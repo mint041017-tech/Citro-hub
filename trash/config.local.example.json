@@ -1,0 +1,5 @@
+{
+  "SHOWAPI_KEY": "在这里填万维易源 appKey（https://www.showapi.com）",
+  "GLM_API_KEY": "在这里填智谱 GLM API Key，仅供服务端 /api/ai 代理使用",
+  "INVITE_CODE": "在这里填注册邀请码；留空或删除本文件表示开放注册"
+}

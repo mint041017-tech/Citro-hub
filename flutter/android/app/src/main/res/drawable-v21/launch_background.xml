@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 冷启动窗口底色 = Citro 画布奶油色（与启动页 / WebView 背景统一，不闪白屏） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/white" />
+    <item>
+        <color android:color="#EDE6D6" />
+    </item>
+</layer-list>

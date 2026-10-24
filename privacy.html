@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Citro 隐私政策</title>
+<style>
+  :root{--bg:#f7f2e7;--paper:#fffdf8;--ink:#23211c;--ink2:#4e4a40;--soft:#6e6858;--line:#e4dcc9;--accent:#8f4e05;--hl:#ffe15c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:760px;margin:0 auto;padding:28px 18px 56px}
+  a{color:var(--accent)}
+  .crumb{font-size:13px;color:var(--soft);margin-bottom:22px}
+  h1{font-size:30px;line-height:1.25;margin:0 0 6px}
+  .meta{color:var(--soft);font-size:12px;margin-bottom:22px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 10px 30px -24px rgba(90,74,44,.55);margin:16px 0}
+  .notice{background:#fbf1c4;border-color:#eadc9a}
+  h2{font-size:17px;margin:26px 0 8px}
+  p,li{color:var(--ink2)}
+  ul{padding-left:20px}
+  footer{margin-top:34px;padding-top:18px;border-top:1px dashed #d2c8b0;color:var(--soft);font-size:12px;text-align:center}
+  .links{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <div class="crumb"><a href="/">Citro</a> / 隐私政策</div>
+  <h1>隐私政策</h1>
+  <div class="meta">生效日期：2026 年 10 月 24 日 · 版本 v1.0</div>
+  <div class="card notice">我们不出售你的个人信息，当前未接入广告或第三方统计 SDK。使用社区、AI、天气与语音功能前，请阅读本政策。</div>
+
+  <h2>1. 引言</h2>
+  <p>Citro（也称「迟暮 Crew」）由个人运营者提供。本政策说明我们收集哪些信息、为什么收集、如何保存与删除，以及你可以如何行使权利。</p>
+
+  <h2>2. 我们收集的信息</h2>
+  <ul>
+    <li><b>账号信息</b>：手机号、昵称、加密后的密码（服务端使用 scrypt 加盐哈希，不保存明文）、头像与生日（可选）。</li>
+    <li><b>社区内容</b>：你发布的文字、图片、语音、评论、点赞与抱一抱。匿名发布时其他用户看不到你的账号昵称，但服务端仍会为安全审核保留内容归属。</li>
+    <li><b>个人工具数据</b>：笔记、食谱、下厨日记、冰箱与购物清单。除你主动公开到「食谱广场」的食谱外，这些数据仅你本人可见。</li>
+    <li><b>设备与本机数据</b>：随机生成的访客 ID、主题、通知开关、天气城市、游戏最高分与本机黑名单。</li>
+    <li><b>位置信息</b>：仅在你授权定位后读取大致位置，用于获取天气；拒绝授权不会影响其他功能。</li>
+    <li><b>AI 与星象</b>：你主动发送给 AI 的对话文本、食谱上下文会发送给第三方 AI 服务用于生成回复；每日星象只发送星座、日期等信息，不发送手机号。</li>
+    <li><b>游戏数据</b>：昵称或访客 ID、成绩、排行榜信息，以及你主动展示的游戏进度。</li>
+  </ul>
+
+  <h2>3. 设备权限</h2>
+  <ul>
+    <li><b>定位</b>：用于天气与本地化信息，可随时关闭。</li>
+    <li><b>麦克风</b>：仅在你按住录音时使用，用于社区语音消息。</li>
+    <li><b>相机与相册</b>：仅在你主动选择头像、帖子配图或食谱图片时读取。</li>
+    <li><b>通知</b>：用于社区消息与烹饪计时提醒，可随时关闭。</li>
+  </ul>
+
+  <h2>4. 使用目的</h2>
+  <p>提供账号登录、社区互动、食谱日记、游戏排行、天气与星象等功能；保障服务安全、处理举报与违规内容；在你同意的情况下通过第三方 AI 生成回复。我们不会将你的个人信息用于广告画像，也不会出售个人信息。</p>
+
+  <h2>5. 第三方与共享</h2>
+  <ul>
+    <li><b>天气</b>：将经纬度发送至 Open-Meteo 获取天气数据。</li>
+    <li><b>AI 功能</b>：将你主动提交的对话或食谱上下文发送至智谱 GLM 大语言模型服务生成回复。请勿在对话中发送身份证号、银行卡号、密码等敏感信息。</li>
+    <li><b>应用商店与操作系统</b>：使用系统通知、定位、相机、麦克风与相册能力时，由操作系统处理权限。</li>
+    <li>除上述场景、法律法规要求或保护用户与公众安全所必需外，我们不会向第三方提供你的个人信息。</li>
+  </ul>
+
+  <h2>6. 存储与安全</h2>
+  <p>账号与社区数据存储在运营者控制的服务器中；密码使用加盐哈希，传输使用 HTTPS。我们通过访问控制与最小化收集降低风险。</p>
+  <p>账号数据保留至你主动注销。注销后，账号、帖子、评论、图片、语音、笔记、食谱、成绩与头像会被删除；因安全审核、争议处理或法律要求必须保留的记录，会在必要期限内保存并限制访问。</p>
+  <p>本机黑名单只保存在当前设备，不会上传服务器；卸载或清除 App 数据会一并删除。</p>
+
+  <h2>7. 你的权利</h2>
+  <p>你可以在 App 的「我的 → 更改信息」查看并修改头像、昵称与生日，也可以删除自己的帖子与评论。</p>
+  <p><b>注销账号</b>：进入「我的 → 账号 → 注销账号」，输入登录密码确认后，账号及个人数据会被永久删除，无法恢复。详见 <a href="/account-deletion.html">账号注销说明</a>。</p>
+  <p>如需查询、更正或删除其他信息，或撤回授权，可通过本页底部联系方式联系我们。</p>
+
+  <h2>8. 未成年人</h2>
+  <p>本服务面向年满 14 周岁的用户。未满 14 周岁请勿注册或使用；未成年人应在监护人指导下使用，并由监护人阅读同意本政策。</p>
+
+  <h2>9. 政策更新</h2>
+  <p>功能或法规变化时，我们可能更新本政策，并在 App 内公布新版本与生效日期。涉及重大变化的，我们会以更显著的方式提示。</p>
+
+  <h2>10. 联系我们</h2>
+  <p>运营者联系方式：KOOK 25343821；微信 Tangerine-1017。我们会在合理期限内处理你的隐私请求与举报。</p>
+
+  <footer>
+    Citro 运营者 · KOOK 25343821 · 微信 Tangerine-1017
+    <div class="links"><a href="/terms.html">用户协议</a><a href="/account-deletion.html">账号注销</a><a href="/">返回首页</a></div>
+  </footer>
+</main>
+</body>
+</html>

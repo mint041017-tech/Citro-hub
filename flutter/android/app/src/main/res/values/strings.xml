@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 应用名（桌面 label / 任务管理器 / 通知栏应用名都读这里）。
+     应用身份：Citro（applicationId 仍为 com.chimu.crew）。 -->
+<resources>
+    <string name="app_name">Citro</string>
+</resources>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Citro · 迟暮 Crew：游戏 Mod 与实用工具、小游戏、食谱日记和同频社区。">
+  <meta name="theme-color" content="#FBF7EC">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Citro">
+  <meta name="color-scheme" content="light dark">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preload" href="main.dart.js" as="script">
+  <title>Citro · 迟暮 Crew</title>
+  <style>
+    html, body {
+      margin: 0; width: 100%; height: 100%; background: #FBF7EC;
+      overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
+    }
+    body { overflow: hidden; }
+    flutter-view, flt-glass-pane { contain: layout paint; }
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      color: #6E6858; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: .08em;
+    }
+    #loading img { width: 112px; height: 112px; object-fit: contain; }
+    #retry {
+      border: 1px solid #D8C39A; border-radius: 999px; padding: 8px 20px;
+      background: #FFFDF6; color: #6E4B1F; font: inherit; cursor: pointer;
+    }
+    #retry[hidden] { display: none; }
+    #loading::after {
+      content: ""; width: 72px; height: 3px; border-radius: 99px;
+      background: linear-gradient(90deg, transparent, #F2A43C, transparent);
+      animation: breathe 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes breathe { from { opacity: .3; transform: scaleX(.65); } to { opacity: 1; transform: scaleX(1); } }
+  </style>
+</head>
+<body>
+  <div id="loading" role="status" aria-label="Citro 正在加载">
+    <img src="icons/Icon-192.png" alt="Citro" decoding="async" fetchpriority="high">
+    <span id="loading-text">正在翻开今天的手账…</span>
+    <button id="retry" type="button" hidden onclick="location.reload()">重新加载</button>
+  </div>
+  <noscript>Citro 需要启用 JavaScript 后才能运行。</noscript>
+  <script>
+    var citroLoadingTimer = setTimeout(function () {
+      var text = document.getElementById('loading-text');
+      var retry = document.getElementById('retry');
+      if (text) text.textContent = '加载时间较长，请检查网络，或重新加载。';
+      if (retry) retry.hidden = false;
+    }, 20000);
+    window.addEventListener('flutter-first-frame', function () {
+      clearTimeout(citroLoadingTimer);
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async onerror="document.getElementById('loading-text').textContent='启动资源加载失败，请重新加载。';document.getElementById('retry').hidden=false;"></script>
+</body>
+</html>

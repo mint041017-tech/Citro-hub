@@ -1,0 +1,102 @@
+# ============================================================
+# Citro / 迟暮 Crew —— 仓库忽略规则
+# 原则：密钥、运行时用户数据、构建产物、本地备份一律不入库
+# ============================================================
+
+# ---------- 依赖 ----------
+node_modules/
+**/node_modules/
+
+# ---------- 密钥 / 签名凭证（P0，绝不入库） ----------
+密钥/
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+**/keystore.properties
+**/local.properties
+.env
+.env.*
+config.json
+trash/config.local.json
+
+# ---------- 运行时用户数据（隐私，绝不入库） ----------
+# 账号 / 会话 / 帖子 / 头像 / 语音 / 配方图等真实用户数据
+trash/data/*
+!trash/data/README.md
+# 星象 AI 每日运势缓存（服务端运行数据）
+zodiac-ai.json
+zodiac-ai.json.bak-*
+
+# ---------- 本地临时目录 / 旧副本 / 截图 ----------
+_tmp/
+_backup/
+效果预览/
+迟暮Crew/
+devtools/_tmp/
+devtools/backup/
+_tmp_audit_*.md
+_acl-recovery/
+
+# ---------- 改前备份 ----------
+backups/
+*.bak-*
+*.bak
+*.bak-routeC
+*.old
+
+# ---------- 未使用的原始素材与下载文件（仅本地/服务器留存） ----------
+素材/_原图备份/
+素材/小工具/
+素材/外设驱动/
+
+# ---------- 构建产物 ----------
+kotlin/.gradle/
+kotlin/.gradle-home/
+kotlin/.kotlin/
+kotlin/app/build/
+# 由 kotlin/sync-www.js 在构建时生成的整站副本
+kotlin/app/src/main/assets/www/
+capacitor/android/app/build/
+*.apk
+*.aab
+*.idsig
+# 例外：站点内提供下载的安装包需要入库
+!/APK/*.apk
+
+# ---------- QA 探针临时文件 ----------
+qa_min.html
+qa_probe*.html
+
+# ---------- 本地工具 / Agent 配置 ----------
+.claude/
+.codeartsdoer/
+.workbuddy/
+
+# ---------- 日志与系统垃圾 ----------
+*.log
+*.tmp
+Thumbs.db
+desktop.ini
+.DS_Store
+nul
+
+# ---------- Python ----------
+__pycache__/
+*.pyc
+
+# Flutter 签名配置（v1.1.3 沿用 v1.1.1 密钥，口令为随机值，与 密钥/ 同级保护）
+flutter/android/app/key.properties
+
+# Flutter 构建缓存 / IDE 本地文件（源码与资源仍入库）
+flutter/.dart_tool/
+flutter/build/
+flutter/.idea/
+flutter/*.iml
+flutter/android/.gradle/
+flutter/android/.kotlin/
+flutter/android/**/build/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies

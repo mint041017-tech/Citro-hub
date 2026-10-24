@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 圆形启动图标（Android 8.0+）：与 ic_launcher.xml 使用同一套自适应图层，
+     由启动器按圆形遮罩裁切；前景字标已在 Ø66dp 安全圆内，不会裁到内容。
+     资源由 devtools/gen-citro-app-icons.py 生成。 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

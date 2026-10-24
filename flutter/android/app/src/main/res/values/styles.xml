@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Citro Flutter 壳主题（配色与 Kotlin 壳 Theme.ChimuCrew 同源，见 docs/citro-design.md）：
+     画布 #EDE6D6（网站浅色 bg）统一 windowBackground / 状态栏 / 导航栏，
+     避免冷启动先闪一帧白屏；浅色系统栏图标。
+     Flutter 模板要求保留 LaunchTheme / NormalTheme 两个名字（Manifest 引用）。 -->
+<resources>
+    <style name="LaunchTheme" parent="android:Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:statusBarColor">#EDE6D6</item>
+        <item name="android:navigationBarColor">#EDE6D6</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+    <style name="NormalTheme" parent="android:Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">#EDE6D6</item>
+        <item name="android:statusBarColor">#EDE6D6</item>
+        <item name="android:navigationBarColor">#EDE6D6</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

@@ -1,0 +1,13 @@
+{
+  "version": "1.8.0",
+  "versionCode": 1800,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v1.8.0-release.apk",
+  "size": 78612279,
+  "notes": [
+    "新增 App 内更新：自动检查新版本、应用内下载并拉起系统安装器",
+    "支持跳过此版本、下载进度、取消与安装权限引导",
+    "启动页保持纯插画，不再显示版本号"
+  ],
+  "publishedAt": "2026-10-24",
+  "force": false
+}
