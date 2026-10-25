@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/resources.dart';
 import '../games/game_registry.dart';
@@ -11,6 +11,7 @@ import '../overlays/extra_sheets.dart';
 import '../overlays/lantern_sheet.dart';
 import '../overlays/pomodoro_sheet.dart';
 import '../overlays/zodiac_modal.dart';
+import '../pages/in_app_web.dart';
 import '../pages/web_resource_actions.dart';
 import '../services/lantern_api.dart';
 import '../services/prefs.dart';
@@ -74,14 +75,6 @@ List<_SearchEntry> _buildSearchIndex() {
       keys: 'home shouye 首页 手账 天气 日历 月历 摸鱼',
       action: _SearchAction.route,
       target: '/home',
-    ),
-    const _SearchEntry(
-      type: '页面',
-      name: '资源库',
-      desc: '小工具与外设驱动',
-      keys: 'res resource ziyuan 资源 工具 驱动 下载',
-      action: _SearchAction.route,
-      target: '/res',
     ),
     const _SearchEntry(
       type: '页面',
@@ -210,43 +203,46 @@ List<_SearchEntry> _buildSearchIndex() {
       ),
     );
   }
-  for (final mod in kMods) {
-    entries.add(
-      _SearchEntry(
-        type: 'Mod',
-        name: mod.name,
-        desc: mod.desc,
-        keys: '${mod.name} ${mod.desc} ${mod.tag} mod 模组 整合包 下载',
-        action: _SearchAction.url,
-        target: mod.url,
-      ),
-    );
-  }
-  for (final tool in kTools) {
-    entries.add(
-      _SearchEntry(
-        type: '工具',
-        name: tool.name,
-        desc: tool.desc,
-        keys: '${tool.name} ${tool.desc} ${tool.section} 工具 软件 下载',
-        action: _SearchAction.tool,
-        tool: tool,
-      ),
-    );
-  }
-  for (final driver in [...kDriversWeb, ...kDriversClient]) {
-    entries.add(
-      _SearchEntry(
-        type: '驱动',
-        name: driver.name,
-        desc: driver.client ? '外设驱动 · 客户端' : '外设驱动 · 网页配置',
-        keys:
-            '${driver.name} 驱动 外设 键盘 鼠标 耳机 网页驱动 客户端 '
-            'driver qudong ${driver.client ? 'client 客户端' : 'web 网页'}',
-        action: _SearchAction.url,
-        target: driver.url,
-      ),
-    );
+  if (!kIsWeb) {
+    // 网页端不再提供 Mod / 工具 / 驱动资源库，搜索索引也同步移除。
+    for (final mod in kMods) {
+      entries.add(
+        _SearchEntry(
+          type: 'Mod',
+          name: mod.name,
+          desc: mod.desc,
+          keys: '${mod.name} ${mod.desc} ${mod.tag} mod 模组 整合包 下载',
+          action: _SearchAction.url,
+          target: mod.url,
+        ),
+      );
+    }
+    for (final tool in kTools) {
+      entries.add(
+        _SearchEntry(
+          type: '工具',
+          name: tool.name,
+          desc: tool.desc,
+          keys: '${tool.name} ${tool.desc} ${tool.section} 工具 软件 下载',
+          action: _SearchAction.tool,
+          tool: tool,
+        ),
+      );
+    }
+    for (final driver in [...kDriversWeb, ...kDriversClient]) {
+      entries.add(
+        _SearchEntry(
+          type: '驱动',
+          name: driver.name,
+          desc: driver.client ? '外设驱动 · 客户端' : '外设驱动 · 网页配置',
+          keys:
+              '${driver.name} 驱动 外设 键盘 鼠标 耳机 网页驱动 客户端 '
+              'driver qudong ${driver.client ? 'client 客户端' : 'web 网页'}',
+          action: _SearchAction.url,
+          target: driver.url,
+        ),
+      );
+    }
   }
   return entries;
 }
@@ -293,6 +289,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
   List<_SearchRow> _rows = [];
   int _active = -1;
   double _targetWidth = 400;
+  bool _panelBelow = true;
+  double _panelMaxHeight = 410;
 
   List<String> get _history => Prefs.getStringList(_searchHistoryKey);
 
@@ -370,37 +368,46 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
   bool _emptyLocalQuery = false;
 
+  void _measurePanel() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    _targetWidth = box.size.width;
+    final origin = box.localToGlobal(Offset.zero);
+    final viewHeight = MediaQuery.sizeOf(context).height;
+    final belowSpace = viewHeight - origin.dy - box.size.height - 14;
+    final aboveSpace = origin.dy - 14;
+    _panelBelow = widget.preferBelow
+        ? (belowSpace >= 180 || belowSpace >= aboveSpace)
+        : (belowSpace >= 240 || belowSpace >= aboveSpace);
+    final available = _panelBelow ? belowSpace : aboveSpace;
+    _panelMaxHeight = available.clamp(140.0, 410.0);
+  }
+
   void _showPanel() {
     _rebuildRows();
-    final box = context.findRenderObject() as RenderBox?;
-    if (box != null) _targetWidth = box.size.width;
+    _measurePanel();
     if (_panel != null) {
       _panel!.markNeedsBuild();
       return;
     }
     _panel = OverlayEntry(
-      builder: (overlayContext) => Positioned.fill(
+      builder: (overlayContext) => Positioned(
+        left: 0,
+        top: 0,
+        width: _targetWidth,
         child: CompositedTransformFollower(
           link: _link,
           showWhenUnlinked: false,
-          targetAnchor: widget.preferBelow
-              ? Alignment.bottomLeft
-              : Alignment.topLeft,
-          followerAnchor: widget.preferBelow
+          targetAnchor: _panelBelow ? Alignment.bottomLeft : Alignment.topLeft,
+          followerAnchor: _panelBelow
               ? Alignment.topLeft
               : Alignment.bottomLeft,
-          offset: Offset(0, widget.preferBelow ? 8 : -8),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: _targetWidth,
-              child: TextFieldTapRegion(
-                groupId: _tapGroup,
-                child: Material(
-                  color: Colors.transparent,
-                  child: _buildPanel(overlayContext),
-                ),
-              ),
+          offset: Offset(0, _panelBelow ? 8 : -8),
+          child: TextFieldTapRegion(
+            groupId: _tapGroup,
+            child: Material(
+              color: Colors.transparent,
+              child: _buildPanel(overlayContext),
             ),
           ),
         ),
@@ -464,11 +471,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
     _focus.unfocus();
     if (row.bing != null || row.history != null) {
       final word = row.bing ?? row.history!;
-      launchUrl(
-        Uri.parse(
-          'https://www.bing.com/search?q=${Uri.encodeQueryComponent(word)}',
-        ),
-        mode: LaunchMode.externalApplication,
+      openCitroPage(
+        context,
+        'https://www.bing.com/search?q=${Uri.encodeQueryComponent(word)}',
+        title: '必应 · $word',
       );
       return;
     }
@@ -505,7 +511,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
   Widget _buildPanel(BuildContext context) {
     final c = context.c;
     return Container(
-      constraints: const BoxConstraints(maxHeight: 410),
+      key: const ValueKey('globalSearchPanel'),
+      constraints: BoxConstraints(maxHeight: _panelMaxHeight),
       decoration: BoxDecoration(
         color: c.dark ? const Color(0xFF211E19) : const Color(0xFFFFFCF4),
         borderRadius: BorderRadius.circular(16),
@@ -569,7 +576,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
         ? '必应搜索：${row.bing}'
         : row.history ?? row.entry!.name;
     final desc = row.bing != null
-        ? '新标签页打开 Bing 搜索结果'
+        ? '在应用内打开 Bing 搜索结果'
         : row.history != null
         ? '使用这条历史记录进行必应搜索'
         : row.entry!.desc;

@@ -208,7 +208,7 @@ class _SectionBlock extends StatelessWidget {
 
 const kPrivacySections = <_LegalSection>[
   _LegalSection('引言', [
-    'Citro（也称「迟暮 Crew」）由个人运营者提供。我们重视你的个人信息与隐私，本政策说明我们收集哪些信息、为什么收集、如何保存与删除，以及你可以如何行使权利。',
+    'Citro 由个人运营者提供。我们重视你的个人信息与隐私，本政策说明我们收集哪些信息、为什么收集、如何保存与删除，以及你可以如何行使权利。',
   ]),
   _LegalSection('我们收集的信息', [
     '账号信息：手机号、昵称、加密后的密码（服务端使用 scrypt 加盐哈希，不保存明文）、头像与生日（可选）。',

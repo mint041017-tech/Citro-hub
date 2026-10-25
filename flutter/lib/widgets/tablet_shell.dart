@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../overlays/ai_chat.dart';
 import '../services/api.dart';
+import '../pages/me_page.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -38,11 +40,13 @@ class CitroLayoutScope extends InheritedWidget {
 class CitroTabletSidebar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
+  final bool showResources;
 
   const CitroTabletSidebar({
     super.key,
     required this.index,
     required this.onChanged,
+    this.showResources = false,
   });
 
   @override
@@ -107,65 +111,96 @@ class CitroTabletSidebar extends StatelessWidget {
                 ),
                 DashedLine(color: c.line2.withAlpha(150)),
                 const SizedBox(height: 14),
-                Text(
-                  '逛一逛',
-                  style: context.body(
-                    size: 10.5,
-                    weight: FontWeight.w700,
-                    color: c.inkSoft,
-                    letterSpacing: 1.4,
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '逛一逛',
+                          style: context.body(
+                            size: 10.5,
+                            weight: FontWeight.w700,
+                            color: c.inkSoft,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        _SidebarItem(
+                          label: '首页',
+                          icon: AppIcons.home,
+                          active: index == 0,
+                          onTap: () => onChanged(0),
+                        ),
+                        _SidebarItem(
+                          label: '游戏',
+                          icon: AppIcons.games,
+                          active: index == 1,
+                          onTap: () => onChanged(1),
+                        ),
+                        _SidebarItem(
+                          label: '社区',
+                          icon: AppIcons.users,
+                          active: index == 2,
+                          badge: app.unread,
+                          onTap: () => onChanged(2),
+                        ),
+                        if (showResources)
+                          _SidebarItem(
+                            label: '资源库',
+                            icon: AppIcons.library,
+                            active: index == 3,
+                            onTap: () => onChanged(3),
+                          ),
+                        _SidebarItem(
+                          label: '全站搜索',
+                          icon: AppIcons.search,
+                          active: false,
+                          onTap: () =>
+                              Navigator.of(context).pushNamed('/search'),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '我的 Citro',
+                          style: context.body(
+                            size: 10.5,
+                            weight: FontWeight.w700,
+                            color: c.inkSoft,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        _SidebarItem(
+                          label: '食谱日记',
+                          icon: AppIcons.fork,
+                          active: false,
+                          onTap: () => Navigator.of(context).pushNamed('/cook'),
+                        ),
+                        _SidebarItem(
+                          label: '我的',
+                          icon: AppIcons.user,
+                          active: false,
+                          onTap: () {
+                            if (platform.isWindows) {
+                              showMeWindow(context);
+                            } else {
+                              Navigator.of(context).pushNamed('/me');
+                            }
+                          },
+                        ),
+                        _SidebarItem(
+                          label: 'CiCi AI',
+                          icon: AppIcons.sparkle,
+                          active: false,
+                          onTap: () => showAiChat(context),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 7),
-                _SidebarItem(
-                  label: '首页',
-                  icon: AppIcons.home,
-                  active: index == 0,
-                  onTap: () => onChanged(0),
-                ),
-                _SidebarItem(
-                  label: '游戏',
-                  icon: AppIcons.games,
-                  active: index == 1,
-                  onTap: () => onChanged(1),
-                ),
-                _SidebarItem(
-                  label: '社区',
-                  icon: AppIcons.users,
-                  active: index == 2,
-                  badge: app.unread,
-                  onTap: () => onChanged(2),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '我的 Citro',
-                  style: context.body(
-                    size: 10.5,
-                    weight: FontWeight.w700,
-                    color: c.inkSoft,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                _SidebarItem(
-                  label: '食谱日记',
-                  icon: AppIcons.fork,
-                  active: false,
-                  onTap: () => Navigator.of(context).pushNamed('/cook'),
-                ),
-                _SidebarItem(
-                  label: '我的',
-                  icon: AppIcons.user,
-                  active: false,
-                  onTap: () => Navigator.of(context).pushNamed('/me'),
-                ),
-                _SidebarItem(
-                  label: 'CiCi AI',
-                  icon: AppIcons.sparkle,
-                  active: false,
-                  onTap: () => showAiChat(context),
-                ),
-                const Spacer(),
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
                   decoration: BoxDecoration(

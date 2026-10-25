@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 class GeoLocation {
   final double latitude;
@@ -29,6 +31,13 @@ class LocationService {
     if (Platform.isIOS) {
       try {
         return await _currentIos().timeout(const Duration(seconds: 20));
+      } catch (_) {
+        return null;
+      }
+    }
+    if (Platform.isWindows) {
+      try {
+        return await _currentWindows().timeout(const Duration(seconds: 20));
       } catch (_) {
         return null;
       }
@@ -59,6 +68,18 @@ class LocationService {
   /// iOS 使用系统 CLLocationManager（经 geolocator）与 CLGeocoder（经 geocoding），
   /// 避免再维护一套 Swift MethodChannel；Android 保留现有原生通道。
   static Future<GeoLocation?> _currentIos() async {
+    return _currentWithGeolocator(useHttpGeocode: false);
+  }
+
+  /// Windows 走 geolocator_windows（系统位置服务）；geocoding 没有 Windows
+  /// 实现，逆地理改用与 Web 相同的 BigDataCloud 接口。
+  static Future<GeoLocation?> _currentWindows() async {
+    return _currentWithGeolocator(useHttpGeocode: true);
+  }
+
+  static Future<GeoLocation?> _currentWithGeolocator({
+    required bool useHttpGeocode,
+  }) async {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return null;
@@ -72,22 +93,28 @@ class LocationService {
         return null;
       }
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-        timeLimit: const Duration(seconds: 12),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 12),
+        ),
       );
       var city = '';
-      try {
-        final places = await Geocoding(locale: const Locale('zh', 'CN'))
-            .placemarkFromCoordinates(pos.latitude, pos.longitude);
-        if (places.isNotEmpty) {
-          final p = places.first;
-          city = p.locality?.trim().isNotEmpty == true
-              ? p.locality!.trim()
-              : (p.subAdministrativeArea?.trim().isNotEmpty == true
-                    ? p.subAdministrativeArea!.trim()
-                    : (p.administrativeArea?.trim() ?? ''));
-        }
-      } catch (_) {}
+      if (useHttpGeocode) {
+        city = await _reverseCity(pos.latitude, pos.longitude);
+      } else {
+        try {
+          final places = await Geocoding(locale: const Locale('zh', 'CN'))
+              .placemarkFromCoordinates(pos.latitude, pos.longitude);
+          if (places.isNotEmpty) {
+            final p = places.first;
+            city = p.locality?.trim().isNotEmpty == true
+                ? p.locality!.trim()
+                : (p.subAdministrativeArea?.trim().isNotEmpty == true
+                      ? p.subAdministrativeArea!.trim()
+                      : (p.administrativeArea?.trim() ?? ''));
+          }
+        } catch (_) {}
+      }
       return GeoLocation(
         latitude: pos.latitude,
         longitude: pos.longitude,
@@ -97,5 +124,28 @@ class LocationService {
     } catch (_) {
       return null;
     }
+  }
+
+  static Future<String> _reverseCity(double lat, double lon) async {
+    try {
+      final uri = Uri.https(
+        'api.bigdatacloud.net',
+        '/data/reverse-geocode-client',
+        {
+          'latitude': lat.toString(),
+          'longitude': lon.toString(),
+          'localityLanguage': 'zh',
+        },
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return '';
+      final j = jsonDecode(utf8.decode(res.bodyBytes));
+      if (j is! Map) return '';
+      for (final key in const ['city', 'locality', 'principalSubdivision']) {
+        final value = j[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    } catch (_) {}
+    return '';
   }
 }

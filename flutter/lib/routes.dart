@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'games/game_registry.dart';
+import 'games/game_loader.dart';
 import 'pages/cook_page.dart';
 import 'pages/me_page.dart';
 import 'pages/play_page.dart';
 import 'pages/root_shell.dart';
+import 'pages/search_page.dart';
 import 'pages/sens_page.dart';
 
 class CitroRoutes {
@@ -16,6 +18,7 @@ class CitroRoutes {
   static const me = '/me';
   static const play = '/play';
   static const sens = '/sens';
+  static const search = '/search';
 
   static const tabs = <String>[home, games, community, resources];
   static const _games = <String>{
@@ -40,11 +43,14 @@ class CitroRoutes {
     if (!value.startsWith('/')) value = '/$value';
     final path = Uri.parse(value).path;
     if (path == '/' || path == home) return home;
+    // 网页端已移除资源页，旧链接直接回首页；原生端仍保留资源库。
+    if (kIsWeb && path == resources) return home;
     if (tabs.contains(path) ||
         path == cook ||
         path == me ||
         path == play ||
         path == sens ||
+        path == search ||
         _games.contains(path)) {
       return path;
     }
@@ -57,15 +63,29 @@ class CitroRoutes {
     if (route == me) return const MePage();
     if (route == play) return const PlayPage();
     if (route == sens) return const SensPage();
+    if (route == search) return const SearchPage();
     if (_games.contains(route)) return buildGamePage(route.substring(1));
     return RootShell(initialIndex: tabs.indexOf(route));
   }
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final route = normalize(settings.name);
-    return MaterialPageRoute<dynamic>(
+    return _CitroPageRoute<dynamic>(
       settings: RouteSettings(name: route, arguments: settings.arguments),
       builder: (_) => pageFor(route),
     );
   }
+}
+
+class _CitroPageRoute<T> extends MaterialPageRoute<T> {
+  _CitroPageRoute({required super.builder, super.settings});
+
+  @override
+  Duration get transitionDuration =>
+      kIsWeb ? const Duration(milliseconds: 170) : super.transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => kIsWeb
+      ? const Duration(milliseconds: 130)
+      : super.reverseTransitionDuration;
 }

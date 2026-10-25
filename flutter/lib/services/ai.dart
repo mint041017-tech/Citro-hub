@@ -17,14 +17,23 @@ class AiService {
   static const String _directEndpoint =
       'https://open.bigmodel.cn/api/paas/v4/chat/completions';
   static const String _webEndpoint = '/trashapi/api/ai';
+  static const String _windowsProxyEndpoint = String.fromEnvironment(
+    'AI_PROXY_URL',
+    defaultValue: 'https://chimu-claw.xyz/trashapi/api/ai',
+  );
   static const String model = 'glm-5.3-flash';
   static const String _compileKey = platform.compileAiKey;
   static final String _key = _compileKey.isNotEmpty
       ? _compileKey
       : (platform.platformEnvironment('GLM_API_KEY') ?? '');
 
-  static String get _endpoint => kIsWeb ? _webEndpoint : _directEndpoint;
-  static bool get available => kIsWeb || _key.isNotEmpty;
+  /// 没有内置密钥的桌面端与 Web 一样走服务端代理，避免把 Key 写进安装包。
+  static bool get _useProxy =>
+      kIsWeb || (platform.isWindows && _key.isEmpty);
+  static String get _endpoint => kIsWeb
+      ? _webEndpoint
+      : (_useProxy ? _windowsProxyEndpoint : _directEndpoint);
+  static bool get available => _useProxy || _key.isNotEmpty;
 
   static const String _system = '''
 你是 CiCi，Citro 手账 App 的傲娇 AI 伙伴。熟悉首页（打卡/天气/食谱日记/摸鱼/星象/一言/番茄钟）、小游戏、社区（图文/语音/评论）、食谱广场/冰箱/购物清单和「我的」。
@@ -55,7 +64,7 @@ class AiService {
     if (!available) throw AiException('AI 暂未配置');
     final req = http.Request('POST', Uri.parse(_endpoint));
     req.headers['Content-Type'] = 'application/json; charset=utf-8';
-    if (!kIsWeb) req.headers['Authorization'] = 'Bearer $_key';
+    if (!_useProxy) req.headers['Authorization'] = 'Bearer $_key';
     req.bodyBytes = utf8.encode(jsonEncode(payload));
     return req;
   }

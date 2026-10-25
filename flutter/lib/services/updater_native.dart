@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -31,6 +33,7 @@ class UpdateInfo {
   final List<String> notes;
   final String? publishedAt;
   final bool force;
+  final String? sha256;
 
   const UpdateInfo({
     required this.version,
@@ -40,6 +43,7 @@ class UpdateInfo {
     this.notes = const [],
     this.publishedAt,
     this.force = false,
+    this.sha256,
   });
 
   factory UpdateInfo.fromJson(Map<String, dynamic> json, {Uri? baseUri}) {
@@ -54,7 +58,7 @@ class UpdateInfo {
     if (rawUrl.isEmpty) throw const FormatException('缺少安装包地址');
     var url = Uri.parse(rawUrl);
     if (!url.hasScheme && baseUri != null) url = baseUri.resolveUri(url);
-    if (url.scheme.toLowerCase() != 'https') {
+    if (!_isAllowedUpdateUrl(url)) {
       throw const FormatException('安装包地址必须使用 HTTPS');
     }
 
@@ -75,6 +79,7 @@ class UpdateInfo {
     final published = (json['publishedAt'] ?? json['date'] ?? '')
         .toString()
         .trim();
+    final rawHash = (json['sha256'] ?? json['hash'] ?? '').toString().trim();
     final code =
         _asInt(json['versionCode'] ?? json['buildNumber']) ??
         versionCodeOf(version);
@@ -87,6 +92,9 @@ class UpdateInfo {
       notes: notes,
       publishedAt: published.isEmpty ? null : published,
       force: json['force'] == true || json['mandatory'] == true,
+      sha256: RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(rawHash)
+          ? rawHash.toLowerCase()
+          : null,
     );
   }
 
@@ -106,7 +114,7 @@ class UpdateInfo {
       ).firstMatch(body)?.group(1);
       if (key == null) continue;
       final name = RegExp(
-        r'^APK/Citro-v(\d+)\.(\d+)\.(\d+)-release\.apk$',
+        r'(?:^|/)Citro-v(\d+)\.(\d+)\.(\d+)(?:-release\.apk|-win64-setup\.exe|\.exe)$',
         caseSensitive: false,
       ).firstMatch(key);
       if (name == null) continue;
@@ -155,11 +163,18 @@ class UpdateInfo {
   String get fileName {
     final last = url.pathSegments.isEmpty ? '' : url.pathSegments.last;
     final cleaned = last.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    if (cleaned.toLowerCase().endsWith('.apk') && cleaned.length > 4) {
+    final lower = cleaned.toLowerCase();
+    if ((lower.endsWith('.apk') ||
+            lower.endsWith('.exe') ||
+            lower.endsWith('.msi') ||
+            lower.endsWith('.zip')) &&
+        cleaned.length > 4) {
       return cleaned;
     }
     final safeVersion = version.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    return 'Citro-v$safeVersion.apk';
+    return Platform.isWindows
+        ? 'Citro-v$safeVersion-win64-setup.exe'
+        : 'Citro-v$safeVersion.apk';
   }
 
   static int versionCodeOf(String version) {
@@ -199,6 +214,16 @@ class UpdateInfo {
     if (value is String) return int.tryParse(value.trim());
     return null;
   }
+
+  /// release 只接受 HTTPS；debug 额外放行 loopback，供本地更新流程联调。
+  static bool _isAllowedUpdateUrl(Uri url) {
+    final scheme = url.scheme.toLowerCase();
+    if (scheme == 'https') return true;
+    if (!kDebugMode || scheme != 'http') return false;
+    return url.host == '127.0.0.1' ||
+        url.host == 'localhost' ||
+        url.host == '::1';
+  }
 }
 
 class UpdateService {
@@ -206,17 +231,43 @@ class UpdateService {
     'UPDATE_MANIFEST_URL',
     defaultValue: 'https://obs.chimu-claw.xyz/APK/update.json',
   );
+  static const String windowsManifestUrl = String.fromEnvironment(
+    'WINDOWS_UPDATE_MANIFEST_URL',
+    defaultValue: 'https://obs.chimu-claw.xyz/exe/update.json',
+  );
   static const String _defaultListingUrl =
       'https://obs.chimu-claw.xyz/?prefix=APK/&max-keys=1000';
+  static const String _windowsListingUrl =
+      'https://obs.chimu-claw.xyz/?prefix=exe/&max-keys=1000';
 
   final http.Client _client;
   final Uri manifestUri;
   final Uri listingUri;
+  final bool windows;
 
-  UpdateService({http.Client? client, Uri? manifestUri, Uri? listingUri})
-    : _client = client ?? http.Client(),
-      manifestUri = manifestUri ?? Uri.parse(defaultManifestUrl),
-      listingUri = listingUri ?? Uri.parse(_defaultListingUrl);
+  UpdateService({
+    http.Client? client,
+    Uri? manifestUri,
+    Uri? listingUri,
+    bool? windows,
+  }) : this._(
+         client ?? http.Client(),
+         manifestUri,
+         listingUri,
+         windows ?? Platform.isWindows,
+       );
+
+  UpdateService._(
+    this._client,
+    Uri? manifestUri,
+    Uri? listingUri,
+    this.windows,
+  ) : manifestUri =
+          manifestUri ??
+          Uri.parse(windows ? windowsManifestUrl : defaultManifestUrl),
+      listingUri =
+          listingUri ??
+          Uri.parse(windows ? _windowsListingUrl : _defaultListingUrl);
 
   static Future<InstalledVersion>? _installed;
 
@@ -368,6 +419,22 @@ class UpdateDownloader {
       } catch (_) {}
       throw const UpdateException('安装包不完整，请重试');
     }
+    if (info.sha256 != null) {
+      try {
+        final digest = await sha256.bind(file.openRead()).first;
+        if (digest.toString().toLowerCase() != info.sha256) {
+          await file.delete();
+          throw const UpdateException('安装包校验失败，请重新下载');
+        }
+      } on UpdateException {
+        rethrow;
+      } catch (_) {
+        try {
+          await file.delete();
+        } catch (_) {}
+        throw const UpdateException('安装包校验失败，请重新下载');
+      }
+    }
     return file;
   }
 
@@ -393,6 +460,7 @@ class UpdateInstaller {
   static const MethodChannel _channel = MethodChannel('com.chimu.crew/updater');
 
   static Future<bool> canInstall() async {
+    if (Platform.isWindows) return true;
     if (!Platform.isAndroid) return false;
     try {
       return await _channel.invokeMethod<bool>('canInstall') ?? false;
@@ -410,7 +478,89 @@ class UpdateInstaller {
     }
   }
 
+  /// Windows 采用「退出应用 → 静默运行 Inno Setup → 重新启动」的链路。
+  /// 安装包按用户级安装到 %LOCALAPPDATA%\Programs\Citro，不需要每次更新提权。
+  static String get _launcherMarker =>
+      '${Directory.systemTemp.path}\\citro_update_started';
+
+  /// 安装器脚本在真正拉起 Setup 后写标记；应用确认后再退出，避免脚本还没跑完
+  /// 就被一起结束，也避免旧实例的互斥锁挡住安装后的重启。
+  static Future<bool> waitForLauncher({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final marker = File(_launcherMarker);
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (await marker.exists()) {
+        try {
+          await marker.delete();
+        } catch (_) {}
+        return true;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    return false;
+  }
+
+  static Future<InstallResult> _installWindows(String path) async {
+    final installer = File(path);
+    if (!await installer.exists()) {
+      return const InstallResult(InstallStatus.failed, '安装包不存在，请重新下载');
+    }
+    try {
+      final marker = File(_launcherMarker);
+      if (await marker.exists()) await marker.delete();
+    } catch (_) {}
+    String quote(String value) => "'${value.replaceAll("'", "''")}'";
+    final currentExe = Platform.resolvedExecutable;
+    final script = File('${installer.parent.path}\\citro_apply_update.ps1');
+    final content = '''
+\$ErrorActionPreference = 'SilentlyContinue'
+\$installer = ${quote(installer.path)}
+\$current = ${quote(currentExe)}
+\$marker = ${quote(_launcherMarker)}
+\$log = Join-Path \$env:TEMP 'citro_update.log'
+\$p = Start-Process -FilePath \$installer -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS','/RESTARTAPPLICATIONS' -PassThru
+if (\$p -ne \$null) {
+  Set-Content -LiteralPath \$marker -Value '1' -Encoding ascii
+}
+Start-Sleep -Seconds 1
+Get-Process -Name 'Citro' -ErrorAction SilentlyContinue | ForEach-Object { \$_.CloseMainWindow() | Out-Null }
+\$p.WaitForExit()
+"installer exit=\$(\$p.ExitCode)" | Out-File -FilePath \$log -Append -Encoding utf8
+if (\$p.ExitCode -eq 0) {
+  \$installed = Join-Path \$env:LOCALAPPDATA 'Programs\\Citro\\Citro.exe'
+  \$target = if (Test-Path \$installed) { \$installed } elseif (Test-Path \$current) { \$current } else { \$null }
+  if (\$target) { Start-Process -FilePath \$target }
+}
+Remove-Item -LiteralPath \$PSCommandPath -Force -ErrorAction SilentlyContinue
+''';
+    try {
+      // PowerShell 5.1 只有在 BOM 存在时才按 UTF-8 读取脚本；
+      // 用户目录可能含中文，缺少 BOM 会把安装包路径读成乱码。
+      await script.writeAsString('\uFEFF$content', flush: true);
+      await Process.start(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-WindowStyle',
+          'Hidden',
+          '-File',
+          script.path,
+        ],
+        // detached 在 Windows 下会让 PowerShell 无控制台直接退出（脚本不执行）；
+        // normal 保持脚本完整运行，窗口由 -WindowStyle Hidden 隐藏。
+      );
+      return const InstallResult(InstallStatus.started);
+    } catch (_) {
+      return const InstallResult(InstallStatus.failed, '无法启动更新安装程序');
+    }
+  }
+
   static Future<InstallResult> install(String path) async {
+    if (Platform.isWindows) return _installWindows(path);
     if (!Platform.isAndroid) {
       return const InstallResult(InstallStatus.failed, '当前平台不支持应用内安装');
     }

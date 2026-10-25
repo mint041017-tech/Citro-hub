@@ -309,4 +309,97 @@ void main() {
     await tester.pumpAndSettle();
     expect(result, UpdateDialogResult.dismissed);
   });
+
+  group('Windows updates', () {
+    const windowsListingXml =
+        '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ListBucketResult>
+  <Contents>
+    <Key>exe/Citro-v1.8.0-win64-setup.exe</Key>
+    <LastModified>2026-10-25T06:00:00.000Z</LastModified>
+    <Size>24000000</Size>
+  </Contents>
+  <Contents>
+    <Key>exe/Citro-v1.8.1-win64-setup.exe</Key>
+    <LastModified>2026-10-26T06:00:00.000Z</LastModified>
+    <Size>25000000</Size>
+  </Contents>
+  <Contents>
+    <Key>exe/update.json</Key>
+    <LastModified>2026-10-26T06:00:00.000Z</LastModified>
+    <Size>300</Size>
+  </Contents>
+</ListBucketResult>''';
+
+    test('parses a Windows installer manifest', () {
+      final info = UpdateInfo.fromJson({
+        'version': '1.8.1',
+        'versionCode': 1801,
+        'url': 'Citro-v1.8.1-win64-setup.exe',
+        'size': 25000000,
+      }, baseUri: Uri.parse('https://obs.chimu-claw.xyz/exe/update.json'));
+
+      expect(
+        info.url.toString(),
+        'https://obs.chimu-claw.xyz/exe/Citro-v1.8.1-win64-setup.exe',
+      );
+      expect(info.fileName, 'Citro-v1.8.1-win64-setup.exe');
+      expect(info.versionCode, 1801);
+    });
+
+    test('picks the newest exe from the Windows listing', () {
+      final info = UpdateInfo.latestFromListing(
+        windowsListingXml,
+        baseUri: Uri.parse(
+          'https://obs.chimu-claw.xyz/?prefix=exe/&max-keys=1000',
+        ),
+      );
+      expect(info, isNotNull);
+      expect(info!.version, '1.8.1');
+      expect(info.size, 25000000);
+      expect(
+        info.url.toString(),
+        'https://obs.chimu-claw.xyz/exe/Citro-v1.8.1-win64-setup.exe',
+      );
+    });
+  });
+
+  group('Windows installer verification', () {
+    test('keeps a valid sha256 from the manifest', () {
+      final info = UpdateInfo.fromJson({
+        'version': '1.8.1',
+        'url': 'Citro-v1.8.1-win64-setup.exe',
+        'sha256': 'A' * 64,
+      }, baseUri: Uri.parse('https://obs.chimu-claw.xyz/exe/update.json'));
+      expect(info.sha256, 'a' * 64);
+    });
+
+    test('rejects a package whose sha256 does not match', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'citro-hash-test',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final payload = List<int>.generate(4096, (i) => i % 256);
+      final client = MockClient.streaming((request, bodyStream) async {
+        return http.StreamedResponse(
+          Stream.fromIterable([payload]),
+          200,
+          contentLength: payload.length,
+        );
+      });
+      addTearDown(client.close);
+      final info = UpdateInfo(
+        version: '1.8.1',
+        versionCode: 1801,
+        url: Uri.parse(_apkUri),
+        size: payload.length,
+        sha256: '0' * 64,
+      );
+      await expectLater(
+        UpdateDownloader(client: client, directory: directory).download(info),
+        throwsA(isA<UpdateException>()),
+      );
+      expect(directory.listSync(), isEmpty);
+    });
+  });
 }

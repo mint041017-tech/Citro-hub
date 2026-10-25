@@ -1,19 +1,21 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/resources.dart';
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/tablet_shell.dart';
+import 'in_app_web.dart';
 import 'play_page.dart';
 import 'sens_page.dart';
-import 'web_resources.dart';
 
 class ResPage extends StatefulWidget {
-  const ResPage({super.key});
+  final bool embedded;
+
+  const ResPage({super.key, this.embedded = false});
   @override
   State<ResPage> createState() => _ResPageState();
 }
@@ -30,10 +32,13 @@ class _ResPageState extends State<ResPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb && MediaQuery.sizeOf(context).width >= 1025) {
-      return const WebResourcesPage();
-    }
     final c = context.c;
+    final layout = CitroLayoutScope.maybeOf(context);
+    final contentWidth =
+        layout?.contentWidth ?? MediaQuery.sizeOf(context).width;
+    final wide = (layout?.tabletNav ?? false) && contentWidth >= 940;
+    final maxWidth = wide ? 1120.0 : 840.0;
+    final tabBar = widget.embedded && !(layout?.tabletNav ?? false);
     final q = query.trim().toLowerCase();
     final mods = q.isEmpty
         ? kMods
@@ -62,9 +67,9 @@ class _ResPageState extends State<ResPage> {
           bottom: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 840),
+              constraints: BoxConstraints(maxWidth: maxWidth),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 30),
+                padding: EdgeInsets.fromLTRB(8, 8, 8, tabBar ? 110 : 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -90,7 +95,7 @@ class _ResPageState extends State<ResPage> {
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  '返回',
+                                  widget.embedded ? '首页' : '返回',
                                   style: context.body(
                                     size: 11.5,
                                     weight: FontWeight.w600,
@@ -152,11 +157,10 @@ class _ResPageState extends State<ResPage> {
                                       tools.isNotEmpty ||
                                       drivers.isNotEmpty;
                                   if (!hasLocal) {
-                                    await launchUrl(
-                                      Uri.parse(
-                                        'https://www.bing.com/search?q=${Uri.encodeQueryComponent(v)}',
-                                      ),
-                                      mode: LaunchMode.externalApplication,
+                                    await openCitroPage(
+                                      context,
+                                      'https://www.bing.com/search?q=${Uri.encodeQueryComponent(v)}',
+                                      title: '必应 · $v',
                                     );
                                   }
                                 },
@@ -225,13 +229,19 @@ class _ResPageState extends State<ResPage> {
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
-                                    childAspectRatio: .86,
-                                  ),
+                              gridDelegate: wide
+                                  ? const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                      mainAxisExtent: 250,
+                                    )
+                                  : const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                      childAspectRatio: .86,
+                                    ),
                               itemCount: mods.length,
                               itemBuilder: (_, i) => _modCard(context, mods[i]),
                             ),
@@ -256,13 +266,19 @@ class _ResPageState extends State<ResPage> {
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 0,
-                                    childAspectRatio: 1.34,
-                                  ),
+                              gridDelegate: wide
+                                  ? const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 0,
+                                      mainAxisExtent: 102,
+                                    )
+                                  : const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 0,
+                                      childAspectRatio: 1.34,
+                                    ),
                               itemCount: tools.length,
                               itemBuilder: (_, i) =>
                                   _toolCard(context, tools[i]),
@@ -292,10 +308,10 @@ class _ResPageState extends State<ResPage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            for (final d in kDriversWeb.where(
-                              (d) => drivers.contains(d),
-                            ))
-                              _driverRow(context, d),
+                            _driverList(
+                              context,
+                              kDriversWeb.where((d) => drivers.contains(d)),
+                            ),
                             const SizedBox(height: 10),
                             Text(
                               '客户端驱动',
@@ -306,61 +322,63 @@ class _ResPageState extends State<ResPage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            for (final d in kDriversClient.where(
-                              (d) => drivers.contains(d),
-                            ))
-                              _driverRow(context, d),
+                            _driverList(
+                              context,
+                              kDriversClient.where((d) => drivers.contains(d)),
+                            ),
                           ],
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    PaperCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: c.hl,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: AppIcon(
-                                strokeSvg(AppIcons.monitor, width: 2),
-                                size: 19,
-                                color: c.accentInk,
+                    if (!platform.isWindows) ...[
+                      const SizedBox(height: 12),
+                      PaperCard(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: c.hl,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: AppIcon(
+                                  strokeSvg(AppIcons.monitor, width: 2),
+                                  size: 19,
+                                  color: c.accentInk,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '更多资源请移步 PC 版',
-                                  style: context.heading(size: 15),
-                                ),
-                                Text(
-                                  'chimu-claw.xyz',
-                                  style: context.body(
-                                    size: 12,
-                                    color: c.accentInk,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '更多资源请移步 PC 版',
+                                    style: context.heading(size: 15),
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    'chimu-claw.xyz',
+                                    style: context.body(
+                                      size: 12,
+                                      color: c.accentInk,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          AppIcon(
-                            strokeSvg(AppIcons.arrowUpRight, width: 2.2),
-                            size: 15,
-                            color: c.accentInk,
-                          ),
-                        ],
+                            AppIcon(
+                              strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+                              size: 15,
+                              color: c.accentInk,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -492,7 +510,7 @@ class _ResPageState extends State<ResPage> {
 
   Widget _toolCard(BuildContext context, ToolItem tool) {
     final c = context.c;
-    return GestureDetector(
+    return Pressable(
       onTap: () {
         if (tool.name == '灵敏度') {
           Navigator.of(context)
@@ -510,6 +528,10 @@ class _ResPageState extends State<ResPage> {
           );
         }
       },
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(c.dark ? 22 : 60),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 10, 6, 9),
         decoration: BoxDecoration(
@@ -572,10 +594,38 @@ class _ResPageState extends State<ResPage> {
     );
   }
 
+  Widget _driverList(BuildContext context, Iterable<DriverItem> drivers) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 24.0;
+        final columns = (constraints.maxWidth / 260).floor().clamp(1, 4);
+        if (columns <= 1) {
+          return Column(
+            children: [for (final d in drivers) _driverRow(context, d)],
+          );
+        }
+        final itemWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: 0,
+          children: [
+            for (final d in drivers)
+              SizedBox(width: itemWidth, child: _driverRow(context, d)),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _driverRow(BuildContext context, DriverItem d) {
     final c = context.c;
-    return InkWell(
+    return Pressable(
       onTap: () => _confirmOpen(context, d.name, d.url, download: d.client),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(c.dark ? 18 : 48),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
@@ -652,7 +702,7 @@ class _ResPageState extends State<ResPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '前往外部页面'),
+              versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '打开页面'),
               style: context.heading(size: 20),
             ),
             const SizedBox(height: 8),
@@ -727,7 +777,7 @@ class _ResPageState extends State<ResPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: AccentButton(
-                    text: isDownload || versions.isNotEmpty ? '下载' : '前往',
+                    text: isDownload || versions.isNotEmpty ? '下载' : '打开',
                     onTap: () => Navigator.pop(ctx, true),
                   ),
                 ),
@@ -737,8 +787,12 @@ class _ResPageState extends State<ResPage> {
         ),
       ),
     );
-    if (ok != true) return;
-    final target = chosen?.url ?? url;
-    await launchUrl(Uri.parse(target), mode: LaunchMode.externalApplication);
+    if (ok != true || !context.mounted) return;
+    await openCitroPage(
+      context,
+      chosen?.url ?? url,
+      title: title,
+      download: isDownload,
+    );
   }
 }

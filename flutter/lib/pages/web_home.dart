@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/quotes.dart';
-import '../data/resources.dart';
 import '../games/game_registry.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -11,8 +10,9 @@ import '../theme/tokens.dart';
 import '../widgets/global_search.dart';
 import '../widgets/paper.dart';
 import 'home_page.dart';
-import 'web_resource_actions.dart';
 import 'web_scrapbook.dart';
+
+void _noop() {}
 
 class WebHomePage extends StatelessWidget {
   final ValueChanged<int> onSwitchTab;
@@ -21,17 +21,14 @@ class WebHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
-    final header = WebDesktopHeader(
-      resources: false,
-      onHome: () {},
-      // RootShell's fourth destination is the resource page.
-      onResources: () => onSwitchTab(3),
-    );
+    const header = WebDesktopHeader(onHome: _noop);
     return WebDesktopPaper(
       child: LayoutBuilder(
         builder: (context, constraints) {
           final height = math.max(900.0, constraints.maxHeight);
+          final rowHeight = (height - 64 - 12 * 9) / 8;
+          // 搜索框高 44，星象卡顶部与它对齐（再让出 9px 纸胶带）。
+          final zodiacTop = (rowHeight - 44) / 2 + 9;
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: SizedBox(
@@ -47,94 +44,42 @@ class WebHomePage extends StatelessWidget {
                     1,
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: GlobalSearch(),
+                      child: GlobalSearch(hint: '搜索功能 / 游戏 / 页面，回车必应'),
                     ),
                   ),
                   const WebGridCell(1, 3, 3, 2, WeatherCard()),
                   const WebGridCell(1, 5, 3, 4, CalendarCard()),
-                  const WebGridCell(4, 3, 3, 1, FishCard()),
-                  const WebGridCell(4, 4, 3, 3, ZodiacCard()),
                   WebGridCell(
                     4,
-                    7,
+                    2,
+                    3,
+                    4,
+                    Padding(
+                      padding: EdgeInsets.only(top: zodiacTop),
+                      child: const ZodiacCard(),
+                    ),
+                  ),
+                  WebGridCell(
+                    4,
+                    6,
                     3,
                     1,
-                    WebTicket(
-                      title: 'Citro ',
-                      accent: '社区',
-                      trailing: context.app.unread > 0
-                          ? '${context.app.unread} 条新消息'
-                          : '0 条动态',
-                      rotate: -1.2,
-                      backgroundColor: c.noteB,
-                      trailingWidget: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${context.app.unread}',
-                            style: context.display(
-                              size: 27,
-                              weight: FontWeight.w700,
-                              color: c.accentInk,
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            context.app.unread > 0 ? '条新消息' : '条动态',
-                            style: context.body(size: 9.5, color: c.inkSoft),
-                          ),
-                        ],
-                      ),
-                      cornerAction: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: c.surface2.withAlpha(210),
-                          border: Border.all(color: c.accentInk.withAlpha(60)),
-                        ),
-                        child: Center(
-                          child: AppIcon(
-                            strokeSvg(AppIcons.bell, width: 1.8),
-                            size: 13,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ),
+                    _WebCommunityTicket(
+                      unread: context.app.unread,
                       onTap: () => onSwitchTab(2),
                     ),
                   ),
                   WebGridCell(
                     4,
-                    8,
+                    7,
                     3,
                     1,
-                    WebTicket(
-                      title: '食谱 ',
-                      accent: '日记',
-                      trailing: '',
-                      rotate: 1.1,
-                      backgroundColor: c.noteY,
-                      trailingWidget: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: c.surface2.withAlpha(170),
-                          border: Border.all(color: c.line2),
-                        ),
-                        child: Center(
-                          child: AppIcon(
-                            strokeSvg(AppIcons.arrowRight, width: 2),
-                            size: 15,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ),
+                    _WebRecipeTicket(
                       onTap: () => Navigator.of(context).pushNamed('/cook'),
                     ),
                   ),
-                  const WebGridCell(7, 2, 6, 7, _WebModsAndGames()),
+                  const WebGridCell(4, 8, 3, 1, FishCard()),
+                  const WebGridCell(7, 2, 6, 7, _WebGames()),
                   const WebGridCell(
                     1,
                     9,
@@ -153,219 +98,57 @@ class WebHomePage extends StatelessWidget {
   }
 }
 
-class _WebModsAndGames extends StatelessWidget {
-  const _WebModsAndGames();
+class _WebGames extends StatelessWidget {
+  const _WebGames();
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 9),
-                  child: WebSectionTitle('游戏 Mod', size: 18),
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        mainAxisExtent: (constraints.maxHeight - 20) / 3,
-                      ),
-                      itemCount: kMods.length,
-                      itemBuilder: (context, index) =>
-                          _WebModCard(mod: kMods[index], odd: index.isOdd),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Container(
-          width: 1,
-          margin: const EdgeInsets.symmetric(horizontal: 17),
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: c.line2.withAlpha(170))),
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, right: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [WebSectionTitle('小游戏', size: 18), Spacer()],
+              const WebSectionTitle('小游戏', size: 22),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '共 ${kGameCards.length} 款',
+                  style: context.hand(size: 13, color: c.inkSoft),
                 ),
               ),
+              const Spacer(),
               Text(
                 '账号同步 · 全站排行',
                 style: context.body(size: 10.5, color: c.inkSoft),
               ),
-              const SizedBox(height: 7),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 9,
-                      mainAxisSpacing: 9,
-                      mainAxisExtent: (constraints.maxHeight - 45) / 6,
-                    ),
-                    itemCount: kGameCards.length,
-                    itemBuilder: (context, index) => _WebGameCard(
-                      entry: kGameCards[index],
-                      angle: const [-1.2, 0.8, -0.4][index % 3],
-                    ),
-                  ),
-                ),
-              ),
             ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) => GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent: (constraints.maxHeight - 30) / 4,
+              ),
+              itemCount: kGameCards.length,
+              itemBuilder: (context, index) => _WebGameCard(
+                entry: kGameCards[index],
+                angle: const [-1.2, 0.8, -0.4][index % 3],
+              ),
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _WebModCard extends StatelessWidget {
-  final ModItem mod;
-  final bool odd;
-
-  const _WebModCard({required this.mod, required this.odd});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Transform.rotate(
-      angle: (odd ? .7 : -.7) * math.pi / 180,
-      child: Pressable(
-        onTap: () => openCitroResource(context, '《${mod.name}》Mod', mod.url),
-        borderRadius: BorderRadius.circular(14),
-        hoverOverlayColor: c.hl.withAlpha(24),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(7, 7, 7, 8),
-          decoration: BoxDecoration(
-            color: c.dark ? const Color(0xFF262320) : const Color(0xFFFFFDF8),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: CitroColors.shadows.paper(c),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        mod.image,
-                        fit: BoxFit.cover,
-                        cacheWidth: 480,
-                        errorBuilder: (_, _, _) => Container(color: c.noteG),
-                      ),
-                      Positioned(
-                        left: 6,
-                        top: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.surface2.withAlpha(235),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            mod.tag,
-                            style: context.body(size: 9, color: c.accentInk),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                mod.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.heading(size: 16, color: c.ink),
-              ),
-              Text(
-                mod.desc,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(size: 9.5, color: c.inkSoft, height: 1.35),
-              ),
-              const SizedBox(height: 3),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.hl.withAlpha(120),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.accentInk.withAlpha(75)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: c.accent.withAlpha(18),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppIcon(
-                        strokeSvg(AppIcons.download, width: 2),
-                        size: 10,
-                        color: c.accentInk,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '网盘下载',
-                        style: context.body(
-                          size: 10,
-                          weight: FontWeight.w700,
-                          color: c.accentInk,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '↗',
-                        style: context.body(
-                          size: 10,
-                          weight: FontWeight.w700,
-                          color: c.accentInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -433,6 +216,238 @@ class _WebGameCard extends StatelessWidget {
   }
 }
 
+class _WebCommunityTicket extends StatelessWidget {
+  final int unread;
+  final VoidCallback onTap;
+
+  const _WebCommunityTicket({required this.unread, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Transform.rotate(
+      angle: -.5 * math.pi / 180,
+      child: PaperCard(
+        color: c.noteB,
+        borderColor: c.line,
+        fold: true,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(2),
+          topRight: Radius.circular(2),
+          bottomLeft: Radius.circular(2),
+          bottomRight: Radius.circular(14),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
+        tapeWidth: 54,
+        tapeHeight: 15,
+        tapeTop: -8,
+        onTap: onTap,
+        child: Row(
+          children: [
+            _EntryIcon(icon: AppIcons.users),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _EntryTitle(first: 'Citro ', second: '社区'),
+                  Text(
+                    '在清爽的汽水里，与同频的灵魂相遇',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 10.5,
+                      color: c.ink2,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _EntryArrow(badge: unread),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WebRecipeTicket extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _WebRecipeTicket({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Transform.rotate(
+      angle: .5 * math.pi / 180,
+      child: PaperCard(
+        color: c.noteY,
+        borderColor: c.line,
+        fold: true,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(2),
+          topRight: Radius.circular(2),
+          bottomLeft: Radius.circular(2),
+          bottomRight: Radius.circular(14),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
+        tapeWidth: 54,
+        tapeHeight: 15,
+        tapeTop: -8,
+        onTap: onTap,
+        child: Row(
+          children: [
+            _EntryIcon(icon: AppIcons.book),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _EntryTitle(first: '食谱 ', second: '日记'),
+                  Text(
+                    '记录每一道拿手菜，把喜欢的味道收好。',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 10.5,
+                      color: c.ink2,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const _EntryArrow(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryIcon extends StatelessWidget {
+  final String icon;
+
+  const _EntryIcon({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: c.surface2.withAlpha(205),
+        shape: BoxShape.circle,
+        border: Border.all(color: c.line),
+      ),
+      child: Center(
+        child: AppIcon(
+          strokeSvg(icon, width: 1.9),
+          size: 17,
+          color: c.accentInk,
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryTitle extends StatelessWidget {
+  final String first;
+  final String second;
+
+  const _EntryTitle({required this.first, required this.second});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        style: context.display(size: 24, color: c.ink),
+        children: [
+          TextSpan(text: first),
+          TextSpan(
+            text: second,
+            style: context
+                .heading(size: 22, color: c.ink)
+                .copyWith(backgroundColor: c.hl, height: 1.25),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EntryArrow extends StatelessWidget {
+  final int badge;
+
+  const _EntryArrow({this.badge = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: c.surface2.withAlpha(200),
+                shape: BoxShape.circle,
+                border: Border.all(color: c.line2),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(AppIcons.arrowRight, width: 2),
+                  size: 15,
+                  color: c.accentInk,
+                ),
+              ),
+            ),
+          ),
+          if (badge > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 15),
+                height: 15,
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: c.stamp,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Center(
+                  child: Text(
+                    badge > 9 ? '9+' : '$badge',
+                    style: context.body(
+                      size: 8.5,
+                      weight: FontWeight.w800,
+                      color: c.surface2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WebQuoteStrip extends StatelessWidget {
   const _WebQuoteStrip();
 
@@ -457,44 +472,72 @@ class _WebQuoteStrip extends StatelessWidget {
           context: context,
           tip: '已复制每日一言',
         ),
-        child: Row(
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Image.asset(
-              'assets/images/logo.webp',
-              width: 34,
-              height: 34,
-              cacheWidth: 102,
-            ),
-            const SizedBox(width: 8),
-            Text('Citro', style: context.display(size: 17, color: c.inkSoft)),
-            const SizedBox(width: 18),
-            Expanded(
+            Align(
+              alignment: Alignment.centerLeft,
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    flex: 5,
-                    child: Text(
-                      quote.cn,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.heading(size: 19, color: c.ink),
-                    ),
+                  Image.asset(
+                    'assets/images/logo.webp',
+                    width: 34,
+                    height: 34,
+                    cacheWidth: 102,
                   ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    flex: 6,
-                    child: Text(
-                      quote.en,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.hand(
-                        size: 18,
-                        color: c.inkSoft,
-                        style: FontStyle.italic,
-                      ),
-                    ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Citro',
+                    style: context.display(size: 17, color: c.inkSoft),
                   ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 120),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxText = math.max(
+                    120.0,
+                    (constraints.maxWidth - 40) * .48,
+                  );
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxText),
+                        child: Text(
+                          quote.cn,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: context.heading(size: 19, color: c.ink),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 18,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        color: c.line2,
+                      ),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxText),
+                        child: Text(
+                          quote.en,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: context.hand(
+                            size: 18,
+                            color: c.inkSoft,
+                            style: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

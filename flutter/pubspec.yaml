@@ -15,6 +15,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   http: ^1.2.2
+  crypto: ^3.0.7
   flutter_svg: ^2.0.17
   lpinyin: ^2.0.3
   shared_preferences: ^2.3.3
@@ -33,6 +34,7 @@ dependencies:
   geocoding: ^5.0.0
   web: ^1.1.2
   flutter_staggered_grid_view: ^0.7.0
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
@@ -70,14 +72,11 @@ flutter:
           weight: 400
         - asset: assets/fonts/noto-sc-700-app.otf
           weight: 700
-    - family: NotoSCWeb
-      fonts:
-        - asset: assets/fonts/noto-sc-400-web.ttf
-          weight: 400
-        - asset: assets/fonts/noto-sc-700-web.ttf
-          weight: 700
 
 # shared_preferences_android 2.5.0/2.5.1 在 release(R8) 下会因 coroutine 类名被裁剪而
 # NoSuchMethodError，表现为启动即卡死/打不开。2.5.2 已带 consumer proguard 规则。
 dependency_overrides:
   shared_preferences_android: 2.5.2
+  # Windows WebView2 的 DXGI 纹理在本机显示空白，内嵌副本改用 CPU 纹理并收紧承载窗口。
+  flutter_inappwebview_windows:
+    path: packages/flutter_inappwebview_windows
