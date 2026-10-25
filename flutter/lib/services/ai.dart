@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import 'platform.dart' as platform;
+import 'api.dart';
 
 class AiException implements Exception {
   final String message;
@@ -14,17 +14,10 @@ class AiException implements Exception {
 }
 
 class AiService {
-  static const String _directEndpoint =
-      'https://open.bigmodel.cn/api/paas/v4/chat/completions';
   static const String _webEndpoint = '/trashapi/api/ai';
   static const String model = 'glm-5.3-flash';
-  static const String _compileKey = platform.compileAiKey;
-  static final String _key = _compileKey.isNotEmpty
-      ? _compileKey
-      : (platform.platformEnvironment('GLM_API_KEY') ?? '');
 
-  static String get _endpoint => kIsWeb ? _webEndpoint : _directEndpoint;
-  static bool get available => kIsWeb || _key.isNotEmpty;
+  static String get _endpoint => kIsWeb ? _webEndpoint : '${Api.base}/api/ai';
 
   static const String _system = '''
 你是 CiCi，Citro 手账 App 的傲娇 AI 伙伴。熟悉首页（打卡/天气/食谱日记/摸鱼/星象/一言/番茄钟）、小游戏、社区（图文/语音/评论）、食谱广场/冰箱/购物清单和「我的」。
@@ -52,10 +45,8 @@ class AiService {
   }
 
   static http.Request _request(Map<String, dynamic> payload) {
-    if (!available) throw AiException('AI 暂未配置');
     final req = http.Request('POST', Uri.parse(_endpoint));
     req.headers['Content-Type'] = 'application/json; charset=utf-8';
-    if (!kIsWeb) req.headers['Authorization'] = 'Bearer $_key';
     req.bodyBytes = utf8.encode(jsonEncode(payload));
     return req;
   }
@@ -65,11 +56,14 @@ class AiService {
     try {
       raw = await res.stream.bytesToString();
       final j = jsonDecode(raw);
+      if (j is Map && j['err'] is String && (j['err'] as String).isNotEmpty) {
+        return j['err'] as String;
+      }
       final err = j is Map ? j['error'] : null;
       if (err is Map && err['message'] is String)
         return err['message'] as String;
     } catch (_) {}
-    if (res.statusCode == 401) return 'AI 鉴权失败，请检查密钥';
+    if (res.statusCode == 401) return 'AI 服务鉴权失败，请稍后重试';
     if (res.statusCode == 429) return 'AI 请求太频繁，请稍后再试';
     if (raw.isNotEmpty)
       return raw.length > 120 ? '${raw.substring(0, 120)}…' : raw;

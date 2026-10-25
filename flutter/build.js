@@ -45,13 +45,8 @@ const env = Object.assign({}, process.env, {
   JAVA_TOOL_OPTIONS: '-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8',
 });
 
-let aiKey = process.env.GLM_API_KEY || '';
-if (!aiKey) {
-  try { aiKey = fs.readFileSync(path.join(rootDir, '密钥', 'glm.key'), 'utf8').trim(); } catch (e) {}
-}
 const buildArgs = ['build', 'apk', '--' + buildType, '--dart-define=APP_VERSION=' + version];
-if (aiKey) buildArgs.push('--dart-define=GLM_API_KEY=' + aiKey);
-console.log(`> flutter build apk --${buildType}  (v${version})  AI:${aiKey ? 'on' : 'off'}`);
+console.log(`> flutter build apk --${buildType}  (v${version})`);
 try {
   cp.execFileSync(flutterBin, buildArgs, {
     cwd: dir,

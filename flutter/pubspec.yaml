@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.8.0）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 1.8.0+1802
+version: 1.8.0+1803
 
 environment:
   sdk: ^3.13.5

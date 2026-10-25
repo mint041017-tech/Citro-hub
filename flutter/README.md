@@ -22,6 +22,7 @@ node build.js release
 ```
 
 产物：`../APK/Citro-v1.8.0-release.apk`（versionCode 1800 / versionName 1.8.0，签名与 v1.1.1 相同，可覆盖升级）。
+Android 与 iOS 构建脚本通过 `APP_VERSION` 设置应用版本并使用常规 Flutter 构建参数；无需提供或嵌入 AI provider key。
 
 ## Web
 
@@ -35,7 +36,7 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 - 浏览器定位需要 HTTPS 或 localhost；拒绝授权后继续使用默认城市天气。
 - Web 录音使用浏览器 Opus/WebM，图片选择、语音播放与截图分享使用浏览器能力。
 - Web 不包含 Android 应用内更新；浏览器通知需要用户手动授权。
-- AI 统一使用 `glm-5.3-flash`、启用 thinking 和 low reasoning effort，浏览器只访问同源 `/trashapi/api/ai`，密钥仅由 Node 服务从 `GLM_API_KEY` 读取。CiCi 对话使用 SSE 流式输出；运势、成语和飞花令等单次判断使用非流式响应。
+- AI 统一使用 `glm-5.3-flash`、启用 thinking 和 low reasoning effort；客户端经自有 Node 服务 `/trashapi/api/ai` 请求，provider 密钥 `GLM_API_KEY` 只配置在 Node 服务端环境/配置中，不需要放入客户端或构建参数。CiCi 对话使用 SSE 流式输出；运势、成语和飞花令等单次判断使用非流式响应。
 
 ## 应用内更新（Android）
 
@@ -53,7 +54,7 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 
 最终 IPA 必须在 macOS + Xcode 上签名构建，剩余步骤见
 [`../docs/ios-mac-checklist.md`](../docs/ios-mac-checklist.md)。快捷构建脚本：
-`bash ios/build_ipa.sh`（需先设置 Team、CocoaPods 与 GLM Key）。
+`bash ios/build_ipa.sh`（需先设置 Team 与 CocoaPods；AI provider key 不属于客户端构建配置）。
 
 - 后端：`https://chimu-claw.xyz/trashapi`（`lib/services/api.dart`）
 - 包名 / Bundle ID：`com.chimu.crew`；Android minSdk 24 / targetSdk 36；iOS 15.0+

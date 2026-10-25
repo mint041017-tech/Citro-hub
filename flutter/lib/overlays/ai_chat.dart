@@ -66,10 +66,6 @@ class _AiChatSheetState extends State<_AiChatSheet> {
     if (_sending) return;
     final text = (preset ?? _input.text).trim();
     if (text.isEmpty) return;
-    if (!AiService.available) {
-      setState(() => _error = 'AI 暂未配置');
-      return;
-    }
     _input.clear();
     _error = null;
     final assistant = _ChatMessage(user: false, text: '', pending: true);

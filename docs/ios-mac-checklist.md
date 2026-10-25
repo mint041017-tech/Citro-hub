@@ -52,8 +52,9 @@ cd flutter
 bash ios/build_ipa.sh
 ```
 
-脚本会读取 `pubspec.yaml` 的版本、从 `../密钥/glm.key` 或 `GLM_API_KEY` 注入 AI Key，
-然后执行 `flutter build ipa --release --export-method app-store`。产物在：
+脚本会读取 `pubspec.yaml` 的版本并通过 `APP_VERSION` 传给 Flutter，然后执行
+`flutter build ipa --release --export-method app-store`。客户端 AI 请求经自有服务
+`/trashapi/api/ai` 转发；provider `GLM_API_KEY` 只配置在 Node 服务端环境/配置中，IPA 构建不需要该密钥。产物在：
 
 ```text
 build/ios/ipa/
@@ -65,9 +66,10 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=1.7.10 \
-  --dart-define=GLM_API_KEY="<你的 GLM Key>"
+  --dart-define=APP_VERSION=1.7.10
 ```
+
+手动构建时将 `APP_VERSION` 与 `pubspec.yaml` 的版本号保持一致。
 
 第一次构建必须打开 Xcode 设置 Team；否则会报 `No profiles for 'com.chimu.crew' were found`。
 

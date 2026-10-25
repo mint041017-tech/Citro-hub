@@ -16,15 +16,6 @@ if [[ -z "${VERSION}" ]]; then
   exit 1
 fi
 
-KEY="${GLM_API_KEY:-}"
-if [[ -z "${KEY}" && -f "../密钥/glm.key" ]]; then
-  KEY="$(tr -d '\r\n' < "../密钥/glm.key")"
-fi
-if [[ -z "${KEY}" ]]; then
-  echo "❌ 缺少 GLM API Key：设置环境变量 GLM_API_KEY，或放置 ../密钥/glm.key。"
-  exit 1
-fi
-
 if ! command -v pod >/dev/null 2>&1; then
   echo "❌ 未找到 CocoaPods。请先执行：sudo gem install cocoapods"
   exit 1
@@ -40,8 +31,7 @@ echo "▶ flutter build ipa (v${VERSION})"
 flutter build ipa \
   --release \
   --export-method app-store \
-  --dart-define=APP_VERSION="${VERSION}" \
-  --dart-define=GLM_API_KEY="${KEY}"
+  --dart-define=APP_VERSION="${VERSION}"
 
 echo
 echo "✅ IPA 目录：build/ios/ipa/"
