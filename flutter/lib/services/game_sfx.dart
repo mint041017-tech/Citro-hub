@@ -211,6 +211,78 @@ class GameSfx {
     _tire = null;
   }
 
+  static Uint8List? _chargeBuf;
+  static AudioPlayer? _chargePlayer;
+  static bool _chargeWarmed = false;
+
+  /// 跳一跳蓄力音：整段 1.4s 的节拍上行音一次性合成并播放，
+  /// 避免逐声调用播放器造成延迟累积、与蓄力进度脱节。
+  static Uint8List _chargeRamp() {
+    const totalMs = 1400.0;
+    const stepMs = 70.0;
+    const beepMs = 46.0;
+    final n = (totalMs / 1000 * _rate).round();
+    final data = Float32List(n);
+    var phase = 0.0;
+    for (var i = 0; i < n; i++) {
+      final tMs = i / _rate * 1000;
+      final power = (tMs / totalMs).clamp(0.0, 1.0);
+      final local = tMs % stepMs;
+      final freq = 300 + 620 * power;
+      phase += freq / _rate;
+      phase %= 1;
+      double s = phase < 0.5 ? 1.0 : -1.0;
+      if (local >= beepMs) {
+        s = 0;
+      } else {
+        final attack = math.min(1.0, local / 4.0);
+        final env = attack * math.exp(-local / beepMs * 4.5);
+        s *= env;
+      }
+      data[i] = s * (0.055 + 0.045 * power);
+    }
+    return _wav(data);
+  }
+
+  static Future<void> warmupJumpCharge() async {
+    if (!_supported) return;
+    try {
+      _chargePlayer ??= AudioPlayer();
+      _chargeBuf ??= _chargeRamp();
+      if (_chargeWarmed) return;
+      _chargeWarmed = true;
+      await _chargePlayer!.setPlayerMode(PlayerMode.lowLatency);
+      await _chargePlayer!.setVolume(0);
+      await _chargePlayer!.play(
+        BytesSource(_chargeBuf!, mimeType: 'audio/wav'),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await _chargePlayer!.stop();
+      await _chargePlayer!.setVolume(1);
+    } catch (_) {}
+  }
+
+  static Future<void> jumpChargeStart() async {
+    if (!_supported || _muted || !soundsEnabled) return;
+    try {
+      _chargePlayer ??= AudioPlayer();
+      _chargeBuf ??= _chargeRamp();
+      await _chargePlayer!.stop();
+      await _chargePlayer!.setVolume(1);
+      await _chargePlayer!.play(
+        BytesSource(_chargeBuf!, mimeType: 'audio/wav'),
+      );
+    } catch (_) {
+      if (!kIsWeb) _available = false;
+    }
+  }
+
+  static Future<void> jumpChargeStop() async {
+    try {
+      await _chargePlayer?.stop();
+    } catch (_) {}
+  }
+
   // ------------------------------------------------------------------
   // 震动（HapticFeedback，无需权限）
   // ------------------------------------------------------------------

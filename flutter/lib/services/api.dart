@@ -302,6 +302,20 @@ class Api {
       get('/api/draw', query: {if (deviceId != null) 'deviceId': deviceId});
   static Future<Map<String, dynamic>> drawTake({String? deviceId}) =>
       post('/api/draw', {if (deviceId != null) 'deviceId': deviceId});
+  static Future<Map<String, dynamic>> drawReroll({String? deviceId}) =>
+      post('/api/draw/reroll', {if (deviceId != null) 'deviceId': deviceId});
+
+  static Future<Map<String, dynamic>> playRecords({String? deviceId}) => get(
+    '/api/play',
+    query: {if (deviceId != null) 'deviceId': deviceId},
+  );
+  static Future<Map<String, dynamic>> playDraw({
+    String? deviceId,
+    String? name,
+  }) => post('/api/play', {
+    if (deviceId != null) 'deviceId': deviceId,
+    if (name != null) 'name': name,
+  });
 
   static Future<Map<String, dynamic>> moyuGet() => get('/api/moyu/config');
   static Future<Map<String, dynamic>> moyuSave(Map<String, dynamic> config) =>
@@ -364,4 +378,14 @@ class Api {
     query: {if (deviceId != null) 'deviceId': deviceId},
     auth: true,
   );
+
+  static Future<Map<String, dynamic>> checkinTake({
+    String? deviceId,
+    String? last,
+    int? streak,
+  }) => post('/api/checkin', {
+    if (deviceId != null) 'deviceId': deviceId,
+    if (last != null) 'last': last,
+    if (streak != null) 'streak': streak,
+  });
 }

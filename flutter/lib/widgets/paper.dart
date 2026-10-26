@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
@@ -693,7 +694,9 @@ class _PressableState extends State<Pressable> {
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null || widget.onLongPress != null;
     final c = context.c;
-    final hoverShadow = widget.hoverShadow ?? !kIsWeb;
+    // Windows 上鼠标悬停会连续触发大半径阴影重绘，是掉帧的主要来源之一。
+    final cheapHover = !kIsWeb && platform.isWindows;
+    final hoverShadow = (widget.hoverShadow ?? !kIsWeb) && !cheapHover;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) {

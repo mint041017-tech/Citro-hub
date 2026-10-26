@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../utils/lunar.dart';
 import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
+import 'ai_chat.dart';
 
 Future<void> showFortuneOverlay(BuildContext context) async {
   await showGeneralDialog(
@@ -71,6 +72,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
   Timer? _introTimer;
   bool _frontUp = false;
   bool _flipBusy = false;
+  bool _transferBusy = false;
 
   String get _backAsset =>
       'assets/card/card_${(_backIndex + 1).toString().padLeft(2, '0')}.webp';
@@ -191,12 +193,178 @@ class _FortuneDialogState extends State<_FortuneDialog>
     }
   }
 
+  Future<void> _openDeedChat() async {
+    final state = AppState.instance;
+    await showAiChat(
+      context,
+      goodDeed: true,
+      onGoodDeed: () => unawaited(state.grantFortuneTransfer()),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _useTransfer() async {
+    if (_transferBusy) return;
+    setState(() => _transferBusy = true);
+    HapticFeedback.mediumImpact();
+    if (_frontUp) await _flipToBack();
+    final next = await AppState.instance.useFortuneTransfer();
+    if (!mounted) return;
+    if (next != null) {
+      setState(() => idx = next);
+      // 留一点时间让用户看到卡背，再翻开新签。
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+      if (!mounted) return;
+      _flipToFront();
+      HapticFeedback.lightImpact();
+    } else {
+      _flipToFront();
+      AppToast.show(context, '今天已经转运过了');
+    }
+    if (mounted) setState(() => _transferBusy = false);
+  }
+
+  Widget _transferBox(BuildContext context, AppState state) {
+    final c = context.c;
+    final used = state.fortuneTransferUsed;
+    final ready = state.fortuneTransferReady;
+    final label = used
+        ? '今日转运已用 · 明天再来'
+        : ready
+        ? '转运 · 再抽一签'
+        : '找 CiCi 分享好事 · 换一签';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: c.dark ? const Color(0x14F2A43C) : const Color(0xFFFFF4E3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.accent.withAlpha(90)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AppIcon(
+                strokeSvg(AppIcons.sparkle, width: 2),
+                size: 14,
+                color: c.accentInk,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  '抽到下签了？还有一次转运机会',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: c.accentInk,
+                  ),
+                ),
+              ),
+              if (ready) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.accent,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    '待使用',
+                    style: context.body(
+                      size: 9,
+                      weight: FontWeight.w800,
+                      color: const Color(0xFF2E2C22),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            used
+                ? '今天的好运已经换过一次，剩下的交给明天。'
+                : ready
+                ? '好事已经分享给 CiCi，这一签可以重新抽。'
+                : '跟 CiCi 说说今天做的一件好事，就能换一签。',
+            style: context.body(size: 10.5, color: c.inkSoft, height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          Pressable(
+            onTap: used || _transferBusy
+                ? null
+                : (ready ? _useTransfer : _openDeedChat),
+            child: Container(
+              height: 34,
+              decoration: BoxDecoration(
+                color: used
+                    ? c.surface2
+                    : (ready ? c.accent : Colors.transparent),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: used
+                      ? c.line
+                      : (ready ? c.accent : c.accent.withAlpha(160)),
+                ),
+              ),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_transferBusy)
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.6,
+                          color: ready ? const Color(0xFF2E2C22) : c.accentInk,
+                        ),
+                      )
+                    else
+                      AppIcon(
+                        strokeSvg(
+                          ready ? AppIcons.refresh : AppIcons.sparkle,
+                          width: 2,
+                        ),
+                        size: 13,
+                        color: used
+                            ? c.inkSoft
+                            : (ready ? const Color(0xFF2E2C22) : c.accentInk),
+                      ),
+                    const SizedBox(width: 5),
+                    Text(
+                      label,
+                      style: context.body(
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: used
+                            ? c.inkSoft
+                            : (ready ? const Color(0xFF2E2C22) : c.accentInk),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final state = context.app;
     final today = DateTime.now();
     final fortune = kFortunes[(idx ?? 0) % kFortunes.length];
+    final isBad = fortune.lv == '下签' || fortune.lv == '下下签';
     final festId = festivalIdOf(today);
     final term = termToday(today);
     final at = termAt(today);
@@ -314,15 +482,24 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 5,
-                                                ),
-                                                child: Text(
-                                                  '${today.year}年${today.month}月 · ${weekdayChinese(today)}',
-                                                  style: context.body(
-                                                    size: 12,
-                                                    color: c.ink2,
+                                              Flexible(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment:
+                                                      Alignment.bottomLeft,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          bottom: 5,
+                                                        ),
+                                                    child: Text(
+                                                      '${today.year}年${today.month}月 · ${weekdayChinese(today)}',
+                                                      maxLines: 1,
+                                                      style: context.body(
+                                                        size: 12,
+                                                        color: c.ink2,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -713,6 +890,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                     ),
                                   ),
                                 ),
+                                if (!loading && isBad && festId == null) ...[
+                                  const SizedBox(height: 12),
+                                  _transferBox(context, state),
+                                ],
                                 const SizedBox(height: 12),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,

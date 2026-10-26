@@ -27,6 +27,12 @@ const kGameCards = <GameCardData>[
     gradient: _gOrange,
     art: _artSudoku,
   ),
+  GameCardData(
+    key: 'gjigsaw',
+    title: '异形数独',
+    gradient: _gGreen,
+    art: _artJigsaw,
+  ),
   GameCardData(key: 'gnono', title: '数织', gradient: _gGreen, art: _artNono),
   GameCardData(
     key: 'gslide',
@@ -723,4 +729,56 @@ class _LiquidJarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => false;
+}
+
+Widget _artJigsaw(BuildContext context) {
+  final c = context.c;
+  final colors = [
+    c.accent.withAlpha(150),
+    c.mint.withAlpha(150),
+    c.accentLt.withAlpha(170),
+    c.stamp.withAlpha(90),
+    c.accent2.withAlpha(120),
+  ];
+  const regions = [
+    0, 0, 0, 1, 1, //
+    0, 0, 1, 1, 1, //
+    2, 2, 2, 3, 3, //
+    2, 2, 2, 3, 3, //
+    2, 2, 4, 4, 4, //
+  ];
+  const values = {0: '5', 6: '', 12: '3', 19: '1', 24: '2'};
+  return Container(
+    width: 40,
+    height: 40,
+    padding: const EdgeInsets.all(2),
+    decoration: BoxDecoration(
+      color: c.surface2.withAlpha(160),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: GridView.count(
+      crossAxisCount: 5,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 1,
+      crossAxisSpacing: 1,
+      children: [
+        for (var i = 0; i < 25; i++)
+          Container(
+            decoration: BoxDecoration(
+              color: colors[regions[i]],
+              borderRadius: BorderRadius.circular(1.5),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              values[i] ?? '',
+              style: const TextStyle(
+                fontSize: 5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF4E4A40),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }

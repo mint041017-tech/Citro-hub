@@ -520,12 +520,16 @@ class _Board24 extends StatelessWidget {
                 height: width,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFFFFFDF8), Color(0xFFFFFDF8)],
+                      colors: c.dark
+                          ? [c.surface, c.surface]
+                          : const [Color(0xFFFFFDF8), Color(0xFFFFFDF8)],
                     ),
-                    border: Border.all(color: const Color(0xE6FFF8EA)),
+                    border: Border.all(
+                      color: c.dark ? c.line2 : const Color(0xE6FFF8EA),
+                    ),
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
@@ -556,6 +560,7 @@ class _Tile24 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final style = _tileStyle(context, value);
     final fs = switch (value) {
       >= 1024 => cell * 0.27,
@@ -569,7 +574,10 @@ class _Tile24 extends StatelessWidget {
         color: style.$1,
         gradient: style.$3,
         borderRadius: BorderRadius.circular(10),
-        border: style.$4 ? null : Border.all(color: const Color(0x0D2E2C22)),
+        // 深色下给同色阶相邻方块留一圈浅描边，边界更清楚。
+        border: c.dark
+            ? Border.all(color: const Color(0x1AFFFFFF))
+            : (style.$4 ? null : Border.all(color: const Color(0x0D2E2C22))),
         boxShadow: style.$5
             ? const [
                 BoxShadow(
@@ -721,51 +729,51 @@ class _Tile24 extends StatelessWidget {
         ),
       };
     }
-    // 深色：同样拉开 2 / 4 的一档色阶，8 / 16 顺次加深
+    // 深色：低段用冷暖交替的色相拉开层次，高段走金→薄荷；128/256 不再同色。
     return switch (v) {
       2 => (
-        const Color(0xFF3A3A46),
+        const Color(0xFF2F2F38),
         const Color(0xFFD8D2C4),
         null,
         false,
         false,
       ),
       4 => (
-        const Color(0xFF4C4534),
-        const Color(0xFFF2DCA8),
+        const Color(0xFF3F4350),
+        const Color(0xFFE6E9F2),
         null,
         false,
         false,
       ),
       8 => (
-        const Color(0xFF5A4531),
+        const Color(0xFF4A4430),
         const Color(0xFFEFE2CC),
         null,
         false,
         false,
       ),
       16 => (
-        const Color(0xFF6B5233),
+        const Color(0xFF5A3E2C),
         const Color(0xFFF5E9D2),
         null,
         false,
         false,
       ),
       32 => (
-        const Color(0xFF7E6326),
-        const Color(0xFFF2EBDA),
+        const Color(0xFF7A4A1F),
+        const Color(0xFFFFE9CC),
         null,
         false,
         false,
       ),
       64 => (
-        const Color(0xFFA97F2E),
-        const Color(0xFF101012),
+        const Color(0xFF9C5A12),
+        const Color(0xFFFFF4E4),
         null,
         false,
         false,
       ),
-      128 => (c.accent, const Color(0xFF101012), null, false, false),
+      128 => (c.accent2, const Color(0xFF101012), null, false, false),
       256 => (c.accent, const Color(0xFF101012), null, false, false),
       512 => (c.accentLt, const Color(0xFF101012), null, false, false),
       1024 => (

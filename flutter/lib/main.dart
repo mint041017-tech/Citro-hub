@@ -309,6 +309,7 @@ class _SplashGateState extends State<SplashGate> {
   }
 
   Future<void> _boot() async {
+    final startedAt = DateTime.now();
     if (mounted) {
       setState(() {
         _ready = false;
@@ -321,6 +322,14 @@ class _SplashGateState extends State<SplashGate> {
     } catch (e) {
       _booted = false;
       _error = '$e';
+    }
+    // Windows 与 iPad 一样先完整展示启动插画，避免秒开时只闪一帧。
+    if (!kIsWeb && platform.isWindows) {
+      const minSplash = Duration(milliseconds: 1000);
+      final elapsed = DateTime.now().difference(startedAt);
+      if (elapsed < minSplash) {
+        await Future<void>.delayed(minSplash - elapsed);
+      }
     }
     if (mounted) setState(() => _ready = true);
   }
@@ -437,17 +446,29 @@ class SplashScreen extends StatelessWidget {
     }
     final size = MediaQuery.sizeOf(context);
     // iPad 固定使用横版启动图，与原生 LaunchImage 的 iPad 资源保持一致；
-    // iPhone/Duo 仍按当前窗口方向选择。
+    // Windows 桌面端复用同一张 iPad 启动图；iPhone/Duo 仍按窗口方向选择。
+    final desktopSplash = !kIsWeb && platform.isWindows;
     final isPad = size.shortestSide >= 700;
-    final landscape = isPad || size.width > size.height;
+    final landscape = desktopSplash || isPad || size.width > size.height;
     return Scaffold(
       backgroundColor: const Color(0xFFFBF7EC),
-      body: Image.asset(
-        landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
-        key: ValueKey(landscape ? 'splash-landscape' : 'splash-portrait'),
-        fit: BoxFit.cover,
-        alignment: landscape ? Alignment.center : Alignment.topCenter,
-        cacheWidth: landscape ? 2000 : 1080,
+      body: SizedBox.expand(
+        child: Image.asset(
+          landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
+          key: ValueKey(landscape ? 'splash-landscape' : 'splash-portrait'),
+          fit: BoxFit.cover,
+          alignment: landscape ? Alignment.center : Alignment.topCenter,
+          cacheWidth: landscape ? 2000 : 1080,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded) return child;
+            return AnimatedOpacity(
+              opacity: frame == null ? 0 : 1,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              child: child,
+            );
+          },
+        ),
       ),
     );
   }

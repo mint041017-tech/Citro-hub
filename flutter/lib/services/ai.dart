@@ -17,7 +17,7 @@ class AiService {
   static const String _directEndpoint =
       'https://open.bigmodel.cn/api/paas/v4/chat/completions';
   static const String _webEndpoint = '/trashapi/api/ai';
-  static const String _windowsProxyEndpoint = String.fromEnvironment(
+  static const String _proxyEndpoint = String.fromEnvironment(
     'AI_PROXY_URL',
     defaultValue: 'https://chimu-claw.xyz/trashapi/api/ai',
   );
@@ -27,12 +27,11 @@ class AiService {
       ? _compileKey
       : (platform.platformEnvironment('GLM_API_KEY') ?? '');
 
-  /// 没有内置密钥的桌面端与 Web 一样走服务端代理，避免把 Key 写进安装包。
-  static bool get _useProxy =>
-      kIsWeb || (platform.isWindows && _key.isEmpty);
+  /// 没有内置密钥时统一走服务端代理，避免把 Key 写进安装包。
+  static bool get _useProxy => kIsWeb || _key.isEmpty;
   static String get _endpoint => kIsWeb
       ? _webEndpoint
-      : (_useProxy ? _windowsProxyEndpoint : _directEndpoint);
+      : (_useProxy ? _proxyEndpoint : _directEndpoint);
   static bool get available => _useProxy || _key.isNotEmpty;
 
   static const String _system = '''

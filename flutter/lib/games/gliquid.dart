@@ -26,6 +26,9 @@ import 'gliquid_game.dart';
 import 'gliquid_physics.dart';
 import 'gliquid_sfx.dart';
 
+// 线上入口已换成 WebView 版；下方旧原生实现仅供物理/预览测试使用。
+export 'gliquid_web.dart';
+
 const Color _ink = Color(0xFF26313F);
 const Color _cream = Color(0xFFFFFAF0);
 const Color _paper = Color(0xFFF5ECDB);
@@ -98,14 +101,14 @@ class _Repaint extends ChangeNotifier {
   void tick() => notifyListeners();
 }
 
-class GameLiquidPage extends StatefulWidget {
-  const GameLiquidPage({super.key});
+class GameLiquidNativePage extends StatefulWidget {
+  const GameLiquidNativePage({super.key});
 
   @override
-  State<GameLiquidPage> createState() => _GameLiquidPageState();
+  State<GameLiquidNativePage> createState() => _GameLiquidPageState();
 }
 
-class _GameLiquidPageState extends State<GameLiquidPage>
+class _GameLiquidPageState extends State<GameLiquidNativePage>
     with SingleTickerProviderStateMixin {
   final _repaint = _Repaint();
   final _focus = FocusNode(debugLabel: 'liquid-2048');
@@ -366,86 +369,80 @@ class _GameLiquidPageState extends State<GameLiquidPage>
       autofocus: true,
       onKeyEvent: _onKey,
       child: GameScaffold(
-          gameKey: 'gliquid',
-          title: '咕噜果冻铺',
-          rankGame: 'liquid',
-          showLive: true,
-          liveProgress: _liveProgressNotifier,
-          onBack: () => popOrHome(context),
-          pills: [
-            GameScorePill(label: '分数', value: LiquidGame.formatScore(game.score)),
-            GameScorePill(
-              label: '最高分',
-              value: LiquidGame.formatScore(math.max(_best, game.score)),
-            ),
-            GameScorePill(
-              label: '接下来',
-              value: game.queue
-                  .skip(1)
-                  .take(3)
-                  .map((l) => LiquidGame.formatBlobValue(
-                        LiquidLevels.valueForLevel(l),
-                      ))
-                  .join('·'),
-              minWidth: 96,
-            ),
-          ],
-          actions: [
-            GameActionButton(
-              label: '重开',
-              icon: GameIcons.refresh,
-              onTap: () => _restart(),
-            ),
-            GameActionButton(
-              label: '排行榜',
-              icon: GameIcons.trophy,
-              onTap: () => showGameRank(
-                context,
-                game: 'liquid',
-                title: '咕噜果冻铺',
-              ),
-            ),
-          ],
-          boardGap: 12,
-          board: LayoutBuilder(
-            builder: (context, cons) {
-              final media = MediaQuery.sizeOf(context);
-              final avail = cons.maxWidth.isFinite ? cons.maxWidth : 760.0;
-              final wide = media.width >= 1100 && media.width > media.height;
-              final boardW = math.min(avail, 430.0);
-              // 竖屏时让整页放得下，避免拖动瞄准时把页面也一起滚了。
-              final boardH = wide
-                  ? math.min(760.0, math.max(440.0, media.height - 240))
-                  : math.min(620.0, math.max(460.0, media.height - 350));
-              return SizedBox(
-                width: boardW,
-                height: boardH,
-                child: GameLiquidView(
-                  game: game,
-                  repaint: _repaint,
-                  best: _best,
-                  newBest: _newBest,
-                  toast: _toast,
-                  onBack: () => popOrHome(context),
-                  onStart: _start,
-                  onRestart: () => _restart(),
-                  onHome: () => _restart(demo: true),
-                  onRank: () => showGameRank(
-                    context,
-                    game: 'liquid',
-                    title: '咕噜果冻铺',
-                  ),
-                  onPointerDown: _onPointerDown,
-                  onPointerMove: _onPointerMove,
-                  onPointerUp: _onPointerUp,
-                  onPointerCancel: _onPointerCancel,
-                  onHover: _onHover,
-                  chrome: false,
-                ),
-              );
-            },
+        gameKey: 'gliquid',
+        title: '咕噜果冻铺',
+        rankGame: 'liquid',
+        showLive: true,
+        liveProgress: _liveProgressNotifier,
+        onBack: () => popOrHome(context),
+        pills: [
+          GameScorePill(label: '分数', value: LiquidGame.formatScore(game.score)),
+          GameScorePill(
+            label: '最高分',
+            value: LiquidGame.formatScore(math.max(_best, game.score)),
           ),
+          GameScorePill(
+            label: '接下来',
+            value: game.queue
+                .skip(1)
+                .take(3)
+                .map(
+                  (l) =>
+                      LiquidGame.formatBlobValue(LiquidLevels.valueForLevel(l)),
+                )
+                .join('·'),
+            minWidth: 96,
+          ),
+        ],
+        actions: [
+          GameActionButton(
+            label: '重开',
+            icon: GameIcons.refresh,
+            onTap: () => _restart(),
+          ),
+          GameActionButton(
+            label: '排行榜',
+            icon: GameIcons.trophy,
+            onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+          ),
+        ],
+        boardGap: 12,
+        board: LayoutBuilder(
+          builder: (context, cons) {
+            final media = MediaQuery.sizeOf(context);
+            final avail = cons.maxWidth.isFinite ? cons.maxWidth : 760.0;
+            final wide = media.width >= 1100 && media.width > media.height;
+            final boardW = math.min(avail, 430.0);
+            // 竖屏时让整页放得下，避免拖动瞄准时把页面也一起滚了。
+            final boardH = wide
+                ? math.min(760.0, math.max(440.0, media.height - 240))
+                : math.min(620.0, math.max(460.0, media.height - 350));
+            return SizedBox(
+              width: boardW,
+              height: boardH,
+              child: GameLiquidView(
+                game: game,
+                repaint: _repaint,
+                best: _best,
+                newBest: _newBest,
+                toast: _toast,
+                onBack: () => popOrHome(context),
+                onStart: _start,
+                onRestart: () => _restart(),
+                onHome: () => _restart(demo: true),
+                onRank: () =>
+                    showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+                onPointerDown: _onPointerDown,
+                onPointerMove: _onPointerMove,
+                onPointerUp: _onPointerUp,
+                onPointerCancel: _onPointerCancel,
+                onHover: _onHover,
+                chrome: false,
+              ),
+            );
+          },
         ),
+      ),
     );
   }
 }
@@ -498,9 +495,7 @@ class GameLiquidView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
-        final topInset = chrome
-            ? 96 + MediaQuery.paddingOf(context).top
-            : 14.0;
+        final topInset = chrome ? 96 + MediaQuery.paddingOf(context).top : 14.0;
         if ((size.width - game.layout.width).abs() > 0.5 ||
             (size.height - game.layout.height).abs() > 0.5) {
           game.resize(
@@ -531,9 +526,7 @@ class GameLiquidView extends StatelessWidget {
           );
         }
 
-        final hudTop = chrome
-            ? MediaQuery.paddingOf(context).top + 6
-            : 6.0;
+        final hudTop = chrome ? MediaQuery.paddingOf(context).top + 6 : 6.0;
         final screenWidth = MediaQuery.sizeOf(context).width;
         final hudScale = screenWidth >= 1100
             ? 1.18

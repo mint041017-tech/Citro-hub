@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,9 @@ class CitroDesktopShell {
 
   static const double titleBarHeight = 38;
 
+  static final _lifecycle = _WindowLifecycle();
+  static bool _hooked = false;
+
   static Future<void> init() async {
     if (!enabled) return;
     await windowManager.ensureInitialized();
@@ -29,10 +33,38 @@ class CitroDesktopShell {
       skipTaskbar: false,
     );
     await windowManager.waitUntilReadyToShow(options, () async {
+      // 先透明再显示，随后用约 160ms 淡入，避免窗口"啪"地出现。
+      try {
+        await windowManager.setOpacity(0);
+      } catch (_) {}
       await windowManager.show();
       await windowManager.focus();
+      unawaited(_fadeOpacity(from: 0, to: 1, durationMs: 90));
     });
     await windowManager.setMinimumSize(const Size(780, 560));
+    if (!_hooked) {
+      _hooked = true;
+      try {
+        await windowManager.setPreventClose(true);
+        windowManager.addListener(_lifecycle);
+      } catch (_) {}
+    }
+  }
+
+  static Future<void> _fadeOpacity({
+    required double from,
+    required double to,
+    required int durationMs,
+  }) async {
+    const frameMs = 16;
+    final steps = (durationMs / frameMs).ceil().clamp(1, 60);
+    try {
+      for (var i = 1; i <= steps; i++) {
+        await windowManager.setOpacity(from + (to - from) * (i / steps));
+        await Future<void>.delayed(const Duration(milliseconds: frameMs));
+      }
+      await windowManager.setOpacity(to);
+    } catch (_) {}
   }
 
   static Widget wrap(BuildContext context, Widget child) {
@@ -53,6 +85,25 @@ class CitroDesktopShell {
         ],
       ),
     );
+  }
+}
+
+class _WindowLifecycle with WindowListener {
+  bool _closing = false;
+
+  @override
+  void onWindowClose() {
+    unawaited(_close());
+  }
+
+  Future<void> _close() async {
+    if (_closing) return;
+    _closing = true;
+    await CitroDesktopShell._fadeOpacity(from: 1, to: 0, durationMs: 90);
+    try {
+      await windowManager.setPreventClose(false);
+      await windowManager.close();
+    } catch (_) {}
   }
 }
 

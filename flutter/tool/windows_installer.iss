@@ -1,5 +1,7 @@
 ﻿#define MyAppName "Citro"
-#define MyAppVersion "1.8.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.9.1"
+#endif
 #define MyAppPublisher "Citro"
 #define MyAppExeName "Citro.exe"
 

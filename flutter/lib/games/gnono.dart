@@ -434,7 +434,8 @@ class _NonoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = primary ? const Color(0xFF3B2A10) : const Color(0xFF4E4A40);
+    final c = context.c;
+    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -463,7 +464,9 @@ class _NonoButton extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              color: primary ? null : const Color(0xB8FFFCF4),
+              color: primary
+                  ? null
+                  : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
               gradient: primary
                   ? const LinearGradient(
                       begin: Alignment.topLeft,
@@ -474,7 +477,7 @@ class _NonoButton extends StatelessWidget {
               border: Border.all(
                 color: primary
                     ? const Color(0x2E94530A)
-                    : const Color(0x294A3A22),
+                    : (c.dark ? c.line2 : const Color(0x294A3A22)),
               ),
             ),
             child: Center(
@@ -863,7 +866,7 @@ class _NonoOverlay extends StatelessWidget {
         sigma: 6,
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xF0FBF7EC),
+            color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FBF7EC),
             border: Border.all(color: c.line),
             borderRadius: BorderRadius.circular(14),
           ),

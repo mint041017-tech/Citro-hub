@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/ai.dart';
+import '../state/app_state.dart';
 import '../services/models.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
@@ -19,36 +20,74 @@ class _ChatMessage {
 
 final List<_ChatMessage> _history = [];
 
-Future<void> showAiChat(BuildContext context, {Recipe? recipe}) async {
+Future<void> showAiChat(
+  BuildContext context, {
+  Recipe? recipe,
+  bool goodDeed = false,
+  VoidCallback? onGoodDeed,
+}) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x8A23211C),
-    builder: (_) => _AiChatSheet(recipe: recipe),
+    builder: (_) => _AiChatSheet(
+      recipe: recipe,
+      goodDeed: goodDeed,
+      onGoodDeed: onGoodDeed,
+    ),
   );
 }
 
 class _AiChatSheet extends StatefulWidget {
   final Recipe? recipe;
-  const _AiChatSheet({this.recipe});
+  final bool goodDeed;
+  final VoidCallback? onGoodDeed;
+  const _AiChatSheet({this.recipe, this.goodDeed = false, this.onGoodDeed});
   @override
   State<_AiChatSheet> createState() => _AiChatSheetState();
 }
 
-class _AiChatSheetState extends State<_AiChatSheet> {
+class _AiChatSheetState extends State<_AiChatSheet>
+    with WidgetsBindingObserver {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
   final FocusNode _focus = FocusNode();
+  final List<_ChatMessage> _deedHistory = [];
   bool _sending = false;
+  bool _deedShared = false;
+
+  // 转运对话单独一份记录，不把「好事」混进日常 CiCi 历史。
+  List<_ChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     _scroll.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    // 键盘弹起会缩短列表视口，必须重新贴到底部才能看到最新消息。
+    _jumpToEnd();
+    Future<void>.delayed(const Duration(milliseconds: 260), _jumpToEnd);
+  }
+
+  void _jumpToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
   }
 
   void _scrollToEnd() {
@@ -62,25 +101,44 @@ class _AiChatSheetState extends State<_AiChatSheet> {
     });
   }
 
+  static const _deedDoneText = '好事收到，转运机会已经到账 ✅\n回到签卡，点「再抽一签」看看新运气。';
+
   Future<void> _send([String? preset]) async {
     if (_sending) return;
     final text = (preset ?? _input.text).trim();
     if (text.isEmpty) return;
-    if (!AiService.available) {
-      setState(() => _error = 'AI 暂未配置');
-      return;
+    final firstDeed = widget.goodDeed && !_deedShared;
+    _ChatMessage? deedMsg;
+    if (firstDeed) {
+      _deedShared = true;
+      widget.onGoodDeed?.call();
+      deedMsg = _ChatMessage(user: false, text: _deedDoneText);
+      unawaited(_recordDeed(text, deedMsg));
     }
     _input.clear();
     _error = null;
+    if (!AiService.available) {
+      setState(() {
+        _messages.add(_ChatMessage(user: true, text: text));
+        if (deedMsg != null) {
+          _messages.add(deedMsg);
+        } else {
+          _error = 'AI 暂未配置';
+        }
+      });
+      _scrollToEnd();
+      return;
+    }
     final assistant = _ChatMessage(user: false, text: '', pending: true);
     setState(() {
-      _history.add(_ChatMessage(user: true, text: text));
-      _history.add(assistant);
+      _messages.add(_ChatMessage(user: true, text: text));
+      if (deedMsg != null) _messages.add(deedMsg);
+      _messages.add(assistant);
       _sending = true;
     });
     _scrollToEnd();
 
-    final source = _history
+    final source = _messages
         .where((m) => !m.pending && m.text.isNotEmpty)
         .map((m) => {'role': m.user ? 'user' : 'assistant', 'content': m.text})
         .toList();
@@ -91,9 +149,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
     try {
       await for (final chunk in AiService.streamChat(
         messages,
-        extraSystem: widget.recipe == null
-            ? null
-            : _recipeContext(widget.recipe!),
+        extraSystem: _systemContext(),
       )) {
         if (!mounted) return;
         setState(() {
@@ -130,9 +186,34 @@ class _AiChatSheetState extends State<_AiChatSheet> {
   void _clear() {
     if (_sending) return;
     setState(() {
-      _history.clear();
+      _messages.clear();
       _error = null;
+      _deedShared = false;
     });
+  }
+
+  Future<void> _recordDeed(String text, _ChatMessage message) async {
+    final state = AppState.instance;
+    if (!state.loggedIn) return;
+    final saved = await state.recordGoodDeed(text);
+    if (!mounted) return;
+    setState(() {
+      message.text = saved
+          ? '$_deedDoneText\n已自动收录到「好事记录」笔记 📝'
+          : '$_deedDoneText\n笔记暂时没存上，稍后再试。';
+    });
+  }
+
+  String? _systemContext() {
+    final parts = <String>[];
+    if (widget.recipe != null) parts.add(_recipeContext(widget.recipe!));
+    if (widget.goodDeed) {
+      parts.add(
+        '用户今天抽到了下签或下下签，正通过分享一件今天做过的好事来转运。'
+        '请温柔地接住这件事、肯定对方，不要说教、不要追问隐私；2~4 句，口语化。',
+      );
+    }
+    return parts.isEmpty ? null : parts.join('\n');
   }
 
   String _recipeContext(Recipe r) {
@@ -231,7 +312,9 @@ class _AiChatSheetState extends State<_AiChatSheet> {
                               ),
                               Text(
                                 widget.recipe == null
-                                    ? '嘴硬心软 · 极速回答'
+                                    ? (widget.goodDeed
+                                          ? '分享好事 · 转运一次'
+                                          : '嘴硬心软 · 极速回答')
                                     : '食谱助手 · ${widget.recipe!.name}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -303,16 +386,51 @@ class _AiChatSheetState extends State<_AiChatSheet> {
                   ),
                   DashedLine(color: c.line2.withAlpha(150)),
                   Expanded(
-                    child: _history.isEmpty
+                    child: _messages.isEmpty
                         ? _welcome(context)
                         : ListView.builder(
                             controller: _scroll,
                             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                            itemCount: _history.length,
+                            itemCount: _messages.length,
                             itemBuilder: (_, i) =>
-                                _bubble(context, _history[i]),
+                                _bubble(context, _messages[i]),
                           ),
                   ),
+                  if (widget.goodDeed && _deedShared)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.mintSoft,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: c.mintLine),
+                        ),
+                        child: Row(
+                          children: [
+                            AppIcon(
+                              strokeSvg(AppIcons.sparkle, width: 2),
+                              size: 14,
+                              color: c.mintInk,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
+                                style: context.body(
+                                  size: 11,
+                                  weight: FontWeight.w600,
+                                  color: c.mintInk,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
@@ -341,9 +459,11 @@ class _AiChatSheetState extends State<_AiChatSheet> {
 
   Widget _welcome(BuildContext context) {
     final c = context.c;
-    final prompts = widget.recipe == null
-        ? ['帮我写一句手账文案', '今天吃什么？', '社区怎么玩？', '安慰一下我']
-        : ['这道菜怎么补救？', '换成家常做法', '帮我看下火候', '列个采购清单'];
+    final prompts = widget.recipe != null
+        ? ['这道菜怎么补救？', '换成家常做法', '帮我看下火候', '列个采购清单']
+        : widget.goodDeed
+        ? const <String>[]
+        : ['帮我写一句手账文案', '今天吃什么？', '社区怎么玩？', '安慰一下我'];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
       child: Column(
@@ -377,51 +497,76 @@ class _AiChatSheetState extends State<_AiChatSheet> {
                     border: Border.all(color: c.line),
                   ),
                   child: Text(
-                    widget.recipe == null
-                        ? '你好呀，我是 CiCi。\n今天想聊点什么？'
-                        : '你好呀，我是 CiCi。\n关于《${widget.recipe!.name}》，想聊点什么？',
+                    widget.recipe != null
+                        ? '你好呀，我是 CiCi。\n关于《${widget.recipe!.name}》，想聊点什么？'
+                        : widget.goodDeed
+                        ? '今天抽到下签也别慌。\n跟我说说你今天做的一件好事，我帮你转运一次。'
+                        : '你好呀，我是 CiCi。\n今天想聊点什么？',
                     style: context.body(size: 13, color: c.ink2, height: 1.7),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 22),
-          Text(
-            '可以试试',
-            style: context.body(
-              size: 10.5,
-              weight: FontWeight.w700,
-              color: c.inkSoft,
-              letterSpacing: .5,
+          if (widget.goodDeed) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: c.mintSoft,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.mintLine),
+              ),
+              child: Text(
+                context.app.loggedIn
+                    ? '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我，顺便收进「好事记录」笔记。'
+                    : '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我就行。登录后会自动收录到「好事记录」笔记。',
+                style: context.body(
+                  size: 11.5,
+                  color: c.mintInk,
+                  height: 1.6,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final p in prompts)
-                GestureDetector(
-                  onTap: () => _send(p),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.surface2,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.line),
-                    ),
-                    child: Text(
-                      p,
-                      style: context.body(size: 11.5, color: c.ink2),
+          ],
+          const SizedBox(height: 22),
+          if (prompts.isNotEmpty) ...[
+            Text(
+              '可以试试',
+              style: context.body(
+                size: 10.5,
+                weight: FontWeight.w700,
+                color: c.inkSoft,
+                letterSpacing: .5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final p in prompts)
+                  GestureDetector(
+                    onTap: () => _send(p),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.surface2,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: c.line),
+                      ),
+                      child: Text(
+                        p,
+                        style: context.body(size: 11.5, color: c.ink2),
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -559,6 +704,11 @@ class _AiChatSheetState extends State<_AiChatSheet> {
                 onTap: () {
                   _focus.requestFocus();
                   SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+                  _jumpToEnd();
+                  Future<void>.delayed(
+                    const Duration(milliseconds: 260),
+                    _jumpToEnd,
+                  );
                 },
                 onSubmitted: (_) => _send(),
                 onTapOutside: (_) => _focus.unfocus(),

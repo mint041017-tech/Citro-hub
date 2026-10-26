@@ -12,6 +12,7 @@ import '../overlays/lantern_sheet.dart';
 import '../overlays/pomodoro_sheet.dart';
 import '../overlays/zodiac_modal.dart';
 import '../pages/in_app_web.dart';
+import '../pages/me_page.dart';
 import '../pages/web_resource_actions.dart';
 import '../services/lantern_api.dart';
 import '../services/prefs.dart';
@@ -482,7 +483,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
     if (entry == null || !mounted) return;
     switch (entry.action) {
       case _SearchAction.route:
-        Navigator.of(context).pushNamed(entry.target!);
+        if (entry.target == '/me') {
+          openMePage(context);
+        } else {
+          Navigator.of(context).pushNamed(entry.target!);
+        }
       case _SearchAction.checkin:
         showCheckinOverlay(context);
       case _SearchAction.zodiac:

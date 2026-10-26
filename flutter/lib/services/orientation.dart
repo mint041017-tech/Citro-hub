@@ -15,6 +15,10 @@ class CitroOrientation {
 
   static bool get isDuo => _isDuo == true;
 
+  /// 尺寸兜底判断：iPhone 最宽也远小于 600pt；Duo 内屏虽超过 600pt 但按折叠屏处理。
+  static bool padSize(Size size) =>
+      platform.isIOS && size.shortestSide >= 600 && !CitroForm.duoInner(size);
+
   static List<DeviceOrientation>? preferredFor({
     required bool isPad,
     required Size size,

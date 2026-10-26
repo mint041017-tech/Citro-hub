@@ -37,6 +37,8 @@ class Prefs {
       PrefKeys.checkinLast,
       PrefKeys.checkinStreak,
       PrefKeys.checkinFortune,
+      PrefKeys.checkinTransfer,
+      PrefKeys.checkinTransferUsed,
       PrefKeys.gameBest,
       PrefKeys.playRecords,
       PrefKeys.playCooldown,
@@ -66,6 +68,8 @@ class PrefKeys {
   static const checkinLast = 'citro_checkin_last';
   static const checkinStreak = 'citro_checkin_streak';
   static const checkinFortune = 'citro_checkin_fortune';
+  static const checkinTransfer = 'citro_checkin_transfer';
+  static const checkinTransferUsed = 'citro_checkin_transfer_used';
   static const gameBest = 'citro_game_best';
   static const gameMuted = 'citro_game_mute';
   static const weatherLat = 'citro_weather_lat';

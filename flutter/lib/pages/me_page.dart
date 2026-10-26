@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
 import '../overlays/delete_account.dart';
@@ -12,6 +13,7 @@ import '../overlays/profile_modal.dart';
 import '../overlays/update_dialog.dart';
 import '../services/api.dart';
 import '../services/notifications.dart';
+import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
 import '../services/updater.dart';
 import '../state/app_state.dart';
@@ -77,6 +79,19 @@ Future<void> showMeWindow(BuildContext context) {
   );
 }
 
+/// Windows 与 iPad 统一用浮窗展示「我的」；手机端仍保持整页路由。
+void openMePage(BuildContext context) {
+  final floating =
+      !kIsWeb &&
+      (platform.isWindows ||
+          CitroOrientation.padSize(MediaQuery.sizeOf(context)));
+  if (floating) {
+    showMeWindow(context);
+    return;
+  }
+  Navigator.of(context).pushNamed('/me');
+}
+
 class MePage extends StatelessWidget {
   final bool floating;
 
@@ -84,7 +99,7 @@ class MePage extends StatelessWidget {
 
   static void _downloadApp() {
     launchUrl(
-      Uri.parse('https://obs.chimu-claw.xyz/APK/Citro-v1.8.0-release.apk'),
+      Uri.parse('https://obs.chimu-claw.xyz/APK/Citro-v1.9.1-release.apk'),
       mode: LaunchMode.externalApplication,
     );
   }
@@ -308,7 +323,7 @@ class MePage extends StatelessWidget {
                           icon: AppIcons.download,
                           label: '下载 App 客户端',
                           trailing: Text(
-                            'Android · v1.8.0 · 75.0MB',
+                            "Android · ${kCitroVersion == 'dev' ? '最新版' : 'v$kCitroVersion'}",
                             style: context.body(size: 10.5, color: c.inkSoft),
                           ),
                           onTap: _downloadApp,

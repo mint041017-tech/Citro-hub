@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Citro 安卓原生壳：桌面图标 + 启动页字标生成（可重复执行）
+"""Citro Flutter 安卓端：桌面图标 + 启动页字标生成（可重复执行）
 
-输入（只读，来自 素材/）：
-  citro-logo-square.jpg   1024x1024 奶油底方图 —— 旧版方形图标 / 自适应图标背景取色
-  citro-logo.png           640x640  透明字标   —— 自适应前景 / 旧版圆形图标 / 启动页字标
+输入（只读）：
+  flutter/ios/.../Icon-App-1024x1024@1x.png  iOS 图标 —— 旧版方图直接复用，保证两端观感一致
+  material/citro-logo.png                    640x640 透明字标 —— 自适应前景 / 圆形图标 / 启动页
 
-输出（kotlin 原生工程资源）：
-  kotlin/app/src/main/res/mipmap-{ldpi,mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/
-      ic_launcher.png              旧版方形图标（API < 26）
+输出（flutter/android 工程资源）：
+  flutter/android/app/src/main/res/mipmap-{ldpi,mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/
+      ic_launcher.png              旧版方形图标（API < 26，与 iOS 图标同构图）
       ic_launcher_round.png        旧版圆形图标（API 25+ 的 android:roundIcon）
       ic_launcher_foreground.png   自适应图标前景层（108dp 画布，透明字标）
-      ic_launcher_background.png   自适应图标背景层（108dp 画布，同源奶油纯色）
-  kotlin/app/src/main/res/drawable/splash_logo.png   启动页透明字标（已裁掉透明边）
+      ic_launcher_background.png   自适应图标背景层（iOS 同源奶油纯色）
+  flutter/android/app/src/main/res/drawable/splash_logo.png   启动页透明字标
 
 自适应图标几何（Material 规范）：
-  两层画布均为 108dp x 108dp，启动器只显示中央 72dp 的遮罩区域；
-  为保证圆形遮罩下字标不被裁切，字标内容收进中央 Ø66dp 安全圆内
-  （半径 33dp，即 108dp 画布的 61%；任务口径「安全区约 66%」取更保守的安全圆）。
-  实际生成时字标内容半径按 32dp 收敛，比 Ø66dp 安全圆再留 1dp 抗锯齿余量。
+  两层画布 108dp，启动器只显示中央 72dp 遮罩区域。字标宽度取 72dp 的 80.4%
+  （与 iOS 图标一致），即 108dp 画布的 53.6%；内容最大半径约 30.3dp，
+  仍在 Ø66dp 安全圆（半径 33dp）内，圆形遮罩不会裁切。
 
 预览（供 Lead 审核，均写 _tmp/team/shell-branding/）：
   icon-preview.png      各密度实际像素 + 48dp 实机观感
@@ -43,11 +42,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 # 仓库根目录 = devtools/ 的上一级（脚本放在 devtools/ 里常驻）
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSET_DIR = os.path.join(BASE, '素材')
-RES_DIR = os.path.join(BASE, 'kotlin', 'app', 'src', 'main', 'res')
-PREVIEW_DIR = os.path.join(BASE, '_tmp', 'team', 'shell-branding')
+ASSET_DIR = os.path.join(BASE, 'material')
+RES_DIR = os.path.join(BASE, 'flutter', 'android', 'app', 'src', 'main', 'res')
+PREVIEW_DIR = os.path.join(BASE, '_tmp', 'team', 'flutter-branding')
 
-SRC_SQUARE = os.path.join(ASSET_DIR, 'citro-logo-square.jpg')
+SRC_SQUARE = os.path.join(BASE, 'flutter', 'ios', 'Runner', 'Assets.xcassets', 'AppIcon.appiconset', 'Icon-App-1024x1024@1x.png')
 SRC_LOGO = os.path.join(ASSET_DIR, 'citro-logo.png')
 
 # 各密度：Android 密度倍率
@@ -62,7 +61,7 @@ DENSITIES = (
 LEGACY_DP = 48            # 旧版启动图标基准尺寸
 ADAPTIVE_DP = 108         # 自适应图标层画布尺寸
 SAFE_CIRCLE_DP = 66       # 自适应图标安全圆直径（Material）
-FIT_SAFE_RADIUS_DP = 32.0  # 生成时字标内容最大半径（比 Ø66dp 安全圆再留 1dp）
+ADAPTIVE_LOGO_WIDTH_RATIO = 0.536  # 字标宽度 / 108dp 画布 = iOS 的 80.4% × 72/108
 LEGACY_ROUND_LOGO_RATIO = 0.78   # 圆形旧版图标里字标宽度占直径比例
 SPLASH_LOGO_PAD = 4       # 启动页字标裁边后四周留白（源图像素）
 ALPHA_TRIM = 8            # 计算内容范围时的 alpha 阈值
@@ -219,7 +218,7 @@ def build_icons():
         out_dir = os.path.join(RES_DIR, 'mipmap-' + name)
         legacy = int(round(LEGACY_DP * scale))
         adaptive = int(round(ADAPTIVE_DP * scale))
-        fit_radius_px = FIT_SAFE_RADIUS_DP * scale
+        fit_radius_px = max_radius * (adaptive * ADAPTIVE_LOGO_WIDTH_RATIO) / wordmark.width
 
         # 1) 旧版方形：直接来自奶油底方图（同源）
         square_icon = square.resize((legacy, legacy), Image.LANCZOS)
@@ -233,7 +232,7 @@ def build_icons():
         save_png(round_icon, p)
         outputs.append(p)
 
-        # 3) 自适应前景：透明字标收进 Ø66dp 安全圆（生成按半径 32dp）
+        # 3) 自适应前景：字标宽度对齐 iOS（72dp 可见区的 80.4%）
         fg = render_foreground(wordmark, max_radius, adaptive, fit_radius_px)
         p = os.path.join(out_dir, 'ic_launcher_foreground.png')
         save_png(fg, p)
@@ -588,7 +587,7 @@ def build_adaptive_masks_preview():
         d.text((x, top + 380), label, font=f_lbl, fill=INK_SOFT)
         x += 360 + gap
     d.text((44, H - 92),
-           '注：字标内容最大半径 32dp（小于 Ø66dp 安全圆半径 33dp）；圆形遮罩可见边界 Ø72dp，余量约 4dp/侧。',
+           '注：字标宽度按 iOS 图标比例（72dp 可见区的 80.4%）生成，内容最大半径约 30.3dp，仍在 Ø66dp 安全圆内。',
            font=f_sub, fill=INK_SOFT)
     out = os.path.join(PREVIEW_DIR, 'adaptive-masks.png')
     os.makedirs(PREVIEW_DIR, exist_ok=True)

@@ -38,6 +38,8 @@ class AppState extends ChangeNotifier {
   bool _locationAsked = false;
   int unread = 0;
   bool notificationsEnabled = true;
+  int _cloudStreak = 0;
+  bool _cloudCheckedToday = false;
 
   /// 弹层开合非常频繁；用独立 notifier 通知计时胶囊，不触发 AppScope
   /// 全量重建（否则每开一个弹窗都会重建后台社区页与首页卡片）。
@@ -132,6 +134,11 @@ class AppState extends ChangeNotifier {
         await _clearAuth();
       } else {
         user = u;
+        final checkin = j['user'] is Map ? (j['user'] as Map)['checkin'] : null;
+        if (checkin is Map) {
+          _cloudStreak = _i(checkin['streak']);
+          _cloudCheckedToday = checkin['checkedInToday'] == true;
+        }
         await _persistAuth();
         notifyListeners();
         _startNotifyPolling();
@@ -166,6 +173,8 @@ class AppState extends ChangeNotifier {
     _postSeeded = false;
     _lastPostTs = null;
     unread = 0;
+    _cloudStreak = 0;
+    _cloudCheckedToday = false;
     user = null;
     Api.token = null;
     await Prefs.setString(PrefKeys.token, null);
@@ -181,6 +190,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _startNotifyPolling();
     unawaited(syncZodiac());
+    unawaited(_loadCheckin());
   }
 
   Future<void> register(
@@ -196,6 +206,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _startNotifyPolling();
     unawaited(syncZodiac());
+    unawaited(_loadCheckin());
   }
 
   Future<void> logout() async {
@@ -635,7 +646,25 @@ class AppState extends ChangeNotifier {
 
   Future<int> drawFortuneIdx() async {
     final cached = todayFortuneIdx;
-    if (cached != null) return cached;
+    if (cached != null) {
+      // 登录状态下即使本地有缓存，也向服务端确认/补一次打卡，保证跨端天数一致。
+      await _syncCloudCheckin(migrate: true);
+      // 另一台设备做过「转运」时，把服务端结果同步回来。
+      try {
+        final j = await Api.draw(deviceId: gid);
+        final remoteIdx = int.tryParse('${j['idx']}');
+        final today = _dayKey(DateTime.now());
+        if (remoteIdx != null && remoteIdx != cached) {
+          await Prefs.setString(PrefKeys.checkinFortune, '$today:$remoteIdx');
+          if (j['transfer'] == true) {
+            await Prefs.setString(PrefKeys.checkinTransferUsed, today);
+          }
+          notifyListeners();
+          return remoteIdx;
+        }
+      } catch (_) {}
+      return cached;
+    }
     int? idx;
     try {
       final j = await Api.drawTake(deviceId: gid);
@@ -654,11 +683,144 @@ class AppState extends ChangeNotifier {
       await Prefs.setString(PrefKeys.checkinLast, today);
       await Prefs.setInt(PrefKeys.checkinStreak, newStreak);
     }
+    await _syncCloudCheckin(migrate: true);
     notifyListeners();
     return idx;
   }
 
-  int get checkinStreak {
+  /// 今日抽到下签 / 下下签时才需要转运（idx 6 = 下签，7 = 下下签）。
+  bool get fortuneIsBad {
+    final idx = todayFortuneIdx;
+    return idx == 6 || idx == 7;
+  }
+
+  bool get fortuneTransferUsed =>
+      Prefs.getString(PrefKeys.checkinTransferUsed) ==
+      _dayKey(DateTime.now());
+
+  /// 跟 CiCi 分享好事后到账的转运机会（当天有效，用一次）。
+  bool get fortuneTransferReady {
+    if (fortuneTransferUsed || !fortuneIsBad) return false;
+    return Prefs.getString(PrefKeys.checkinTransfer) == _dayKey(DateTime.now());
+  }
+
+  Future<void> grantFortuneTransfer() async {
+    if (!fortuneIsBad || fortuneTransferUsed) return;
+    await Prefs.setString(PrefKeys.checkinTransfer, _dayKey(DateTime.now()));
+    notifyListeners();
+  }
+
+  /// 把跟 CiCi 分享的好事收进「好事记录」笔记（仅登录用户）。
+  /// 只保留一份笔记、新内容放最上面；超过服务端 5000 字上限时裁掉最旧的。
+  Future<bool> recordGoodDeed(String text) async {
+    final body = text.trim();
+    if (!loggedIn || body.isEmpty) return false;
+    final now = DateTime.now();
+    final stamp =
+        '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final entry = '$body\n$stamp';
+    try {
+      final list = await Api.notes();
+      final existing = list.where((n) => n.title == '好事记录').toList();
+      if (existing.isEmpty) {
+        await Api.saveNote(title: '好事记录', content: entry);
+        return true;
+      }
+      final note = existing.first;
+      var content = note.content.trim();
+      content = content.isEmpty ? entry : '$entry\n\n$content';
+      if (content.length > 4800) {
+        final parts = content.split('\n\n');
+        final kept = <String>[];
+        var length = 0;
+        for (final part in parts) {
+          final add = part.length + (kept.isEmpty ? 0 : 2);
+          if (length + add > 4800) break;
+          kept.add(part);
+          length += add;
+        }
+        content = kept.join('\n\n');
+      }
+      await Api.saveNote(id: note.id, title: '好事记录', content: content);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 消耗转运机会重抽一签：服务端只允许下签重抽一次，且只给 0..5 的签。
+  Future<int?> useFortuneTransfer() async {
+    if (!fortuneTransferReady) return null;
+    final today = _dayKey(DateTime.now());
+    int? idx;
+    var offline = false;
+    var rejected = false;
+    try {
+      final j = await Api.drawReroll(deviceId: gid);
+      idx = int.tryParse('${j['idx']}');
+    } on ApiException catch (e) {
+      if (e.code == 409) {
+        // 服务端已经转运过（比如另一台设备）：取回当前结果，不再本地重抽。
+        try {
+          final j = await Api.draw(deviceId: gid);
+          idx = int.tryParse('${j['idx']}');
+        } catch (_) {}
+        if (idx == null) rejected = true;
+      } else if (e.code == 404 || e.code == 405 || e.code == 501) {
+        // 后端还没部署转运接口：退回本机重抽，保证客户端先升级也能玩。
+        offline = true;
+      } else if (e.code >= 400) {
+        rejected = true;
+      } else {
+        offline = true;
+      }
+    } catch (_) {
+      offline = true;
+    }
+    if (rejected) return null;
+    if (idx == null && !offline) return null;
+    idx ??= Random().nextInt(6);
+    await Prefs.setString(PrefKeys.checkinFortune, '$today:$idx');
+    await Prefs.setString(PrefKeys.checkinTransferUsed, today);
+    await Prefs.setString(PrefKeys.checkinTransfer, null);
+    notifyListeners();
+    return idx;
+  }
+
+  Future<void> _loadCheckin() async {
+    if (!loggedIn) return;
+    try {
+      final j = await Api.checkinStats(gid);
+      _cloudStreak = _i(j['streak']);
+      _cloudCheckedToday = j['checkedInToday'] == true;
+      notifyListeners();
+      // 服务端还没有记录、本地却有连续天数：登录后立刻迁移，避免显示归零。
+      if (_cloudStreak == 0 && !_cloudCheckedToday && _localStreak > 0) {
+        await _syncCloudCheckin(migrate: true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _syncCloudCheckin({bool migrate = false}) async {
+    if (!loggedIn) return;
+    try {
+      final j = _cloudCheckedToday
+          ? await Api.checkinStats(gid)
+          : await Api.checkinTake(
+              deviceId: gid,
+              last: migrate ? Prefs.getString(PrefKeys.checkinLast) : null,
+              streak: migrate ? Prefs.getInt(PrefKeys.checkinStreak, 0) : null,
+            );
+      _cloudStreak = _i(j['streak']);
+      _cloudCheckedToday = j['checkedInToday'] == true;
+      notifyListeners();
+    } catch (_) {
+      // 离线时保留本地记录兜底；恢复网络后再同步。
+    }
+  }
+
+  int get _localStreak {
     final last = Prefs.getString(PrefKeys.checkinLast) ?? '';
     final today = _dayKey(DateTime.now());
     final yesterday = _dayKey(DateTime.now().subtract(const Duration(days: 1)));
@@ -667,8 +829,18 @@ class AppState extends ChangeNotifier {
     return 0;
   }
 
-  bool get checkedInToday =>
+  bool get _localCheckedInToday =>
       Prefs.getString(PrefKeys.checkinLast) == _dayKey(DateTime.now());
+
+  int get checkinStreak {
+    if (loggedIn) return _cloudStreak > 0 ? _cloudStreak : _localStreak;
+    return _localStreak;
+  }
+
+  bool get checkedInToday {
+    if (loggedIn) return _cloudCheckedToday || _localCheckedInToday;
+    return _localCheckedInToday;
+  }
 
   static String _dayKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

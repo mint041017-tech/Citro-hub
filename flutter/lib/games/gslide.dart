@@ -408,8 +408,8 @@ class GameSlideView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xF0FCF8F0),
-        border: Border.all(color: const Color(0x292E2C22)),
+        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
+        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -434,16 +434,16 @@ class GameSlideView extends StatelessWidget {
                   const TextSpan(text: '用时 '),
                   TextSpan(
                     text: fmtDuration(seconds),
-                    style: const TextStyle(
-                      color: _slideFloatInk,
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : _slideFloatInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   TextSpan(text: ' · 步数 $moves · 得分 '),
                   TextSpan(
                     text: '$score',
-                    style: const TextStyle(
-                      color: _slideFloatInk,
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : _slideFloatInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

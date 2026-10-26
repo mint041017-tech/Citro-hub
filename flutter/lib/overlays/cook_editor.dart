@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
 import '../services/api.dart';
+import '../services/image_store.dart';
 import '../services/media.dart';
 import '../services/models.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
+import '../widgets/app_image.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import 'ingredient_library.dart';
@@ -373,11 +375,13 @@ class _CookEditorState extends State<_CookEditor> {
       if (cropped == null || !mounted) return;
       final compressed = await MediaService.compressCookImage(
         cropped,
-        maxDim: 1200,
-        quality: 82,
+        maxDim: 1080,
+        quality: 80,
       );
       if (!mounted) return;
       final url = await Api.uploadCookImage(MediaService.dataUrl(compressed));
+      if (!mounted) return;
+      await ImageStore.put(url, compressed);
       if (!mounted) return;
       setState(() {
         cover = url;
@@ -398,11 +402,13 @@ class _CookEditorState extends State<_CookEditor> {
       if (bytes == null || !mounted) return;
       final compressed = await MediaService.compressCookImage(
         bytes,
-        maxDim: 1600,
-        quality: 82,
+        maxDim: 1280,
+        quality: 80,
       );
       if (!mounted) return;
       final url = await Api.uploadCookImage(MediaService.dataUrl(compressed));
+      if (!mounted) return;
+      await ImageStore.put(url, compressed);
       if (!mounted) return;
       setState(() => steps[i].img = url);
     } catch (e) {
@@ -1714,7 +1720,7 @@ class _CookEditorState extends State<_CookEditor> {
                     Positioned.fill(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
+                        child: AppImage(
                           Api.imageUrl(row.img),
                           fit: BoxFit.cover,
                           cacheWidth: 260,
