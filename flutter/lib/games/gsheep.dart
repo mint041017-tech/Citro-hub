@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -193,6 +193,43 @@ void _shuffleList<T>(List<T> a, math.Random rnd) {
     a[i] = a[j];
     a[j] = t;
   }
+}
+
+/// 用 0.5 格的邻域桶替代 O(n²) 全量互查：覆盖阈值 <1 格，
+/// 所以只需检查自身周围 ±2 个桶；候选再走精确几何判断。
+Set<int> sheepLockedIds(List<SheepTile> tiles) {
+  final buckets = <int, List<SheepTile>>{};
+  int cell(double v) => (v * 2).floor();
+  int slot(int x, int y) => (x + 1000) * 100000 + (y + 1000);
+  for (final t in tiles) {
+    if (t.picked) continue;
+    buckets.putIfAbsent(slot(cell(t.gx), cell(t.gy)), () => []).add(t);
+  }
+  final locked = <int>{};
+  for (final t in tiles) {
+    if (t.picked) continue;
+    final cx = cell(t.gx);
+    final cy = cell(t.gy);
+    var isLocked = false;
+    for (var dx = -2; dx <= 2 && !isLocked; dx++) {
+      for (var dy = -2; dy <= 2; dy++) {
+        final list = buckets[slot(cx + dx, cy + dy)];
+        if (list == null) continue;
+        for (final o in list) {
+          if (identical(o, t) || o.layer < t.layer) continue;
+          if (o.layer == t.layer && o.id <= t.id) continue;
+          if ((o.gx - t.gx).abs() < SheepGeom.cover &&
+              (o.gy - t.gy).abs() < SheepGeom.cover) {
+            isLocked = true;
+            break;
+          }
+        }
+        if (isLocked) break;
+      }
+    }
+    if (isLocked) locked.add(t.id);
+  }
+  return locked;
 }
 
 /// web `gsheepCovers`：a 是否「压住」b。
@@ -512,11 +549,11 @@ class _GameSheepPageState extends State<GameSheepPage> {
 
   // --- 取牌 / 三消 ---------------------------------------------------------
 
-  void _pick(SheepTile tile, SheepGeom geom) {
-    if (_over || tile.picked) return;
-    if (geom.isLocked(_tiles, tile)) return;
+  bool _pick(SheepTile tile, SheepGeom geom) {
+    if (_over || tile.picked) return false;
+    if (geom.isLocked(_tiles, tile)) return false;
     final si = _slots.indexWhere((s) => s == null);
-    if (si < 0) return;
+    if (si < 0) return false;
     _pushHistory();
     tile.picked = true;
     _slots[si] = tile;
@@ -524,6 +561,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
     _checkMatch();
     _sortSlots();
     _checkEnd();
+    return true;
   }
 
   /// 移出区的牌可以点回槽位（web `gsheepPickRemoved`）。
@@ -774,7 +812,11 @@ class _GameSheepPageState extends State<GameSheepPage> {
       overlayTitle: _ovTitle,
       overlayDesc: _ovDesc,
       showRevive: _ovRevive,
-      onPick: (tile, geom) => setState(() => _pick(tile, geom)),
+      onPick: (tile, geom) {
+        var picked = false;
+        setState(() => picked = _pick(tile, geom));
+        return picked;
+      },
       onPickRemoved: (tile) => setState(() => _pickRemoved(tile)),
       onNewGame: () => setState(_newGame),
       onRetry: () => setState(_newGame),
@@ -817,13 +859,153 @@ const String _iconTrash =
     '<path d="M4 7h16"/><path d="M9 7v-3h6v3"/>'
     '<path d="M6 7l1 13h10l1-13"/>';
 
-/// 牌被上层压住时的滤镜：CSS `filter:brightness(.72) saturate(.55)` 的 sRGB 矩阵近似。
-final ColorFilter _lockedFilter = ColorFilter.matrix(const <double>[
-  0.4650, 0.2317, 0.0233, 0, 0, //
-  0.0690, 0.6277, 0.0233, 0, 0, //
-  0.0690, 0.2317, 0.4193, 0, 0, //
-  0, 0, 0, 1, 0, //
-]);
+class _SheepGhost {
+  const _SheepGhost(this.id, this.tile, this.left, this.top, this.size);
+
+  final int id;
+  final SheepTile tile;
+  final double left;
+  final double top;
+  final double size;
+}
+
+/// 牌桌单独做成有状态组件：点击成功的牌在原位缩小淡出，
+/// 幽灵动画只重绘自己，不动下面 300 张静态牌。
+class _SheepBoard extends StatefulWidget {
+  const _SheepBoard({
+    required this.tiles,
+    required this.geom,
+    required this.onPick,
+    required this.tileBuilder,
+  });
+
+  final List<SheepTile> tiles;
+  final SheepGeom geom;
+  final bool Function(SheepTile tile, SheepGeom geom)? onPick;
+  final Widget Function(double size, int type, bool locked) tileBuilder;
+
+  @override
+  State<_SheepBoard> createState() => _SheepBoardState();
+}
+
+class _SheepBoardState extends State<_SheepBoard> {
+  final List<_SheepGhost> _ghosts = <_SheepGhost>[];
+  int _seq = 0;
+
+  @override
+  void didUpdateWidget(covariant _SheepBoard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 换关卡会换一份 tiles 列表；旧关卡的消失残影不要飘到新盘面上。
+    if (!identical(oldWidget.tiles, widget.tiles)) _ghosts.clear();
+  }
+
+  void _spawnGhost(SheepTile tile) {
+    final ghost = _SheepGhost(
+      _seq++,
+      tile,
+      widget.geom.leftOf(tile),
+      widget.geom.topOf(tile) - 0.3,
+      widget.geom.ts,
+    );
+    setState(() => _ghosts.add(ghost));
+    Future<void>.delayed(const Duration(milliseconds: 260), () {
+      if (!mounted) return;
+      setState(() => _ghosts.removeWhere((e) => e.id == ghost.id));
+    });
+  }
+
+  /// 层深 → 模糊半径。最上层为 0，越往下越虚化。
+  static const List<double> _bandBlur = <double>[0, 1.2, 1.9, 2.6];
+
+  @override
+  Widget build(BuildContext context) {
+    final geom = widget.geom;
+    final lockedIds = sheepLockedIds(widget.tiles);
+    final maxLayer = widget.tiles
+        .where((t) => !t.picked)
+        .fold<int>(0, (m, t) => math.max(m, t.layer));
+    final bands = List<List<SheepTile>>.generate(4, (_) => <SheepTile>[]);
+    for (final t in widget.tiles) {
+      if (t.picked) continue;
+      final depth = maxLayer - t.layer;
+      final level = depth == 0
+          ? 0
+          : (depth <= 2 ? 1 : (depth <= 4 ? 2 : 3));
+      bands[level].add(t);
+    }
+
+    Widget tileAt(SheepTile t) => Positioned(
+      left: geom.leftOf(t),
+      top: geom.topOf(t) - 0.3,
+      width: geom.ts,
+      height: geom.ts,
+      child: GestureDetector(
+        key: ValueKey<String>('sheepTile${t.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onPick == null
+            ? null
+            : () {
+                final ok = widget.onPick!(t, geom);
+                if (ok) _spawnGhost(t);
+              },
+        child: widget.tileBuilder(
+          geom.ts,
+          t.type,
+          lockedIds.contains(t.id),
+        ),
+      ),
+    );
+
+    Widget bandAt(int level) => Stack(
+      clipBehavior: Clip.none,
+      children: [for (final t in bands[level]) tileAt(t)],
+    );
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // 深层先画：每层只套一次模糊，避免 300 张牌各自 saveLayer。
+        for (var level = 3; level >= 1; level--)
+          if (bands[level].isNotEmpty)
+            Positioned.fill(
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: _bandBlur[level],
+                  sigmaY: _bandBlur[level],
+                ),
+                child: bandAt(level),
+              ),
+            ),
+        if (bands[0].isNotEmpty) Positioned.fill(child: bandAt(0)),
+        for (final g in _ghosts)
+          Positioned(
+            key: ValueKey<String>('sheepGhost${g.id}'),
+            left: g.left,
+            top: g.top,
+            width: g.size,
+            height: g.size,
+            child: IgnorePointer(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 1, end: 0),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: RepaintBoundary(
+                  child: widget.tileBuilder(g.size, g.tile.type, false),
+                ),
+                builder: (context, value, child) => Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: 0.78 + 0.22 * value,
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 /// 羊了个羊的纯视觉层（golden 测试直接渲染它，状态由 [GameSheepPage] 提供）。
 class GameSheepView extends StatelessWidget {
@@ -878,7 +1060,7 @@ class GameSheepView extends StatelessWidget {
   final String? overlayTitle;
   final String? overlayDesc;
   final bool showRevive;
-  final void Function(SheepTile tile, SheepGeom geom)? onPick;
+  final bool Function(SheepTile tile, SheepGeom geom)? onPick;
   final ValueChanged<SheepTile>? onPickRemoved;
   final VoidCallback? onNewGame;
   final VoidCallback? onRetry;
@@ -1251,33 +1433,12 @@ class GameSheepView extends StatelessWidget {
   }
 
   Widget _board(BuildContext context, SheepGeom geom) {
-    final lockedIds = <int>{};
-    for (final t in tiles) {
-      if (!t.picked && geom.isLocked(tiles, t)) lockedIds.add(t.id);
-    }
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        for (final t in tiles)
-          if (!t.picked)
-            Positioned(
-              left: geom.leftOf(t),
-              top: geom.topOf(t) - 0.3,
-              width: geom.ts,
-              height: geom.ts,
-              child: GestureDetector(
-                key: ValueKey<String>('sheepTile${t.id}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: onPick == null ? null : () => onPick!(t, geom),
-                child: _tileCard(
-                  context,
-                  size: geom.ts,
-                  type: t.type,
-                  locked: lockedIds.contains(t.id),
-                ),
-              ),
-            ),
-      ],
+    return _SheepBoard(
+      tiles: tiles,
+      geom: geom,
+      onPick: onPick,
+      tileBuilder: (size, type, locked) =>
+          _tileCard(context, size: size, type: type, locked: locked),
     );
   }
 
@@ -1291,83 +1452,57 @@ class GameSheepView extends StatelessWidget {
     final c = context.c;
     final radius = BorderRadius.circular(10);
     final iconSize = (size - 2) * 0.8;
-    final card = Stack(
-      children: [
-        Positioned.fill(
-          child: CssShadowLayer(
-            radius: 10,
-            // CSS box-shadow 列表里「先写的在上层」，kit 是按列表顺序后写覆盖先写，
-            // 所以这里把模糊阴影放前面、2px 实色阴影放最后。
-            shadows: locked
-                ? const <CssShadowSpec>[
-                    CssShadowSpec(
-                      color: Color(0x24584A28),
-                      offset: Offset(0, 3),
-                      blur: 6,
-                    ),
-                    CssShadowSpec(
-                      color: Color(0x59967E5C),
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : const <CssShadowSpec>[
-                    CssShadowSpec(
-                      color: Color(0x805A4A2C),
-                      offset: Offset(0, 6),
-                      blur: 14,
-                      spread: -8,
-                    ),
-                    CssShadowSpec(
-                      color: Color(0xFFD2C8B0),
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-            child: SizedBox.expand(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: radius,
-                  border: Border.all(color: c.line2),
-                ),
-              ),
-            ),
-          ),
+    // 300 张牌时逐牌做 MaskFilter/SaveLayer 是主要掉帧源：
+    // 这里改成实色投影 + 复用的 SVG 图标，锁定态只叠一层半透明遮罩。
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: radius,
+          border: Border.all(color: c.line2),
+          boxShadow: locked
+              ? const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x24584A28),
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x405A4A2C),
+                    offset: Offset(0, 3),
+                  ),
+                ],
         ),
-        if (locked)
-          Positioned.fill(
-            child: IgnorePointer(
-              // web 的 `inset 0 0 0 999px rgba(46,44,34,.22)` 画在 padding box
-              // （边框内侧），边框本身不受影响，所以这里内缩 1px、圆角 9。
-              child: Padding(
-                padding: const EdgeInsets.all(1),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0x382E2C22),
-                    borderRadius: BorderRadius.circular(9),
+        child: Stack(
+          children: [
+            if (locked)
+              Positioned.fill(
+                child: IgnorePointer(
+                  // web 的 `inset 0 0 0 999px rgba(46,44,34,.22)` 画在 padding box
+                  // （边框内侧），边框本身不受影响，所以这里内缩 1px、圆角 9。
+                  child: Padding(
+                    padding: const EdgeInsets.all(1),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0x332E2C22),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
                   ),
                 ),
               ),
+            Center(
+              child: SizedBox(
+                width: iconSize,
+                height: iconSize,
+                child: _sheepIcon(type),
+              ),
             ),
-          ),
-        Center(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-            child: SvgPicture.string(
-              _sheepSvg(type),
-              width: iconSize,
-              height: iconSize,
-            ),
-          ),
+          ],
         ),
-      ],
-    );
-    return RepaintBoundary(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: locked
-            ? ColorFiltered(colorFilter: _lockedFilter, child: card)
-            : card,
       ),
     );
   }
@@ -1516,9 +1651,9 @@ class GameSheepView extends StatelessWidget {
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xF6F6EFDF),
+          color: c.dark ? c.surface.withAlpha(0xF6) : const Color(0xF6F6EFDF),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xF2FFF8EA)),
+          border: Border.all(color: c.dark ? c.line2 : const Color(0xF2FFF8EA)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1584,6 +1719,20 @@ String _sheepSvg(int type) {
   );
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
       '$body</svg>';
+}
+
+
+/// SVG 容易在每次 build 时重新解析；按牌型缓存一次，300 张牌共用。
+final Map<int, Widget> _sheepIconWidgets = <int, Widget>{};
+
+Widget _sheepIcon(int type) {
+  final i = type < 0
+      ? 0
+      : (type >= _sheepIconBodies.length ? _sheepIconBodies.length - 1 : type);
+  return _sheepIconWidgets.putIfAbsent(
+    i,
+    () => SvgPicture.string(_sheepSvg(i), fit: BoxFit.contain),
+  );
 }
 
 /// 图标描边收细系数（见 [_sheepSvg]）。

@@ -7,7 +7,6 @@ import '../data/poems.dart';
 import '../services/ai.dart';
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'game_ui.dart';
@@ -412,7 +411,6 @@ class GameFeihuaView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     final media = MediaQuery.sizeOf(context);
     final w = media.width;
     final tablet = w >= 900;
@@ -469,9 +467,11 @@ class GameFeihuaView extends StatelessWidget {
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: c.surface,
+                // 纸笺色板固定为浅色，舞台也保持浅色纸面，
+                // 否则深色主题下深色文字会压在深色底上。
+                color: CitroColors.light.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
+                border: Border.all(color: CitroColors.light.line),
               ),
               child: Stack(
                 children: [

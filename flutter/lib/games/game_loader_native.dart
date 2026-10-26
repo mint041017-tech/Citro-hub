@@ -5,6 +5,7 @@ import 'g2048.dart';
 import 'gbrake_web.dart';
 import 'gfeihua.dart';
 import 'gidiom.dart';
+import 'gjigsaw.dart';
 import 'gjump.dart';
 import 'gliquid.dart';
 import 'gmemory.dart';
@@ -21,6 +22,7 @@ Widget buildGamePage(String key) {
     'g2048' => const Game2048Page(),
     'gmem' => const GameMemoryPage(),
     'gsudoku' => const GameSudokuPage(),
+    'gjigsaw' => const GameJigsawPage(),
     'gnono' => const GameNonoPage(),
     'gslide' => const GameSlidePage(),
     'gsnake' => const GameSnakePage(),

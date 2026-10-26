@@ -4,12 +4,31 @@ import 'package:flutter/material.dart';
 
 import '../services/api.dart';
 import '../services/models.dart';
+import '../pages/me_page.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+
+/// “正在玩”列表每 4s 刷新一次；内容没变时不触发整页重建。
+bool sameLiveList(List<dynamic> a, List<dynamic> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    final x = a[i];
+    final y = b[i];
+    if (x is! Map || y is! Map) return false;
+    if ('${x['name']}' != '${y['name']}' ||
+        '${x['progress']}' != '${y['progress']}' ||
+        '${x['av']}' != '${y['av']}' ||
+        (x['you'] == true) != (y['you'] == true)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 class GamePageShell extends StatefulWidget {
   final String gameKey;
@@ -64,7 +83,9 @@ class _GamePageShellState extends State<GamePageShell> {
         gid: state.loggedIn ? null : state.gid,
       );
       final list = (j['list'] as List?) ?? [];
-      if (mounted) setState(() => _live = list);
+      if (mounted && !sameLiveList(_live, list)) {
+        setState(() => _live = list);
+      }
     } catch (_) {}
   }
 
@@ -263,7 +284,7 @@ class _GamePageShellState extends State<GamePageShell> {
 Future<void> showGameAccount(BuildContext context) async {
   final state = context.app;
   if (state.loggedIn) {
-    Navigator.of(context).pushNamed('/me');
+    openMePage(context);
     return;
   }
   final controller = TextEditingController(
@@ -946,7 +967,9 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
     final next = widget.initial.isEmpty
         ? (widget.difficulties.isNotEmpty ? widget.difficulties.first.$1 : '')
         : widget.initial;
-    if (widget.game != oldWidget.game || next != diff) {
+    // 只在「游戏变了 / 游戏内难度真的变了」时跟随；父级每 4s 的 live 心跳
+    // 也会重建本组件，绝不能借此把用户手选的榜单分段重置回去。
+    if (widget.game != oldWidget.game || widget.initial != oldWidget.initial) {
       diff = next;
       if (widget.enabled) _load();
     }

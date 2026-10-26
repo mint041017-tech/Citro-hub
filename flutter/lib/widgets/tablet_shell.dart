@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../overlays/ai_chat.dart';
 import '../services/api.dart';
 import '../pages/me_page.dart';
-import '../services/platform.dart' as platform;
+import '../services/orientation.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -53,6 +53,9 @@ class CitroTabletSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final app = context.app;
+    final avatarUrl = Api.imageUrl(app.user?.av);
+    // 仅 iPad 放大导航字号；Windows 保持原尺寸。
+    final padWide = CitroOrientation.padSize(MediaQuery.sizeOf(context));
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(right: BorderSide(color: c.line)),
@@ -121,7 +124,7 @@ class CitroTabletSidebar extends StatelessWidget {
                         Text(
                           '逛一逛',
                           style: context.body(
-                            size: 10.5,
+                            size: padWide ? 11.5 : 10.5,
                             weight: FontWeight.w700,
                             color: c.inkSoft,
                             letterSpacing: 1.4,
@@ -165,7 +168,7 @@ class CitroTabletSidebar extends StatelessWidget {
                         Text(
                           '我的 Citro',
                           style: context.body(
-                            size: 10.5,
+                            size: padWide ? 11.5 : 10.5,
                             weight: FontWeight.w700,
                             color: c.inkSoft,
                             letterSpacing: 1.4,
@@ -179,18 +182,6 @@ class CitroTabletSidebar extends StatelessWidget {
                           onTap: () => Navigator.of(context).pushNamed('/cook'),
                         ),
                         _SidebarItem(
-                          label: '我的',
-                          icon: AppIcons.user,
-                          active: false,
-                          onTap: () {
-                            if (platform.isWindows) {
-                              showMeWindow(context);
-                            } else {
-                              Navigator.of(context).pushNamed('/me');
-                            }
-                          },
-                        ),
-                        _SidebarItem(
                           label: 'CiCi AI',
                           icon: AppIcons.sparkle,
                           active: false,
@@ -201,35 +192,92 @@ class CitroTabletSidebar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-                  decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: c.line),
-                    boxShadow: CitroColors.shadows.paper(c),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        app.loggedIn ? app.displayName : '游客漫游中',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.heading(size: 14, color: c.ink),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        app.loggedIn ? '账号已同步' : '登录后同步社区与排行',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.body(
-                          size: 10.5,
-                          color: c.inkSoft,
-                          height: 1.45,
+                Pressable(
+                  onTap: () => openMePage(context),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+                    decoration: BoxDecoration(
+                      color: c.surface2,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: c.line),
+                      boxShadow: CitroColors.shadows.paper(c),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(11),
+                          child: SizedBox(
+                            width: 38,
+                            height: 38,
+                            child: avatarUrl.isEmpty
+                                ? ColoredBox(
+                                    color: app.loggedIn ? c.hl : c.surface,
+                                    child: Center(
+                                      child: app.loggedIn
+                                          ? Text(
+                                              app.user!.name.isEmpty
+                                                  ? '友'
+                                                  : app.user!.name[0],
+                                              style: context.display(
+                                                size: 16,
+                                                weight: FontWeight.w700,
+                                                color: c.accentInk,
+                                              ),
+                                            )
+                                          : AppIcon(
+                                              strokeSvg(
+                                                AppIcons.user,
+                                                width: 2,
+                                              ),
+                                              size: 18,
+                                              color: c.ink2,
+                                            ),
+                                    ),
+                                  )
+                                : Image.network(
+                                    avatarUrl,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 114,
+                                    errorBuilder: (_, _, _) => ColoredBox(
+                                      color: c.surface,
+                                      child: Center(
+                                        child: AppIcon(
+                                          strokeSvg(AppIcons.user, width: 2),
+                                          size: 18,
+                                          color: c.ink2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                app.loggedIn ? app.displayName : '游客漫游中',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.heading(size: 14, color: c.ink),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                app.loggedIn ? '账号已同步' : '登录后同步社区与排行',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.body(
+                                  size: 10.5,
+                                  color: c.inkSoft,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -654,6 +702,7 @@ class _SidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final large = CitroOrientation.padSize(MediaQuery.sizeOf(context));
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: Pressable(
@@ -694,7 +743,7 @@ class _SidebarItem extends StatelessWidget {
                 child: Text(
                   label,
                   style: context.body(
-                    size: 13.5,
+                    size: large ? 15 : 13.5,
                     weight: FontWeight.w700,
                     color: active ? c.accentInk : c.ink,
                   ),

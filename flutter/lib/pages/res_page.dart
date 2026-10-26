@@ -20,6 +20,8 @@ class ResPage extends StatefulWidget {
   State<ResPage> createState() => _ResPageState();
 }
 
+const _gamesMovedTools = {'玩法抽签', '瞬投', '屏幕分享', '视野live'};
+
 class _ResPageState extends State<ResPage> {
   final search = TextEditingController();
   String query = '';
@@ -47,9 +49,12 @@ class _ResPageState extends State<ResPage> {
                 (m) => '${m.name}${m.desc}${m.tag}'.toLowerCase().contains(q),
               )
               .toList();
+    final sourceTools = (platform.isAndroid || platform.isIOS)
+        ? kTools.where((t) => !_gamesMovedTools.contains(t.name)).toList()
+        : kTools;
     final tools = q.isEmpty
-        ? kTools
-        : kTools
+        ? sourceTools
+        : sourceTools
               .where(
                 (t) =>
                     '${t.name}${t.desc}${t.section}'.toLowerCase().contains(q),
@@ -226,24 +231,30 @@ class _ResPageState extends State<ResPage> {
                           children: [
                             const SectionTitle('游戏 Mod', size: 26),
                             const SizedBox(height: 10),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: wide
-                                  ? const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                      mainAxisExtent: 250,
-                                    )
-                                  : const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                      childAspectRatio: .86,
-                                    ),
-                              itemCount: mods.length,
-                              itemBuilder: (_, i) => _modCard(context, mods[i]),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final columns = wide ? 3 : 2;
+                                final cellWidth =
+                                    (constraints.maxWidth -
+                                        10 * (columns - 1)) /
+                                    columns;
+                                // 封面固定 2:1，下方文字区高度固定，避免按比例撑出大片空白。
+                                final extent = (cellWidth - 14) / 2 + 72;
+                                return GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: columns,
+                                        crossAxisSpacing: 10,
+                                        mainAxisSpacing: 10,
+                                        mainAxisExtent: extent,
+                                      ),
+                                  itemCount: mods.length,
+                                  itemBuilder: (_, i) =>
+                                      _modCard(context, mods[i]),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -266,19 +277,14 @@ class _ResPageState extends State<ResPage> {
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: wide
-                                  ? const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 0,
-                                      mainAxisExtent: 102,
-                                    )
-                                  : const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 0,
-                                      childAspectRatio: 1.34,
-                                    ),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: wide ? 3 : 2,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 0,
+                                    // 工具行内容高度固定，两列下不再用宽高比把卡片拉高。
+                                    mainAxisExtent: 104,
+                                  ),
                               itemCount: tools.length,
                               itemBuilder: (_, i) =>
                                   _toolCard(context, tools[i]),
@@ -456,7 +462,14 @@ class _ResPageState extends State<ResPage> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(m.name, style: context.heading(size: 17)),
+                Expanded(
+                  child: Text(
+                    m.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.heading(size: 17),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 3),

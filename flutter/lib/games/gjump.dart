@@ -314,7 +314,6 @@ class _GameJumpPageState extends State<GameJumpPage>
   double _camXTo = 0;
   double _power = 0;
   double _chargeT0 = 0;
-  double _chargeBeepAcc = 0;
   String _state = 'ready'; // ready / charge / fly / fall / over
   _Fly? _fly;
   _Fall? _fall;
@@ -343,6 +342,8 @@ class _GameJumpPageState extends State<GameJumpPage>
   void initState() {
     super.initState();
     GameSfx.soundsEnabled = true; // v1.6.0：仅刹车与跳一跳保留音效
+    unawaited(GameSfx.warmup());
+    unawaited(GameSfx.warmupJumpCharge());
     _newGame();
     // 用 Choreographer 驱动的 Ticker 取代 16ms 定时器：60Hz 设备跑 60fps，
     // 120Hz 设备直接跑 120fps，且与屏幕 vsync 对齐，不会出现半帧抖动。
@@ -358,6 +359,7 @@ class _GameJumpPageState extends State<GameJumpPage>
   @override
   void dispose() {
     _ticker.dispose();
+    unawaited(GameSfx.jumpChargeStop());
     GameSfx.soundsEnabled = false;
     _progress.dispose();
     _frame.dispose();
@@ -402,6 +404,7 @@ class _GameJumpPageState extends State<GameJumpPage>
   }
 
   void _newGame() {
+    unawaited(GameSfx.jumpChargeStop());
     final st0 = _pickStyle();
     _blocks = [_JumpBlock(x: 0, y: 0, w: 56, h: 34, style: st0)];
     _cur = 0;
@@ -594,7 +597,7 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   void _pressDown() {
     if (_over || _state != 'ready') return;
-    _chargeBeepAcc = 60; // 按下立即响第一声
+    unawaited(GameSfx.jumpChargeStart());
     setState(() {
       _state = 'charge';
       _chargeT0 = _now;
@@ -605,6 +608,8 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   void _pressUp() {
     if (_state != 'charge') return;
+    unawaited(GameSfx.jumpChargeStop());
+    GameSfx.tone(freq: 520, dur: 0.07, type: 'square', vol: 0.13, slide: 760);
     final p = math.min(1.0, (_now - _chargeT0) / _chargeMs);
     final b = _blocks[_cur];
     if (_cur + 1 >= _blocks.length) return;
@@ -644,20 +649,6 @@ class _GameJumpPageState extends State<GameJumpPage>
 
     if (_state == 'charge') {
       _power = math.min(1.0, (now - _chargeT0) / _chargeMs);
-      // v1.6.0：蓄力声音提示 —— 音高随力度上行的节拍音（每 70ms 一格），
-      // 松手起跳即停；web 端按住时的 tick 提示同思路。
-      _chargeBeepAcc += dt;
-      if (_chargeBeepAcc >= 70) {
-        _chargeBeepAcc = 0;
-        unawaited(
-          GameSfx.tone(
-            freq: 300 + 620 * _power,
-            dur: 0.045,
-            type: 'square',
-            vol: 0.055 + 0.045 * _power,
-          ),
-        );
-      }
     } else if (_state == 'fly') {
       final f = _fly!;
       final k = (now - f.t0) / f.t;
@@ -1099,8 +1090,8 @@ class _JumpOverlay extends StatelessWidget {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xEDF6EFDF),
-        border: Border.all(color: const Color(0x262E2C22)),
+        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xEDF6EFDF),
+        border: Border.all(color: c.dark ? c.line2 : const Color(0x262E2C22)),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -1130,8 +1121,8 @@ class _JumpOverlay extends StatelessWidget {
                   ),
                   TextSpan(
                     text: '$score',
-                    style: const TextStyle(
-                      color: Color(0xFFE8C87E),
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : const Color(0xFFE8C87E),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       height: 1.7,

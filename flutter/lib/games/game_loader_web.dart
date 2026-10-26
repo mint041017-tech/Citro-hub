@@ -6,6 +6,7 @@ import 'g2048.dart' deferred as g2048;
 import 'gbrake_web.dart' deferred as gbrake;
 import 'gfeihua.dart' deferred as gfeihua;
 import 'gidiom.dart' deferred as gidiom;
+import 'gjigsaw.dart' deferred as gjigsaw hide JigsawModeX;
 import 'gjump.dart' deferred as gjump;
 import 'gliquid.dart' deferred as gliquid;
 import 'gmemory.dart' deferred as gmemory;
@@ -27,6 +28,9 @@ Future<Widget> _loadPage(String key) async {
     case 'gsudoku':
       await gsudoku.loadLibrary();
       return gsudoku.GameSudokuPage();
+    case 'gjigsaw':
+      await gjigsaw.loadLibrary();
+      return gjigsaw.GameJigsawPage();
     case 'gnono':
       await gnono.loadLibrary();
       return gnono.GameNonoPage();

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'games/game_loader.dart';
+import 'services/platform.dart' as platform;
 import 'pages/cook_page.dart';
 import 'pages/me_page.dart';
 import 'pages/play_page.dart';
@@ -25,6 +26,7 @@ class CitroRoutes {
     '/g2048',
     '/gmem',
     '/gsudoku',
+    '/gjigsaw',
     '/gnono',
     '/gslide',
     '/gsnake',
@@ -82,11 +84,12 @@ class _CitroPageRoute<T> extends MaterialPageRoute<T> {
   _CitroPageRoute({required super.builder, super.settings});
 
   @override
-  Duration get transitionDuration =>
-      kIsWeb ? const Duration(milliseconds: 170) : super.transitionDuration;
+  Duration get transitionDuration => kIsWeb || platform.isWindows
+      ? const Duration(milliseconds: 160)
+      : super.transitionDuration;
 
   @override
-  Duration get reverseTransitionDuration => kIsWeb
-      ? const Duration(milliseconds: 130)
+  Duration get reverseTransitionDuration => kIsWeb || platform.isWindows
+      ? const Duration(milliseconds: 140)
       : super.reverseTransitionDuration;
 }

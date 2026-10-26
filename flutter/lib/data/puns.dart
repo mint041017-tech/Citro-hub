@@ -1,4 +1,5 @@
 // 玩法抽签 · PUNS[]
+// 全站同步由服务端发签；增删条目时同步 trash/trash.js 的 PLAY_PUNS。
 const List<String> kPuns = [
   "使用技能要说技能",
   "听到爆点拿出盘盘",

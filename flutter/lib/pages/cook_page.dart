@@ -19,6 +19,7 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
+import '../widgets/app_image.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -179,15 +180,13 @@ class _CookPageState extends State<CookPage> {
   }
 
   void _precacheCovers(List<Recipe> list) {
+    final urls = list
+        .take(20)
+        .where((r) => r.cover.isNotEmpty)
+        .map((r) => Api.imageUrl(r.cover));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      for (final r in list.take(10)) {
-        if (r.cover.isEmpty) continue;
-        precacheImage(
-          ResizeImage(NetworkImage(Api.imageUrl(r.cover)), width: 540),
-          context,
-        ).catchError((_) {});
-      }
+      AppImage.precache(context, urls);
     });
   }
 
@@ -251,13 +250,35 @@ class _CookPageState extends State<CookPage> {
     }
   }
 
-  Future<void> _saveShopping() async {
+  Future<bool> _saveShopping() async {
     try {
       final list = await Api.saveShopping(shopping);
       if (mounted) setState(() => shopping = list);
+      return true;
     } catch (e) {
       if (mounted) AppToast.show(context, '清单保存失败');
+      return false;
     }
+  }
+
+  Future<void> _addIngredientsToShopping(Recipe r) async {
+    final seen = {for (final it in shopping) it.text.trim()};
+    var added = 0;
+    for (final it in r.ingredients) {
+      final name = it.name.trim();
+      if (name.isEmpty) continue;
+      final amount = it.amount.trim();
+      final text = amount.isEmpty ? name : '$name $amount';
+      if (!seen.add(text)) continue;
+      shopping.add(ShoppingItem(text: text));
+      added++;
+    }
+    if (added == 0) {
+      if (mounted) AppToast.show(context, '食材已经在购物清单里了');
+      return;
+    }
+    final ok = await _saveShopping();
+    if (ok && mounted) AppToast.show(context, '已加入 $added 项到购物清单');
   }
 
   Future<void> _saveFridge() async {
@@ -1071,19 +1092,12 @@ class _CookPageState extends State<CookPage> {
                       ),
                     if (r.cover.isNotEmpty)
                       Positioned.fill(
-                        child: Image.network(
+                        child: AppImage(
                           Api.imageUrl(r.cover),
                           fit: BoxFit.cover,
                           cacheWidth: 540,
-                          gaplessPlayback: true,
-                          frameBuilder: (ctx, child, frame, sync) => sync
-                              ? child
-                              : AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: child,
-                                ),
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          errorBuilder: (_, __, ___) =>
+                              const SizedBox.shrink(),
                         ),
                       ),
                     Positioned(
@@ -1196,7 +1210,7 @@ class _CookPageState extends State<CookPage> {
               width: 17,
               height: 17,
               child: av.isNotEmpty
-                  ? Image.network(
+                  ? AppImage(
                       Api.imageUrl(av),
                       fit: BoxFit.cover,
                       cacheWidth: 54,
@@ -1365,7 +1379,43 @@ class _CookPageState extends State<CookPage> {
             const SizedBox(height: 12),
             DashedLine(color: c.line2),
             const SizedBox(height: 12),
-            _sectionTitle(context, '食材'),
+            Row(
+              children: [
+                _sectionTitle(context, '食材'),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => _addIngredientsToShopping(r),
+                  child: Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: c.hl,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: c.accent.withAlpha(110)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppIcon(
+                          strokeSvg(AppIcons.cart, width: 2),
+                          size: 13,
+                          color: c.accentInk,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '加入购物清单',
+                          style: context.body(
+                            size: 10.5,
+                            weight: FontWeight.w700,
+                            color: c.accentInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             _ingredients(context, r),
             const SizedBox(height: 14),
@@ -1767,7 +1817,7 @@ class _CookPageState extends State<CookPage> {
                       height: 88,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
+                        child: AppImage(
                           Api.imageUrl(step.img),
                           fit: BoxFit.cover,
                           cacheWidth: 280,
@@ -2331,18 +2381,10 @@ class _CookPageState extends State<CookPage> {
                       ),
                     ),
                     if (r.cover.isNotEmpty)
-                      Image.network(
+                      AppImage(
                         Api.imageUrl(r.cover),
                         fit: BoxFit.cover,
                         cacheWidth: 180,
-                        gaplessPlayback: true,
-                        frameBuilder: (ctx, child, frame, sync) => sync
-                            ? child
-                            : AnimatedOpacity(
-                                opacity: frame == null ? 0 : 1,
-                                duration: const Duration(milliseconds: 160),
-                                child: child,
-                              ),
                         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                       ),
                   ],

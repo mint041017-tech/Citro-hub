@@ -12,7 +12,6 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
-import 'in_app_web.dart';
 
 /// The desktop page is a 12-column sheet on a warm desk, matching index.html.
 class WebDesktopPaper extends StatelessWidget {
@@ -229,47 +228,6 @@ class _Brand extends StatelessWidget {
                           size: 15,
                           weight: FontWeight.w700,
                           color: c.accentInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 9),
-              Pressable(
-                onTap: () => openCitroPage(
-                  context,
-                  'https://dl.chimu-claw.xyz/',
-                  title: 'Citro 下载站',
-                ),
-                hoverLift: 0,
-                hoverShadow: false,
-                hoverColor: c.mintLine.withAlpha(90),
-                borderRadius: BorderRadius.circular(999),
-                child: Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  decoration: BoxDecoration(
-                    color: c.mintSoft,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.mintLine),
-                    boxShadow: CitroColors.shadows.paper(c),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppIcon(
-                        strokeSvg(AppIcons.download, width: 2),
-                        size: 17,
-                        color: c.mintInk,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '下载站',
-                        style: context.body(
-                          size: 15,
-                          weight: FontWeight.w700,
-                          color: c.mintInk,
                         ),
                       ),
                     ],

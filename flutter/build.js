@@ -51,7 +51,7 @@ if (!aiKey) {
 }
 const buildArgs = ['build', 'apk', '--' + buildType, '--dart-define=APP_VERSION=' + version];
 if (aiKey) buildArgs.push('--dart-define=GLM_API_KEY=' + aiKey);
-console.log(`> flutter build apk --${buildType}  (v${version})  AI:${aiKey ? 'on' : 'off'}`);
+console.log(`> flutter build apk --${buildType}  (v${version})  AI:${aiKey ? 'direct' : 'proxy'}`);
 try {
   cp.execFileSync(flutterBin, buildArgs, {
     cwd: dir,

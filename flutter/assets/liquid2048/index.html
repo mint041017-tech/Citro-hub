@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5ecdb">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>咕噜果冻铺 · 软体合并小游戏</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="stage" aria-label="咕噜果冻铺游戏画面"></canvas>
+
+    <header class="hud">
+      <div class="brand" aria-hidden="true">
+        <span class="brand-mark"><i></i><i></i><i></i></span>
+        <span class="brand-copy">
+          <strong>咕噜果冻铺</strong>
+          <small>GULU JELLY SHOP</small>
+        </span>
+      </div>
+
+      <div class="hud-main">
+        <div class="score-card" aria-live="polite">
+          <div class="stat">
+            <span>得分</span>
+            <b id="score">0</b>
+          </div>
+          <span class="ticket-line" aria-hidden="true"></span>
+          <div class="stat best">
+            <span>最佳</span>
+            <b id="best">0</b>
+          </div>
+        </div>
+
+        <div class="next-box" aria-label="接下来要投喂的果冻">
+          <span class="next-label">接下来</span>
+          <div id="nextQueue" class="next-queue"></div>
+        </div>
+
+        <div class="hud-actions">
+          <button id="soundBtn" class="icon-btn" type="button" aria-label="关闭声音" title="声音">
+            <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h3l4 3.5v-13L7 9H4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.2 6a8.5 8.5 0 0 1 0 12"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h3l4 3.5v-13L7 9H4Z"/><path d="m15.5 9.5 5 5"/><path d="m20.5 9.5-5 5"/></svg>
+          </button>
+          <button id="restartBtn" class="icon-btn" type="button" aria-label="重开一局" title="重开一局">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5A8 8 0 1 1 17.6 5"/><path d="M20.5 4.5v6h-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="play-hint" id="playHint" aria-hidden="true">
+      <span><kbd>按住</kbd> 蓄力</span>
+      <i></i>
+      <span><kbd>松开</kbd> 投喂</span>
+      <i></i>
+      <span><kbd>← →</kbd> 微调</span>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="overlay is-open" id="startOverlay">
+      <section class="card intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+        <span class="tape tape-a" aria-hidden="true"></span>
+        <span class="tape tape-b" aria-hidden="true"></span>
+        <p class="eyebrow">SOFT BODY MERGE · 软体合并</p>
+        <h1 id="introTitle">咕噜<span>果冻铺</span></h1>
+        <p class="lede">把软乎乎的果冻投进罐子里。<br>相同数字碰在一起，就会咕噜一下合体变大，数字没有上限。</p>
+
+        <div class="mascot-wrap" aria-hidden="true">
+          <div class="mascot">
+            <span class="mascot-eye left"></span>
+            <span class="mascot-eye right"></span>
+            <span class="mascot-mouth"></span>
+            <span class="mascot-num">6</span>
+            <span class="mascot-shine"></span>
+          </div>
+          <span class="doodle star s1">✦</span>
+          <span class="doodle star s2">✧</span>
+          <span class="doodle arc"></span>
+        </div>
+
+        <ul class="howto">
+          <li>
+            <span class="step">1</span>
+            <div><b>瞄准</b><small>移动鼠标 / 手指</small></div>
+          </li>
+          <li>
+            <span class="step">2</span>
+            <div><b>蓄力</b><small>按住不放</small></div>
+          </li>
+          <li>
+            <span class="step">3</span>
+            <div><b>投喂</b><small>松开出手</small></div>
+          </li>
+        </ul>
+
+        <button id="startBtn" class="primary-btn" type="button">开张营业 <span aria-hidden="true">→</span></button>
+        <p class="footnote">没有倒计时，慢慢玩。投得越多，出货越大；果冻溢出罐口才打烊。</p>
+      </section>
+    </div>
+
+    <div class="overlay" id="endOverlay">
+      <section class="card end-card" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+        <span class="tape tape-a" aria-hidden="true"></span>
+        <p class="eyebrow">TODAY'S JAR</p>
+        <h2 id="endTitle">罐口溢出来啦</h2>
+        <p class="lede small" id="endCopy">今天的果冻卖完了，明天再来一罐吧。</p>
+
+        <div class="result-row">
+          <div class="result-main">
+            <span>本局得分</span>
+            <b id="finalScore">0</b>
+          </div>
+          <div class="result-side">
+            <div><span>最大果冻</span><b id="finalLevel">1</b></div>
+            <div><span>投喂次数</span><b id="finalShots">0</b></div>
+          </div>
+        </div>
+
+        <div class="ribbon hidden" id="newBest">新的本机纪录</div>
+
+        <div class="board">
+          <div class="board-head"><span>本机小榜</span><span>TOP 5</span></div>
+          <ol id="scoreBoard" class="score-board"></ol>
+        </div>
+
+        <button id="againBtn" class="primary-btn" type="button">再来一罐 <span aria-hidden="true">↻</span></button>
+        <button id="homeBtn" class="ghost-btn" type="button">回看玩法</button>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/audio.js"></script>
+  <script src="js/softbody.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    (function () {
+      if (window.parent && window.parent !== window) {
+        document.body.classList.add("citro-standard");
+      }
+      var lastOver = -1;
+      function send(payload) {
+        try {
+          if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+            if (payload.type === "over") {
+              window.flutter_inappwebview.callHandler("citroScore", payload);
+            } else {
+              window.flutter_inappwebview.callHandler("citroLiveState", payload);
+            }
+          } else if (window.parent && window.parent !== window) {
+            window.parent.postMessage(payload, "*");
+          }
+        } catch (err) {}
+      }
+      window.addEventListener("message", function (event) {
+        var data = event && event.data ? event.data : {};
+        if (typeof data.__citroShell === "string") {
+          document.body.classList.toggle(
+            "citro-standard",
+            data.__citroShell === "standard"
+          );
+        }
+        if (data.__citroCommand === "restart" && window.__gulu) {
+          if (window.__gulu.state === "start") {
+            window.__gulu.startGame();
+          } else {
+            window.__gulu.startNewRound("restart");
+          }
+        }
+      });
+      function hook() {
+        var game = window.__gulu;
+        if (!game) {
+          setTimeout(hook, 150);
+          return;
+        }
+        if (game.__citroBridge) return;
+        game.__citroBridge = true;
+        var originalShowEnd = game.showEnd.bind(game);
+        game.showEnd = function () {
+          originalShowEnd();
+          if (lastOver === game.score) return;
+          lastOver = game.score;
+          send({
+            __citroLiquid: 1,
+            type: "over",
+            score: Math.round(game.score || 0),
+            level: game.maxLevel || 1,
+            shots: game.shots || 0
+          });
+        };
+        setInterval(function () {
+          try {
+            if (game.state === "playing") lastOver = -1;
+            var next = [];
+            try {
+              for (var i = 1; i < Math.min(4, game.queue.length); i++) {
+                next.push(
+                  window.__citroLevelValue
+                    ? window.__citroLevelValue(game.queue[i]).value
+                    : game.queue[i]
+                );
+              }
+            } catch (err) {
+              next = game.queue.slice(1, 4);
+            }
+            var progress = game.state === "playing"
+              ? "得分 " + Math.round(game.score || 0) + " · 最大 Lv." + (game.maxLevel || 1)
+              : "开局准备中";
+            send({
+              __citroLiquid: 1,
+              type: "live",
+              progress: progress,
+              state: game.state,
+              score: Math.round(game.score || 0),
+              best: Math.round(Math.max(game.best || 0, game.score || 0)),
+              next: next,
+              level: game.maxLevel || 1
+            });
+          } catch (err) {}
+        }, 2000);
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", hook);
+      } else {
+        hook();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -13,6 +13,8 @@ import '../overlays/report_sheet.dart';
 import '../services/api.dart';
 import '../services/media.dart';
 import '../services/models.dart';
+import '../services/orientation.dart';
+import '../services/platform.dart' as platform;
 import '../services/voice.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -485,9 +487,20 @@ class _CommunityPageState extends State<CommunityPage> {
     // 宽屏网页沿用桌面端的信息流：居中标题 + 资料封面 + 多列瀑布流，
     // 不再使用网页专用的三栏仪表盘。
     final webWide = kIsWeb && width >= 760;
-    final masonry = tabletNav || duo || webWide;
-    final maxFeed = (tabletNav || webWide) ? 1180.0 : 760.0;
+    final pad = !kIsWeb && CitroOrientation.padSize(MediaQuery.sizeOf(context));
+    // 窄窗口（含测试里模拟的手机宽度）走手机信息流，别让 Windows 桌面布局
+    // 覆盖掉 Duo 外屏/小窗口的判断。
+    final windows = !kIsWeb && platform.isWindows && width >= 600;
+    final masonry = tabletNav || duo || webWide || pad || windows;
+    final maxFeed = (tabletNav || webWide || pad || windows) ? 1180.0 : 760.0;
     final side = math.max(8.0, (width - maxFeed) / 2);
+    // iPad 横竖屏都固定双列；Windows 最多双列；网页宽屏双列；
+    // Android 平板保留原来的 2/3 列规则。
+    final columns = (pad || windows || kIsWeb)
+        ? (width >= 560 ? 2 : 1)
+        : width >= 900
+        ? (MediaQuery.orientationOf(context) == Orientation.landscape ? 3 : 2)
+        : (width >= 560 ? 2 : 1);
     final q = search.trim().toLowerCase();
     final filtered = posts.where((p) {
       if (app.isBlocked(p.nick)) return false;
@@ -552,14 +565,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             SliverPadding(
                               padding: EdgeInsets.symmetric(horizontal: side),
                               sliver: SliverMasonryGrid.count(
-                                crossAxisCount: kIsWeb
-                                    ? (width >= 560 ? 2 : 1)
-                                    : width >= 900
-                                    ? (MediaQuery.orientationOf(context) ==
-                                              Orientation.landscape
-                                          ? 3
-                                          : 2)
-                                    : (width >= 560 ? 2 : 1),
+                                crossAxisCount: columns,
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 10,
                                 childCount: filtered.length,

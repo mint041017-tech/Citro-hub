@@ -585,7 +585,7 @@ class _MemoryOverlay extends StatelessWidget {
       child: CitroBackdropBlur(
         sigma: 6,
         child: Container(
-          color: const Color(0xE0FCF8F0),
+          color: c.dark ? c.surface.withAlpha(0xE8) : const Color(0xE0FCF8F0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

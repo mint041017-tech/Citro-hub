@@ -10,6 +10,7 @@ import '../theme/tokens.dart';
 import '../widgets/global_search.dart';
 import '../widgets/paper.dart';
 import 'home_page.dart';
+import 'in_app_web.dart';
 import 'web_scrapbook.dart';
 
 void _noop() {}
@@ -148,7 +149,307 @@ class _WebGames extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 9),
+        const WebGameToolsRow(),
       ],
+    );
+  }
+}
+
+/// 桌面首页游戏面板底部的小工具卡：与 Web 手机端游戏页同款，
+/// 工具卡加大、下载站单独一条高亮卡，游戏网格自动让出空间。
+class WebGameToolsRow extends StatelessWidget {
+  const WebGameToolsRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final tools = <_WebGameTool>[
+      _WebGameTool(
+        title: '玩法抽签',
+        desc: '无畏契约整活',
+        icon: AppIcons.sparkle,
+        background: c.hl,
+        foreground: c.accentInk,
+        onTap: () => Navigator.of(context).pushNamed('/play'),
+      ),
+      _WebGameTool(
+        title: '瞬投',
+        desc: '投掷物点位',
+        icon: AppIcons.location,
+        background: c.mintSoft,
+        foreground: c.mintInk,
+        onTap: () =>
+            openCitroPage(context, 'https://shuntou.top/', title: '瞬投'),
+      ),
+      _WebGameTool(
+        title: '屏幕分享',
+        desc: '网页共享演示',
+        icon: AppIcons.monitor,
+        background: c.noteB,
+        foreground: c.accentInk,
+        onTap: () =>
+            openCitroPage(context, 'https://demo.piik.tv/', title: '屏幕分享'),
+      ),
+      _WebGameTool(
+        title: '视野live',
+        desc: '实时视野直播',
+        icon: AppIcons.eye,
+        background: c.mintSoft,
+        foreground: c.mintInk,
+        onTap: () => openCitroPage(
+          context,
+          'https://shijiao.xingpaste.com/',
+          title: '视野live',
+        ),
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              for (var i = 0; i < tools.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _WebGameToolCard(tool: tools[i])),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _WebDownloadCard(
+          onTap: () => openCitroPage(
+            context,
+            'https://dl.chimu-claw.xyz/',
+            title: 'Citro 下载站',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WebGameTool {
+  final String title;
+  final String desc;
+  final String icon;
+  final Color background;
+  final Color foreground;
+  final VoidCallback onTap;
+
+  const _WebGameTool({
+    required this.title,
+    required this.desc,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onTap,
+  });
+}
+
+class _WebGameToolCard extends StatelessWidget {
+  final _WebGameTool tool;
+
+  const _WebGameToolCard({required this.tool});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: tool.onTap,
+      borderRadius: BorderRadius.circular(12),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.line),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: tool.background,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(tool.icon, width: 2),
+                  size: 17,
+                  color: tool.foreground,
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              tool.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.body(
+                size: 12.5,
+                weight: FontWeight.w700,
+                color: c.ink,
+                height: 1.15,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              tool.desc,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.body(
+                size: 9.5,
+                color: c.inkSoft,
+                height: 1.15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 下载站单独一条，薄荷底 + 「官方」标注 + 直达按钮，明显区别于普通工具卡。
+class _WebDownloadCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _WebDownloadCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.mintLine.withAlpha(c.dark ? 30 : 80),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: c.dark
+                ? const [Color(0x2AC9D3B2), Color(0x0DC9D3B2)]
+                : const [Color(0xFFE4EFDC), Color(0xFFFBF7EC)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.mintLine, width: 1.2),
+          boxShadow: CitroColors.shadows.paper(c),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: c.mint,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(AppIcons.download, width: 2),
+                  size: 16,
+                  color: Color(0xFF2E2C22),
+                ),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '下载站',
+                        style: context.body(
+                          size: 13,
+                          weight: FontWeight.w800,
+                          color: c.mintInk,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.accent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '官方',
+                          style: context.body(
+                            size: 8.5,
+                            weight: FontWeight.w800,
+                            color: const Color(0xFF2E2C22),
+                            height: 1.15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'App、Mod 与工具下载 · 官方直链',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 9.5,
+                      color: c.mintInk.withAlpha(190),
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: c.surface2,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: c.mintLine),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '直达',
+                    style: context.body(
+                      size: 10,
+                      weight: FontWeight.w700,
+                      color: c.mintInk,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  AppIcon(
+                    strokeSvg(AppIcons.arrowUpRight, width: 2),
+                    size: 10,
+                    color: c.mintInk,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

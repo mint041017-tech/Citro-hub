@@ -478,8 +478,8 @@ class GameSnakeView extends StatelessWidget {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xF0FCF8F0),
-        border: Border.all(color: const Color(0x292E2C22)),
+        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
+        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -504,8 +504,8 @@ class GameSnakeView extends StatelessWidget {
                   const TextSpan(text: '得分 '),
                   TextSpan(
                     text: '$score',
-                    style: const TextStyle(
-                      color: _snakeFloatInk,
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : _snakeFloatInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

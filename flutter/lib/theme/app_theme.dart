@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -108,14 +107,14 @@ ThemeData buildCitroTheme(CitroColors colors) {
               TargetPlatform.android: CitroFastPageTransitionsBuilder(),
               TargetPlatform.iOS: CitroFastPageTransitionsBuilder(),
               TargetPlatform.macOS: CitroFastPageTransitionsBuilder(),
-              TargetPlatform.windows: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.windows: CitroFastSlidePageTransitionsBuilder(),
               TargetPlatform.linux: CitroFastPageTransitionsBuilder(),
               TargetPlatform.fuchsia: CitroFastPageTransitionsBuilder(),
             }
           : const {
               TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-              // Windows 上保留 iPad 的横向推入 + 边缘阴影手感。
-              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+              // Windows 统一使用短促淡入：省掉整页横推 + 边缘阴影的栅格开销。
+              TargetPlatform.windows: CitroFastSlidePageTransitionsBuilder(),
             },
     ),
     textTheme: base.textTheme.apply(
@@ -138,6 +137,37 @@ ThemeData buildCitroTheme(CitroColors colors) {
   );
 }
 
+
+
+/// Windows 专用：保留轻微的横向推入手感，但去掉 Cupertino 的整页横推与边缘阴影。
+/// 页面转场统一用短时长，减少每帧的大面积栅格化。
+class CitroFastSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const CitroFastSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+    );
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(.04, 0),
+        end: Offset.zero,
+      ).animate(curved),
+      child: FadeTransition(
+        opacity: Tween<double>(begin: .88, end: 1).animate(curved),
+        child: child,
+      ),
+    );
+  }
+}
 /// 网页端使用短促的淡入 + 轻微右移，避免 300ms 以上的整页滑动掉帧。
 class CitroFastPageTransitionsBuilder extends PageTransitionsBuilder {
   const CitroFastPageTransitionsBuilder();
