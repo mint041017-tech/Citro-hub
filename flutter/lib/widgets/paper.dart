@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -581,6 +582,11 @@ class AppIcons {
   static const plus = '<path d="M12 5v14M5 12h14"/>';
   static const minus = '<path d="M5 12h14"/>';
   static const close = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
+  static const maximize = '<rect x="5" y="5" width="14" height="14" rx="2.4"/>';
+  static const restore =
+      '<rect x="8" y="3.5" width="12.5" height="12.5" rx="2.2"/><path d="M3.5 8.5v9a2 2 0 0 0 2 2h9"/>';
+  static const library =
+      '<rect x="3" y="3" width="7.2" height="7.2" rx="1.8"/><rect x="13.8" y="3" width="7.2" height="7.2" rx="1.8"/><rect x="3" y="13.8" width="7.2" height="7.2" rx="1.8"/><rect x="13.8" y="13.8" width="7.2" height="7.2" rx="1.8"/>';
   static const download =
       '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>';
   static const edit =
@@ -657,7 +663,7 @@ class Pressable extends StatefulWidget {
   final Color? hoverColor;
   final Color? hoverOverlayColor;
   final double hoverLift;
-  final bool hoverShadow;
+  final bool? hoverShadow;
 
   const Pressable({
     super.key,
@@ -669,7 +675,7 @@ class Pressable extends StatefulWidget {
     this.hoverColor,
     this.hoverOverlayColor,
     this.hoverLift = 2.5,
-    this.hoverShadow = true,
+    this.hoverShadow,
   });
 
   @override
@@ -687,6 +693,7 @@ class _PressableState extends State<Pressable> {
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null || widget.onLongPress != null;
     final c = context.c;
+    final hoverShadow = widget.hoverShadow ?? !kIsWeb;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) {
@@ -729,7 +736,7 @@ class _PressableState extends State<Pressable> {
             ),
             decoration: BoxDecoration(
               borderRadius: widget.borderRadius,
-              boxShadow: widget.hoverShadow && widget.borderRadius != null
+              boxShadow: hoverShadow && widget.borderRadius != null
                   ? [
                       BoxShadow(
                         color: _hover && !_down

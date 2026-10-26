@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/game_sfx.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -39,6 +42,9 @@ class _GameSnakePageState extends State<GameSnakePage> {
   bool over = false;
   bool submitted = false;
   Timer? timer;
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'snake-keyboard');
+
+  bool get _keyboardEnabled => platform.isWindows || kIsWeb;
 
   /// 「正在玩」进度（web gamesLiveHeartbeat('gsnake', '得分 N · 长度 M')）。
   final ValueNotifier<String> _progress = ValueNotifier<String>('得分 0');
@@ -47,12 +53,18 @@ class _GameSnakePageState extends State<GameSnakePage> {
   void initState() {
     super.initState();
     _newGame();
+    if (_keyboardEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _keyFocus.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     timer?.cancel();
     _progress.dispose();
+    _keyFocus.dispose();
     super.dispose();
   }
 
@@ -108,6 +120,33 @@ class _GameSnakePageState extends State<GameSnakePage> {
     nextY = y;
   }
 
+  (int, int)? _directionFor(LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.keyW) {
+      return (0, -1);
+    }
+    if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.keyS) {
+      return (0, 1);
+    }
+    if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.keyA) {
+      return (-1, 0);
+    }
+    if (key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.keyD) {
+      return (1, 0);
+    }
+    return null;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_keyboardEnabled || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final direction = _directionFor(event.logicalKey);
+    if (direction == null) return KeyEventResult.ignored;
+    _turn(direction.$1, direction.$2);
+    return KeyEventResult.handled;
+  }
+
   void _tick() {
     if (over) return;
     dirX = nextX;
@@ -152,7 +191,7 @@ class _GameSnakePageState extends State<GameSnakePage> {
   @override
   Widget build(BuildContext context) {
     final best = context.app.localBest('snake:$diff');
-    return GameSnakeView(
+    final view = GameSnakeView(
       diff: diff,
       snake: snake,
       food: food,
@@ -174,6 +213,13 @@ class _GameSnakePageState extends State<GameSnakePage> {
         difficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
         initial: diff,
       ),
+      keyboardMode: _keyboardEnabled,
+    );
+    return Focus(
+      focusNode: _keyFocus,
+      autofocus: _keyboardEnabled,
+      onKeyEvent: _onKey,
+      child: view,
     );
   }
 }
@@ -194,6 +240,7 @@ class GameSnakeView extends StatelessWidget {
     this.onTurn,
     this.onRetry,
     this.onRank,
+    this.keyboardMode = false,
   });
 
   final List<Point> snake;
@@ -208,6 +255,7 @@ class GameSnakeView extends StatelessWidget {
   final void Function(int x, int y)? onTurn;
   final VoidCallback? onRetry;
   final VoidCallback? onRank;
+  final bool keyboardMode;
 
   static const _diffItems = <(String, String)>[
     ('easy', '简单'),
@@ -244,7 +292,10 @@ class GameSnakeView extends StatelessWidget {
               : duoPortrait
               ? math.max(320.0, media.height - 550)
               : 520.0;
-          final boardW = landscapeTablet
+          final keyboard = keyboardMode && !kIsWeb;
+          final boardW = keyboard
+              ? math.min(available, math.min(520.0, heightCap))
+              : landscapeTablet
               ? math.min(
                   520.0,
                   math.max(320.0, math.min(available - 266, heightCap)),
@@ -257,7 +308,14 @@ class GameSnakeView extends StatelessWidget {
               const SizedBox(height: 12),
               _hud(context),
               const SizedBox(height: 14),
-              if (landscapeTablet)
+              if (keyboard) ...[
+                _board(context, boardW),
+                const SizedBox(height: 8),
+                Text(
+                  'WASD / 方向键控制',
+                  style: context.body(size: 11, color: context.c.inkSoft),
+                ),
+              ] else if (landscapeTablet)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -271,6 +329,13 @@ class GameSnakeView extends StatelessWidget {
                 _board(context, boardW),
                 const SizedBox(height: 6),
                 _dpad(context),
+              ],
+              if (kIsWeb) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'WASD / 方向键控制',
+                  style: context.body(size: 11, color: context.c.inkSoft),
+                ),
               ],
             ],
           );

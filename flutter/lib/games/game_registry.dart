@@ -4,19 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import 'game_common.dart';
-import 'g2048.dart';
-import 'gmemory.dart';
-import 'gsudoku.dart';
-import 'gnono.dart';
-import 'gslide.dart';
-import 'gsnake.dart';
-import 'gsheep.dart';
-import 'gjump.dart';
-import 'gpeng.dart';
-import 'gbrake_web.dart';
-import 'gidiom.dart';
-import 'gfeihua.dart';
 
 class GameCardData {
   final String key;
@@ -64,6 +51,12 @@ const kGameCards = <GameCardData>[
   ),
   GameCardData(key: 'gidiom', title: '成语接龙', gradient: _gRed, art: _artIdiom),
   GameCardData(key: 'gfeihua', title: '飞花令', gradient: _gTeal, art: _artFeihua),
+  GameCardData(
+    key: 'gliquid',
+    title: '咕噜果冻',
+    gradient: _gMint,
+    art: _artLiquid,
+  ),
 ];
 
 List<Color> _gOrange(CitroColors c) => const [
@@ -85,6 +78,10 @@ List<Color> _gRed(CitroColors c) => const [
 List<Color> _gTeal(CitroColors c) => const [
   Color(0x242E6B73),
   Color(0x1AA89154),
+];
+List<Color> _gMint(CitroColors c) => const [
+  Color(0x30A9E5C8),
+  Color(0x18FFC3D6),
 ];
 
 Widget _tile(
@@ -608,35 +605,122 @@ Widget _petal(BuildContext context, double angle) => Transform.rotate(
   ),
 );
 
-Widget buildGamePage(String key) {
-  return switch (key) {
-    'g2048' => const Game2048Page(),
-    'gmem' => const GameMemoryPage(),
-    'gsudoku' => const GameSudokuPage(),
-    'gnono' => const GameNonoPage(),
-    'gslide' => const GameSlidePage(),
-    'gsnake' => const GameSnakePage(),
-    'gsheep' => const GameSheepPage(),
-    'gjump' => const GameJumpPage(),
-    'gpeng' => const GamePengPage(),
-    // v1.7.0：极限刹车改为内嵌原始版（WebView + three.js 构建产物）
-    'gbrake' => const GameBrakeWebPage(),
-    'gidiom' => const GameIdiomPage(),
-    'gfeihua' => const GameFeihuaPage(),
-    _ => const _MissingGame(),
-  };
-}
+Widget _artLiquid(BuildContext context) => SizedBox(
+  width: 58,
+  height: 48,
+  child: CustomPaint(painter: _LiquidJarPainter(context.c)),
+);
 
-class _MissingGame extends StatelessWidget {
-  const _MissingGame();
+class _LiquidJarPainter extends CustomPainter {
+  _LiquidJarPainter(this.c);
+
+  final CitroColors c;
+
   @override
-  Widget build(BuildContext context) {
-    return GamePageShell(
-      gameKey: 'missing',
-      title: '游戏',
-      subtitle: '这个游戏还没准备好',
-      note: '',
-      child: Center(child: Text('敬请期待', style: context.heading(size: 22))),
+  void paint(Canvas canvas, Size size) {
+    final ink = c.ink;
+    final rect = Rect.fromLTWH(10, 6, 38, 38);
+    final jar = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+    canvas.drawRRect(jar, Paint()..color = const Color(0xFFFFFAF0));
+
+    canvas.save();
+    canvas.clipRRect(jar);
+    final wave = Path()
+      ..moveTo(rect.left, rect.bottom - 15)
+      ..quadraticBezierTo(
+        rect.left + 9,
+        rect.bottom - 21,
+        rect.center.dx,
+        rect.bottom - 16,
+      )
+      ..quadraticBezierTo(
+        rect.right - 9,
+        rect.bottom - 11,
+        rect.right,
+        rect.bottom - 17,
+      )
+      ..lineTo(rect.right, rect.bottom)
+      ..lineTo(rect.left, rect.bottom)
+      ..close();
+    canvas.drawPath(wave, Paint()..color = const Color(0xFFA9ECCB));
+
+    const pink = Color(0xFFFFC3D6);
+    const pinkEdge = Color(0xFFAB4F72);
+    canvas.drawCircle(
+      Offset(rect.right - 13, rect.bottom - 16),
+      10.5,
+      Paint()..color = pink,
+    );
+    canvas.drawCircle(
+      Offset(rect.right - 13, rect.bottom - 16),
+      10.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = pinkEdge,
+    );
+    canvas.drawCircle(
+      Offset(rect.right - 16.5, rect.bottom - 19),
+      1.6,
+      Paint()..color = ink,
+    );
+    canvas.drawCircle(
+      Offset(rect.right - 9.5, rect.bottom - 19),
+      1.6,
+      Paint()..color = ink,
+    );
+
+    final yellow = Offset(rect.left + 15, rect.bottom - 22);
+    canvas.drawCircle(yellow, 7, Paint()..color = const Color(0xFFFFDD7F));
+    canvas.drawCircle(
+      yellow,
+      7,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xFF98701A),
+    );
+
+    final star = Path()
+      ..moveTo(rect.left + 9, rect.top + 12)
+      ..lineTo(rect.left + 11, rect.top + 16)
+      ..lineTo(rect.left + 15, rect.top + 18)
+      ..lineTo(rect.left + 11, rect.top + 20)
+      ..lineTo(rect.left + 9, rect.top + 24)
+      ..lineTo(rect.left + 7, rect.top + 20)
+      ..lineTo(rect.left + 3, rect.top + 18)
+      ..lineTo(rect.left + 7, rect.top + 16)
+      ..close();
+    canvas.drawPath(star, Paint()..color = const Color(0xB3FFFAF0));
+    canvas.restore();
+
+    canvas.drawRRect(
+      jar,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..color = ink,
+    );
+    canvas.drawLine(
+      Offset(rect.left - 3, rect.top + 1),
+      Offset(rect.left + 8, rect.top - 3),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round
+        ..color = ink,
+    );
+    canvas.drawLine(
+      Offset(rect.right + 3, rect.top + 1),
+      Offset(rect.right - 8, rect.top - 3),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round
+        ..color = ink,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => false;
 }

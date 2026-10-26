@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -11,7 +10,9 @@ import '../services/lantern_api.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import 'in_app_web.dart';
 
 /// The desktop page is a 12-column sheet on a warm desk, matching index.html.
 class WebDesktopPaper extends StatelessWidget {
@@ -108,7 +109,7 @@ class WebDesktopGrid extends StatelessWidget {
                 height: cell.row == 1
                     ? headerHeight
                     : rowHeight * cell.rowSpan + gap * (cell.rowSpan - 1),
-                child: cell.child,
+                child: RepaintBoundary(child: cell.child),
               ),
           ],
         );
@@ -118,16 +119,9 @@ class WebDesktopGrid extends StatelessWidget {
 }
 
 class WebDesktopHeader extends StatelessWidget {
-  final bool resources;
   final VoidCallback onHome;
-  final VoidCallback onResources;
 
-  const WebDesktopHeader({
-    super.key,
-    required this.resources,
-    required this.onHome,
-    required this.onResources,
-  });
+  const WebDesktopHeader({super.key, required this.onHome});
 
   @override
   Widget build(BuildContext context) {
@@ -155,10 +149,6 @@ class WebDesktopHeader extends StatelessWidget {
                 const SizedBox(width: 9),
               ],
               const WebThemeMenu(),
-              const SizedBox(width: 9),
-              _NavButton(label: '首页', active: !resources, onTap: onHome),
-              const SizedBox(width: 9),
-              _NavButton(label: '资源', active: resources, onTap: onResources),
             ],
           ),
         ),
@@ -179,70 +169,115 @@ class _Brand extends StatelessWidget {
       onDoubleTap: () => showCoinSheet(context),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Pressable(
-              onTap: onTap,
-              hoverLift: 0,
-              hoverShadow: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images/logo.webp',
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.contain,
-                    cacheWidth: 168,
-                  ),
-                  const SizedBox(width: 9),
-                  HighlightedText(
-                    'Citro',
-                    style: context.display(size: 34, color: c.ink),
-                    highlight: c.hl,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Pressable(
-              onTap: () => showAiChat(context),
-              hoverLift: 0,
-              hoverShadow: false,
-              hoverColor: c.hl.withAlpha(55),
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                height: 42,
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                  color: c.surface2.withAlpha(210),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
-                ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Pressable(
+                onTap: onTap,
+                hoverLift: 0,
+                hoverShadow: false,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppIcon(
-                      strokeSvg(AppIcons.sparkle, width: 2),
-                      size: 18,
-                      color: c.accentInk,
+                    Image.asset(
+                      'assets/images/logo.webp',
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.contain,
+                      cacheWidth: 168,
                     ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'CiCi',
-                      style: context.body(
-                        size: 15,
-                        weight: FontWeight.w700,
-                        color: c.accentInk,
-                      ),
+                    const SizedBox(width: 9),
+                    HighlightedText(
+                      'Citro',
+                      style: context.display(size: 34, color: c.ink),
+                      highlight: c.hl,
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Pressable(
+                onTap: () => showAiChat(context),
+                hoverLift: 0,
+                hoverShadow: false,
+                hoverColor: c.hl.withAlpha(55),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: c.surface2.withAlpha(210),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: c.line),
+                    boxShadow: CitroColors.shadows.paper(c),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppIcon(
+                        strokeSvg(AppIcons.sparkle, width: 2),
+                        size: 18,
+                        color: c.accentInk,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'CiCi',
+                        style: context.body(
+                          size: 15,
+                          weight: FontWeight.w700,
+                          color: c.accentInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 9),
+              Pressable(
+                onTap: () => openCitroPage(
+                  context,
+                  'https://dl.chimu-claw.xyz/',
+                  title: 'Citro 下载站',
+                ),
+                hoverLift: 0,
+                hoverShadow: false,
+                hoverColor: c.mintLine.withAlpha(90),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: c.mintSoft,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: c.mintLine),
+                    boxShadow: CitroColors.shadows.paper(c),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppIcon(
+                        strokeSvg(AppIcons.download, width: 2),
+                        size: 17,
+                        color: c.mintInk,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '下载站',
+                        style: context.body(
+                          size: 15,
+                          weight: FontWeight.w700,
+                          color: c.mintInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -275,50 +310,6 @@ class _LanternNavButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text('灯谜', style: context.heading(size: 15, color: c.ink)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavButton extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _NavButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Pressable(
-      onTap: onTap,
-      hoverLift: 0,
-      hoverShadow: false,
-      hoverColor: active ? null : c.hl.withAlpha(55),
-      borderRadius: BorderRadius.circular(99),
-      child: Container(
-        height: 46,
-        constraints: const BoxConstraints(minWidth: 68),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? c.accent : c.surface2.withAlpha(220),
-          borderRadius: BorderRadius.circular(99),
-          border: Border.all(color: active ? c.accent : c.line),
-          boxShadow: CitroColors.shadows.paper(c),
-        ),
-        child: Text(
-          label,
-          style: context.body(
-            size: 13.5,
-            weight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? const Color(0xFF2E2C22) : c.inkSoft,
-          ),
         ),
       ),
     );
@@ -555,126 +546,48 @@ class WebSectionTitle extends StatelessWidget {
   }
 }
 
-class WebTicket extends StatelessWidget {
-  final String title;
-  final String accent;
-  final String trailing;
-  final VoidCallback onTap;
-  final double rotate;
-  final Color? backgroundColor;
-  final Widget? trailingWidget;
-  final Widget? cornerAction;
+/// 网页宽屏的「返回首页」纸质胶囊。
+class WebHomeBackPill extends StatelessWidget {
+  final String label;
 
-  const WebTicket({
-    super.key,
-    required this.title,
-    required this.accent,
-    required this.trailing,
-    required this.onTap,
-    this.rotate = 0,
-    this.backgroundColor,
-    this.trailingWidget,
-    this.cornerAction,
-  });
+  const WebHomeBackPill({super.key, this.label = '返回首页'});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Transform.rotate(
-      angle: rotate * 3.141592653589793 / 180,
-      child: Center(
-        child: SizedBox(
-          height: 78,
-          width: double.infinity,
-          child: PaperCard(
-            rotate: 0,
-            color:
-                backgroundColor ??
-                (c.dark ? const Color(0xFF26221A) : const Color(0xFFFFFBEF)),
-            borderColor: c.line,
-            fold: true,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(2),
-              topRight: Radius.circular(2),
-              bottomLeft: Radius.circular(2),
-              bottomRight: Radius.circular(14),
+    return Pressable(
+      onTap: () => popOrHome(context),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(55),
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: c.surface2.withAlpha(235),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.paper(c),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIcon(
+              strokeSvg(AppIcons.arrowLeft, width: 2.2),
+              size: 15,
+              color: c.accentInk,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            tapeColor: c.dark
-                ? const Color(0x44FFCE8E)
-                : const Color(0x99F7BC78),
-            tapeWidth: 54,
-            tapeHeight: 15,
-            tapeTop: -8,
-            onTap: onTap,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  right: 7,
-                  bottom: -9,
-                  child: IgnorePointer(
-                    child: Transform.rotate(
-                      angle: -10 * math.pi / 180,
-                      child: Text(
-                        'Citro',
-                        style: context.display(
-                          size: 30,
-                          color: c.accentInk.withAlpha(22),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (cornerAction != null)
-                  Positioned(top: -2, right: -2, child: cornerAction!),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          style: context.heading(size: 28, color: c.ink),
-                          children: [
-                            TextSpan(text: title),
-                            TextSpan(
-                              text: accent,
-                              style: TextStyle(color: c.accentInk),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (trailingWidget != null)
-                      Padding(
-                        padding: EdgeInsets.only(
-                          right: cornerAction == null ? 0 : 28,
-                        ),
-                        child: trailingWidget!,
-                      )
-                    else ...[
-                      Text(
-                        trailing,
-                        style: context.body(
-                          size: 12,
-                          weight: FontWeight.w600,
-                          color: c.accentInk,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      AppIcon(
-                        strokeSvg(AppIcons.arrowRight, width: 2.2),
-                        size: 17,
-                        color: c.accentInk,
-                      ),
-                    ],
-                  ],
-                ),
-              ],
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: context.body(
+                size: 12.5,
+                weight: FontWeight.w600,
+                color: c.ink2,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

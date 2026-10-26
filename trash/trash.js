@@ -713,7 +713,7 @@ function clearCookie(res, req) {
 /* ---------------- 小游戏成绩（按昵称/gid 记录最高分） ----------------
    白名单必须覆盖前端全部会落榜的游戏键，漏掉哪个键，那个游戏就会
    提交 400「未知游戏」而永远不上榜（前端对 4xx 不弹错，表现为空榜）。 */
-const GAME_IDS = ['2048', 'memory:easy', 'memory:std', 'memory:hard', 'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp', 'nono:easy', 'nono:std', 'nono:hard', 'slide:easy', 'slide:std', 'slide:hard', 'snake:easy', 'snake:std', 'snake:hard', 'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua'];
+const GAME_IDS = ['2048', 'memory:easy', 'memory:std', 'memory:hard', 'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp', 'nono:easy', 'nono:std', 'nono:hard', 'slide:easy', 'slide:std', 'slide:hard', 'snake:easy', 'snake:std', 'snake:hard', 'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua', 'liquid'];
 const gamesFile = path.join(DATA_DIR, 'games.json');
 let gameScores = readJson(gamesFile, {});
 if (!gameScores || typeof gameScores !== 'object' || Array.isArray(gameScores)) gameScores = {};
@@ -742,7 +742,7 @@ function claimGuestRec(arr, gid, name) {
    前端进入任一游戏页即每 4s POST /api/games/live 上报进度，离开时带 leave 下线；
    这里只登记「谁在玩 + 进度」，靠 TTL 判定离线，进程重启即清空（不需要持久化）。
    注意 game 用的是前端页面键（g2048/gmem/…），与成绩榜的 GAME_IDS 不是一套，别混用。 */
-const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua'];
+const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua', 'gliquid'];
 const LIVE_TTL = 20000;    // 心跳 4s，留 5 倍余量；超过即认为已离开
 const LIVE_PROG_MAX = 60;  // 进度文案上限，防止被塞长文本
 const liveUsers = new Map();   // game -> Map(身份 key -> { name, av, progress, ts })

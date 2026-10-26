@@ -1,0 +1,23 @@
+{
+  "name": "Citro 下载站",
+  "short_name": "Citro",
+  "description": "Citro 客户端、游戏 Mod、实用工具与外设驱动下载。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6eedf",
+  "theme_color": "#f6eedf",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

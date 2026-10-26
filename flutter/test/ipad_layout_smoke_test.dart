@@ -1,3 +1,4 @@
+import 'package:citro/games/game_loader.dart';
 import 'package:citro/games/game_registry.dart';
 import 'package:citro/games/game_ui.dart';
 import 'package:citro/overlays/ai_chat.dart';

@@ -23,8 +23,64 @@ import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import 'legal_page.dart';
 
+Future<void> showMeWindow(BuildContext context) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '关闭我的',
+    barrierColor: const Color(0x8A23211C),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, _, __) {
+      final media = MediaQuery.of(ctx);
+      final width = math.min(720.0, media.size.width - 48);
+      final height = math.min(760.0, media.size.height - 48);
+      return Center(
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 30,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: MediaQuery(
+                data: media.copyWith(size: Size(width, height)),
+                child: const MePage(floating: true),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: .96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 class MePage extends StatelessWidget {
-  const MePage({super.key});
+  final bool floating;
+
+  const MePage({super.key, this.floating = false});
 
   static void _downloadApp() {
     launchUrl(
@@ -38,9 +94,10 @@ class MePage extends StatelessWidget {
     final state = context.app;
     final c = context.c;
     final user = state.user;
-    final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
+    final duo =
+        !platform.isWindows && CitroForm.duoDevice(MediaQuery.sizeOf(context));
     final width = MediaQuery.sizeOf(context).width;
-    final web = kIsWeb;
+    final web = kIsWeb && !floating;
     final side = math.max(8.0, (width - (web ? 760 : 640)) / 2);
     return Scaffold(
       body: PaperBackground(
@@ -71,7 +128,7 @@ class MePage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        if (!duo) ...[
+                        if (!duo && !floating) ...[
                           Pressable(
                             onTap: () => popOrHome(context),
                             child: Container(
@@ -125,6 +182,29 @@ class MePage extends StatelessWidget {
                               weight: FontWeight.w700,
                               color: c.inkSoft,
                               letterSpacing: 1.7,
+                            ),
+                          ),
+                        ],
+                        if (floating) ...[
+                          const Spacer(),
+                          Pressable(
+                            onTap: () => Navigator.of(context).maybePop(),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: c.surface2,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: c.line),
+                                boxShadow: CitroColors.shadows.paper(c),
+                              ),
+                              child: Center(
+                                child: AppIcon(
+                                  strokeSvg(AppIcons.close, width: 2.2),
+                                  size: 15,
+                                  color: c.ink2,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -308,7 +388,7 @@ class MePage extends StatelessWidget {
                       _MeToggleRow(
                         icon: AppIcons.bell,
                         label: '通知提醒',
-                        hint: '社区消息与烹饪计时',
+                        hint: platform.isWindows ? '桌面端以应用内提醒呈现' : '社区消息与烹饪计时',
                         value: state.notificationsEnabled,
                         onChanged: (v) => _setNotifications(context, v),
                       ),
@@ -325,7 +405,7 @@ class MePage extends StatelessWidget {
                         _themeChip(context, '跟随系统', ThemeMode.system),
                       ],
                     ),
-                    if (platform.isAndroid) ...[
+                    if (platform.isAndroid || platform.isWindows) ...[
                       const SizedBox(height: 18),
                       _section(c, '关于'),
                       const SizedBox(height: 8),
@@ -490,6 +570,11 @@ class MePage extends StatelessWidget {
       await state.setNotificationsEnabled(false);
       await Notifications.cancelAll();
       if (context.mounted) AppToast.show(context, '已关闭通知提醒');
+      return;
+    }
+    if (platform.isWindows) {
+      await state.setNotificationsEnabled(true);
+      if (context.mounted) AppToast.show(context, '应用内提醒已开启');
       return;
     }
     final systemEnabled = await Notifications.areEnabled();

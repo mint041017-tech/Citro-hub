@@ -22,6 +22,7 @@ import '../utils/navigation.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
+import 'web_scrapbook.dart';
 
 class CookPage extends StatefulWidget {
   const CookPage({super.key});
@@ -500,38 +501,6 @@ class _CookPageState extends State<CookPage> {
               ),
             ),
           const Spacer(),
-          Pressable(
-            onTap: () => popOrHome(context),
-            hoverLift: 0,
-            child: Container(
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.line),
-              ),
-              child: Row(
-                children: [
-                  AppIcon(
-                    strokeSvg(AppIcons.arrowLeft, width: 2),
-                    size: 16,
-                    color: c.accentInk,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    '返回首页',
-                    style: context.body(
-                      size: 13,
-                      weight: FontWeight.w600,
-                      color: c.ink2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
@@ -539,6 +508,13 @@ class _CookPageState extends State<CookPage> {
               style: context.hand(size: 13, color: c.inkSoft),
             ),
           ),
+          if (kIsWeb) ...[
+            const SizedBox(height: 12),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: WebHomeBackPill(),
+            ),
+          ],
         ],
       ),
     );

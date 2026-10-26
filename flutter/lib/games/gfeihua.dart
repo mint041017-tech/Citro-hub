@@ -143,6 +143,15 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
     });
   }
 
+  void _submitFromEnter() {
+    if (input.value.composing.isValid) return;
+    if (!RegExp(r'[\u4e00-\u9fa5]').hasMatch(input.text)) {
+      _feedback('请先选好中文候选词，再回车提交');
+      return;
+    }
+    _submit();
+  }
+
   void _submit() {
     if (!running || thinking || validating) return;
     final raw = input.text.trim().replaceAll(RegExp(r'\s+'), '');
@@ -339,6 +348,7 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
       onStart: _start,
       onAgain: _start,
       onSubmit: _submit,
+      onEnter: _submitFromEnter,
       onSwap: _changeChar,
       onRank: () => showGameRank(context, game: 'feihua', title: '飞花令 · 玩家排行'),
     );
@@ -372,6 +382,7 @@ class GameFeihuaView extends StatelessWidget {
     this.onStart,
     this.onAgain,
     this.onSubmit,
+    this.onEnter,
     this.onSwap,
     this.onRank,
   });
@@ -395,6 +406,7 @@ class GameFeihuaView extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onAgain;
   final VoidCallback? onSubmit;
+  final VoidCallback? onEnter;
   final VoidCallback? onSwap;
   final VoidCallback? onRank;
 
@@ -846,12 +858,9 @@ class GameFeihuaView extends StatelessWidget {
                           controller: input,
                           focusNode: focusNode,
                           enabled: !thinking,
-                          // v1.6.1：提交后立即重新聚焦，键盘不收起。
-                          onSubmitted: (_) {
-                            onSubmit?.call();
-                            focusNode?.requestFocus();
-                          },
-                          maxLength: 20,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => onEnter?.call(),
+                          maxLength: 128,
                           style: const TextStyle(
                             fontFamily: AppFonts.noto,
                             fontFamilyFallback: AppFonts.bodyFallback,
@@ -863,7 +872,7 @@ class GameFeihuaView extends StatelessWidget {
                           decoration: InputDecoration(
                             isDense: true,
                             counterText: '',
-                            hintText: '输入一句诗，回车提交',
+                            hintText: '输入一句诗，选候选词后回车或点「对」',
                             hintStyle: const TextStyle(
                               fontFamily: AppFonts.noto,
                               fontFamilyFallback: AppFonts.bodyFallback,

@@ -78,5 +78,5 @@ cp trash/config.local.example.json trash/config.local.json
 - `index.html`
 - `styles/`
 - `trash/data/`
-- 服务器上的 Nginx/Apache 反代配置
+- 服务器上的 Nginx/Apache 反代配置（线上 vhost 与 `/trashapi` 反代的同步副本在 `docs/nginx/`）
 - `trash/config.local.json`（含密钥，单独保管）

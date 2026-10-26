@@ -167,6 +167,15 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
 
   int _mult() => math.max(1, (count ~/ 2) * 2);
 
+  void _submitFromEnter() {
+    if (input.value.composing.isValid) return;
+    if (!RegExp(r'[\u4e00-\u9fa5]').hasMatch(input.text)) {
+      _feedback('请先选好中文候选词，再回车提交');
+      return;
+    }
+    _submit();
+  }
+
   void _submit() {
     if (!running || aiThinking || validating) return;
     final raw = input.text.trim().replaceAll(RegExp(r'\s+'), '');
@@ -341,6 +350,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       onStart: _start,
       onAgain: _start,
       onSubmit: _submit,
+      onEnter: _submitFromEnter,
       onRank: () => showGameRank(context, game: 'idiom', title: '成语接龙 · 玩家排行'),
     );
   }
@@ -373,6 +383,7 @@ class GameIdiomView extends StatelessWidget {
     this.onStart,
     this.onAgain,
     this.onSubmit,
+    this.onEnter,
     this.onRank,
   });
 
@@ -395,6 +406,7 @@ class GameIdiomView extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onAgain;
   final VoidCallback? onSubmit;
+  final VoidCallback? onEnter;
   final VoidCallback? onRank;
 
   @override
@@ -842,13 +854,9 @@ class GameIdiomView extends StatelessWidget {
                           controller: input,
                           focusNode: focusNode,
                           enabled: !aiThinking,
-                          // v1.6.1：提交后立即重新聚焦，键盘不收起（用户反馈：
-                          // 不要每次提交之后就关闭输入法）。
-                          onSubmitted: (_) {
-                            onSubmit?.call();
-                            focusNode?.requestFocus();
-                          },
-                          maxLength: 12,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => onEnter?.call(),
+                          maxLength: 64,
                           style: const TextStyle(
                             fontFamily: AppFonts.noto,
                             fontFamilyFallback: AppFonts.bodyFallback,
@@ -860,7 +868,7 @@ class GameIdiomView extends StatelessWidget {
                           decoration: InputDecoration(
                             isDense: true,
                             counterText: '',
-                            hintText: '输入成语，回车提交',
+                            hintText: '输入成语，选候选词后回车或点「接」',
                             hintStyle: const TextStyle(
                               fontFamily: AppFonts.noto,
                               fontFamilyFallback: AppFonts.bodyFallback,

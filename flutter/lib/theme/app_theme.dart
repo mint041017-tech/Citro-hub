@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
@@ -100,8 +102,21 @@ ThemeData buildCitroTheme(CitroColors colors) {
     splashColor: Colors.transparent,
   );
   return base.copyWith(
-    pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},
+    pageTransitionsTheme: PageTransitionsTheme(
+      builders: kIsWeb
+          ? const {
+              TargetPlatform.android: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.iOS: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.macOS: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.windows: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.linux: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.fuchsia: CitroFastPageTransitionsBuilder(),
+            }
+          : const {
+              TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+              // Windows 上保留 iPad 的横向推入 + 边缘阴影手感。
+              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+            },
     ),
     textTheme: base.textTheme.apply(
       bodyColor: colors.ink,
@@ -121,4 +136,33 @@ ThemeData buildCitroTheme(CitroColors colors) {
       selectionHandleColor: colors.accent,
     ),
   );
+}
+
+/// 网页端使用短促的淡入 + 轻微右移，避免 300ms 以上的整页滑动掉帧。
+class CitroFastPageTransitionsBuilder extends PageTransitionsBuilder {
+  const CitroFastPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(.012, 0),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
+    );
+  }
 }

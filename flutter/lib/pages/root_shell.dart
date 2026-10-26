@@ -7,6 +7,7 @@ import '../overlays/update_dialog.dart';
 import '../perf_probe.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/tab_bar.dart';
@@ -120,6 +121,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
 
   Future<void> _switchTab(int i) async {
     if (i == index || _switching || i < 0 || i > 3) return;
+    if (kIsWeb && i == 3) return;
     if (kIsWeb) {
       const routes = ['/home', '/games', '/trash', '/res'];
       await Navigator.of(context).pushNamed(routes[i]);
@@ -170,8 +172,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
             _visited[2]
                 ? TickerMode(enabled: index == 2, child: const CommunityPage())
                 : const SizedBox.shrink(),
-            _visited[3]
-                ? TickerMode(enabled: index == 3, child: const ResPage())
+            _visited[3] && !kIsWeb
+                ? TickerMode(
+                    enabled: index == 3,
+                    child: const ResPage(embedded: true),
+                  )
                 : const SizedBox.shrink(),
           ],
         ),
@@ -240,6 +245,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     width: _sidebarWidth,
                     child: CitroTabletSidebar(
                       index: index,
+                      showResources: platform.isWindows,
                       onChanged: switchTo,
                     ),
                   ),
@@ -266,7 +272,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     child: _pageStack(),
                   ),
                 ),
-                if (!desktop && !keyboardOpen && index != 3)
+                if (!desktop &&
+                    !keyboardOpen &&
+                    (index != 3 || platform.isWindows))
                   CitroTabBar(index: index, onChanged: switchTo),
               ],
             ),

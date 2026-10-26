@@ -15,20 +15,25 @@ import 'services/web_route.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/breakpoints.dart';
+import 'theme/scroll_behavior.dart';
 import 'theme/tokens.dart';
 import 'widgets/corner_guard.dart';
+import 'widgets/desktop_shell.dart';
 import 'widgets/tablet_shell.dart';
 
 Future<void> main() async {
   PerfProbe.start();
   WidgetsFlutterBinding.ensureInitialized();
+  await CitroDesktopShell.init();
   // 图片缓存是这类图文 App 最容易吃满内存的地方：限制总量，低内存时整块清掉。
+  // 桌面端内存更宽裕，放宽缓存避免大图反复解码，帧时间更稳定。
+  final desktopCache = !kIsWeb && platform.isDesktop;
   PaintingBinding.instance.imageCache
-    ..maximumSize = kIsWeb ? 80 : 120
-    ..maximumSizeBytes = (kIsWeb ? 32 : 48) << 20;
+    ..maximumSize = kIsWeb ? 80 : (desktopCache ? 180 : 120)
+    ..maximumSizeBytes = (kIsWeb ? 32 : (desktopCache ? 96 : 48)) << 20;
   ErrorWidget.builder = (details) => _FriendlyError(details: details);
   // iPhone 默认锁竖屏，只有 Duo 内屏解锁横屏；iPad 交给 Info.plist。
-  if (!kIsWeb && !platform.isIOS) {
+  if (!kIsWeb && !platform.isIOS && !platform.isDesktop) {
     try {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -202,6 +207,7 @@ class _CitroAppState extends State<CitroApp> {
           themeMode: _themeMode,
           theme: buildCitroTheme(CitroColors.light),
           darkTheme: buildCitroTheme(CitroColors.darkColors),
+          scrollBehavior: const CitroScrollBehavior(),
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
           localizationsDelegates: const [
@@ -263,13 +269,18 @@ class _CitroAppState extends State<CitroApp> {
                 ),
               ),
             );
-            if (!duo) return content;
-            return CitroDuoBackRailOverlay(
-              pageDepth: _citroRouteObserver.pageDepth,
-              popupDepth: _citroRouteObserver.popupDepth,
-              pageName: _citroRouteObserver.pageName,
-              onBack: () => citroNavigatorKey.currentState?.maybePop(),
-              child: CitroDuoCornerGuard(child: content),
+            if (!duo) {
+              return CitroDesktopShell.wrap(context, content);
+            }
+            return CitroDesktopShell.wrap(
+              context,
+              CitroDuoBackRailOverlay(
+                pageDepth: _citroRouteObserver.pageDepth,
+                popupDepth: _citroRouteObserver.popupDepth,
+                pageName: _citroRouteObserver.pageName,
+                onBack: () => citroNavigatorKey.currentState?.maybePop(),
+                child: CitroDuoCornerGuard(child: content),
+              ),
             );
           },
         ),

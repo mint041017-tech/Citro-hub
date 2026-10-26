@@ -66,6 +66,15 @@ capacitor/android/app/build/
 # 例外：站点内提供下载的安装包需要入库
 !/APK/*.apk
 
+# ---------- Windows 桌面端产物（上传 OBS，不入库） ----------
+WIN/
+exe/
+
+# ---------- 站点上传包 / 构建产物（不入库） ----------
+web/*.zip
+download-site/*.zip
+citro-analytics/dist/
+
 # ---------- QA 探针临时文件 ----------
 qa_min.html
 qa_probe*.html

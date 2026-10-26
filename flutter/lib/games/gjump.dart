@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../services/game_sfx.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
@@ -329,6 +332,10 @@ class _GameJumpPageState extends State<GameJumpPage>
   int _maxCombo = 0;
   int _axis = 0;
   _JumpStyle? _lastStyle;
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'jump-keyboard');
+
+  bool get _keyboardEnabled => platform.isWindows || kIsWeb;
+  bool _spaceDown = false;
 
   double get _now => _clock.elapsedMilliseconds.toDouble();
 
@@ -341,6 +348,11 @@ class _GameJumpPageState extends State<GameJumpPage>
     // 120Hz 设备直接跑 120fps，且与屏幕 vsync 对齐，不会出现半帧抖动。
     _ticker = createTicker(_onFrame)..start();
     _tickerReady = true;
+    if (_keyboardEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _keyFocus.requestFocus();
+      });
+    }
   }
 
   @override
@@ -349,6 +361,7 @@ class _GameJumpPageState extends State<GameJumpPage>
     GameSfx.soundsEnabled = false;
     _progress.dispose();
     _frame.dispose();
+    _keyFocus.dispose();
     super.dispose();
   }
 
@@ -552,6 +565,33 @@ class _GameJumpPageState extends State<GameJumpPage>
     _state = 'fall';
   }
 
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_keyboardEnabled || event.logicalKey != LogicalKeyboardKey.space) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent) {
+      if (!_spaceDown) {
+        _spaceDown = true;
+        _pressDown();
+      }
+      return KeyEventResult.handled;
+    }
+    if (event is KeyUpEvent) {
+      if (_spaceDown) {
+        _spaceDown = false;
+        _pressUp();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.handled;
+  }
+
+  void _releaseKeyboardCharge() {
+    if (!_spaceDown) return;
+    _spaceDown = false;
+    _pressUp();
+  }
+
   void _pressDown() {
     if (_over || _state != 'ready') return;
     _chargeBeepAcc = 60; // 按下立即响第一声
@@ -734,7 +774,7 @@ class _GameJumpPageState extends State<GameJumpPage>
   Widget build(BuildContext context) {
     final best = math.max(_best, context.app.localBest('jump'));
     _syncScene(_now);
-    return GameJumpView(
+    final view = GameJumpView(
       score: _score,
       best: best,
       frameData: _scene,
@@ -750,6 +790,16 @@ class _GameJumpPageState extends State<GameJumpPage>
       onNew: _newGame,
       onRank: () => showGameRank(context, game: 'jump', title: '跳一跳'),
       onRetry: _newGame,
+    );
+    if (!_keyboardEnabled) return view;
+    return Focus(
+      focusNode: _keyFocus,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      onFocusChange: (hasFocus) {
+        if (!hasFocus) _releaseKeyboardCharge();
+      },
+      child: view,
     );
   }
 }
@@ -1006,7 +1056,9 @@ class _JumpHint extends StatelessWidget {
             const SizedBox(width: 7),
             Flexible(
               child: Text(
-                '按住蓄力 · 松手起跳',
+                (platform.isWindows || kIsWeb)
+                    ? '按住蓄力 · 松手起跳 · 空格'
+                    : '按住蓄力 · 松手起跳',
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.visible,
