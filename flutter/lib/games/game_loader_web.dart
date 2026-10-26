@@ -7,6 +7,7 @@ import 'gbrake_web.dart' deferred as gbrake;
 import 'gfeihua.dart' deferred as gfeihua;
 import 'gidiom.dart' deferred as gidiom;
 import 'gjump.dart' deferred as gjump;
+import 'gliquid.dart' deferred as gliquid;
 import 'gmemory.dart' deferred as gmemory;
 import 'gnono.dart' deferred as gnono;
 import 'gpeng.dart' deferred as gpeng;
@@ -53,6 +54,9 @@ Future<Widget> _loadPage(String key) async {
     case 'gfeihua':
       await gfeihua.loadLibrary();
       return gfeihua.GameFeihuaPage();
+    case 'gliquid':
+      await gliquid.loadLibrary();
+      return gliquid.GameLiquidPage();
     default:
       return const _MissingGame();
   }

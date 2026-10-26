@@ -78,16 +78,18 @@ class GameSfx {
     String type = 'square',
     double vol = 0.18,
     double? slide,
+    bool punchy = false,
   }) async {
     if (!_supported || _muted || !soundsEnabled) return;
     try {
-      final key = 't$freq|$dur|$type|$vol|$slide';
+      final key = 't$freq|$dur|$type|$vol|$slide|$punchy';
       final bytes = _cache[key] ??= _synth(
         freq: freq,
         dur: dur,
         type: type,
         vol: vol,
         slide: slide,
+        punchy: punchy,
       );
       final p = _nextPlayer()!;
       await p.stop();
@@ -109,6 +111,30 @@ class GameSfx {
     try {
       final key = 'n$dur|$vol|$freq';
       final bytes = _cache[key] ??= _noise(dur: dur, vol: vol, freq: freq);
+      final p = _nextPlayer()!;
+      await p.stop();
+      await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
+    } catch (e) {
+      if (!kIsWeb) _available = false;
+    }
+  }
+
+  /// 带通中心从 from 扫到 to 的噪声（投掷/合并/结束的“气息”）。
+  static Future<void> noiseSweep({
+    required double dur,
+    double vol = 0.3,
+    double from = 1600,
+    double to = 260,
+  }) async {
+    if (!_supported || _muted || !soundsEnabled) return;
+    try {
+      final key = 's$dur|$vol|$from|$to';
+      final bytes = _cache[key] ??= _noiseSweep(
+        dur: dur,
+        vol: vol,
+        from: from,
+        to: to,
+      );
       final p = _nextPlayer()!;
       await p.stop();
       await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
@@ -334,6 +360,7 @@ class GameSfx {
     required String type,
     required double vol,
     double? slide,
+    bool punchy = false,
   }) {
     final n = (dur * _rate).round();
     final data = Float32List(n);
@@ -363,10 +390,22 @@ class GameSfx {
         default:
           s = phase < 0.5 ? 1.0 : -1.0;
       }
-      // 包络：12ms 起音 → 指数衰减到 0.0008
-      final attack = math.min(1.0, t / 0.012);
-      final release = math.exp(-t / dur * 9.0) * (1 - 0.0008) + 0.0008;
-      data[i] = s * vol * attack * release;
+      double env;
+      if (punchy) {
+        // 原版 WebAudio：8ms 快速起音到满音量，再指数衰减到接近 0。
+        const attack = 0.008;
+        if (t < attack) {
+          env = t / attack;
+        } else {
+          env = math.exp(-(t - attack) / math.max(0.001, dur - attack) * 9.0);
+        }
+      } else {
+        // 旧版包络：12ms 起音 + 全程指数衰减。
+        final attack = math.min(1.0, t / 0.012);
+        final release = math.exp(-t / dur * 9.0) * (1 - 0.0008) + 0.0008;
+        env = attack * release;
+      }
+      data[i] = s * vol * env;
     }
     return _wav(data);
   }
@@ -392,6 +431,58 @@ class GameSfx {
       final env = (1 - i / n);
       data[i] = s * vol * env * 0.9 + prev * 0.02;
       prev = s;
+    }
+    return _wav(data);
+  }
+
+  static Uint8List _noiseSweep({
+    required double dur,
+    required double vol,
+    required double from,
+    required double to,
+  }) {
+    final n = (dur * _rate).round();
+    final data = Float32List(n);
+    final rnd = math.Random(0x5EED);
+
+    // RBJ bandpass（Q=0.9），中心频率按原版指数扫频；每样本更新系数。
+    var x1 = 0.0, x2 = 0.0, y1 = 0.0, y2 = 0.0;
+    const q = 0.9;
+    const attack = 0.01;
+    var peak = 0.0;
+    for (var i = 0; i < n; i++) {
+      final t = n > 1 ? i / (n - 1) : 0.0;
+      final f0 = from * math.pow(to / from, t);
+      final w0 = 2 * math.pi * f0 / _rate;
+      final alpha = math.sin(w0) / (2 * q);
+      final a0 = 1 + alpha;
+      final b0 = alpha / a0;
+      final b2 = -alpha / a0;
+      final a1 = -2 * math.cos(w0) / a0;
+      final a2 = (1 - alpha) / a0;
+
+      final x = rnd.nextDouble() * 2 - 1;
+      final y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1;
+      x1 = x;
+      y2 = y1;
+      y1 = y;
+
+      final time = i / _rate;
+      final env = time < attack
+          ? time / attack
+          : math.exp(-(time - attack) / math.max(0.001, dur - attack) * 6.9);
+      final s = (y * env * 2.8).clamp(-1.0, 1.0);
+      data[i] = s;
+      final mag = s.abs();
+      if (mag > peak) peak = mag;
+    }
+    // 归一化到调用方给的 gain（原版 noiseSweep 的 gain 就是峰值量级）。
+    if (peak > 1e-6) {
+      final scale = (vol * 0.9) / peak;
+      for (var i = 0; i < n; i++) {
+        data[i] *= scale;
+      }
     }
     return _wav(data);
   }

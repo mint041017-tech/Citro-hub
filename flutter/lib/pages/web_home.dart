@@ -135,7 +135,7 @@ class _WebGames extends StatelessWidget {
             builder: (context, constraints) => GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
+                crossAxisCount: 4,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 mainAxisExtent: (constraints.maxHeight - 30) / 4,
@@ -143,7 +143,7 @@ class _WebGames extends StatelessWidget {
               itemCount: kGameCards.length,
               itemBuilder: (context, index) => _WebGameCard(
                 entry: kGameCards[index],
-                angle: const [-1.2, 0.8, -0.4][index % 3],
+                angle: const [-1.2, 0.8, -0.4, 0.5][index % 4],
               ),
             ),
           ),

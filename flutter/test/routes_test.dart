@@ -1,3 +1,4 @@
+import 'package:citro/games/gliquid.dart';
 import 'package:citro/pages/cook_page.dart';
 import 'package:citro/pages/me_page.dart';
 import 'package:citro/pages/play_page.dart';
@@ -12,6 +13,7 @@ void main() {
     expect(CitroRoutes.normalize(null), '/home');
     expect(CitroRoutes.normalize('/'), '/home');
     expect(CitroRoutes.normalize('#/g2048'), '/g2048');
+    expect(CitroRoutes.normalize('/gliquid'), '/gliquid');
     expect(CitroRoutes.normalize('games'), '/games');
     expect(CitroRoutes.normalize('/search'), '/search');
     expect(CitroRoutes.normalize('/missing'), '/home');
@@ -31,5 +33,6 @@ void main() {
     expect(CitroRoutes.pageFor('/play'), isA<PlayPage>());
     expect(CitroRoutes.pageFor('/sens'), isA<SensPage>());
     expect(CitroRoutes.pageFor('/search'), isA<SearchPage>());
+    expect(CitroRoutes.pageFor('/gliquid'), isA<GameLiquidPage>());
   });
 }

@@ -34,6 +34,7 @@ class CitroRoutes {
     '/gbrake',
     '/gidiom',
     '/gfeihua',
+    '/gliquid',
   };
 
   static String normalize(String? raw) {

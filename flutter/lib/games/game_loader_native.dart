@@ -6,6 +6,7 @@ import 'gbrake_web.dart';
 import 'gfeihua.dart';
 import 'gidiom.dart';
 import 'gjump.dart';
+import 'gliquid.dart';
 import 'gmemory.dart';
 import 'gnono.dart';
 import 'gpeng.dart';
@@ -30,6 +31,7 @@ Widget buildGamePage(String key) {
     'gbrake' => const GameBrakeWebPage(),
     'gidiom' => const GameIdiomPage(),
     'gfeihua' => const GameFeihuaPage(),
+    'gliquid' => const GameLiquidPage(),
     _ => const _MissingGame(),
   };
 }

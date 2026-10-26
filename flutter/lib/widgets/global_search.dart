@@ -76,10 +76,10 @@ List<_SearchEntry> _buildSearchIndex() {
       action: _SearchAction.route,
       target: '/home',
     ),
-    const _SearchEntry(
+    _SearchEntry(
       type: '页面',
       name: '小游戏',
-      desc: '12 款小游戏 · 账号同步 · 全站排行',
+      desc: '${kGameCards.length} 款小游戏 · 账号同步 · 全站排行',
       keys: 'games game 游戏 小游戏 排行',
       action: _SearchAction.route,
       target: '/games',
