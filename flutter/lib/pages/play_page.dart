@@ -9,8 +9,10 @@ import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/puns.dart';
+import '../services/api.dart';
 import '../services/clipboard_image.dart';
 import '../services/prefs.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
@@ -25,7 +27,9 @@ class PlayPage extends StatefulWidget {
 class _PlayRecord {
   final String text;
   final int ts;
-  const _PlayRecord(this.text, this.ts);
+  final String name;
+  final bool you;
+  const _PlayRecord(this.text, this.ts, {this.name = '', this.you = false});
 }
 
 class _PlayPageState extends State<PlayPage> {
@@ -37,12 +41,17 @@ class _PlayPageState extends State<PlayPage> {
   bool _cancelRoll = false;
   int cooldownUntil = 0;
   List<_PlayRecord> records = [];
+  List<_PlayRecord> remote = [];
+  bool remoteLoading = true;
+  bool remoteBusy = false;
+  String? remoteError;
   Timer? _cdTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _refreshRemote();
     _cdTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && remaining > 0) setState(() {});
     });
@@ -61,10 +70,72 @@ class _PlayPageState extends State<PlayPage> {
     for (final raw in list.reversed) {
       try {
         final j = jsonDecode(raw);
-        records.add(_PlayRecord('${j['t']}', int.tryParse('${j['ts']}') ?? 0));
+        records.add(
+          _PlayRecord(
+            '${j['t']}',
+            int.tryParse('${j['ts']}') ?? 0,
+            you: true,
+          ),
+        );
       } catch (_) {}
     }
     setState(() {});
+  }
+
+  List<_PlayRecord> _parseRemote(dynamic raw) {
+    return ((raw as List?) ?? const [])
+        .whereType<Map>()
+        .map(
+          (e) => _PlayRecord(
+            '${e['t'] ?? ''}'.trim(),
+            int.tryParse('${e['ts']}') ?? 0,
+            name: '${e['name'] ?? '游客'}',
+            you: e['you'] == true,
+          ),
+        )
+        .where((e) => e.text.isNotEmpty)
+        .toList();
+  }
+
+  void _applyRemote(Map<String, dynamic> j) {
+    final list = _parseRemote(j['records']);
+    final cd = int.tryParse('${j['cd'] ?? 0}') ?? 0;
+    final until = DateTime.now().millisecondsSinceEpoch + cd;
+    if (until != cooldownUntil) {
+      cooldownUntil = until;
+      Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
+    }
+    if (mounted) {
+      setState(() {
+        remote = list;
+        remoteError = null;
+        remoteLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshRemote({bool silent = false}) async {
+    if (remoteBusy) return;
+    remoteBusy = true;
+    if (!silent && mounted) {
+      setState(() {
+        remoteLoading = true;
+        remoteError = null;
+      });
+    }
+    try {
+      final j = await Api.playRecords(deviceId: AppState.instance.gid);
+      if (!mounted) return;
+      _applyRemote(j);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        remoteError = '$e';
+        remoteLoading = false;
+      });
+    } finally {
+      remoteBusy = false;
+    }
   }
 
   int get remaining =>
@@ -88,9 +159,42 @@ class _PlayPageState extends State<PlayPage> {
       setState(() => stageText = seq[i]);
       await Future.delayed(Duration(milliseconds: 55 + i * 6));
     }
-    final pick = kPuns[rnd.nextInt(kPuns.length)];
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final rec = _PlayRecord(pick, ts);
+    if (!mounted) return;
+    final state = AppState.instance;
+    Map<String, dynamic>? remote;
+    var cooling = false;
+    String? drawError;
+    try {
+      remote = await Api.playDraw(
+        deviceId: state.gid,
+        name: state.loggedIn ? null : state.guestName,
+      );
+    } on ApiException catch (e) {
+      if (e.code == 429) {
+        cooling = true;
+      } else {
+        drawError = e.message;
+      }
+    } catch (e) {
+      drawError = '$e';
+    }
+    if (!mounted) return;
+    if (cooling) {
+      setState(() {
+        rolling = false;
+        stageText = '还在冷却，等一会儿再抽';
+      });
+      await _refreshRemote(silent: true);
+      if (mounted) AppToast.show(context, '冷却中，稍后再抽');
+      return;
+    }
+    final pick = remote != null && '${remote['t'] ?? ''}'.trim().isNotEmpty
+        ? '${remote['t']}'
+        : kPuns[rnd.nextInt(kPuns.length)];
+    final ts =
+        int.tryParse('${remote?['ts']}') ??
+        DateTime.now().millisecondsSinceEpoch;
+    final rec = _PlayRecord(pick, ts, you: true);
     records.insert(0, rec);
     cooldownUntil = ts + 10 * 60 * 1000;
     await Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
@@ -105,18 +209,27 @@ class _PlayPageState extends State<PlayPage> {
       lastPun = pick;
       stageText = pick;
       rolling = false;
+      remoteError = drawError;
     });
+    if (remote != null) {
+      _applyRemote(remote);
+    } else {
+      // 服务端没抽成（离线）：本地照常展示，稍后刷新会带出真实冷却。
+      unawaited(_refreshRemote(silent: true));
+      if (drawError != null) {
+        AppToast.show(context, '网络开小差，已按本机记录抽签');
+      }
+    }
   }
 
   void _clear() {
     Prefs.setStringList(PrefKeys.playRecords, []);
-    Prefs.setInt(PrefKeys.playCooldown, 0);
     setState(() {
       records = [];
-      cooldownUntil = 0;
       stageText = '点击「开始抽取」，命运交给橘子';
       lastPun = null;
     });
+    if (mounted) AppToast.show(context, '本机抽签记录已清空');
   }
 
   Future<void> _shareShot() async {
@@ -371,6 +484,8 @@ class _PlayPageState extends State<PlayPage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        _communityPanel(c),
                         const SizedBox(height: 14),
                         Text(
                           '玩法仅供参考，快乐第一。',
@@ -443,6 +558,159 @@ class _PlayPageState extends State<PlayPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _communityPanel(CitroColors c) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AppIcon(
+                strokeSvg(AppIcons.users, width: 2),
+                size: 15,
+                color: c.accentInk,
+              ),
+              const SizedBox(width: 6),
+              Text('大家的抽签', style: context.heading(size: 16)),
+              const Spacer(),
+              if (remoteLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 1.6),
+                )
+              else
+                Pressable(
+                  onTap: _refreshRemote,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: AppIcon(
+                      strokeSvg(AppIcons.refresh, width: 2),
+                      size: 14,
+                      color: c.inkSoft,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (remoteLoading && remote.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                '正在同步全站记录…',
+                textAlign: TextAlign.center,
+                style: context.body(size: 12, color: c.inkSoft),
+              ),
+            )
+          else if (remoteError != null && remote.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                children: [
+                  Text(
+                    '暂时连不上全站记录',
+                    style: context.body(size: 12, color: c.inkSoft),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '抽签仍可继续，联网后会自动同步',
+                    style: context.body(size: 10, color: c.inkSoft),
+                  ),
+                ],
+              ),
+            )
+          else if (remote.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                '还没有人抽，做第一个',
+                textAlign: TextAlign.center,
+                style: context.body(size: 12, color: c.inkSoft),
+              ),
+            )
+          else
+            ...remote.take(20).map(
+              (r) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      margin: const EdgeInsets.only(top: 1),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: r.you ? c.accent : c.hl,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.line2),
+                      ),
+                      child: Text(
+                        r.name.isEmpty ? '?' : r.name.characters.last,
+                        style: context.body(
+                          size: 9,
+                          weight: FontWeight.w700,
+                          color: r.you ? const Color(0xFF2E2C22) : c.accentInk,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  r.you ? '你' : r.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.body(
+                                    size: 10.5,
+                                    weight: FontWeight.w700,
+                                    color: r.you ? c.accentInk : c.inkSoft,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _time(r.ts),
+                                style: context.body(
+                                  size: 9.5,
+                                  color: c.inkSoft.withAlpha(200),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            r.text,
+                            style: context.body(
+                              size: 12,
+                              color: c.ink2,
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

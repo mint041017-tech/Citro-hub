@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../app_keys.dart';
+import '../widgets/paper.dart';
+import 'platform.dart' as platform;
 
 class Notifications {
   static final FlutterLocalNotificationsPlugin _plugin =
@@ -12,6 +18,7 @@ class Notifications {
   static bool ready = false;
   static bool enabled = true;
   static Future<void>? _initFuture;
+  static final Map<int, Timer> _windowsTimers = <int, Timer>{};
 
   static Future<void> ensureInit() {
     if (ready) return Future.value();
@@ -19,6 +26,12 @@ class Notifications {
   }
 
   static Future<void> _init() async {
+    if (platform.isWindows) {
+      // Windows 没有对应的本地通知插件：桌面端用应用内提示 + 计时胶囊，
+      // 既保留提醒能力，也避免依赖额外的 WinRT 权限与快捷方式注册。
+      ready = true;
+      return;
+    }
     try {
       tz_data.initializeTimeZones();
       try {
@@ -57,8 +70,17 @@ class Notifications {
     }
   }
 
+  /// Windows 端把通知落到应用内轻提示，避免用户以为提醒被静默吞掉。
+  static void _showWindows(String title, String body) {
+    final context = citroNavigatorKey.currentContext;
+    if (context == null) return;
+    final message = title.isEmpty ? body : '$title · $body';
+    AppToast.show(context, message, duration: const Duration(seconds: 4));
+  }
+
   static Future<bool> areEnabled() async {
     await ensureInit();
+    if (platform.isWindows) return enabled;
     try {
       final ios = _plugin
           .resolvePlatformSpecificImplementation<
@@ -80,6 +102,7 @@ class Notifications {
 
   static Future<bool> requestPermission() async {
     await ensureInit();
+    if (platform.isWindows) return enabled;
     try {
       final ios = _plugin
           .resolvePlatformSpecificImplementation<
@@ -107,6 +130,10 @@ class Notifications {
     if (!enabled) return;
     await ensureInit();
     if (!ready) return;
+    if (platform.isWindows) {
+      _showWindows(title, body);
+      return;
+    }
     try {
       await _plugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -137,7 +164,7 @@ class Notifications {
     String label,
     DateTime end,
   ) async {
-    if (!enabled) return;
+    if (!enabled || platform.isWindows) return;
     await ensureInit();
     if (!ready) return;
     try {
@@ -198,6 +225,15 @@ class Notifications {
     if (!enabled) return;
     await ensureInit();
     if (!ready) return;
+    if (platform.isWindows) {
+      _windowsTimers.remove(id)?.cancel();
+      final delay = when.difference(DateTime.now());
+      _windowsTimers[id] = Timer(delay.isNegative ? Duration.zero : delay, () {
+        _windowsTimers.remove(id);
+        if (enabled) _showWindows(title, body);
+      });
+      return;
+    }
     try {
       final android = _plugin
           .resolvePlatformSpecificImplementation<
@@ -235,6 +271,8 @@ class Notifications {
   }
 
   static Future<void> cancel(int id) async {
+    _windowsTimers.remove(id)?.cancel();
+    if (platform.isWindows) return;
     try {
       await _timerChannel.invokeMethod('cancel', {'id': id});
     } catch (_) {}
@@ -245,6 +283,11 @@ class Notifications {
   }
 
   static Future<void> cancelAll() async {
+    for (final timer in _windowsTimers.values) {
+      timer.cancel();
+    }
+    _windowsTimers.clear();
+    if (platform.isWindows) return;
     try {
       await _timerChannel.invokeMethod('cancelAll');
     } catch (_) {}

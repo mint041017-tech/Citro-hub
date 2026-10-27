@@ -1,5 +1,5 @@
 // 手动视觉基线：flutter test test/duo_games_preview.dart --update-goldens
-import 'package:citro/games/game_registry.dart';
+import 'package:citro/games/game_loader.dart';
 import 'package:citro/games/game_ui.dart';
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';

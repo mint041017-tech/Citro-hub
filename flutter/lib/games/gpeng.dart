@@ -1395,10 +1395,11 @@ class _PengOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xF0FCF8F0),
-        border: Border.all(color: const Color(0x292E2C22)),
+        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
+        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -1423,16 +1424,16 @@ class _PengOverlay extends StatelessWidget {
                   const TextSpan(text: '坚持了 '),
                   TextSpan(
                     text: '$secs',
-                    style: const TextStyle(
-                      color: _floatInk,
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : _floatInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   TextSpan(text: ' 秒 · 反弹 $bounces 次 · 得分 '),
                   TextSpan(
                     text: '$score',
-                    style: const TextStyle(
-                      color: _floatInk,
+                    style: TextStyle(
+                      color: c.dark ? c.accentLt : _floatInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

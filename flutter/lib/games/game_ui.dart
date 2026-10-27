@@ -25,7 +25,7 @@ import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
 import 'game_common.dart'
-    show GameTabletRankRail, showGameAccount, showGameLeaderboard;
+    show GameTabletRankRail, sameLiveList, showGameAccount, showGameLeaderboard;
 
 /// 版式常量（web 游戏页 390×844 实测）
 class GameMetrics {
@@ -178,7 +178,9 @@ class _GameScaffoldState extends State<GameScaffold> {
         gid: state.loggedIn ? null : state.gid,
       );
       final list = (j['list'] as List?) ?? const [];
-      if (mounted) setState(() => _live = list);
+      if (mounted && !sameLiveList(_live, list)) {
+        setState(() => _live = list);
+      }
     } catch (_) {}
   }
 
@@ -999,7 +1001,8 @@ class GameActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = primary ? const Color(0xFF3B2A10) : const Color(0xFF4E4A40);
+    final c = context.c;
+    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
     final body = Stack(
       children: [
         // web 的 box-shadow 会被裁剪在 border-box 之外；Flutter 里半透明底色会让
@@ -1023,7 +1026,9 @@ class GameActionButton extends StatelessWidget {
           height: height,
           padding: const EdgeInsets.symmetric(horizontal: 22),
           decoration: BoxDecoration(
-            color: primary ? null : const Color(0xB8FFFCF4),
+            color: primary
+                ? null
+                : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
             gradient: primary
                 ? const LinearGradient(
                     begin: Alignment.topLeft,
@@ -1035,7 +1040,7 @@ class GameActionButton extends StatelessWidget {
             border: Border.all(
               color: primary
                   ? const Color(0x2E94530A)
-                  : const Color(0x294A3A22),
+                  : (c.dark ? c.line2 : const Color(0x294A3A22)),
             ),
           ),
           child: Row(

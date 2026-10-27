@@ -52,6 +52,21 @@ const FRUIT = ["破防橘子","沉默柠檬","暴躁椰子","摆烂桃子","心�
 /* ---------------- 基础工具 ---------------- */
 function dayStr() { return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); }
 let today = dayStr();
+function yesterdayStr() {
+  return new Date(Date.now() + 8 * 3600 * 1000 - 86400000).toISOString().slice(0, 10);
+}
+function checkinStatus(u) {
+  const d = dayStr();
+  const last = u && u.checkinLast ? String(u.checkinLast) : '';
+  const checked = last === d;
+  const alive = checked || last === yesterdayStr();
+  return {
+    date: d,
+    last: last,
+    checkedInToday: checked,
+    streak: alive ? Math.max(0, parseInt(u.checkinStreak, 10) || 0) : 0
+  };
+}
 
 function writeAtomic(file, obj) {
   try {
@@ -519,6 +534,50 @@ function saveZodiacSigns() { writeAtomic(zodiacSignsFile, { signs: zodiacSigns }
 function saveZodiacForts() { writeAtomic(zodiacFortFile, { days: zodiacForts }); }
 function saveZodiacDraws() { writeAtomic(zodiacDrawFile, { draws: zodiacDraws }); }
 
+/* ---------------- ★玩法抽签（无畏契约整活）：全站最近记录 + 10 分钟冷却 ----------------
+   登录按账号、游客按设备 ID 记冷却；只保留最近 60 条，内容必须是预设池里的原文，
+   避免有人把任意文本推到所有人的列表里。池子与 flutter/lib/data/puns.dart 保持一致。 */
+const PLAY_PUNS = [
+  '使用技能要说技能', '听到爆点拿出盘盘', '听到报点丢枪', '听到报点蹲下',
+  '全程只能使用鬼魅', '全程禁止使用跳跃', '只能用英语交流', '全程禁止使用Q技能',
+  '全程禁止使用C技能', '全程禁止使用E技能', '全程禁止使用技能', '不许拆包/下包',
+  '不能进入爆能器部署区域', '只能刀人', '只能使用冲锋枪', '只能使用手枪',
+  '全程必须开镜', '无准星', '不能用皮肤', '只能用一个弹夹', '只能瞄地走路',
+  '只能打对面战绩垫底的', '全程模仿所选角色语音', '说话只能用成语',
+  '只能用骇灵和标配', '只能用技能', '不能发枪/要枪', '不许起甲',
+  '灵敏度最低', '灵敏度拉满', '灵敏度减半', '灵敏度翻倍',
+  '只能用鸟狙和标配', '只能跑打', '每小局报三次自己的位置给对方',
+  '当宝宝，对队内实时第一名提供情绪价值', '不/只能静步', '只能蹲下走路（半场）',
+  '限喷子（半场）', '开枪键与跳绑一起（半场）', '大冒险（不过分即可）',
+  '真心话（不过分即可）', '开一枪丢一次枪', '开一枪喷漆一次',
+  '退弹（只能用每个弹夹最后一发）'
+];
+const PLAY_CD_MS = 10 * 60 * 1000;
+const PLAY_KEEP = 60;
+const playFile = path.join(DATA_DIR, 'play.json');
+const playRaw = readJson(playFile, {});
+let playRecords = Array.isArray(playRaw.records)
+  ? playRaw.records.filter(function (r) { return r && typeof r.t === 'string' && typeof r.ts === 'number'; })
+  : [];
+let playCooldowns = (playRaw.cooldowns && typeof playRaw.cooldowns === 'object' && !Array.isArray(playRaw.cooldowns))
+  ? playRaw.cooldowns : {};
+function savePlay() { writeAtomic(playFile, { records: playRecords, cooldowns: playCooldowns }); }
+function playKeyOf(me, deviceId) {
+  if (me && me.name) return 'u:' + me.name;
+  const g = String(deviceId || '').trim();
+  return GID_RE.test(g) ? 'g:' + g : null;
+}
+function playList(key) {
+  const now = Date.now();
+  return {
+    ok: true,
+    cd: key ? Math.max(0, (parseInt(playCooldowns[key], 10) || 0) - now) : 0,
+    records: playRecords.slice(-40).reverse().map(function (r) {
+      return { t: r.t, name: r.name, ts: r.ts, you: !!key && r.key === key };
+    })
+  };
+}
+
 /* 星盘解读缓存：本命 = 出生数据 SHA1（永久复用）；行运 = 出生数据+当天日期（按天复用） */
 const astroInterpretFile = path.join(DATA_DIR, 'astro-interprets.json');
 let astroInterprets = readJson(astroInterpretFile, { items: {} }).items || {};
@@ -713,7 +772,7 @@ function clearCookie(res, req) {
 /* ---------------- 小游戏成绩（按昵称/gid 记录最高分） ----------------
    白名单必须覆盖前端全部会落榜的游戏键，漏掉哪个键，那个游戏就会
    提交 400「未知游戏」而永远不上榜（前端对 4xx 不弹错，表现为空榜）。 */
-const GAME_IDS = ['2048', 'memory:easy', 'memory:std', 'memory:hard', 'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp', 'nono:easy', 'nono:std', 'nono:hard', 'slide:easy', 'slide:std', 'slide:hard', 'snake:easy', 'snake:std', 'snake:hard', 'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua'];
+const GAME_IDS = ['2048', 'memory:easy', 'memory:std', 'memory:hard', 'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp', 'nono:easy', 'nono:std', 'nono:hard', 'slide:easy', 'slide:std', 'slide:hard', 'snake:easy', 'snake:std', 'snake:hard', 'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua', 'liquid', 'jigsaw:easy', 'jigsaw:normal', 'jigsaw:hard'];
 const gamesFile = path.join(DATA_DIR, 'games.json');
 let gameScores = readJson(gamesFile, {});
 if (!gameScores || typeof gameScores !== 'object' || Array.isArray(gameScores)) gameScores = {};
@@ -742,7 +801,7 @@ function claimGuestRec(arr, gid, name) {
    前端进入任一游戏页即每 4s POST /api/games/live 上报进度，离开时带 leave 下线；
    这里只登记「谁在玩 + 进度」，靠 TTL 判定离线，进程重启即清空（不需要持久化）。
    注意 game 用的是前端页面键（g2048/gmem/…），与成绩榜的 GAME_IDS 不是一套，别混用。 */
-const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua'];
+const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua', 'gliquid', 'gjigsaw'];
 const LIVE_TTL = 20000;    // 心跳 4s，留 5 倍余量；超过即认为已离开
 const LIVE_PROG_MAX = 60;  // 进度文案上限，防止被塞长文本
 const liveUsers = new Map();   // game -> Map(身份 key -> { name, av, progress, ts })
@@ -917,11 +976,26 @@ function serveImg(req, res, dir, file) {
   if (!/^[A-Za-z0-9_-]+\.jpg$/.test(file)) { res.writeHead(404); res.end('nope'); return; }
   const fp = path.join(dir, file);
   if (!fp.startsWith(dir) || !fs.existsSync(fp)) { res.writeHead(404); res.end('nope'); return; }
-  res.writeHead(200, {
+  let st;
+  try { st = fs.statSync(fp); } catch (e) { res.writeHead(404); res.end('nope'); return; }
+  /* 图片名即内容指纹（上传时随机生成、永不覆盖），可以放心长缓存；
+     补上 Content-Length + ETag，客户端二次加载直接 304，不会再整张重传。 */
+  const etag = '"' + st.size.toString(16) + '-' + Math.floor(st.mtimeMs).toString(16) + '"';
+  const headers = {
     'Content-Type': 'image/jpeg',
     'Cache-Control': 'public, max-age=31536000, immutable',
-    'Access-Control-Allow-Origin': '*'
-  });
+    'Access-Control-Allow-Origin': '*',
+    'ETag': etag,
+    'Last-Modified': st.mtime.toUTCString()
+  };
+  if (String(req.headers['if-none-match'] || '') === etag) {
+    res.writeHead(304, headers);
+    res.end();
+    return;
+  }
+  headers['Content-Length'] = st.size;
+  res.writeHead(200, headers);
+  if (req.method === 'HEAD') { res.end(); return; }
   fs.createReadStream(fp).pipe(res);
 }
 /* 解析 dataURL 语音（前端 MediaRecorder 录制后 base64 提交），返回 {buf, ext} */
@@ -994,6 +1068,22 @@ function migrateAuxUserData(oldName, name) {
     }
   });
   if (drawsDirty) saveZodiacDraws();
+
+  /* 玩法抽签：昵称是身份键，改名一并过户（记录 + 冷却） */
+  let playDirty = false;
+  playRecords.forEach(function (r) {
+    if (r && r.key === 'u:' + oldName) {
+      r.key = 'u:' + name;
+      r.name = name;
+      playDirty = true;
+    }
+  });
+  if (playCooldowns['u:' + oldName] !== undefined) {
+    playCooldowns['u:' + name] = playCooldowns['u:' + oldName];
+    delete playCooldowns['u:' + oldName];
+    playDirty = true;
+  }
+  if (playDirty) savePlay();
 
   let reportsDirty = false;
   reports.forEach(function (r) {
@@ -1264,7 +1354,8 @@ const server = http.createServer(async function (req, res) {
         name: me.name,
         av: avatarOf(me.name),
         bday: bdayOf(bu),
-        profileDone: bu ? bu.profileDone !== false : true
+        profileDone: bu ? bu.profileDone !== false : true,
+        checkin: checkinStatus(bu)
       } : null,
       count: posts.length
     });
@@ -1526,6 +1617,13 @@ const server = http.createServer(async function (req, res) {
       if (key.indexOf(drawPrefix) === 0) { delete zodiacDraws[key]; drawDirty = true; }
     });
     if (drawDirty) saveZodiacDraws();
+
+    /* 玩法抽签：清掉本人记录与冷却 */
+    const playBefore = playRecords.length;
+    const hadPlayCd = playCooldowns['u:' + name] !== undefined;
+    playRecords = playRecords.filter(function (r) { return !(r && r.key === 'u:' + name); });
+    delete playCooldowns['u:' + name];
+    if (playRecords.length !== playBefore || hadPlayCd) savePlay();
     if (u.birth) {
       ['natal', 'transit'].forEach(function (scope) {
         try {
@@ -1602,7 +1700,7 @@ const server = http.createServer(async function (req, res) {
 
   /* ===== 图片读取（头像 / 帖子配图 / 食谱图） ===== */
   const imgGet = url.match(/^\/api\/img\/(avatars|posts|cook)\/([^/]+)$/);
-  if (req.method === 'GET' && imgGet) {
+  if ((req.method === 'GET' || req.method === 'HEAD') && imgGet) {
     const imgDir = imgGet[1] === 'avatars' ? AV_DIR : (imgGet[1] === 'cook' ? COOK_DIR : IMG_DIR);
     return serveImg(req, res, imgDir, imgGet[2]);
   }
@@ -2168,6 +2266,38 @@ const server = http.createServer(async function (req, res) {
     return json(res, 200, { fortune: r.data, cached: !!r.cached, date: dayStr() });
   }
 
+  /* ===== ★玩法抽签：全站最近记录 + 抽签（登录/游客都可用） ===== */
+  if (req.method === 'GET' && url === '/api/play') {
+    if (limited(ip, 'play', 60, 60000)) return json(res, 429, { err: '查询太频繁' });
+    const qs = new URL(req.url, 'http://x').searchParams;
+    return json(res, 200, playList(playKeyOf(me, qs.get('deviceId'))));
+  }
+  if (req.method === 'POST' && url === '/api/play') {
+    if (limited(ip, 'playdraw', 20, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const b = await body();
+    const key = playKeyOf(me, b && b.deviceId);
+    if (!key) return json(res, 400, { err: '缺少身份标识' });
+    const now = Date.now();
+    const left = Math.max(0, (parseInt(playCooldowns[key], 10) || 0) - now);
+    if (left > 0) {
+      const r = playList(key);
+      r.err = '冷却中，稍后再抽';
+      return json(res, 429, r);
+    }
+    const gn = String(b && b.name || '').trim();
+    const who = me ? me.name : (validGuestName(gn) ? gn : '游客');
+    const text = PLAY_PUNS[Math.floor(Math.random() * PLAY_PUNS.length)];
+    playRecords.push({ key: key, name: who, t: text, ts: now });
+    if (playRecords.length > PLAY_KEEP) playRecords = playRecords.slice(-PLAY_KEEP);
+    playCooldowns[key] = now + PLAY_CD_MS;
+    /* 顺手清掉过期一天以上的冷却键，避免文件无限长大 */
+    Object.keys(playCooldowns).forEach(function (k) {
+      if ((parseInt(playCooldowns[k], 10) || 0) < now - 86400000) delete playCooldowns[k];
+    });
+    savePlay();
+    return json(res, 200, Object.assign({ t: text, ts: now }, playList(key)));
+  }
+
   /* ===== ★每日运签：领取/读取当日一签（账号或设备，当日固定，不重抽） ===== */
   /* 节日日：全员固定节日签（内容在前端 FESTIVAL_FORTUNES）；已抽记录迁移为节日签 */
   const DRAW_N = 8; // 与前端 FORTUNES 条数一致
@@ -2221,7 +2351,11 @@ const server = http.createServer(async function (req, res) {
     const fest = lockFestivalDraw(ck, zkey);
     if (fest) return json(res, 200, fest);
     const hit = zodiacDraws[ck];
-    if (hit && hit.idx != null) return json(res, 200, { idx: hit.idx, first: false, date: dayStr() });
+    if (hit && hit.idx != null) {
+      return json(res, 200, {
+        idx: hit.idx, first: false, date: dayStr(), transfer: !!hit.transfer
+      });
+    }
     return json(res, 200, { idx: null, first: false, date: dayStr() });
   }
   if (req.method === 'POST' && url === '/api/draw') {
@@ -2234,12 +2368,75 @@ const server = http.createServer(async function (req, res) {
     if (fest) return json(res, 200, fest);
     /* 今日已抽：原样返回，绝不重抽 */
     if (zodiacDraws[ck] && zodiacDraws[ck].idx != null) {
-      return json(res, 200, { idx: zodiacDraws[ck].idx, first: false, date: dayStr() });
+      return json(res, 200, {
+        idx: zodiacDraws[ck].idx, first: false, date: dayStr(),
+        transfer: !!zodiacDraws[ck].transfer
+      });
     }
     const idx = Math.floor(Math.random() * DRAW_N);
     zodiacDraws[ck] = { idx: idx, ts: Date.now(), key: zkey };
     saveZodiacDraws();
     return json(res, 200, { idx: idx, first: true, date: dayStr() });
+  }
+  /* ===== ★抽签转运：下签/下下签分享好事后重抽一次 =====
+     只允许当天 idx=6（下签）或 7（下下签），每天一次，且只从 0..5 里重抽，
+     不能「转运」又转回凶签；节日签不参与。 */
+  if (req.method === 'POST' && url === '/api/draw/reroll') {
+    if (limited(ip, 'drawreroll', 10, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const b = await body();
+    const zkey = zodiacKeyOf(me, b && b.deviceId);
+    if (!zkey) return json(res, 400, { err: '缺少身份标识' });
+    const ck = zkey + '|' + dayStr();
+    const hit = zodiacDraws[ck];
+    if (!hit || hit.idx == null) return json(res, 400, { err: '今天还没有抽签' });
+    if (hit.festival) return json(res, 400, { err: '节日签不能转运' });
+    if (hit.transfer) {
+      return json(res, 409, { err: '今天已经转运过了', idx: hit.idx, transfer: true });
+    }
+    if (hit.idx !== 6 && hit.idx !== 7) {
+      return json(res, 400, { err: '只有下签才需要转运' });
+    }
+    const idx = Math.floor(Math.random() * 6);
+    zodiacDraws[ck] = {
+      idx: idx, ts: Date.now(), key: zkey, transfer: true, prevIdx: hit.idx
+    };
+    saveZodiacDraws();
+    return json(res, 200, { ok: true, idx: idx, transfer: true, prevIdx: hit.idx });
+  }
+
+  /* ===== 打卡：连续天数跨端同步 ===== */
+  if (req.method === 'GET' && url === '/api/checkin/stats') {
+    if (needAuth(res, me)) return;
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    return json(res, 200, checkinStatus(bu));
+  }
+  if (req.method === 'POST' && url === '/api/checkin') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'checkin', 20, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = await body();
+    let dirty = false;
+    /* 首次上云：用客户端已有的本地连续天数做迁移，避免老用户被清零 */
+    if (!bu.checkinLast && b && b.last) {
+      const last = String(b.last);
+      if (last === dayStr() || last === yesterdayStr()) {
+        bu.checkinLast = last;
+        bu.checkinStreak = Math.max(1, Math.min(100000, parseInt(b.streak, 10) || 0));
+        dirty = true;
+      }
+    }
+    const d = dayStr();
+    if (bu.checkinLast !== d) {
+      bu.checkinStreak = bu.checkinLast === yesterdayStr()
+        ? (parseInt(bu.checkinStreak, 10) || 0) + 1
+        : 1;
+      bu.checkinLast = d;
+      dirty = true;
+    }
+    if (dirty) saveUsers();
+    return json(res, 200, checkinStatus(bu));
   }
 
   /* ===== ★星盘：本命盘 / 行运盘（Kerykeion 本地计算，登录后可用） ===== */

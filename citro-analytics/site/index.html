@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f5f5f3" />
+    <title>Citro 增长分析 · 本地演示工作台</title>
+    <meta
+      name="description"
+      content="Citro 增长分析演示工作台：查看 APP 与网页业务的关键指标、收入趋势、套餐构成、任务、团队状态和通知。所有数据均为本地虚构演示数据。"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+
+    <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="10.8" cy="10.8" r="6.6" />
+        <path d="m15.6 15.6 4.2 4.2" />
+      </symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="4" y="4" width="6.5" height="6.5" rx="1.6" />
+        <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6" />
+        <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6" />
+        <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6" />
+      </symbol>
+      <symbol id="i-tasks" viewBox="0 0 24 24">
+        <rect x="4" y="4" width="16" height="16" rx="3.2" />
+        <path d="m8.3 12.2 2.4 2.4 5-5.2" />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <circle cx="9" cy="8.3" r="3.1" />
+        <path d="M3.8 19.2c.35-3.35 2.3-5.2 5.2-5.2s4.85 1.85 5.2 5.2" />
+        <path d="M15.4 5.6a2.9 2.9 0 0 1 0 5.4M16.8 14.3c2.25.35 3.55 2 3.85 4.9" />
+      </symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24">
+        <path d="M6.4 10.2a5.6 5.6 0 0 1 11.2 0c0 5 1.6 5.8 2.1 6.35H4.3c.5-.55 2.1-1.35 2.1-6.35Z" />
+        <path d="M9.8 19.1a2.35 2.35 0 0 0 4.4 0" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.4" />
+        <path d="M12 10.7v5.2" />
+        <circle cx="12" cy="7.8" r=".9" fill="currentColor" stroke="none" />
+      </symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 4.5v10M7.6 10.4 12 14.8l4.4-4.4" />
+        <path d="M4.8 18.8h14.4" />
+      </symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24">
+        <path d="M4 6.5h16M7.5 12h9M10.2 17.5h3.6" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="m5 12.5 4.4 4.3L19 6.8" />
+      </symbol>
+    </svg>
+
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="工作台导航">
+        <div class="sidebar-head">
+          <a class="brand" href="#overview" aria-label="Citro 增长分析首页">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <rect width="32" height="32" rx="9" fill="#1b1d22" />
+              <path
+                d="M21.7 11.4a6.2 6.2 0 1 0 .1 9.2"
+                fill="none"
+                stroke="#f5f5f3"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M22.2 6.6c.5 2.25-.8 3.65-2.9 4 .15-2.2 1.05-3.4 2.9-4Z" fill="#c2ad82" />
+            </svg>
+            <span class="brand-copy">
+              <strong>Citro</strong>
+              <span>增长分析</span>
+            </span>
+          </a>
+          <button class="icon-button drawer-close" id="drawer-close" type="button" aria-label="关闭导航">
+            <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+          </button>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="主菜单">
+          <p class="nav-label">工作台</p>
+          <ul class="nav-list">
+            <li>
+              <a class="nav-link is-active" href="#overview" data-section="overview" aria-current="page">
+                <svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>
+                <span>总览</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#tasks" data-section="tasks">
+                <svg class="icon" aria-hidden="true"><use href="#i-tasks"></use></svg>
+                <span>任务</span>
+                <span class="nav-badge" id="nav-task-badge">1/4</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#team" data-section="team">
+                <svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg>
+                <span>团队</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#notifications" data-section="notifications">
+                <svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>
+                <span>通知</span>
+                <span class="nav-badge nav-badge--accent" id="nav-unread-badge">3</span>
+              </a>
+            </li>
+          </ul>
+
+          <p class="nav-label nav-label--spaced">资源</p>
+          <button class="nav-link nav-link--button" type="button" data-open-notes>
+            <svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>
+            <span>数据说明</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="sidebar-demo">
+            <div class="sidebar-demo-head">
+              <span class="status-dot"></span>
+              <strong>本地演示环境</strong>
+            </div>
+            <p>数据为虚构样例，不连接真实后端。</p>
+            <button class="text-button" type="button" data-open-notes>了解数据范围</button>
+          </div>
+
+          <div class="profile">
+            <span class="avatar avatar--profile" aria-hidden="true">林</span>
+            <span class="profile-copy">
+              <strong>林雅 <span>演示</span></strong>
+              <span>运营负责人</span>
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="nav-scrim" id="nav-scrim" aria-hidden="true" hidden></div>
+
+      <div class="workspace-column">
+        <header class="topbar">
+          <button
+            class="icon-button menu-button"
+            id="menu-button"
+            type="button"
+            aria-label="打开导航"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+          </button>
+
+          <div class="workspace-locator" aria-label="当前工作区：Citro 增长分析">
+            <span class="workspace-kicker">工作区</span>
+            <span class="workspace-line">
+              <strong>Citro</strong>
+              <span class="workspace-slash" aria-hidden="true">/</span>
+              <span>增长分析</span>
+              <span class="scope-pill">APP + 网页</span>
+            </span>
+          </div>
+
+          <span class="demo-badge"><span class="demo-dot" aria-hidden="true"></span>本地演示</span>
+
+          <form class="search-shell" id="search-form" role="search" novalidate>
+            <label class="sr-only" for="search-input">搜索任务或通知</label>
+            <svg class="icon search-icon" aria-hidden="true"><use href="#i-search"></use></svg>
+            <input
+              class="search-input"
+              id="search-input"
+              name="q"
+              type="search"
+              placeholder="搜索任务或通知"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="search-clear" id="search-clear" type="button" aria-label="清除搜索" hidden>
+              <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+            </button>
+          </form>
+        </header>
+
+        <main class="main" id="main" tabindex="-1">
+          <noscript>
+            <div class="nojs-alert">这是一个交互式演示工作台，请启用 JavaScript 以查看数据和操作。</div>
+          </noscript>
+
+          <div class="demo-banner" role="note">
+            <svg class="icon demo-banner-icon" aria-hidden="true"><use href="#i-info"></use></svg>
+            <p>
+              <strong>本地演示数据</strong>
+              <span>所有收入、客户、成员、任务与通知均为虚构样例，不代表真实业务。</span>
+            </p>
+            <button class="text-button" type="button" data-open-notes>查看数据说明</button>
+          </div>
+
+          <div class="filter-strip" id="filter-strip" hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-filter"></use></svg>
+            <p id="filter-status" role="status" aria-live="polite">
+              正在筛选 <strong id="filter-query"></strong>
+              <span class="filter-separator" aria-hidden="true">·</span>
+              任务 <span id="filter-task-count">0</span> 条
+              <span class="filter-separator" aria-hidden="true">·</span>
+              通知 <span id="filter-notification-count">0</span> 条
+            </p>
+            <button class="text-button" id="filter-clear" type="button">清除筛选</button>
+          </div>
+
+          <section class="overview" id="overview" aria-labelledby="page-title">
+            <div class="hero">
+              <div class="hero-copy">
+                <p class="eyebrow">增长概览 <span aria-hidden="true">·</span> 演示工作区</p>
+                <h1 id="page-title">你好，林雅。</h1>
+                <p class="hero-sub">APP 与网页业务的信号都在这里。先看关键指标，再处理今天最重要的事。</p>
+              </div>
+
+              <div class="hero-actions">
+                <div class="range-control">
+                  <span class="field-label" id="range-label">时间范围</span>
+                  <div class="segmented" id="range-buttons" role="group" aria-labelledby="range-label">
+                    <button class="range-button" type="button" data-range="7d" aria-pressed="false">近 7 天</button>
+                    <button class="range-button is-active" type="button" data-range="30d" aria-pressed="true">
+                      近 30 天
+                    </button>
+                    <button class="range-button" type="button" data-range="90d" aria-pressed="false">近 90 天</button>
+                  </div>
+                </div>
+                <button class="button button-primary export-button" id="export-button" type="button">
+                  <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+                  导出 CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="range-meta">
+              <span>数据周期 <strong id="range-period">2026.09.26 — 2026.10.25</strong></span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span id="range-granularity">每 3 天汇总</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span>数据截止 <time datetime="2026-10-25" data-demo-date>2026-10-25</time></span>
+            </div>
+
+            <div class="metrics-block">
+              <h2 class="sr-only">关键指标（本地演示数据）</h2>
+              <div class="metrics-grid" id="metrics-grid"></div>
+            </div>
+
+            <div class="analytics-grid">
+              <article class="panel revenue-panel" aria-labelledby="revenue-title">
+                <header class="panel-header">
+                  <div class="panel-heading">
+                    <h2 id="revenue-title">收入趋势</h2>
+                    <p class="panel-sub" id="revenue-subtitle">每 3 天汇总 · 演示数据</p>
+                  </div>
+                  <div class="panel-stat">
+                    <span class="panel-stat-label">区间收入</span>
+                    <strong id="revenue-total">¥524,300</strong>
+                    <span class="delta delta--good" id="revenue-change">
+                      <span class="delta-arrow" aria-hidden="true">↑</span>
+                      <span>11.5%</span>
+                    </span>
+                  </div>
+                </header>
+
+                <div class="chart-meta">
+                  <span class="chart-key"><span class="chart-key-line" aria-hidden="true"></span>收入（元）</span>
+                  <span id="chart-points-note">11 个数据点</span>
+                </div>
+
+                <div class="chart-shell" id="revenue-chart-shell">
+                  <div class="chart-wrap" id="revenue-chart-wrap">
+                    <p class="chart-placeholder">正在载入演示图表…</p>
+                  </div>
+                  <div class="chart-tooltip" id="chart-tooltip" aria-hidden="true" hidden></div>
+                </div>
+
+                <p class="sr-only" id="revenue-chart-summary">
+                  收入趋势图。当前范围共 11 个数据点，可以展开数据表查看每个区间的准确金额。
+                </p>
+
+                <details class="chart-details">
+                  <summary>查看数据表</summary>
+                  <div class="table-scroll">
+                    <table>
+                      <caption id="revenue-table-caption">
+                        近 30 天收入趋势（演示数据，单位：元）
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">日期</th>
+                          <th scope="col">收入（元）</th>
+                        </tr>
+                      </thead>
+                      <tbody id="revenue-table-body"></tbody>
+                    </table>
+                  </div>
+                </details>
+              </article>
+
+              <article class="panel plan-panel" aria-labelledby="plan-title">
+                <header class="panel-header">
+                  <div class="panel-heading">
+                    <h2 id="plan-title">套餐收入</h2>
+                    <p class="panel-sub">所选范围 MRR 分摊 · 演示数据</p>
+                  </div>
+                </header>
+
+                <div class="plan-body">
+                  <div class="donut-wrap">
+                    <svg class="donut" id="plan-donut" viewBox="0 0 170 170" aria-hidden="true"></svg>
+                    <div class="donut-center">
+                      <span>MRR 合计</span>
+                      <strong id="plan-total">¥482.6k</strong>
+                    </div>
+                  </div>
+                  <ul class="plan-list" id="plan-list" aria-label="套餐收入构成"></ul>
+                </div>
+
+                <p class="panel-footnote">按所选范围的演示 MRR 分摊，仅用于界面展示。</p>
+              </article>
+            </div>
+          </section>
+
+          <div class="lower-grid">
+            <section class="panel tasks-panel" id="tasks" aria-labelledby="tasks-title">
+              <header class="panel-header panel-header--stackable">
+                <div class="panel-heading">
+                  <h2 id="tasks-title">今日任务</h2>
+                  <p class="panel-sub">演示工作清单</p>
+                </div>
+                <div class="task-summary">
+                  <span class="task-count" id="task-count">已完成 1 / 4</span>
+                  <span class="count-chip" id="task-percent">25%</span>
+                </div>
+              </header>
+
+              <div
+                class="progress"
+                id="task-progress-track"
+                role="progressbar"
+                aria-labelledby="tasks-title"
+                aria-valuemin="0"
+                aria-valuemax="4"
+                aria-valuenow="1"
+                aria-valuetext="1 / 4"
+              >
+                <span class="progress-bar" id="task-progress" style="width: 25%"></span>
+              </div>
+
+              <ul class="task-list" id="task-list"></ul>
+
+              <div class="empty-state" id="task-empty" hidden>
+                <p>没有匹配的任务。</p>
+                <button class="text-button" type="button" id="task-empty-clear">清除搜索</button>
+              </div>
+            </section>
+
+            <section class="panel team-panel" id="team" aria-labelledby="team-title">
+              <header class="panel-header">
+                <div class="panel-heading">
+                  <h2 id="team-title">团队状态</h2>
+                  <p class="panel-sub">演示成员 · 在线情况</p>
+                </div>
+                <span class="team-count" id="team-count">4 人 · 2 在线</span>
+              </header>
+
+              <ul class="team-list" id="team-list"></ul>
+              <p class="panel-footnote">成员、角色和工作负荷均为虚构演示内容。</p>
+            </section>
+
+            <section class="panel notifications-panel" id="notifications" aria-labelledby="notifications-title">
+              <header class="panel-header panel-header--stackable">
+                <div class="panel-heading">
+                  <h2 id="notifications-title">通知</h2>
+                  <p class="panel-sub">演示通知</p>
+                </div>
+                <div class="notification-actions">
+                  <span class="unread-count" id="unread-count">3 条未读</span>
+                  <button class="button button-quiet button-small" id="mark-all-read" type="button">全部标为已读</button>
+                </div>
+              </header>
+
+              <ul class="notification-list" id="notification-list"></ul>
+
+              <div class="empty-state" id="notification-empty" hidden>
+                <p>没有匹配的通知。</p>
+                <button class="text-button" type="button" id="notification-empty-clear">清除搜索</button>
+              </div>
+            </section>
+          </div>
+
+          <footer class="app-footer">
+            <div class="footer-brand">
+              <strong>Citro Analytics</strong>
+              <span>本地演示版 · 数据截止 <time datetime="2026-10-25" data-demo-date>2026-10-25</time></span>
+            </div>
+            <p>APP + 网页演示汇总 · 未连接真实后端</p>
+            <button class="text-button" type="button" data-open-notes>数据说明</button>
+          </footer>
+        </main>
+      </div>
+    </div>
+
+    <dialog class="notes-dialog" id="data-dialog" aria-labelledby="notes-title">
+      <div class="notes-head">
+        <div>
+          <p class="eyebrow">数据说明</p>
+          <h2 id="notes-title">这是一份本地演示工作台</h2>
+        </div>
+        <button class="icon-button" id="dialog-close" type="button" aria-label="关闭数据说明">
+          <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+        </button>
+      </div>
+
+      <div class="notes-body">
+        <p class="notes-lead">
+          页面中的指标、趋势、套餐构成、任务、团队和通知都来自同一份本地演示数据。所有人物与业务数字均为虚构，不代表任何真实客户或业务表现。
+        </p>
+
+        <dl class="notes-facts">
+          <div>
+            <dt>数据范围</dt>
+            <dd>APP + 网页模拟汇总</dd>
+          </div>
+          <div>
+            <dt>数据截止</dt>
+            <dd><time datetime="2026-10-25" data-demo-date>2026-10-25</time></dd>
+          </div>
+          <div>
+            <dt>连接状态</dt>
+            <dd>未连接登录、支付、数据库或外部服务</dd>
+          </div>
+          <div>
+            <dt>页面内交互</dt>
+            <dd>时间范围、搜索、任务勾选、通知已读与 CSV 导出只在当前页面生效，刷新后恢复初始演示状态。</dd>
+          </div>
+        </dl>
+
+        <div class="notes-callout">
+          <strong>关于接入真实业务数据</strong>
+          <p>
+            演示数据独立存放在 data.js 中，界面与数据层已经分开。接入时可将演示数据替换为 APP 或网页后端返回的数据，并在服务端完成身份验证与访问权限控制。
+          </p>
+        </div>
+      </div>
+
+      <div class="notes-foot">
+        <button class="button button-primary" id="dialog-done" type="button">知道了</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <div class="sr-only" id="live-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

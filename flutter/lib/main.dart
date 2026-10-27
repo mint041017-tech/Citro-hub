@@ -15,20 +15,25 @@ import 'services/web_route.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/breakpoints.dart';
+import 'theme/scroll_behavior.dart';
 import 'theme/tokens.dart';
 import 'widgets/corner_guard.dart';
+import 'widgets/desktop_shell.dart';
 import 'widgets/tablet_shell.dart';
 
 Future<void> main() async {
   PerfProbe.start();
   WidgetsFlutterBinding.ensureInitialized();
+  await CitroDesktopShell.init();
   // 图片缓存是这类图文 App 最容易吃满内存的地方：限制总量，低内存时整块清掉。
+  // 桌面端内存更宽裕，放宽缓存避免大图反复解码，帧时间更稳定。
+  final desktopCache = !kIsWeb && platform.isDesktop;
   PaintingBinding.instance.imageCache
-    ..maximumSize = kIsWeb ? 80 : 120
-    ..maximumSizeBytes = (kIsWeb ? 32 : 48) << 20;
+    ..maximumSize = kIsWeb ? 80 : (desktopCache ? 180 : 120)
+    ..maximumSizeBytes = (kIsWeb ? 32 : (desktopCache ? 96 : 48)) << 20;
   ErrorWidget.builder = (details) => _FriendlyError(details: details);
   // iPhone 默认锁竖屏，只有 Duo 内屏解锁横屏；iPad 交给 Info.plist。
-  if (!kIsWeb && !platform.isIOS) {
+  if (!kIsWeb && !platform.isIOS && !platform.isDesktop) {
     try {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -202,6 +207,7 @@ class _CitroAppState extends State<CitroApp> {
           themeMode: _themeMode,
           theme: buildCitroTheme(CitroColors.light),
           darkTheme: buildCitroTheme(CitroColors.darkColors),
+          scrollBehavior: const CitroScrollBehavior(),
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
           localizationsDelegates: const [
@@ -263,13 +269,18 @@ class _CitroAppState extends State<CitroApp> {
                 ),
               ),
             );
-            if (!duo) return content;
-            return CitroDuoBackRailOverlay(
-              pageDepth: _citroRouteObserver.pageDepth,
-              popupDepth: _citroRouteObserver.popupDepth,
-              pageName: _citroRouteObserver.pageName,
-              onBack: () => citroNavigatorKey.currentState?.maybePop(),
-              child: CitroDuoCornerGuard(child: content),
+            if (!duo) {
+              return CitroDesktopShell.wrap(context, content);
+            }
+            return CitroDesktopShell.wrap(
+              context,
+              CitroDuoBackRailOverlay(
+                pageDepth: _citroRouteObserver.pageDepth,
+                popupDepth: _citroRouteObserver.popupDepth,
+                pageName: _citroRouteObserver.pageName,
+                onBack: () => citroNavigatorKey.currentState?.maybePop(),
+                child: CitroDuoCornerGuard(child: content),
+              ),
             );
           },
         ),
@@ -298,6 +309,7 @@ class _SplashGateState extends State<SplashGate> {
   }
 
   Future<void> _boot() async {
+    final startedAt = DateTime.now();
     if (mounted) {
       setState(() {
         _ready = false;
@@ -310,6 +322,14 @@ class _SplashGateState extends State<SplashGate> {
     } catch (e) {
       _booted = false;
       _error = '$e';
+    }
+    // Windows 与 iPad 一样先完整展示启动插画，避免秒开时只闪一帧。
+    if (!kIsWeb && platform.isWindows) {
+      const minSplash = Duration(milliseconds: 1000);
+      final elapsed = DateTime.now().difference(startedAt);
+      if (elapsed < minSplash) {
+        await Future<void>.delayed(minSplash - elapsed);
+      }
     }
     if (mounted) setState(() => _ready = true);
   }
@@ -426,17 +446,29 @@ class SplashScreen extends StatelessWidget {
     }
     final size = MediaQuery.sizeOf(context);
     // iPad 固定使用横版启动图，与原生 LaunchImage 的 iPad 资源保持一致；
-    // iPhone/Duo 仍按当前窗口方向选择。
+    // Windows 桌面端复用同一张 iPad 启动图；iPhone/Duo 仍按窗口方向选择。
+    final desktopSplash = !kIsWeb && platform.isWindows;
     final isPad = size.shortestSide >= 700;
-    final landscape = isPad || size.width > size.height;
+    final landscape = desktopSplash || isPad || size.width > size.height;
     return Scaffold(
       backgroundColor: const Color(0xFFFBF7EC),
-      body: Image.asset(
-        landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
-        key: ValueKey(landscape ? 'splash-landscape' : 'splash-portrait'),
-        fit: BoxFit.cover,
-        alignment: landscape ? Alignment.center : Alignment.topCenter,
-        cacheWidth: landscape ? 2000 : 1080,
+      body: SizedBox.expand(
+        child: Image.asset(
+          landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
+          key: ValueKey(landscape ? 'splash-landscape' : 'splash-portrait'),
+          fit: BoxFit.cover,
+          alignment: landscape ? Alignment.center : Alignment.topCenter,
+          cacheWidth: landscape ? 2000 : 1080,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded) return child;
+            return AnimatedOpacity(
+              opacity: frame == null ? 0 : 1,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              child: child,
+            );
+          },
+        ),
       ),
     );
   }

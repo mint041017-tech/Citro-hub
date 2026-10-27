@@ -1,20 +1,19 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../data/resources.dart';
 import '../games/game_registry.dart';
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
+import 'in_app_web.dart';
+import 'web_scrapbook.dart';
 
 class GamesPage extends StatelessWidget {
   const GamesPage({super.key});
-
-  static const _keep = ['玩法抽签', '灵敏度', '瞬投', 'KOOK', 'NN语音', 'UU远程', '青柠起始页'];
 
   @override
   Widget build(BuildContext context) {
@@ -22,23 +21,77 @@ class GamesPage extends StatelessWidget {
     final layout = CitroLayoutScope.maybeOf(context);
     final width = layout?.contentWidth ?? MediaQuery.sizeOf(context).width;
     final tabletNav = layout?.tabletNav ?? false;
-    final maxWidth = tabletNav ? 1120.0 : 840.0;
+    // 宽屏网页与桌面端一致：更宽的画布、同样大的游戏卡，不再附赠资源库入口。
+    final desktopWeb = kIsWeb && width >= 1025;
+    final wideDesktop = tabletNav || desktopWeb;
+    final maxWidth = wideDesktop ? 1120.0 : 840.0;
     final side = math.max(8.0, (width - maxWidth) / 2);
     final duo = layout?.duo == true;
     final gameColumns = duo
         ? (width >= 820 ? 5 : (width >= 520 ? 4 : 3))
         : (width >= 1040 ? 5 : (width >= 760 ? 4 : 3));
-    final toolColumns = duo
-        ? (width >= 820 ? 4 : 3)
-        : (width >= 980 ? 4 : (width >= 700 ? 3 : 2));
-    final tools = kTools.where((t) => _keep.contains(t.name)).toList();
     final games = kGameCards;
-    return PaperBackground(
+    final gameTools = <_GameToolLink>[
+      _GameToolLink(
+        title: '玩法抽签',
+        desc: '无畏契约整活玩法',
+        icon: AppIcons.sparkle,
+        background: c.hl,
+        foreground: c.accentInk,
+        onTap: () => Navigator.of(context).pushNamed('/play'),
+      ),
+      _GameToolLink(
+        title: '瞬投',
+        desc: '投掷物点位地图',
+        icon: AppIcons.location,
+        background: c.mintSoft,
+        foreground: c.mintInk,
+        onTap: () =>
+            openCitroPage(context, 'https://shuntou.top/', title: '瞬投'),
+      ),
+      _GameToolLink(
+        title: '屏幕分享',
+        desc: '网页共享与远程演示',
+        icon: AppIcons.monitor,
+        background: c.noteB,
+        foreground: c.accentInk,
+        onTap: () =>
+            openCitroPage(context, 'https://demo.piik.tv/', title: '屏幕分享'),
+      ),
+      _GameToolLink(
+        title: '视野live',
+        desc: '实时视野 · 在线直播',
+        icon: AppIcons.eye,
+        background: c.mintSoft,
+        foreground: c.mintInk,
+        onTap: () => openCitroPage(
+          context,
+          'https://shijiao.xingpaste.com/',
+          title: '视野live',
+        ),
+      ),
+    ];
+    final downloadSite = kIsWeb
+        ? _GameToolLink(
+            title: '下载站',
+            desc: 'App、Mod 与工具下载',
+            icon: AppIcons.download,
+            background: c.noteG,
+            foreground: c.mintInk,
+            onTap: () => openCitroPage(
+              context,
+              'https://dl.chimu-claw.xyz/',
+              title: 'Citro 下载站',
+            ),
+          )
+        : null;
+    final showGameTools = kIsWeb || platform.isAndroid || platform.isIOS;
+    final content = PaperBackground(
       child: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(side, 8, side, tabletNav ? 32 : 100),
+          padding: EdgeInsets.fromLTRB(side, 8, side, wideDesktop ? 32 : 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -144,158 +197,331 @@ class GamesPage extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              PaperCard(
-                rotate: -.6,
-                tapeColor: c.tape,
-                tapeAngle: -3,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SectionTitle('小工具', size: toolColumns >= 3 ? 26 : 23),
-                    const SizedBox(height: 10),
-                    DashedLine(color: c.line2.withAlpha(150)),
-                    const SizedBox(height: 4),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: toolColumns,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 0,
-                        childAspectRatio: (layout?.duo == true && width < 520)
-                            ? 1.22
-                            : 1.34,
-                      ),
-                      itemCount: tools.length + 1,
-                      itemBuilder: (_, i) {
-                        if (i >= tools.length)
-                          return _ToolCard.fill(
-                            context,
-                            onLongPress: () => _openRes(context),
-                          );
-                        return _ToolCard(tool: tools[i]);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              PaperCard(
-                padding: const EdgeInsets.all(12),
-                onTap: () =>
-                    _openExternal(context, 'https://chimu-claw.xyz/#/res'),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: c.hl,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: AppIcon(
-                          strokeSvg(AppIcons.monitor, width: 2),
-                          size: 19,
-                          color: c.accentInk,
+              if (showGameTools) ...[
+                const SizedBox(height: 12),
+                _GameToolSection(links: gameTools, download: downloadSite),
+              ],
+              if (!platform.isWindows && !kIsWeb) ...[
+                const SizedBox(height: 12),
+                PaperCard(
+                  padding: const EdgeInsets.all(12),
+                  onTap: () => _openRes(context),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: c.hl,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: AppIcon(
+                            strokeSvg(AppIcons.monitor, width: 2),
+                            size: 19,
+                            color: c.accentInk,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '更多游戏 Mod / 工具 / 外设驱动请移步 PC 版',
-                            style: context
-                                .heading(size: 15, color: c.ink, height: 1.35)
-                                .copyWith(letterSpacing: .1),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'chimu-claw.xyz',
-                            style: context.body(
-                              size: 12,
-                              color: c.accentInk,
-                              letterSpacing: .48,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '更多 Mod / 工具 / 外设驱动',
+                              style: context
+                                  .heading(size: 15, color: c.ink, height: 1.35)
+                                  .copyWith(letterSpacing: .1),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              '打开资源库',
+                              style: context.body(
+                                size: 12,
+                                color: c.accentInk,
+                                letterSpacing: .48,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    AppIcon(
-                      strokeSvg(AppIcons.arrowUpRight, width: 2.2),
-                      size: 15,
-                      color: c.accentInk,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: TextButton(
-                  onPressed: () => _openRes(context),
-                  child: Text(
-                    '资源库 · Mod / 工具 / 外设驱动',
-                    style: context.body(size: 11, color: c.inkSoft),
+                      AppIcon(
+                        strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+                        size: 15,
+                        color: c.accentInk,
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton(
+                    onPressed: () => _openRes(context),
+                    child: Text(
+                      '资源库 · Mod / 工具 / 外设驱动',
+                      style: context.body(size: 11, color: c.inkSoft),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+    if (!desktopWeb) return content;
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        Positioned(
+          left: 18,
+          bottom: MediaQuery.paddingOf(context).bottom + 24,
+          child: const WebHomeBackPill(),
+        ),
+      ],
     );
   }
 
   void _openRes(BuildContext context) {
     Navigator.of(context).pushNamed('/res');
   }
+}
 
-  Future<void> _openExternal(BuildContext context, String url) async {
-    final ok = await showCitroDialog<bool>(
-      context,
-      builder: (ctx) => PaperDialog(
-        showClose: false,
+class _GameToolLink {
+  final String title;
+  final String desc;
+  final String icon;
+  final Color background;
+  final Color foreground;
+  final VoidCallback onTap;
+
+  const _GameToolLink({
+    required this.title,
+    required this.desc,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onTap,
+  });
+}
+
+class _GameToolSection extends StatelessWidget {
+  final List<_GameToolLink> links;
+  final _GameToolLink? download;
+
+  const _GameToolSection({required this.links, this.download});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return PaperCard(
+      rotate: .35,
+      tapeColor: c.tape2,
+      tapeAngle: 2.2,
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const SectionTitle('小工具', size: 21),
+              const Spacer(),
+              Text(
+                kIsWeb ? '在线工具 · 下载' : '在线工具',
+                style: context.body(size: 10.5, color: c.inkSoft),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 620) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: links.length <= 3 ? 3 : 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        mainAxisExtent: 72,
+                      ),
+                      itemCount: links.length,
+                      itemBuilder: (_, i) =>
+                          _GameToolCompactCard(link: links[i]),
+                    ),
+                    if (download != null) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 60,
+                        child: _GameToolCard(link: download!),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              final all = [...links, ?download];
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: all.length,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  mainAxisExtent: 60,
+                ),
+                itemCount: all.length,
+                itemBuilder: (_, i) => _GameToolCard(link: all[i]),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GameToolCompactCard extends StatelessWidget {
+  final _GameToolLink link;
+
+  const _GameToolCompactCard({required this.link});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: link.onTap,
+      borderRadius: BorderRadius.circular(12),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.line),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('前往外部页面？', style: context.heading(size: 20)),
-            const SizedBox(height: 8),
-            Text(
-              url,
-              textAlign: TextAlign.center,
-              style: context.body(size: 11, color: ctx.c.inkSoft),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: link.background,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(link.icon, width: 2),
+                  size: 15,
+                  color: link.foreground,
+                ),
+              ),
             ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: AccentButton(
-                    text: '取消',
-                    outlined: true,
-                    onTap: () => Navigator.pop(ctx, false),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AccentButton(
-                    text: '前往',
-                    onTap: () => Navigator.pop(ctx, true),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 5),
+            Text(
+              link.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.body(
+                size: 11.5,
+                weight: FontWeight.w700,
+                color: c.ink,
+                height: 1.15,
+              ),
             ),
           ],
         ),
       ),
     );
-    if (ok == true) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    }
+  }
+}
+
+class _GameToolCard extends StatelessWidget {
+  final _GameToolLink link;
+
+  const _GameToolCard({required this.link});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: link.onTap,
+      borderRadius: BorderRadius.circular(12),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: link.background,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(link.icon, width: 2),
+                  size: 16,
+                  color: link.foreground,
+                ),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    link.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 12.5,
+                      weight: FontWeight.w700,
+                      color: c.ink,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    link.desc,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 9.5,
+                      color: c.inkSoft,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            AppIcon(
+              strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+              size: 11,
+              color: c.inkSoft,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -323,7 +549,8 @@ class _GameCard extends StatelessWidget {
     final tablet = layout?.tabletNav ?? false;
     final compact =
         (layout?.duo ?? false) && CitroLayoutScope.widthOf(context) < 520;
-    final large = tablet && !compact;
+    final desktopWeb = kIsWeb && CitroLayoutScope.widthOf(context) >= 1025;
+    final large = (tablet || desktopWeb) && !compact;
     return Pressable(
       onTap: () => Navigator.of(context).pushNamed('/${entry.key}'),
       child: Container(
@@ -384,169 +611,5 @@ class _GameCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _ToolCard extends StatelessWidget {
-  final ToolItem? tool;
-  final VoidCallback? onLongPress;
-  const _ToolCard({this.tool, this.onLongPress});
-
-  factory _ToolCard.fill(BuildContext context, {VoidCallback? onLongPress}) =>
-      _ToolCard(onLongPress: onLongPress);
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final layout = CitroLayoutScope.maybeOf(context);
-    final tablet = layout?.tabletNav ?? false;
-    final compact =
-        (layout?.duo ?? false) && CitroLayoutScope.widthOf(context) < 520;
-    final large = tablet && !compact;
-    final isFill = tool == null;
-    final name = tool?.name ?? '更多敬请期待';
-    final desc = tool?.desc ?? '持续收录实用小工具';
-    final iconSvg = isFill
-        ? strokeSvg(
-            '<circle cx="12" cy="12" r="9" stroke-dasharray="2 2"/><path d="M12 8v4l2 2"/>',
-            width: 2,
-          )
-        : strokeSvg(tool!.icon, width: 2);
-    return GestureDetector(
-      onLongPress: onLongPress,
-      onTap: () {
-        if (isFill) return;
-        if (tool!.name == '灵敏度') {
-          Navigator.of(context).pushNamed('/sens');
-        } else if (tool!.name == '玩法抽签') {
-          Navigator.of(context).pushNamed('/play');
-        } else if (tool!.url != null) {
-          _launch(context, tool!.url!);
-        }
-      },
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          large ? 14 : 10,
-          large ? 14 : (compact ? 8 : 10),
-          large ? 10 : 6,
-          large ? 12 : (compact ? 7 : 9),
-        ),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: c.line2.withAlpha(120))),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) => FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: constraints.maxWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: large ? 42 : (compact ? 30 : 34),
-                    height: large ? 42 : (compact ? 30 : 34),
-                    decoration: BoxDecoration(
-                      color: isFill ? c.surface : c.hl,
-                      borderRadius: BorderRadius.circular(large ? 12 : 10),
-                      border: isFill ? Border.all(color: c.line2) : null,
-                    ),
-                    child: Center(
-                      child: AppIcon(
-                        iconSvg,
-                        size: large ? 21 : (compact ? 16 : 17),
-                        color: isFill ? c.inkSoft : c.accentInk,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: large ? 8 : (compact ? 4 : 6)),
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isFill ? c.line2 : c.accent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.body(
-                            size: large ? 16 : (compact ? 12.5 : 13),
-                            weight: FontWeight.w700,
-                            color: c.ink,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: large ? 4 : 2),
-                  Text(
-                    desc,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: large ? 13 : (compact ? 10.5 : 11),
-                      color: c.inkSoft,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _launch(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (url.contains('小工具/') || url.contains('外设驱动/')) {
-      final ok = await showCitroDialog<bool>(
-        context,
-        builder: (ctx) => PaperDialog(
-          showClose: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('确认下载？', style: context.heading(size: 20)),
-              const SizedBox(height: 8),
-              Text(
-                url.split('/').last,
-                textAlign: TextAlign.center,
-                style: context.body(size: 11, color: ctx.c.inkSoft),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: AccentButton(
-                      text: '取消',
-                      outlined: true,
-                      onTap: () => Navigator.pop(ctx, false),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AccentButton(
-                      text: '下载',
-                      onTap: () => Navigator.pop(ctx, true),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-      if (ok != true) return;
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

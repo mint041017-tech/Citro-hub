@@ -20,10 +20,41 @@
     return window.flutter_inappwebview || null;
   }
 
-  function call(name, args) {
+  /* Web 端：iframe 通过 postMessage 交给 Citro 网页宿主处理。
+     桌面 WebView 仍优先走 flutter_inappwebview。 */
+  var webBridge = window.parent && window.parent !== window;
+  var webSeq = 0;
+  var webPending = {};
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.__citroReply !== 1) return;
+    var resolve = webPending[d.id];
+    if (!resolve) return;
+    delete webPending[d.id];
+    resolve(d.result);
+  });
+  function callParent(name, args) {
     return new Promise(function (resolve) {
-      var b = bridge();
-      if (!b || !b.callHandler) return resolve(null);
+      var id = ++webSeq;
+      webPending[id] = resolve;
+      try {
+        window.parent.postMessage(
+          { __citro: 1, id: id, name: name, args: args || [] },
+          '*'
+        );
+      } catch (e) {
+        delete webPending[id];
+        resolve(null);
+      }
+    });
+  }
+
+  function call(name, args) {
+    var b = bridge();
+    if (!b || !b.callHandler) {
+      return webBridge ? callParent(name, args) : Promise.resolve(null);
+    }
+    return new Promise(function (resolve) {
       try {
         // flutter_inappwebview 的 callHandler(name, ...args) 是可变参数：
         // 之前传数组会被原生端当成「一个 List 参数」，args.first 不是 Map，

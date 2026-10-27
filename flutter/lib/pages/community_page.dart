@@ -13,16 +13,17 @@ import '../overlays/report_sheet.dart';
 import '../services/api.dart';
 import '../services/media.dart';
 import '../services/models.dart';
+import '../services/orientation.dart';
+import '../services/platform.dart' as platform;
 import '../services/voice.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import '../widgets/history_today.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import '../widgets/voice_bubble.dart';
-import 'home_page.dart';
+import 'web_scrapbook.dart';
 
 const _moreIcon =
     '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>';
@@ -125,7 +126,6 @@ class _CommunityPageState extends State<CommunityPage> {
   int unread = 0;
   bool loading = false;
   bool loaded = false;
-  bool _mineOnly = false;
   String search = '';
   bool showSearch = false;
   final searchCtrl = TextEditingController();
@@ -484,9 +484,23 @@ class _CommunityPageState extends State<CommunityPage> {
     final width = layout?.contentWidth ?? MediaQuery.sizeOf(context).width;
     final tabletNav = layout?.tabletNav ?? false;
     final duo = layout?.duo ?? false;
-    final masonry = tabletNav || duo;
-    final maxFeed = tabletNav ? 1180.0 : 760.0;
+    // 宽屏网页沿用桌面端的信息流：居中标题 + 资料封面 + 多列瀑布流，
+    // 不再使用网页专用的三栏仪表盘。
+    final webWide = kIsWeb && width >= 760;
+    final pad = !kIsWeb && CitroOrientation.padSize(MediaQuery.sizeOf(context));
+    // 窄窗口（含测试里模拟的手机宽度）走手机信息流，别让 Windows 桌面布局
+    // 覆盖掉 Duo 外屏/小窗口的判断。
+    final windows = !kIsWeb && platform.isWindows && width >= 600;
+    final masonry = tabletNav || duo || webWide || pad || windows;
+    final maxFeed = (tabletNav || webWide || pad || windows) ? 1180.0 : 760.0;
     final side = math.max(8.0, (width - maxFeed) / 2);
+    // iPad 横竖屏都固定双列；Windows 最多双列；网页宽屏双列；
+    // Android 平板保留原来的 2/3 列规则。
+    final columns = (pad || windows || kIsWeb)
+        ? (width >= 560 ? 2 : 1)
+        : width >= 900
+        ? (MediaQuery.orientationOf(context) == Orientation.landscape ? 3 : 2)
+        : (width >= 560 ? 2 : 1);
     final q = search.trim().toLowerCase();
     final filtered = posts.where((p) {
       if (app.isBlocked(p.nick)) return false;
@@ -497,12 +511,6 @@ class _CommunityPageState extends State<CommunityPage> {
     }).toList();
     final showPosts =
         app.loggedIn && !(loading && !loaded) && filtered.isNotEmpty;
-    if (kIsWeb && width >= 1025 && app.loggedIn) {
-      final webPosts = _mineOnly
-          ? filtered.where((post) => post.mine).toList()
-          : filtered;
-      return _desktop(context, app, webPosts);
-    }
     final prelude = <Widget>[
       _header(context),
       if (!app.loggedIn)
@@ -557,12 +565,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             SliverPadding(
                               padding: EdgeInsets.symmetric(horizontal: side),
                               sliver: SliverMasonryGrid.count(
-                                crossAxisCount: width >= 900
-                                    ? (MediaQuery.orientationOf(context) ==
-                                              Orientation.landscape
-                                          ? 3
-                                          : 2)
-                                    : (width >= 560 ? 2 : 1),
+                                crossAxisCount: columns,
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 10,
                                 childCount: filtered.length,
@@ -601,12 +604,18 @@ class _CommunityPageState extends State<CommunityPage> {
                       ),
               ),
             ),
+            if (kIsWeb && width >= 1025)
+              Positioned(
+                left: 18,
+                bottom: MediaQuery.paddingOf(context).bottom + 24,
+                child: const WebHomeBackPill(),
+              ),
             if (app.loggedIn)
               Positioned(
                 right: math.max(18.0, (width - maxFeed) / 2 + 18),
                 bottom:
                     MediaQuery.paddingOf(context).bottom +
-                    (tabletNav ? 24 : 96),
+                    (tabletNav || (kIsWeb && width >= 1025) ? 24 : 96),
                 child: GestureDetector(
                   onTap: _compose,
                   child: Container(
@@ -633,364 +642,33 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _desktop(BuildContext context, AppState app, List<Post> visible) {
-    final c = context.c;
-    return PaperBackground(
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Image.asset(
-                    'assets/images/logo.webp',
-                    width: 40,
-                    height: 40,
-                    cacheWidth: 120,
-                  ),
-                  const SizedBox(width: 8),
-                  Text('Citro 社区', style: context.heading(size: 25)),
-                  const SizedBox(width: 12),
-                  Text(
-                    '在清爽的汽水里，与同频的灵魂相遇',
-                    style: context.hand(size: 14, color: c.inkSoft),
-                  ),
-                  const Spacer(),
-                  _desktopAction('刷新', AppIcons.refresh, _reload),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(width: 258, child: _desktopLeft(context, app)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _desktopFeed(context, app, visible)),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 258,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const WeatherCard(),
-                            const SizedBox(height: 10),
-                            const CalendarCard(),
-                            const SizedBox(height: 10),
-                            const HistoryTodayCard(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _desktopAction(String label, String icon, VoidCallback onTap) {
-    final c = context.c;
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.line),
-        ),
-        child: Row(
-          children: [
-            AppIcon(strokeSvg(icon), size: 15, color: c.accentInk),
-            const SizedBox(width: 5),
-            Text(label, style: context.body(size: 11.5, color: c.ink2)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _desktopLeft(BuildContext context, AppState app) {
-    final c = context.c;
-    final user = app.user!;
-    final mine = posts.where((post) => post.mine).length;
-    final likes = posts
-        .where((post) => post.mine)
-        .fold<int>(0, (sum, post) => sum + post.likes);
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PaperCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: () => _openUserPosts(mine: true),
-                  child: Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.hl,
-                      border: Border.all(color: c.surface2, width: 3),
-                      image: user.av == null
-                          ? null
-                          : DecorationImage(
-                              image: ResizeImage(
-                                NetworkImage(Api.imageUrl(user.av)),
-                                width: 228,
-                              ),
-                              fit: BoxFit.cover,
-                            ),
-                    ),
-                    child: user.av == null
-                        ? Center(
-                            child: Text(
-                              user.name.isEmpty ? '·' : user.name[0],
-                              style: context.display(
-                                size: 30,
-                                weight: FontWeight.w700,
-                                color: c.accentInk,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  user.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.heading(size: 18, color: c.ink),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$mine 条动态 · $likes 获赞',
-                  style: context.body(size: 11, color: c.inkSoft),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          PaperCard(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: const Center(child: _DesktopClock()),
-          ),
-          const SizedBox(height: 10),
-          PaperCard(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _filterButton(
-                        '全部动态',
-                        active: !_mineOnly,
-                        onTap: () => setState(() => _mineOnly = false),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: _filterButton(
-                        '我的发布',
-                        active: _mineOnly,
-                        onTap: () => setState(() => _mineOnly = true),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: _filterButton('刷新动态', active: false, onTap: _reload),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Pressable(
-            onTap: _openInbox,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-              decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
-              ),
-              child: Row(
-                children: [
-                  const Text('📬', style: TextStyle(fontSize: 20)),
-                  const SizedBox(width: 9),
-                  Text('收件箱', style: context.body(size: 13, color: c.ink)),
-                  const Spacer(),
-                  if (unread > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7),
-                      decoration: BoxDecoration(
-                        color: c.accent,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        '$unread',
-                        style: context.body(
-                          size: 10,
-                          weight: FontWeight.w800,
-                          color: const Color(0xFF2E2C22),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterButton(
-    String label, {
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    final c = context.c;
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? c.hl : c.surface,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: active ? c.accent : c.line2),
-        ),
-        child: Text(
-          label,
-          style: context.body(
-            size: 11.5,
-            weight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? c.accentInk : c.ink2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _desktopFeed(BuildContext context, AppState app, List<Post> visible) {
-    final c = context.c;
-    return Column(
-      children: [
-        if (showSearch) ...[_searchBox(context), const SizedBox(height: 8)],
-        Pressable(
-          onTap: _compose,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            decoration: BoxDecoration(
-              color: c.surface2,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: c.line),
-              boxShadow: CitroColors.shadows.paper(c),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: c.hl,
-                    shape: BoxShape.circle,
-                    image: app.user?.av == null
-                        ? null
-                        : DecorationImage(
-                            image: ResizeImage(
-                              NetworkImage(Api.imageUrl(app.user!.av)),
-                              width: 102,
-                            ),
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                  child: app.user?.av == null
-                      ? Center(
-                          child: Text(
-                            app.user!.name.isEmpty ? '·' : app.user!.name[0],
-                            style: context.display(
-                              size: 15,
-                              color: c.accentInk,
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '分享这一刻… 可发图文与语音',
-                    style: context.body(size: 12.5, color: c.inkSoft),
-                  ),
-                ),
-                const Text('📷', style: TextStyle(fontSize: 17)),
-                const SizedBox(width: 9),
-                const Text('🎙️', style: TextStyle(fontSize: 17)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Expanded(
-          child: loading && !loaded
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-              : visible.isEmpty
-              ? Center(
-                  child: Text(
-                    '还没有动态，发一条试试',
-                    style: context.body(size: 12.5, color: c.inkSoft),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  itemCount: visible.length,
-                  itemBuilder: (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _feedTile(context, visible[index]),
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-
   Widget _feedTile(BuildContext context, Post p) {
-    return _PostCard(
-      key: ValueKey('post-${p.id}'),
-      post: p,
-      onAvatar: p.mine
-          ? () => _openUserPosts(mine: true)
-          : (p.anon ? null : () => _openUserPosts(nick: p.nick, avatar: p.av)),
-      onLike: () => _like(p),
-      onDelete: () => _deletePost(p),
-      onComment: (text, {replyId, image, voice, voiceDur = 0}) => _sendComment(
-        p,
-        text,
-        replyId: replyId,
-        image: image,
-        voice: voice,
-        voiceDur: voiceDur,
+    return RepaintBoundary(
+      child: _PostCard(
+        key: ValueKey('post-${p.id}'),
+        post: p,
+        onAvatar: p.mine
+            ? () => _openUserPosts(mine: true)
+            : (p.anon
+                  ? null
+                  : () => _openUserPosts(nick: p.nick, avatar: p.av)),
+        onLike: () => _like(p),
+        onDelete: () => _deletePost(p),
+        onComment: (text, {replyId, image, voice, voiceDur = 0}) =>
+            _sendComment(
+              p,
+              text,
+              replyId: replyId,
+              image: image,
+              voice: voice,
+              voiceDur: voiceDur,
+            ),
+        onDeleteComment: (comment) => _deleteComment(p, comment),
+        onViewImage: _viewImage,
+        onReportPost: () => _reportPost(context, p),
+        onReportComment: (comment) => _reportComment(context, p, comment),
+        onBlockUser: (nick) => _blockNick(context, nick),
       ),
-      onDeleteComment: (comment) => _deleteComment(p, comment),
-      onViewImage: _viewImage,
-      onReportPost: () => _reportPost(context, p),
-      onReportComment: (comment) => _reportComment(context, p, comment),
-      onBlockUser: (nick) => _blockNick(context, nick),
     );
   }
 
@@ -1387,56 +1065,6 @@ class _TapeClip extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> old) => false;
-}
-
-class _DesktopClock extends StatefulWidget {
-  const _DesktopClock();
-
-  @override
-  State<_DesktopClock> createState() => _DesktopClockState();
-}
-
-class _DesktopClockState extends State<_DesktopClock> {
-  DateTime _now = DateTime.now();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    const weeks = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    String two(int value) => value.toString().padLeft(2, '0');
-    return Column(
-      children: [
-        Text(
-          '${_now.month}.${two(_now.day)} ${weeks[_now.weekday % 7]}',
-          style: context.body(size: 12, color: c.inkSoft),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          '${two(_now.hour)}:${two(_now.minute)}:${two(_now.second)}',
-          style: context.display(
-            size: 30,
-            weight: FontWeight.w600,
-            color: c.ink,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _PostCard extends StatefulWidget {

@@ -6,12 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+const _expectedProxy = String.fromEnvironment(
+  'AI_PROXY_URL',
+  defaultValue: '${Api.base}/api/ai',
+);
+
 void main() {
   test(
     'completion uses the Citro proxy without a provider credential',
     () async {
       final client = MockClient((request) async {
-        expect(request.url, Uri.parse('${Api.base}/api/ai'));
+        expect(request.url, Uri.parse(_expectedProxy));
         expect(request.headers['Authorization'], isNull);
         final payload = jsonDecode(request.body) as Map;
         expect(payload['stream'], isFalse);
@@ -41,7 +46,7 @@ void main() {
     'proxy chat decodes split UTF-8 SSE content and ignores reasoning',
     () async {
       final client = MockClient.streaming((request, body) async {
-        expect(request.url, Uri.parse('${Api.base}/api/ai'));
+        expect(request.url, Uri.parse(_expectedProxy));
         expect(request.headers['Authorization'], isNull);
         final payload = jsonDecode(await body.bytesToString()) as Map;
         expect(payload['stream'], isTrue);

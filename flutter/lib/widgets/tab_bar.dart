@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import 'paper.dart';
@@ -17,7 +18,8 @@ class CitroTabBar extends StatelessWidget {
     final c = context.c;
     final unread = context.app.unread;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final side = math.max(0.0, (MediaQuery.sizeOf(context).width - 520) / 2);
+    final barWidth = platform.isWindows ? 560.0 : 520.0;
+    final side = math.max(0.0, (MediaQuery.sizeOf(context).width - barWidth) / 2);
     return Positioned(
       left: 10 + side,
       right: 10 + side,
@@ -79,6 +81,13 @@ class CitroTabBar extends StatelessWidget {
                       badge: unread,
                       onTap: () => onChanged(2),
                     ),
+                    if (platform.isWindows)
+                      _TabBtn(
+                        label: '资源',
+                        icon: AppIcons.library,
+                        active: index == 3,
+                        onTap: () => onChanged(3),
+                      ),
                   ],
                 ),
               ),

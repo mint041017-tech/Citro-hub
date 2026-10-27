@@ -1,7 +1,8 @@
-# Citro · Flutter 原生版（v1.8.0）
+# Citro · Flutter 原生版（v1.9.1）
 
-Chimu Crew 的 Web / Android / iOS 客户端。页面与游戏均用 Flutter Widget 原生实现，
-视觉按站点 393×852 手账 UI 逐页对齐；Web 的「极限刹车」同样使用 Flutter 3D 场景，不依赖 WebView。
+Chimu Crew 的 Web / Android / iOS / Windows 客户端。页面与游戏均用 Flutter Widget 原生实现，
+视觉按站点 393×852 手账 UI 逐页对齐；Web 的「极限刹车」使用 Flutter 3D 场景，
+Android / iOS / Windows 使用内嵌 WebView（Windows 为 WebView2）。
 
 ## 功能
 
@@ -10,7 +11,8 @@ Chimu Crew 的 Web / Android / iOS 客户端。页面与游戏均用 Flutter Wid
 - 社区：登录/注册、发帖（图文/语音/匿名）、点赞/抱抱/评论回复、收件箱、搜索与筛选
 - 食谱日记：食谱库、广场、找菜、冰箱、购物清单、今天吃什么、分步编辑 / 计时 / 下厨日记
 - 星象：每日运势、幸运指数与 AI 星语；抽签、灵敏度换算、我的、笔记、资料修改、深浅主题
-- 「资源库」：Mod / 工具 / 外设驱动聚合页（从游戏页底部入口或长按工具占位卡进入）
+- 「资源库」：Mod / 工具 / 外设驱动聚合页（iPad 从游戏页底部入口进入；Windows 侧栏/底栏直接进入）
+- Windows 桌面端：iPad 同款界面与动效、无边框自绘标题栏、单实例、多比例布局、全站搜索、应用内更新
 
 ## 构建
 
@@ -21,8 +23,18 @@ cd X:\flutter
 node build.js release
 ```
 
-产物：`../APK/Citro-v1.8.0-release.apk`（versionCode 1800 / versionName 1.8.0，签名与 v1.1.1 相同，可覆盖升级）。
-Android 与 iOS 构建脚本通过 `APP_VERSION` 设置应用版本并使用常规 Flutter 构建参数；无需提供或嵌入 AI provider key。
+产物：`../APK/Citro-v1.9.1-release.apk`（versionCode 1902 / versionName 1.9.1，签名与 v1.1.1 相同，可覆盖升级）。
+Android 与 iOS 构建脚本通过 `APP_VERSION` 设置应用版本并使用常规 Flutter 构建参数；无需读取本地 key 文件或嵌入 AI provider key。
+
+Windows 构建需要 VS 2022 Build Tools（C++ 工作负载）、NuGet CLI 与 Inno Setup 6：
+
+```powershell
+# 在 flutter/ 目录
+node tool/build_windows.js
+# ../WIN/Citro-v1.9.1-win64/            便携版
+# ../exe/Citro-v1.9.1-win64-setup.exe   用户级安装包
+# ../exe/update.json                    应用内更新清单（含 SHA-256）
+```
 
 ## Web
 
@@ -36,7 +48,7 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 - 浏览器定位需要 HTTPS 或 localhost；拒绝授权后继续使用默认城市天气。
 - Web 录音使用浏览器 Opus/WebM，图片选择、语音播放与截图分享使用浏览器能力。
 - Web 不包含 Android 应用内更新；浏览器通知需要用户手动授权。
-- AI 统一使用 `glm-5.3-flash`、启用 thinking 和 low reasoning effort；客户端经自有 Node 服务 `/trashapi/api/ai` 请求，provider 密钥 `GLM_API_KEY` 只配置在 Node 服务端环境/配置中，不需要放入客户端或构建参数。CiCi 对话使用 SSE 流式输出；运势、成语和飞花令等单次判断使用非流式响应。
+- AI 统一使用 `glm-5.3-flash`、启用 thinking 和 low reasoning effort，浏览器只访问同源 `/trashapi/api/ai`，密钥仅由 Node 服务从 `GLM_API_KEY` 读取。CiCi 对话使用 SSE 流式输出；运势、成语和飞花令等单次判断使用非流式响应。
 
 ## 应用内更新（Android）
 
@@ -44,6 +56,14 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 - 版本源：`https://obs.chimu-claw.xyz/APK/update.json`。该文件不存在时回退读取同一 OBS 的 `APK/` 对象列表，所以只上传新 APK 也能被发现。
 - `node build.js release` 会生成 `../APK/update.json`，**请和 APK 一起上传**。更新说明每条一行写在 `flutter/update_notes.txt`（可选）；需要强制更新时在生成的 JSON 里把 `force` 改为 `true`。
 - 下载完成后通过 FileProvider 拉起系统安装器；Android 8+ 首次需在系统设置中允许 Citro 安装未知应用。
+
+## 应用内更新（Windows）
+
+- 版本源：`https://obs.chimu-claw.xyz/exe/update.json`；`node tool/build_windows.js` 会生成 `../exe/update.json`，与安装包一起上传。
+- 应用下载到临时目录后校验 `size` 与 SHA-256，再以 PowerShell 启动 Inno Setup；确认安装器已启动后应用退出，Setup 静默安装并自动拉起新版本。
+- 安装包按用户级安装到 `%LOCALAPPDATA%\Programs\Citro`，无需管理员；便携版触发更新时会更新到该目录。
+- 未配置代码签名，SmartScreen 可能提示未知发布者；正式分发建议接入 SignTool。
+- 详细构建、发布与验证记录见根目录 [`README.md`](../README.md#windows-构建)。
 
 ## iOS / IPA
 
@@ -54,7 +74,7 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 
 最终 IPA 必须在 macOS + Xcode 上签名构建，剩余步骤见
 [`../docs/ios-mac-checklist.md`](../docs/ios-mac-checklist.md)。快捷构建脚本：
-`bash ios/build_ipa.sh`（需先设置 Team 与 CocoaPods；AI provider key 不属于客户端构建配置）。
+`bash ios/build_ipa.sh`（需先设置 Team 与 CocoaPods；AI provider key 只配置在 Node 服务端，不属于客户端构建配置）。
 
 - 后端：`https://chimu-claw.xyz/trashapi`（`lib/services/api.dart`）
 - 包名 / Bundle ID：`com.chimu.crew`；Android minSdk 24 / targetSdk 36；iOS 15.0+

@@ -15,9 +15,13 @@ class AiException implements Exception {
 
 class AiService {
   static const String _webEndpoint = '/trashapi/api/ai';
+  static const String _proxyEndpoint = String.fromEnvironment(
+    'AI_PROXY_URL',
+    defaultValue: '${Api.base}/api/ai',
+  );
   static const String model = 'glm-5.3-flash';
 
-  static String get _endpoint => kIsWeb ? _webEndpoint : '${Api.base}/api/ai';
+  static String get _endpoint => kIsWeb ? _webEndpoint : _proxyEndpoint;
 
   static const String _system = '''
 你是 CiCi，Citro 手账 App 的傲娇 AI 伙伴。熟悉首页（打卡/天气/食谱日记/摸鱼/星象/一言/番茄钟）、小游戏、社区（图文/语音/评论）、食谱广场/冰箱/购物清单和「我的」。

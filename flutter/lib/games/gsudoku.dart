@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/game_sfx.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -53,6 +56,9 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   bool submitted = false;
   Timer? timer;
   final _progress = ValueNotifier<String>('');
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'sudoku-keyboard');
+
+  bool get _keyboardEnabled => platform.isWindows || kIsWeb;
 
   (String, int, int) get _meta => _diffs[diff]!;
 
@@ -60,12 +66,18 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   void initState() {
     super.initState();
     _newGame();
+    if (_keyboardEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _keyFocus.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     timer?.cancel();
     _progress.dispose();
+    _keyFocus.dispose();
     super.dispose();
   }
 
@@ -96,7 +108,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     notes = List.generate(81, (_) => <int>{});
     history = [];
     errors = 0;
-    sel = -1;
+    sel = _keyboardEnabled ? _firstEmptyCell() : -1;
     hints = 3;
     seconds = 0;
     noteMode = false;
@@ -107,6 +119,13 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     _progress.value = '${_meta.$1} · 用时 0:00';
     _startTimer();
     setState(() {});
+  }
+
+  int _firstEmptyCell() {
+    for (var i = 0; i < board.length; i++) {
+      if (board[i] == 0) return i;
+    }
+    return 0;
   }
 
   void _startTimer() {
@@ -121,6 +140,80 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   void _select(int i) {
     if (over || paused) return;
     setState(() => sel = i);
+    if (_keyboardEnabled) _keyFocus.requestFocus();
+  }
+
+  void _moveSelection(int dx, int dy) {
+    if (over || paused) return;
+    final current = sel < 0 ? 0 : sel;
+    final row = (current ~/ 9 + dy).clamp(0, 8);
+    final col = (current % 9 + dx).clamp(0, 8);
+    setState(() => sel = row * 9 + col);
+    _keyFocus.requestFocus();
+  }
+
+  int? _digitFor(LogicalKeyboardKey key) {
+    const digits = [
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit5,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit7,
+      LogicalKeyboardKey.digit8,
+      LogicalKeyboardKey.digit9,
+    ];
+    final index = digits.indexOf(key);
+    if (index >= 0) return index + 1;
+    const numpad = [
+      LogicalKeyboardKey.numpad1,
+      LogicalKeyboardKey.numpad2,
+      LogicalKeyboardKey.numpad3,
+      LogicalKeyboardKey.numpad4,
+      LogicalKeyboardKey.numpad5,
+      LogicalKeyboardKey.numpad6,
+      LogicalKeyboardKey.numpad7,
+      LogicalKeyboardKey.numpad8,
+      LogicalKeyboardKey.numpad9,
+    ];
+    final padIndex = numpad.indexOf(key);
+    return padIndex >= 0 ? padIndex + 1 : null;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_keyboardEnabled || event is KeyUpEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp) {
+      _moveSelection(0, -1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _moveSelection(0, 1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _moveSelection(-1, 0);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _moveSelection(1, 0);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace ||
+        key == LogicalKeyboardKey.delete ||
+        key == LogicalKeyboardKey.numpad0) {
+      _erase();
+      return KeyEventResult.handled;
+    }
+    final digit = _digitFor(key);
+    if (digit != null) {
+      _input(digit);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _input(int n) {
@@ -255,7 +348,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   Widget build(BuildContext context) {
     final bestScore = context.app.localBest('sudoku:$diff');
     final bestSecs = bestScore > 0 ? math.max(1, _meta.$3 - bestScore) : 0;
-    return GameSudokuView(
+    final view = GameSudokuView(
+      keyboardMode: _keyboardEnabled,
       diff: diff,
       board: board,
       given: given,
@@ -282,6 +376,12 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       onHint: _hint,
       onNote: () => setState(() => noteMode = !noteMode),
     );
+    return Focus(
+      focusNode: _keyFocus,
+      autofocus: _keyboardEnabled,
+      onKeyEvent: _onKey,
+      child: view,
+    );
   }
 }
 
@@ -303,6 +403,7 @@ class GameSudokuView extends StatelessWidget {
     this.win = false,
     this.noteMode = false,
     this.hints = 3,
+    this.keyboardMode = false,
     this.progress,
     this.onDiff,
     this.onNew,
@@ -330,6 +431,7 @@ class GameSudokuView extends StatelessWidget {
   final bool win;
   final bool noteMode;
   final int hints;
+  final bool keyboardMode;
   final ValueNotifier<String>? progress;
   final ValueChanged<String>? onDiff;
   final VoidCallback? onNew;
@@ -383,15 +485,16 @@ class GameSudokuView extends StatelessWidget {
           final contentW = constraints.maxWidth.isFinite
               ? constraints.maxWidth
               : screenW - GameMetrics.sidePad * 2;
+          final webWide = kIsWeb && tablet;
           final boardW = duoShort
               ? math.max(240.0, media.height - 386)
               : tablet
-              ? math.min(520.0, contentW)
+              ? math.min(webWide ? 500.0 : 520.0, contentW)
               : math.min(screenW * 0.9, 470.0);
           final keySize = duoShort
               ? 56.0
               : tablet
-              ? 68.0
+              ? (webWide ? 60.0 : 68.0)
               : (screenW * 0.16).clamp(44.0, 70.0);
           final stage = _SudokuStage(
             width: boardW,
@@ -408,20 +511,32 @@ class GameSudokuView extends StatelessWidget {
             onPause: onPause,
             onNew: onNew,
           );
-          final pad = _SudokuPad(
-            contentW: duoShort
-                ? math.min(340.0, contentW - boardW - 20)
-                : contentW,
-            keySize: keySize,
-            remaining: remaining,
-            noteMode: noteMode,
-            hints: hints,
-            onInput: onInput,
-            onErase: onErase,
-            onUndo: onUndo,
-            onHint: onHint,
-            onNote: onNote,
-          );
+          final pad = (keyboardMode && !kIsWeb)
+              ? _SudokuTools(
+                  contentW: duoShort
+                      ? math.min(340.0, contentW - boardW - 20)
+                      : contentW,
+                  noteMode: noteMode,
+                  hints: hints,
+                  onErase: onErase,
+                  onUndo: onUndo,
+                  onHint: onHint,
+                  onNote: onNote,
+                )
+              : _SudokuPad(
+                  contentW: duoShort
+                      ? math.min(340.0, contentW - boardW - 20)
+                      : contentW,
+                  keySize: keySize,
+                  remaining: remaining,
+                  noteMode: noteMode,
+                  hints: hints,
+                  onInput: onInput,
+                  onErase: onErase,
+                  onUndo: onUndo,
+                  onHint: onHint,
+                  onNote: onNote,
+                );
           if (duoShort) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -610,7 +725,8 @@ class _SudokuBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = primary ? const Color(0xFF3B2A10) : const Color(0xFF4E4A40);
+    final c = context.c;
+    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -638,7 +754,9 @@ class _SudokuBtn extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              color: primary ? null : const Color(0xB8FFFCF4),
+              color: primary
+                  ? null
+                  : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
               gradient: primary
                   ? const LinearGradient(
                       begin: Alignment.topLeft,
@@ -649,7 +767,7 @@ class _SudokuBtn extends StatelessWidget {
               border: Border.all(
                 color: primary
                     ? const Color(0x2E94530A)
-                    : const Color(0x294A3A22),
+                    : (c.dark ? c.line2 : const Color(0x294A3A22)),
               ),
             ),
             child: Padding(
@@ -1060,6 +1178,73 @@ class _SudokuCell extends StatelessWidget {
 // 数字键盘 / 工具行
 // ---------------------------------------------------------------------------
 
+class _SudokuTools extends StatelessWidget {
+  const _SudokuTools({
+    required this.contentW,
+    required this.noteMode,
+    required this.hints,
+    this.onErase,
+    this.onUndo,
+    this.onHint,
+    this.onNote,
+  });
+
+  final double contentW;
+  final bool noteMode;
+  final int hints;
+  final VoidCallback? onErase;
+  final VoidCallback? onUndo;
+  final VoidCallback? onHint;
+  final VoidCallback? onNote;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: contentW,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '键盘 1–9 填数 · 方向键移动 · 退格擦除',
+            style: context.body(size: 11, color: context.c.inkSoft),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SudokuBtn(label: '撤销', icon: GameIcons.undo, onTap: onUndo),
+              _SudokuBtn(label: '擦除', icon: GameIcons.eraser, onTap: onErase),
+              _SudokuBtn(
+                label: '笔记',
+                icon: GameIcons.pencil,
+                primary: noteMode,
+                onTap: onNote,
+              ),
+              _SudokuBtn(
+                label: '提示',
+                icon: GameIcons.lightbulb,
+                onTap: onHint,
+                trailing: Text(
+                  '$hints',
+                  style: const TextStyle(
+                    fontFamily: AppFonts.noto,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF4E4A40),
+                    height: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SudokuPad extends StatelessWidget {
   const _SudokuPad({
     required this.contentW,
@@ -1104,6 +1289,13 @@ class _SudokuPad extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (kIsWeb && MediaQuery.sizeOf(context).width >= 900) ...[
+                Text(
+                  '键盘 1–9 填数 · 方向键移动 · 退格擦除',
+                  style: context.body(size: 11, color: context.c.inkSoft),
+                ),
+                const SizedBox(height: 8),
+              ],
               SizedBox(
                 height: keySize * 2 + 9,
                 child: Column(
@@ -1152,17 +1344,6 @@ class _SudokuPad extends StatelessWidget {
               ),
             ],
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _SudokuKeyBordersPainter(
-                  contentW: contentW,
-                  keySize: keySize,
-                  line2: c.line2,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1182,6 +1363,7 @@ class _SudokuPad extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: c.surface2,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: c.line2, width: 1),
                 ),
               ),
             ),
@@ -1221,65 +1403,6 @@ class _SudokuPad extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // 数字键盘按键边框（按设备像素对齐，Chrome 会把 1px 边框 snap 到整像素）
 // ---------------------------------------------------------------------------
-
-class _SudokuKeyBordersPainter extends CustomPainter {
-  const _SudokuKeyBordersPainter({
-    required this.contentW,
-    required this.keySize,
-    required this.line2,
-  });
-
-  final double contentW;
-  final double keySize;
-  final Color line2;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final m = canvas.getTransform();
-    final sx = m[0] == 0 ? 1.0 : m[0];
-    final sy = m[5] == 0 ? 1.0 : m[5];
-    final tx = m[12];
-    final ty = m[13];
-    double snapX(double x) => ((tx + x * sx).round() - tx) / sx;
-    double snapY(double y) => ((ty + y * sy).round() - ty) / sy;
-    const gap = 8.0;
-    void drawRow(int count, double left, double top) {
-      for (var i = 0; i < count; i++) {
-        final x0 = snapX(left + i * (keySize + gap));
-        final x1 = snapX(left + i * (keySize + gap) + keySize);
-        final y0 = snapY(top);
-        final y1 = snapY(top + keySize);
-        final outer = Path()
-          ..addRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromLTRB(x0, y0, x1, y1),
-              const Radius.circular(10),
-            ),
-          );
-        final inner = Path()
-          ..addRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromLTRB(x0 + 1, y0 + 1, x1 - 1, y1 - 1),
-              const Radius.circular(9),
-            ),
-          );
-        final ring = Path.combine(PathOperation.difference, outer, inner);
-        canvas.drawPath(ring, Paint()..color = line2);
-      }
-    }
-
-    final row1W = 5 * keySize + 4 * gap;
-    final row2W = 4 * keySize + 3 * gap;
-    drawRow(5, (contentW - row1W) / 2, 0);
-    drawRow(4, (contentW - row2W) / 2, keySize + 9);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SudokuKeyBordersPainter oldDelegate) =>
-      oldDelegate.line2 != line2 ||
-      oldDelegate.keySize != keySize ||
-      oldDelegate.contentW != contentW;
-}
 
 // ---------------------------------------------------------------------------
 // 浮层
@@ -1324,7 +1447,9 @@ class _SudokuOverlay extends StatelessWidget {
           sigma: 6,
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xF0FBF7EC),
+              color: c.dark
+                  ? c.surface.withAlpha(0xF0)
+                  : const Color(0xF0FBF7EC),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: c.line),
             ),

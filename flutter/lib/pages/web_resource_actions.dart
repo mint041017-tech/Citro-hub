@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/resources.dart';
 import '../theme/app_theme.dart';
 import '../widgets/modal.dart';
+import 'in_app_web.dart';
 
 /// Shared by the original mobile resource list, desktop scrapbook and search.
 /// Keeping confirmation/version selection here prevents the three UIs drifting.
@@ -30,7 +30,7 @@ Future<void> openCitroResource(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '前往外部页面'),
+            versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '打开页面'),
             style: ctx.heading(size: 20),
           ),
           const SizedBox(height: 8),
@@ -105,7 +105,7 @@ Future<void> openCitroResource(
               const SizedBox(width: 10),
               Expanded(
                 child: AccentButton(
-                  text: isDownload || versions.isNotEmpty ? '下载' : '前往',
+                  text: isDownload || versions.isNotEmpty ? '下载' : '打开',
                   onTap: () => Navigator.pop(ctx, true),
                 ),
               ),
@@ -116,9 +116,11 @@ Future<void> openCitroResource(
     ),
   );
   if (ok != true || !context.mounted) return;
-  await launchUrl(
-    Uri.parse(chosen?.url ?? url),
-    mode: LaunchMode.externalApplication,
+  await openCitroPage(
+    context,
+    chosen?.url ?? url,
+    title: title,
+    download: isDownload,
   );
 }
 

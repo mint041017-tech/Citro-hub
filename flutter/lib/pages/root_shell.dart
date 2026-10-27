@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../overlays/update_dialog.dart';
 import '../perf_probe.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/tab_bar.dart';
@@ -72,7 +74,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   /// 这样打开星象 / AI 对话时不会在首帧临时解码 9 张猫图。
   Future<void> _warmAssets() async {
     if (kIsWeb) return;
-    await Future<void>.delayed(const Duration(milliseconds: 2200));
+    await Future<void>.delayed(
+      Duration(milliseconds: !kIsWeb && platform.isWindows ? 5000 : 2200),
+    );
     if (!mounted) return;
     final warm = <String>[
       'assets/images/logo.webp',
@@ -120,6 +124,10 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
 
   Future<void> _switchTab(int i) async {
     if (i == index || _switching || i < 0 || i > 3) return;
+    if (!kIsWeb && (platform.isAndroid || platform.isIOS)) {
+      HapticFeedback.selectionClick();
+    }
+    if (kIsWeb && i == 3) return;
     if (kIsWeb) {
       const routes = ['/home', '/games', '/trash', '/res'];
       await Navigator.of(context).pushNamed(routes[i]);
@@ -127,12 +135,17 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     }
     _switching = true;
     final dir = i > index ? 1.0 : -1.0;
+    // Windows 上整页位移会带来额外的栅格化开销，只保留淡入。
+    final smoothOnly = !kIsWeb && platform.isWindows;
     PerfProbe.beginFrameCollection();
     // 单程动画：立即换页，新页用 90ms 滑入+轻微淡入，总耗时控制在 100ms 内。
     setState(() {
       _visited[i] = true;
       index = i;
-      _slideTween = Tween(begin: Offset(dir * 36, 0), end: Offset.zero);
+      _slideTween = Tween(
+        begin: smoothOnly ? Offset.zero : Offset(dir * 36, 0),
+        end: Offset.zero,
+      );
     });
     _fade.value = .55;
     await Future.wait([_fade.forward(), _slide.forward(from: 0)]);
@@ -170,8 +183,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
             _visited[2]
                 ? TickerMode(enabled: index == 2, child: const CommunityPage())
                 : const SizedBox.shrink(),
-            _visited[3]
-                ? TickerMode(enabled: index == 3, child: const ResPage())
+            _visited[3] && !kIsWeb
+                ? TickerMode(
+                    enabled: index == 3,
+                    child: const ResPage(embedded: true),
+                  )
                 : const SizedBox.shrink(),
           ],
         ),
@@ -240,6 +256,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     width: _sidebarWidth,
                     child: CitroTabletSidebar(
                       index: index,
+                      showResources: platform.isWindows,
                       onChanged: switchTo,
                     ),
                   ),
@@ -266,7 +283,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     child: _pageStack(),
                   ),
                 ),
-                if (!desktop && !keyboardOpen && index != 3)
+                if (!desktop &&
+                    !keyboardOpen &&
+                    (index != 3 || platform.isWindows))
                   CitroTabBar(index: index, onChanged: switchTo),
               ],
             ),

@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
+import 'platform.dart' as platform;
+
 class MediaService {
   static final ImagePicker _picker = ImagePicker();
   static Future<void> _compressQueue = Future<void>.value();
@@ -28,8 +30,11 @@ class MediaService {
     int maxWidth = 2400,
     int quality = 92,
   }) async {
+    // image_picker 的 Windows 实现没有相机，直接复用文件选择器，
+    // 保持「拍照」按钮可用，而不是抛 UnimplementedError。
+    final useCamera = camera && !platform.isWindows;
     final file = await _picker.pickImage(
-      source: camera ? ImageSource.camera : ImageSource.gallery,
+      source: useCamera ? ImageSource.camera : ImageSource.gallery,
       maxWidth: maxWidth.toDouble(),
       imageQuality: quality,
     );

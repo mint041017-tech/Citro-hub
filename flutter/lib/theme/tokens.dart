@@ -246,14 +246,12 @@ class AppFonts {
   static const noto = 'NotoSC';
   static const fallback = <String>[
     'ZCOOL',
-    'NotoSCWeb',
     'NotoSC',
     'Noto Sans SC',
     'PingFang SC',
     'Microsoft YaHei',
   ];
   static const bodyFallback = <String>[
-    'NotoSCWeb',
     'NotoSC',
     'Noto Sans SC',
     'PingFang SC',

@@ -8,7 +8,6 @@ import '../data/idioms.dart';
 import '../services/ai.dart';
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
 import 'game_ui.dart';
@@ -166,6 +165,15 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
   }
 
   int _mult() => math.max(1, (count ~/ 2) * 2);
+
+  void _submitFromEnter() {
+    if (input.value.composing.isValid) return;
+    if (!RegExp(r'[\u4e00-\u9fa5]').hasMatch(input.text)) {
+      _feedback('请先选好中文候选词，再回车提交');
+      return;
+    }
+    _submit();
+  }
 
   void _submit() {
     if (!running || aiThinking || validating) return;
@@ -341,6 +349,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       onStart: _start,
       onAgain: _start,
       onSubmit: _submit,
+      onEnter: _submitFromEnter,
       onRank: () => showGameRank(context, game: 'idiom', title: '成语接龙 · 玩家排行'),
     );
   }
@@ -373,6 +382,7 @@ class GameIdiomView extends StatelessWidget {
     this.onStart,
     this.onAgain,
     this.onSubmit,
+    this.onEnter,
     this.onRank,
   });
 
@@ -395,11 +405,11 @@ class GameIdiomView extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onAgain;
   final VoidCallback? onSubmit;
+  final VoidCallback? onEnter;
   final VoidCallback? onRank;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     final media = MediaQuery.sizeOf(context);
     final w = media.width;
     final tablet = w >= 900;
@@ -455,9 +465,11 @@ class GameIdiomView extends StatelessWidget {
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: c.surface,
+                // 纸笺色板固定为浅色，舞台也保持浅色纸面，
+                // 否则深色主题下深色文字会压在深色底上。
+                color: CitroColors.light.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
+                border: Border.all(color: CitroColors.light.line),
               ),
               child: Stack(
                 children: [
@@ -842,13 +854,9 @@ class GameIdiomView extends StatelessWidget {
                           controller: input,
                           focusNode: focusNode,
                           enabled: !aiThinking,
-                          // v1.6.1：提交后立即重新聚焦，键盘不收起（用户反馈：
-                          // 不要每次提交之后就关闭输入法）。
-                          onSubmitted: (_) {
-                            onSubmit?.call();
-                            focusNode?.requestFocus();
-                          },
-                          maxLength: 12,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => onEnter?.call(),
+                          maxLength: 64,
                           style: const TextStyle(
                             fontFamily: AppFonts.noto,
                             fontFamilyFallback: AppFonts.bodyFallback,
@@ -860,7 +868,7 @@ class GameIdiomView extends StatelessWidget {
                           decoration: InputDecoration(
                             isDense: true,
                             counterText: '',
-                            hintText: '输入成语，回车提交',
+                            hintText: '输入成语，选候选词后回车或点「接」',
                             hintStyle: const TextStyle(
                               fontFamily: AppFonts.noto,
                               fontFamilyFallback: AppFonts.bodyFallback,

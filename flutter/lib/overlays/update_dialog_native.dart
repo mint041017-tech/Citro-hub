@@ -20,7 +20,7 @@ Future<void> checkForUpdates(
   BuildContext context, {
   bool manual = false,
 }) async {
-  if (!Platform.isAndroid) return;
+  if (!Platform.isAndroid && !Platform.isWindows) return;
   if (_checking || _dialogOpen) {
     if (manual && context.mounted) {
       AppToast.show(context, '正在检查更新，请稍候');
@@ -111,7 +111,19 @@ Future<void> checkForUpdates(
     _dialogOpen = false;
   }
   if (result == UpdateDialogResult.installStarted && context.mounted) {
-    AppToast.show(context, '已打开系统安装程序');
+    if (Platform.isWindows) {
+      AppToast.show(context, '正在准备安装更新…');
+      final launcherReady = await UpdateInstaller.waitForLauncher();
+      if (!context.mounted) return;
+      if (launcherReady) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        exit(0);
+      } else {
+        AppToast.show(context, '更新程序未能启动，请稍后重试');
+      }
+    } else {
+      AppToast.show(context, '已打开系统安装程序');
+    }
   }
 }
 
@@ -362,7 +374,10 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               ),
             ),
             const SizedBox(width: 10),
-            Text('正在打开系统安装程序…', style: context.body(size: 13, color: c.ink2)),
+            Text(
+              Platform.isWindows ? '正在准备安装并重启…' : '正在打开系统安装程序…',
+              style: context.body(size: 13, color: c.ink2),
+            ),
           ],
         );
       case _Phase.error:

@@ -1,9 +1,10 @@
-# Citro · 迟暮 Crew
+# Citro
 
 > 游戏 Mod 与实用工具、13 款小游戏、食谱日记和同频社区。不卷段位，随缘开黑。
 
-新版 Web 与 Android / iOS 共用 `flutter/lib/` 中的 Flutter 页面、游戏和业务逻辑，
-后端继续使用 Node 零依赖 API。根目录的 `index.html` 与 `styles/` 暂时保留为旧版网页，便于对照与回退。
+新版 Web、Android / iOS 与 Windows 桌面端共用 `flutter/lib/` 中的 Flutter 页面、游戏和业务逻辑，
+后端继续使用 Node 零依赖 API。Windows 桌面端采用 iPad 同款界面与动效，并增加无边框自绘标题栏、
+全量资源库与应用内更新；Web 宽屏继续使用手账桌面布局。根目录的 `index.html` 与 `styles/` 暂时保留为旧版网页，便于对照与回退。
 
 - 线上站点：<https://chimu-claw.xyz>
 - 新版前端：Flutter Web，`bash tool/build_web.sh` 构建（本地 CanvasKit、裁剪未用渲染器并预压缩）
@@ -15,6 +16,7 @@
 
 | 模块 | 说明 |
 | --- | --- |
+| Windows 桌面端 | iPad 同款界面与动效、完全无边框 + 自绘标题栏、多比例自适应、全量资源库、应用内下载/静默安装/自动重启 |
 | 首页 | 手账拼贴风布局、「今日小猫」随机贴纸、每日壁纸 |
 | 资源下载 | 游戏 Mod 封面卡片、小工具与外设驱动的下载直链（外链到服务器） |
 | 小游戏 | 2048、记忆卡牌、数独、Nonogram、滑动拼图、贪吃蛇、羊了个羊、跳一跳、碰碰、刹车挑战等 13 款 |
@@ -27,6 +29,7 @@
 ## 技术栈
 
 - **Web**：Flutter 3.47 原生 Widget，与移动端共享页面和状态；浏览器定位、录音等能力通过条件导入适配
+- **Windows**：Flutter 3.47 Windows 原生构建（Impeller），`window_manager` 无边框窗口，Inno Setup 用户级安装与静默更新；WebView2 运行「极限刹车」
 - **旧版前端**：原生 HTML / CSS / JavaScript，保留在根目录用于对照与回退
 - **后端**：Node.js 内置模块（`http` / `fs` / `crypto`），零第三方依赖；JSON 文件存储 + scrypt 密码哈希 + httpOnly Cookie 会话
 - **Android / iOS**：与 Web 共用 Flutter 原生 Widget 实现，全部页面 / 游戏 / 社区 / 食谱 / 星象均为原生 UI
@@ -48,7 +51,11 @@ Citro/
 │  ├─ build.js                #   Android 一键打包脚本
 │  ├─ lib/                    #   共享页面 / 游戏 / 组件 / 状态 / API 与平台适配
 │  ├─ web/                    #   Web 入口、PWA manifest 与品牌图标
+│  ├─ windows/                #   Windows runner（无边框窗口、单实例、高性能 GPU）
+│  ├─ tool/build_windows.js   #   Windows 构建 + Inno Setup 安装包 + 更新清单
 │  └─ android/                #   包名 com.chimu.crew、签名与启动资源
+├─ WIN/                       # Windows 便携版构建产物（不入库）
+├─ exe/                       # Windows 安装包与 update.json（不入库，上传 OBS）
 ├─ kotlin/                    # 旧版 Kotlin WebView 外壳（历史存档，不再发版）
 ├─ devtools/                  # 字体子集、图标、图片压缩、本地静态服务等脚本
 ├─ docs/                      # 设计规范、素材清单、部署清单、发版记录
@@ -74,9 +81,27 @@ bash tool/build_web.sh
 
 部署时保留服务端 `/trashapi` 与 `/api` 反向代理，并将前端路由回退到 `index.html`。
 Nginx 请启用 `gzip_static` 并参考 [`docs/nginx-citro-web.conf`](docs/nginx-citro-web.conf) 设置压缩与缓存；
+线上完整 vhost 与 `/trashapi` 反代配置见 [`docs/nginx/`](docs/nginx/)（含修改前备份）。
 Edge 与 Safari 会使用本站 CanvasKit，不再请求 CDN。构建命令不会覆盖根目录的旧版 `index.html`。
 
-### 2. 查看旧版前端（可选）
+### 2. Windows 桌面端（开发）
+
+前置：Windows 10 1809+ / Windows 11 x64、VS 2022 Build Tools（勾选 **Desktop development with C++**）、
+NuGet CLI（`flutter_inappwebview_windows` 构建 WebView2 时需要）、Microsoft Edge WebView2 Runtime（Win10/11 通常已内置）。
+直接运行：
+
+```powershell
+cd flutter
+flutter pub get
+flutter run -d windows
+```
+
+窗口默认 1200×720、最小 780×560；支持完全无边框拖拽、双击标题栏最大化、四周缩放、单实例；
+全站搜索只保留侧栏入口，不显示滚动条；“我的”为圆角浮窗。桌面端数独用 1–9 / 方向键 / 退格，
+贪吃蛇用 WASD / 方向键，跳一跳支持空格；成语接龙与飞花令选好输入法候选词后点“接”提交。
+Windows 版使用 iPad 界面，不使用 Web 的手账桌面布局。
+
+### 3. 查看旧版前端（可选）
 
 任选一种静态服务器（旧站用根相对路径，必须起 HTTP 服务，直接双击 `index.html` 部分功能不可用）：
 
@@ -95,7 +120,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File devtools/serve.ps1 -Port 801
 
 打开 <http://127.0.0.1:8019/> 即可。
 
-### 3. 起后端（社区 / 登录 / 食谱 / 星象）
+### 4. 起后端（社区 / 登录 / 食谱 / 星象）
 
 ```bash
 node trash/trash.js
@@ -127,6 +152,42 @@ cp trash/config.local.example.json trash/config.local.json
 ```
 
 完整部署步骤见 [`docs/citro-部署上传清单.md`](docs/citro-部署上传清单.md)。
+
+## Windows 构建
+
+前置：VS 2022 Build Tools（C++ 桌面工作负载）、Windows 10 SDK、NuGet CLI、Inno Setup 6（仅打安装包需要）。
+构建脚本会自动产出便携版、用户级安装包和更新清单：
+
+```powershell
+cd flutter
+node tool/build_windows.js
+# 产物（均已 gitignore，不入库）：
+# WIN/Citro-v1.8.0-win64/            便携版（Citro.exe + data + DLL）
+# exe/Citro-v1.8.0-win64-setup.exe   安装包（Inno Setup，安装到 %LOCALAPPDATA%\Programs\Citro，无需管理员）
+# exe/update.json                    应用内更新清单（含 size 与 SHA-256）
+# 只出便携版：node tool/build_windows.js --no-installer
+```
+
+安装器使用 Citro 手账主题和全中文向导：自定义欢迎 / 完成页插画、应用图标、中文语言文件与
+“创建桌面快捷方式 / 启动 Citro”等全部文案；安装到当前用户目录，无需管理员权限。
+
+安装包支持静默更新：应用内检查到新版本后，下载到临时目录 → 校验 size + SHA-256 → 启动 Inno Setup →
+应用退出 → 静默安装 → 自动拉起新版本。更新安装脚本用 PowerShell 运行，确认 Setup 已启动后应用才退出，
+避免脚本被一起结束或旧实例互斥锁挡住重启。
+
+发布更新时，把 `exe/Citro-vX-win64-setup.exe` 和 `exe/update.json` 上传到
+`https://obs.chimu-claw.xyz/exe/`（清单中的 `url` 默认指向该目录）。构建时可覆盖：
+
+- `UPDATE_BASE_URL=https://your.host/exe`：修改清单里生成的下载地址
+- `WINDOWS_UPDATE_MANIFEST_URL=https://your.host/exe/update.json`：修改应用内检查地址
+- 清单字段：`version`、`versionCode`、`url`（HTTPS）、`size`、`sha256`、`notes`、`publishedAt`、`force`
+
+**代码签名**：当前安装包与 exe 未签名，Windows SmartScreen 可能提示“未知发布者”。正式分发建议为
+`Citro.exe` 和 setup 配置代码签名证书（Inno Setup 的 `SignTool`），不要在仓库中保存证书/口令。
+
+Windows 端已验证：Win11 21H2 x64 上多比例窗口（800×600 / 1024×768 / 1200×720 / 1600×700 / 800×1000）、
+最大化/最小化/还原/拖拽/缩放/单实例、资源库 3 列/2 列、WebView2 极限刹车、AI 代理、定位天气、
+全局搜索、应用内更新全链路。Win10 未在真机逐项验证；如需最低版本兼容性验收，请在 Win10 1809+ 上复跑。
 
 ## Android 构建
 
