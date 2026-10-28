@@ -3,8 +3,10 @@
 > 代码、工程文件、权限文案、图标、启动屏、隐私清单、通知/定位 Dart 适配已经完成。
 > 下面这些步骤依赖 macOS、Xcode、Apple 签名与真机，Windows 无法代替。
 >
-> 截至 2026-10-24：`flutter analyze` 0 error / 0 warning，Android debug 构建通过；
-> **iOS 的 Xcode 编译、签名和真机运行尚未在 Mac 上验证**，第一次 Mac 构建可能还需要处理 Xcode/CocoaPods 版本差异。
+> 截至 2026-10-28：版本已升到 **1.9.2+1902**（pubspec 为唯一版本源，Runner/TimerWidget 均用
+> `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）；1.9.2 的共享 Flutter 层、资源与权限文案已完成，
+> `flutter analyze` 改动文件无 error/warning，Android release / Windows / Web 构建通过。
+> **iOS 的 Xcode 编译、签名和真机运行仍未在 Mac 上验证**，第一次 Mac 构建可能还需要处理 Xcode/CocoaPods 版本差异。
 
 ## 0. 前置
 
@@ -65,7 +67,7 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=1.7.10 \
+  --dart-define=APP_VERSION=1.9.2 \
   --dart-define=GLM_API_KEY="<你的 GLM Key>"
 ```
 
@@ -113,13 +115,14 @@ flutter build ipa --release --export-method app-store \
 
 ## 5. 上线前仍未完成的外部事项
 
-- 部署 `trash/trash.js`（账号注销/举报接口）；
+- 部署 `trash/trash.js`（账号注销/举报接口；1.9.2 食谱收藏保留原作者依赖新版 `cookPubMine` 的 `owner`/`ownerAv`/`fromOwner` 字段）；
 - 恢复真实 `trash/data`（当前线上是 QA 测试数据，详见 `docs/citro-android-v1.7.10-release.md` 与账号恢复记录）；
 - 部署 `privacy.html`、`terms.html`、`account-deletion.html`；
 - 中国大陆区若上架：准备 ICP 备案、游戏版号/软著（如被按游戏类审核）、生成式 AI 相关备案/安全评估；
-- App Store 截图、预览、宣传文案与客服渠道。
+- App Store 截图、预览、宣传文案与客服渠道；
+- 1.9.2 的 GLM Key 仍按 `GLM_API_KEY` 环境变量或 `../密钥/glm.key` 提供，密钥不入库、不打印。
 
 ## 6. 版本号规则
 
-- `pubspec.yaml` 的 `version: 1.7.10+1710` 决定 iOS `CFBundleShortVersionString` / `CFBundleVersion`。
+- `pubspec.yaml` 的 `version: 1.9.2+1902` 决定 iOS `CFBundleShortVersionString` / `CFBundleVersion`。
 - 每次上传 App Store Connect 必须递增 build number（+ 后面的数字）；仅改代码不升 build number 会被拒绝。

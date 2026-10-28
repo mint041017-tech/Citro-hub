@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>页面不存在 · 404 · Test Game</title>
+  <meta name="description" content="你访问的页面不存在或已被移走。可以回到首页，或前往 Citro 主站、下载站。">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#f6eedf">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6eedf'/%3E%3Crect x='9' y='22' width='46' height='22' rx='11' fill='%23fffaf1' stroke='%233c3025' stroke-width='3'/%3E%3Cpath d='M24 28v10M19 33h10' stroke='%233c3025' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='43' cy='30' r='3' fill='%23d56145'/%3E%3Ccircle cx='49' cy='36' r='3' fill='%23e4a13d'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --paper: #f6eedf;
+      --card: #fffaf1;
+      --card-soft: #fbf4e7;
+      --ink: #3c3025;
+      --ink-soft: #716252;
+      --ink-faint: #9b8b76;
+      --line: #ddcdb4;
+      --line-strong: #c8af8c;
+      --accent: #d56145;
+      --accent-deep: #a9432d;
+      --gold: #e4a13d;
+      --shadow: 0 18px 44px rgba(90, 66, 40, 0.11), 0 2px 0 rgba(255, 255, 255, 0.75) inset;
+      --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      background:
+        radial-gradient(900px 520px at 86% -4%, rgba(228, 161, 61, 0.16), transparent 62%),
+        radial-gradient(740px 560px at -8% 26%, rgba(94, 125, 100, 0.09), transparent 64%),
+        var(--paper);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.16;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+      mix-blend-mode: multiply;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    ::selection {
+      color: var(--ink);
+      background: rgba(228, 161, 61, 0.38);
+    }
+
+    :focus-visible {
+      outline: 3px solid rgba(213, 97, 69, 0.5);
+      outline-offset: 3px;
+    }
+
+    .stage {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 32px);
+    }
+
+    .wrap {
+      width: min(100%, 560px);
+    }
+
+    .card {
+      position: relative;
+      padding: clamp(30px, 6vw, 50px) clamp(22px, 5vw, 48px) clamp(26px, 5vw, 38px);
+      text-align: center;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      width: 92px;
+      height: 22px;
+      transform: translateX(-50%) rotate(-2deg);
+      background: rgba(228, 161, 61, 0.38);
+      border-radius: 3px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 4px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+    }
+
+    .eyebrow-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--gold);
+      box-shadow: 0 0 0 3px rgba(228, 161, 61, 0.18);
+    }
+
+    .art {
+      display: block;
+      width: min(220px, 66%);
+      height: auto;
+      margin: 0 auto 4px;
+      animation: float 4.6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-7px);
+      }
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(24px, 4.8vw, 32px);
+      font-weight: 800;
+      line-height: 1.4;
+      letter-spacing: 0.02em;
+    }
+
+    .lead {
+      max-width: 38ch;
+      margin: 0 auto 28px;
+      color: var(--ink-soft);
+      font-size: 15px;
+      line-height: 1.9;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 22px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+      flex: none;
+    }
+
+    .btn--solid {
+      color: #fff8f0;
+      background: var(--accent);
+      box-shadow: 0 10px 22px rgba(213, 97, 69, 0.24);
+    }
+
+    .btn--solid:hover {
+      background: var(--accent-deep);
+    }
+
+    .btn--ghost {
+      color: var(--ink);
+      background: var(--card-soft);
+      border-color: var(--line);
+    }
+
+    .btn--ghost:hover {
+      border-color: var(--line-strong);
+      background: #fff;
+    }
+
+    .hint {
+      margin: 22px 0 0;
+      color: var(--ink-faint);
+      font-size: 10.5px;
+      letter-spacing: 0.16em;
+    }
+
+    .foot {
+      margin: 18px 0 0;
+      color: var(--ink-faint);
+      font-size: 11.5px;
+      letter-spacing: 0.14em;
+      text-align: center;
+    }
+
+    @media (max-width: 460px) {
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .art {
+        width: min(190px, 70%);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .art {
+        animation: none;
+      }
+
+      .btn {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="wrap">
+      <article class="card">
+        <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>CITRO · TEST GAME</p>
+
+        <svg class="art" viewBox="0 0 240 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="一个找不到页面、满头问号的游戏手柄">
+          <ellipse cx="120" cy="134" rx="66" ry="9" fill="#3c3025" opacity="0.07"/>
+          <circle cx="120" cy="82" r="56" stroke="#c8af8c" stroke-width="2" stroke-dasharray="4 9" stroke-linecap="round" opacity="0.7"/>
+          <g transform="rotate(-4 120 88)">
+            <rect x="48" y="56" width="144" height="62" rx="31" fill="#fffaf1" stroke="#3c3025" stroke-width="3.5"/>
+            <path d="M80 74v24M68 86h24" stroke="#3c3025" stroke-width="5.5" stroke-linecap="round"/>
+            <circle cx="154" cy="78" r="6" fill="#d56145"/>
+            <circle cx="169" cy="92" r="6" fill="#e4a13d"/>
+            <circle cx="139" cy="92" r="6" fill="#5e7d64"/>
+            <path d="M165 82v20" stroke="#ddcdb4" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+          <g fill="#716252" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-weight="700">
+            <text x="178" y="48" font-size="18" transform="rotate(12 178 48)">?</text>
+            <text x="196" y="34" font-size="24" transform="rotate(-8 196 34)">?</text>
+            <text x="212" y="52" font-size="14" transform="rotate(16 212 52)">?</text>
+          </g>
+        </svg>
+
+        <h1>这页好像走丢了。</h1>
+
+        <p class="lead">
+          你访问的地址没有对应的页面，可能是链接写错了，或者内容已经收起来了。回到首页，或者去别处逛逛吧。
+        </p>
+
+        <div class="actions">
+          <a class="btn btn--solid" href="/">
+            回到首页
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5M6.5 10v9.5h11V10"/></svg>
+          </a>
+          <a class="btn btn--ghost" href="https://chimu-claw.xyz/" target="_blank" rel="noopener">
+            前往主站
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
+          <a class="btn btn--ghost" href="https://dl.chimu-claw.xyz/" target="_blank" rel="noopener">
+            前往下载站
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          </a>
+        </div>
+
+        <p class="hint">ERROR 404 · PAGE NOT FOUND</p>
+      </article>
+
+      <p class="foot">Citro · Test Game</p>
+    </div>
+  </main>
+</body>
+</html>

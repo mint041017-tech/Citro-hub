@@ -68,6 +68,7 @@ capacitor/android/app/build/
 # 1.9.x 安装包改走 OBS，避免大文件重复入库
 APK/Citro-v1.9.0-release.apk
 APK/Citro-v1.9.1-release.apk
+APK/Citro-v1.9.*.apk
 
 # ---------- Windows 桌面端产物（上传 OBS，不入库） ----------
 WIN/
@@ -76,7 +77,9 @@ exe/
 # ---------- iOS 未签名包 / 本地参考副本（不入库） ----------
 IPA/
 Test Game/
+Test Game.zip
 backup_gliquid/
+lipper game/
 
 # ---------- 站点上传包 / 构建产物（不入库） ----------
 web/*.zip
@@ -86,6 +89,8 @@ citro-analytics/dist/
 # ---------- QA 探针临时文件 ----------
 qa_min.html
 qa_probe*.html
+flutter/test/preview/failures/
+flutter/cube_solution.txt
 
 # ---------- 本地工具 / Agent 配置 ----------
 .claude/

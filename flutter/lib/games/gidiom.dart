@@ -1235,46 +1235,49 @@ class GameIdiomView extends StatelessWidget {
   }
 
   Widget _bigButton(String label, VoidCallback? onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 2,
-            height: 48,
-            child: Container(
-              decoration: BoxDecoration(
-                color: _accent2,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: _accent,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.transparent),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.28,
-                  color: _onAccent,
+    return GameHover(
+      enabled: onTap != null,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 2,
+              height: 48,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _accent2,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
-          ),
-        ],
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _accent,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.transparent),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: AppFonts.noto,
+                    fontFamilyFallback: AppFonts.bodyFallback,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.28,
+                    color: _onAccent,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -28,13 +28,14 @@ void main() {
     ]);
   });
 
-  testWidgets('gmem render', (tester) async {
+  const chars = ['福', '禄', '寿', '喜', '梅', '兰', '竹', '菊'];
+
+  Future<void> pump(WidgetTester tester, Size size) async {
     GameScaffold.liveEnabled = false;
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    const chars = ['福', '禄', '寿', '喜', '梅', '兰', '竹', '菊'];
     final cards = <MemoryCardData>[
       for (var i = 0; i < 8; i++)
         (pair: i, char: chars[i], open: false, matched: false),
@@ -56,9 +57,21 @@ void main() {
       );
     });
     await tester.pumpAndSettle();
+  }
+
+  testWidgets('gmem render', (tester) async {
+    await pump(tester, const Size(390, 844));
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/gmem.png'),
+    );
+  });
+
+  testWidgets('gmem landscape', (tester) async {
+    await pump(tester, const Size(1280, 800));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/gmem-landscape.png'),
     );
   });
 }

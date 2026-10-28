@@ -26,7 +26,6 @@ class CitroRoutes {
     '/g2048',
     '/gmem',
     '/gsudoku',
-    '/gjigsaw',
     '/gnono',
     '/gslide',
     '/gsnake',
@@ -37,6 +36,7 @@ class CitroRoutes {
     '/gidiom',
     '/gfeihua',
     '/gliquid',
+    '/gknockwater',
   };
 
   static String normalize(String? raw) {
@@ -46,6 +46,8 @@ class CitroRoutes {
     if (!value.startsWith('/')) value = '/$value';
     final path = Uri.parse(value).path;
     if (path == '/' || path == home) return home;
+    // 异形数独已并入统一数独入口，旧链接直接落到数独模式选择。
+    if (path == '/gjigsaw') return '/gsudoku';
     // 网页端已移除资源页，旧链接直接回首页；原生端仍保留资源库。
     if (kIsWeb && path == resources) return home;
     if (tabs.contains(path) ||

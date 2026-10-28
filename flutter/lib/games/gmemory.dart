@@ -13,11 +13,10 @@ import 'game_ui.dart';
 /// 记忆卡牌（web `#gmemPage`：index.html:8109-8143 + gmem JS 18096-18239）。
 ///
 /// 视觉基准 `_tmp/ref/games/gmem-m-l.png`（390×844 light）实测 px：
-/// 标题底 113.67 → 难度条 129.67（274.672×41：padding 4 / gap 2 / 按钮 86.89×31）
-/// → HUD 192.67（3 个 62×56.64 pill + 42 高按钮，gap 9）
-/// → 棋盘 wrap 318.3（360.797×486.375，border 1，board margin-top 16）
+/// 难度条 274.672×41（padding 4 / gap 2 / 按钮 86.89×31）
+/// → 棋盘 wrap 360.797×486.375（border 1，board margin-top 16）
 /// → board 358.797×468.375（4 列 82.19 / 4 行 109.59，gap 10，卡面 3:4）。
-/// 页面总高 873.36 > 视口 844：live 条落在滚动流末尾（liveInScroll）。
+/// 版式 v2：难度条在棋盘上方，步数/用时/最佳进顶栏数据看板，重开/排行榜在棋盘下方。
 class GameMemoryPage extends StatefulWidget {
   const GameMemoryPage({super.key});
 
@@ -254,15 +253,21 @@ class GameMemoryView extends StatelessWidget {
       liveInScroll: true,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
-      hud: _MemoryHud(
-        diff: diff,
-        moves: moves,
-        seconds: seconds,
-        best: best,
-        onDiff: onDiff,
-        onNew: onNew,
-        onRank: onRank,
-      ),
+      above: [_DiffTabs(value: diff, onChanged: onDiff)],
+      pills: [
+        GameScorePill(label: '步数', value: '$moves'),
+        GameScorePill(label: '用时', value: '${seconds}s'),
+        GameScorePill(label: '最佳', value: best > 0 ? '$best' : '--'),
+      ],
+      actions: [
+        GameActionButton(
+          label: '重新开始',
+          icon: GameIcons.refresh,
+          primary: true,
+          onTap: onNew,
+        ),
+        GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
+      ],
       board: _MemoryBoard(
         cards: cards,
         cols: meta.cols,
@@ -280,69 +285,8 @@ class GameMemoryView extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// HUD：难度条 + 三个 pill + 两个按钮（g-hud 宽 362，两行 Wrap）
+// 难度分段器：棋盘上方
 // ---------------------------------------------------------------------------
-
-class _MemoryHud extends StatelessWidget {
-  const _MemoryHud({
-    required this.diff,
-    required this.moves,
-    required this.seconds,
-    required this.best,
-    this.onDiff,
-    this.onNew,
-    this.onRank,
-  });
-
-  final String diff;
-  final int moves;
-  final int seconds;
-  final int best;
-  final ValueChanged<String>? onDiff;
-  final VoidCallback? onNew;
-  final VoidCallback? onRank;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // kit 标题后固定 8：web 标题底 113.67 + 16 = tabs top 129.67 → 再补 8。
-        const SizedBox(height: 8),
-        _DiffTabs(value: diff, onChanged: onDiff),
-        // web tabs 下 margin-bottom 14 + g-hud margin-top 8 = 22。
-        const SizedBox(height: 22),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: GameMetrics.hudGap,
-          runSpacing: GameMetrics.hudGap,
-          children: [
-            GameScorePill(label: '步数', value: '$moves'),
-            GameScorePill(label: '用时', value: '${seconds}s'),
-            GameScorePill(label: '最佳', value: best > 0 ? '$best' : '--'),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GameActionButton(
-                  label: '重新开始',
-                  icon: GameIcons.refresh,
-                  primary: true,
-                  onTap: onNew,
-                ),
-                const SizedBox(width: 8),
-                GameActionButton(
-                  label: '排行榜',
-                  icon: GameIcons.trophy,
-                  onTap: onRank,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
 
 /// 难度分段器（web .gmem-diff：274.672×41 / padding 4 / gap 2 / 按钮 86.89×31）。
 class _DiffTabs extends StatelessWidget {
@@ -379,36 +323,39 @@ class _DiffTabs extends StatelessWidget {
 
   Widget _tab(String key, String label) {
     final on = key == value;
-    return GestureDetector(
-      onTap: onChanged == null ? null : () => onChanged!(key),
-      child: Container(
-        width: _tabW,
-        height: _tabH,
-        alignment: Alignment.center,
-        decoration: on
-            ? const BoxDecoration(
-                color: Color(0xFFF2A43C),
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x66FE923B),
-                    offset: Offset(0, 4),
-                    blurRadius: 14,
-                  ),
-                ],
-              )
-            : null,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: TextStyle(
-            fontFamily: AppFonts.noto,
-            fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            height: 19 / 12,
-            letterSpacing: 0.2,
-            color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
+    return GameHover(
+      enabled: onChanged != null,
+      child: GestureDetector(
+        onTap: onChanged == null ? null : () => onChanged!(key),
+        child: Container(
+          width: _tabW,
+          height: _tabH,
+          alignment: Alignment.center,
+          decoration: on
+              ? const BoxDecoration(
+                  color: Color(0xFFF2A43C),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x66FE923B),
+                      offset: Offset(0, 4),
+                      blurRadius: 14,
+                    ),
+                  ],
+                )
+              : null,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              fontFamily: AppFonts.noto,
+              fontFamilyFallback: AppFonts.bodyFallback,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 19 / 12,
+              letterSpacing: 0.2,
+              color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
+            ),
           ),
         ),
       ),
@@ -660,27 +607,31 @@ class _MemoryTileState extends State<_MemoryTile>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _ctrl,
-        builder: (context, _) {
-          final angle = _ctrl.value * math.pi;
-          final front = angle > math.pi / 2;
-          final m = Matrix4.identity()..setEntry(3, 2, 1 / 700);
-          m.rotateY(angle + (front ? math.pi : 0));
-          return Transform(
-            alignment: Alignment.center,
-            transform: m,
-            child: front
-                ? _CardFront(
-                    char: widget.data.char,
-                    matched: widget.data.matched,
-                  )
-                : const _CardBack(),
-          );
-        },
+    return GameHover(
+      enabled: widget.onTap != null,
+      lift: 2,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (context, _) {
+            final angle = _ctrl.value * math.pi;
+            final front = angle > math.pi / 2;
+            final m = Matrix4.identity()..setEntry(3, 2, 1 / 700);
+            m.rotateY(angle + (front ? math.pi : 0));
+            return Transform(
+              alignment: Alignment.center,
+              transform: m,
+              child: front
+                  ? _CardFront(
+                      char: widget.data.char,
+                      matched: widget.data.matched,
+                    )
+                  : const _CardBack(),
+            );
+          },
+        ),
       ),
     );
   }

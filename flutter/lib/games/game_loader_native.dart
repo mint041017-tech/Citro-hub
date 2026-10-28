@@ -5,7 +5,6 @@ import 'g2048.dart';
 import 'gbrake_web.dart';
 import 'gfeihua.dart';
 import 'gidiom.dart';
-import 'gjigsaw.dart';
 import 'gjump.dart';
 import 'gliquid.dart';
 import 'gmemory.dart';
@@ -15,6 +14,7 @@ import 'gsheep.dart';
 import 'gslide.dart';
 import 'gsnake.dart';
 import 'gsudoku.dart';
+import 'knockwater/knockwater_page.dart';
 import 'game_common.dart';
 
 Widget buildGamePage(String key) {
@@ -22,7 +22,6 @@ Widget buildGamePage(String key) {
     'g2048' => const Game2048Page(),
     'gmem' => const GameMemoryPage(),
     'gsudoku' => const GameSudokuPage(),
-    'gjigsaw' => const GameJigsawPage(),
     'gnono' => const GameNonoPage(),
     'gslide' => const GameSlidePage(),
     'gsnake' => const GameSnakePage(),
@@ -34,6 +33,7 @@ Widget buildGamePage(String key) {
     'gidiom' => const GameIdiomPage(),
     'gfeihua' => const GameFeihuaPage(),
     'gliquid' => const GameLiquidPage(),
+    'gknockwater' => const KnockwaterPage(),
     _ => const _MissingGame(),
   };
 }

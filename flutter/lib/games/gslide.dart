@@ -259,11 +259,7 @@ class GameSlideView extends StatelessWidget {
       liveProgress: liveProgress,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
-      above: [
-        const SizedBox(height: 12),
-        _DiffTabs(diff: diff, onChanged: onDiff),
-        const SizedBox(height: 4),
-      ],
+      above: [_DiffTabs(diff: diff, onChanged: onDiff)],
       pills: [
         GameScorePill(label: '步数', value: '$moves'),
         GameScorePill(label: '用时', value: fmtDuration(seconds)),
@@ -505,27 +501,30 @@ class _DiffTabs extends StatelessWidget {
   Widget _tab(BuildContext context, (String, String) item) {
     final c = context.c;
     final on = diff == item.$1;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onChanged == null ? null : () => onChanged!(item.$1),
-      child: Container(
-        height: 31,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: on ? c.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.transparent),
-        ),
-        child: Text(
-          item.$2,
-          style: TextStyle(
-            fontFamily: AppFonts.noto,
-            fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            height: 1.4,
-            color: on ? const Color(0xFF2E2C22) : c.ink2,
+    return GameHover(
+      enabled: onChanged != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onChanged == null ? null : () => onChanged!(item.$1),
+        child: Container(
+          height: 31,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? c.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.transparent),
+          ),
+          child: Text(
+            item.$2,
+            style: TextStyle(
+              fontFamily: AppFonts.noto,
+              fontFamilyFallback: AppFonts.bodyFallback,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.4,
+              color: on ? const Color(0xFF2E2C22) : c.ink2,
+            ),
           ),
         ),
       ),

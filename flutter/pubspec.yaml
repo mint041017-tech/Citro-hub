@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.9.1）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 1.9.1+1901
+version: 1.9.2+1902
 
 environment:
   sdk: ^3.13.5
@@ -56,6 +56,8 @@ flutter:
     # 咕噜果冻铺 Web 版（flutter_inappwebview 内嵌）
     - assets/liquid2048/
     - assets/liquid2048/js/
+    # 铃渡（Knockwater）原生音效
+    - assets/knockwater/audio/
   fonts:
     - family: Kalam
       fonts:

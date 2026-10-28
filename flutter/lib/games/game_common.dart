@@ -622,7 +622,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
         setState(() => boardTab = key);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: on ? c.hl : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
@@ -631,7 +631,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
         child: Text(
           label,
           style: context.body(
-            size: 11.5,
+            size: 12.5,
             weight: FontWeight.w600,
             color: on ? c.accentInk : c.inkSoft,
           ),
@@ -752,8 +752,8 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 5,
+                              horizontal: 12,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
                               color: diff == d.$1 ? c.hl : Colors.transparent,
@@ -765,7 +765,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                             child: Text(
                               d.$2,
                               style: context.body(
-                                size: 11,
+                                size: 12,
                                 weight: FontWeight.w600,
                                 color: diff == d.$1 ? c.accentInk : c.inkSoft,
                               ),
@@ -924,6 +924,9 @@ class GameTabletRankRail extends StatefulWidget {
   final bool aiSplit;
   final bool enabled;
 
+  /// 左侧栏已在返回按钮旁显示「排行榜」时可以关掉内部标题，避免重复。
+  final bool showTitle;
+
   const GameTabletRankRail({
     super.key,
     required this.game,
@@ -932,6 +935,7 @@ class GameTabletRankRail extends StatefulWidget {
     this.initial = '',
     this.aiSplit = false,
     this.enabled = true,
+    this.showTitle = true,
   });
 
   @override
@@ -1029,38 +1033,42 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            AppIcon(
-              strokeSvg(AppIcons.trophy, width: 2),
-              size: 17,
-              color: c.accentInk,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                '排行榜',
-                style: context.heading(size: 18, color: c.ink),
+        if (widget.showTitle)
+          Row(
+            children: [
+              AppIcon(
+                strokeSvg(AppIcons.trophy, width: 2),
+                size: 17,
+                color: c.accentInk,
               ),
-            ),
-            Flexible(
-              child: Text(
-                widget.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(size: 10.5, color: c.inkSoft),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '排行榜',
+                  style: context.heading(size: 18, color: c.ink),
+                ),
               ),
-            ),
-          ],
-        ),
+              Flexible(
+                child: Text(
+                  widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(size: 10.5, color: c.inkSoft),
+                ),
+              ),
+            ],
+          ),
         if (widget.difficulties.isNotEmpty) ...[
           const SizedBox(height: 9),
           Wrap(
-            spacing: 5,
-            runSpacing: 5,
+            spacing: 6,
+            runSpacing: 6,
             children: [
               for (final item in widget.difficulties)
-                GestureDetector(
+                Pressable(
+                  scale: .97,
+                  hoverLift: 0,
+                  borderRadius: BorderRadius.circular(999),
                   onTap: () {
                     if (diff == item.$1) return;
                     setState(() => diff = item.$1);
@@ -1068,8 +1076,8 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: diff == item.$1 ? c.accent : c.surface2,
@@ -1081,7 +1089,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                     child: Text(
                       item.$2,
                       style: context.body(
-                        size: 10.5,
+                        size: 11.5,
                         weight: FontWeight.w700,
                         color: diff == item.$1
                             ? const Color(0xFF2E2C22)
@@ -1100,12 +1108,15 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
               for (final item in const [('player', '玩家榜'), ('ai', 'AI 榜')])
                 Padding(
                   padding: const EdgeInsets.only(right: 5),
-                  child: GestureDetector(
+                  child: Pressable(
+                    scale: .97,
+                    hoverLift: 0,
+                    borderRadius: BorderRadius.circular(999),
                     onTap: () => setState(() => boardTab = item.$1),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 4,
+                        horizontal: 10,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: boardTab == item.$1 ? c.hl : Colors.transparent,
@@ -1117,7 +1128,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                       child: Text(
                         item.$2,
                         style: context.body(
-                          size: 10.5,
+                          size: 11.5,
                           weight: FontWeight.w700,
                           color: boardTab == item.$1 ? c.accentInk : c.inkSoft,
                         ),

@@ -251,7 +251,8 @@ List<_SearchEntry> _buildSearchIndex() {
 String _gameKeywords(String key) => switch (key) {
   'g2048' => '2048 数字 合成',
   'gmem' => 'memory jiyi 记忆 翻牌 配对 卡牌',
-  'gsudoku' => 'sudoku 数独 九宫格 逻辑',
+  'gsudoku' =>
+    'sudoku 数独 九宫格 逻辑 异形 风车 重叠 奇偶 对角线 不等式 杀手 3d',
   'gnono' => 'nonogram nono 数织 填涂',
   'gslide' => 'slide huarongdao 华容道 拼图 滑动',
   'gsnake' => 'snake 贪吃蛇 蛇',
@@ -261,6 +262,7 @@ String _gameKeywords(String key) => switch (key) {
   'gbrake' => 'brake 极限刹车 刹车 汽车 3d',
   'gidiom' => 'idiom 成语接龙 成语 接龙',
   'gfeihua' => 'feihua 飞花令 诗词 诗句',
+  'gknockwater' => 'knockwater 铃渡 铃 水面 花瓣 渡 水墨 解谜 走格',
   _ => '',
 };
 

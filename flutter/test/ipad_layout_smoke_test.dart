@@ -160,7 +160,11 @@ void main() {
 
     testWidgets('native games ${entry.key}', (tester) async {
       addTearDown(tester.view.reset);
-      for (final game in kGameCards.where((game) => game.key != 'gbrake')) {
+      // 铃渡带常驻水面 Ticker，逐尺寸单独覆盖在
+      // test/knockwater/layout_matrix_test.dart；这里避免同一用例反复重建。
+      for (final game in kGameCards.where(
+        (game) => game.key != 'gbrake' && game.key != 'gknockwater',
+      )) {
         await verifyPage(
           tester,
           game.title,

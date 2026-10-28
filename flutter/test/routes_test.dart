@@ -14,6 +14,8 @@ void main() {
     expect(CitroRoutes.normalize('/'), '/home');
     expect(CitroRoutes.normalize('#/g2048'), '/g2048');
     expect(CitroRoutes.normalize('/gliquid'), '/gliquid');
+    expect(CitroRoutes.normalize('#/gknockwater'), '/gknockwater');
+    expect(CitroRoutes.normalize('/gjigsaw'), '/gsudoku');
     expect(CitroRoutes.normalize('games'), '/games');
     expect(CitroRoutes.normalize('/search'), '/search');
     expect(CitroRoutes.normalize('/missing'), '/home');

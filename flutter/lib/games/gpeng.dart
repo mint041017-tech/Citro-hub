@@ -1252,9 +1252,8 @@ class GamePengView extends StatelessWidget {
     );
 
     // HUD 三粒 pill 在 web 中是定宽（62 / 63.0469 / 62），kit 的内容自适应宽度
-    // 会让整组窄 ~1px，这里用 SizedBox 显式定宽还原；kit 在传 hud 时忽略
-    // pills/actions，所以按钮行也一并放进 hud。
-    final hud = Column(
+    // 会让整组窄 ~1px，这里用 SizedBox 显式定宽还原。
+    final hud = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         // 三个 pill 总宽 205.047，居中后左缘落在 92.4765（小数坐标）→ Skia
@@ -1263,7 +1262,7 @@ class GamePengView extends StatelessWidget {
         Transform.translate(
           offset: const Offset(-0.4765, 0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 width: 62,
@@ -1282,24 +1281,6 @@ class GamePengView extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 9),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GameActionButton(
-              label: '新游戏',
-              icon: GameIcons.reset,
-              primary: true,
-              onTap: onNew,
-            ),
-            const SizedBox(width: 8),
-            GameActionButton(
-              label: '排行榜',
-              icon: GameIcons.trophy,
-              onTap: onRank,
-            ),
-          ],
-        ),
       ],
     );
 
@@ -1307,6 +1288,15 @@ class GamePengView extends StatelessWidget {
       gameKey: 'gpeng',
       title: '淘气小球',
       hud: hud,
+      actions: [
+        GameActionButton(
+          label: '新游戏',
+          icon: GameIcons.reset,
+          primary: true,
+          onTap: onNew,
+        ),
+        GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
+      ],
       boardGap: 18,
       board: board,
       liveProgress: liveProgress,

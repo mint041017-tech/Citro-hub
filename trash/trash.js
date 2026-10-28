@@ -282,6 +282,8 @@ function cookFridgeClean(v) {
 }
 /* 后端 → 本人（完整字段，含下厨日记） */
 function cookPubMine(r) {
+  /* 从广场收藏来的副本保留原作者；自己写的食谱作者就是自己 */
+  const author = r.fromOwner || r.uid;
   return {
     id: r.id, name: r.name, emoji: r.emoji, tags: r.tags || [],
     cuisine: r.cuisine || '', dishType: r.dishType || '', cover: r.cover || '',
@@ -289,6 +291,7 @@ function cookPubMine(r) {
     source: r.source || '', servings: r.servings || 0,
     ingredients: r.ingredients || [], steps: r.steps || [], note: r.note || '',
     diary: r.diary || [],
+    owner: author, ownerAv: avatarOf(author), fromOwner: r.fromOwner || '',
     visibility: r.visibility === 'public' ? 'public' : 'private',
     createdAt: r.createdAt, updatedAt: r.updatedAt
   };
@@ -320,6 +323,9 @@ function cookPut(uid, src) {
     const mine = cookRecipes.filter(function (x) { return x.uid === uid; });
     if (mine.length >= COOK_MAX_PER_USER) return { err: '食谱最多 ' + COOK_MAX_PER_USER + ' 份，删掉一些再存吧' };
     rec = { id: cookId(), uid: uid };
+    /* 仅新建时记录来源作者（收录副本），更新时不可篡改 */
+    const fromOwner = cookText(r.fromOwner, 40);
+    if (fromOwner && fromOwner !== uid) rec.fromOwner = fromOwner;
     cookRecipes.push(rec);
   }
   rec.name = name;
@@ -346,7 +352,11 @@ function cookPut(uid, src) {
 /* 改昵称时把食谱与购物清单一并过户，否则数据会「凭空消失」 */
 function cookMigrateUser(oldName, name) {
   let dirty = false;
-  cookRecipes.forEach(function (r) { if (r.uid === oldName) { r.uid = name; dirty = true; } });
+  cookRecipes.forEach(function (r) {
+    if (r.uid === oldName) { r.uid = name; dirty = true; }
+    /* 别人收藏过我的食谱：署名跟着改昵称走 */
+    if (r.fromOwner === oldName) { r.fromOwner = name; dirty = true; }
+  });
   if (cookShopping[oldName]) {
     /* 新昵称一般没有条目；已有则接在后面，避免覆盖丢数据 */
     const merged = (Array.isArray(cookShopping[name]) ? cookShopping[name] : []).concat(cookShopping[oldName]);
@@ -550,7 +560,17 @@ const PLAY_PUNS = [
   '当宝宝，对队内实时第一名提供情绪价值', '不/只能静步', '只能蹲下走路（半场）',
   '限喷子（半场）', '开枪键与跳绑一起（半场）', '大冒险（不过分即可）',
   '真心话（不过分即可）', '开一枪丢一次枪', '开一枪喷漆一次',
-  '退弹（只能用每个弹夹最后一发）'
+  '退弹（只能用每个弹夹最后一发）',
+  '小姐（每杀一个人说：老板走好。每次被击杀说：mua+对方id）',
+  '殉情（队内第一阵亡，需要跟着一起）',
+  '只能前往a包点', '只能前往b包点',
+  '所有人喊乌萨奇都得喊“到！”（开局把这个规则告知对面）',
+  '螃蟹（只能AD移动）', '定身（只要有人释放技能定身2s）',
+  '士兵（不能后退）', '泉水指挥官（不能对枪）',
+  '走地鸡（只能选择一突且不能脱离地面和不能高速位移）',
+  '唱一首歌', 'all in（每把都花光所有的钱）',
+  '队伍里任何人造成击杀喊“Banana！”',
+  '只能跳着走路', '游戏限制30帧'
 ];
 const PLAY_CD_MS = 10 * 60 * 1000;
 const PLAY_KEEP = 60;
@@ -772,7 +792,27 @@ function clearCookie(res, req) {
 /* ---------------- 小游戏成绩（按昵称/gid 记录最高分） ----------------
    白名单必须覆盖前端全部会落榜的游戏键，漏掉哪个键，那个游戏就会
    提交 400「未知游戏」而永远不上榜（前端对 4xx 不弹错，表现为空榜）。 */
-const GAME_IDS = ['2048', 'memory:easy', 'memory:std', 'memory:hard', 'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp', 'nono:easy', 'nono:std', 'nono:hard', 'slide:easy', 'slide:std', 'slide:hard', 'snake:easy', 'snake:std', 'snake:hard', 'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua', 'liquid', 'jigsaw:easy', 'jigsaw:normal', 'jigsaw:hard'];
+const GAME_IDS = [
+  '2048', 'memory:easy', 'memory:std', 'memory:hard',
+  'sudoku:easy', 'sudoku:med', 'sudoku:hard', 'sudoku:exp',
+  /* 统一数独入口：异形 / 雪花 / 重叠 / 高级阶数。经典四档沿用上面的旧键。 */
+  'sudoku:jigsaw-medium', 'sudoku:jigsaw-hard', 'sudoku:jigsaw-expert',
+  'sudoku:snowflake-hard', 'sudoku:snowflake-expert',
+  'sudoku:overlap-2', 'sudoku:overlap-3', 'sudoku:overlap-4',
+  'sudoku:overlap-5', 'sudoku:overlap-8', 'sudoku:overlap-13',
+  'sudoku:windmill-hard', 'sudoku:windmill-expert',
+  'sudoku:evenodd-hard', 'sudoku:evenodd-expert',
+  'sudoku:diag-hard', 'sudoku:diag-expert',
+  'sudoku:ineq-hard', 'sudoku:ineq-expert',
+  'sudoku:killer-hard', 'sudoku:killer-expert',
+  'sudoku:cube3d-hard', 'sudoku:cube3d-expert',
+  'nono:easy', 'nono:std', 'nono:hard',
+  'slide:easy', 'slide:std', 'slide:hard',
+  'snake:easy', 'snake:std', 'snake:hard',
+  'sheep', 'jump', 'peng', 'brake', 'idiom', 'feihua', 'liquid',
+  /* 旧异形数独键保留给还没升级的客户端 */
+  'jigsaw:easy', 'jigsaw:normal', 'jigsaw:hard', 'knockwater',
+];
 const gamesFile = path.join(DATA_DIR, 'games.json');
 let gameScores = readJson(gamesFile, {});
 if (!gameScores || typeof gameScores !== 'object' || Array.isArray(gameScores)) gameScores = {};
@@ -801,7 +841,7 @@ function claimGuestRec(arr, gid, name) {
    前端进入任一游戏页即每 4s POST /api/games/live 上报进度，离开时带 leave 下线；
    这里只登记「谁在玩 + 进度」，靠 TTL 判定离线，进程重启即清空（不需要持久化）。
    注意 game 用的是前端页面键（g2048/gmem/…），与成绩榜的 GAME_IDS 不是一套，别混用。 */
-const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua', 'gliquid', 'gjigsaw'];
+const LIVE_GAMES = ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide', 'gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake', 'gidiom', 'gfeihua', 'gliquid', 'gjigsaw', 'gknockwater'];
 const LIVE_TTL = 20000;    // 心跳 4s，留 5 倍余量；超过即认为已离开
 const LIVE_PROG_MAX = 60;  // 进度文案上限，防止被塞长文本
 const liveUsers = new Map();   // game -> Map(身份 key -> { name, av, progress, ts })
@@ -1589,6 +1629,8 @@ const server = http.createServer(async function (req, res) {
       deleted.recipes++;
     });
     cookRecipes = keptRecipes;
+    /* 注销后清掉别人副本上的旧署名，避免继续展示已注销昵称 */
+    cookRecipes.forEach(function (r) { if (r.fromOwner === name) r.fromOwner = ''; });
     delete cookShopping[name];
     delete cookFridge[name];
     saveCook();

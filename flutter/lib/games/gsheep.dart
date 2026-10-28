@@ -928,9 +928,7 @@ class _SheepBoardState extends State<_SheepBoard> {
     for (final t in widget.tiles) {
       if (t.picked) continue;
       final depth = maxLayer - t.layer;
-      final level = depth == 0
-          ? 0
-          : (depth <= 2 ? 1 : (depth <= 4 ? 2 : 3));
+      final level = depth == 0 ? 0 : (depth <= 2 ? 1 : (depth <= 4 ? 2 : 3));
       bands[level].add(t);
     }
 
@@ -948,11 +946,7 @@ class _SheepBoardState extends State<_SheepBoard> {
                 final ok = widget.onPick!(t, geom);
                 if (ok) _spawnGhost(t);
               },
-        child: widget.tileBuilder(
-          geom.ts,
-          t.type,
-          lockedIds.contains(t.id),
-        ),
+        child: widget.tileBuilder(geom.ts, t.type, lockedIds.contains(t.id)),
       ),
     );
 
@@ -1085,6 +1079,19 @@ class GameSheepView extends StatelessWidget {
       liveInScroll: true,
       liveProgress: liveProgress,
       hud: _hud(context),
+      actions: [
+        GameActionButton(
+          label: '新游戏',
+          icon: GameIcons.reset,
+          primary: true,
+          onTap: onNewGame,
+        ),
+        GameActionButton(
+          label: '排行榜',
+          icon: GameIcons.trophySimple,
+          onTap: onRank,
+        ),
+      ],
       boardGap: 14,
       board: LayoutBuilder(
         builder: (context, cons) {
@@ -1140,24 +1147,6 @@ class GameSheepView extends StatelessWidget {
               _timePill(context),
               const SizedBox(width: 9),
               _pill(context, '最快', bestText),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GameActionButton(
-                label: '新游戏',
-                icon: GameIcons.reset,
-                primary: true,
-                onTap: onNewGame,
-              ),
-              const SizedBox(width: 8),
-              GameActionButton(
-                label: '排行榜',
-                icon: GameIcons.trophySimple,
-                onTap: onRank,
-              ),
             ],
           ),
         ],
@@ -1335,10 +1324,13 @@ class GameSheepView extends StatelessWidget {
         ],
       ),
     );
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled ? onTap : null,
-      child: Opacity(opacity: enabled ? 1 : .45, child: row),
+    return GameHover(
+      enabled: enabled,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: Opacity(opacity: enabled ? 1 : .45, child: row),
+      ),
     );
   }
 
@@ -1464,16 +1456,10 @@ class GameSheepView extends StatelessWidget {
           border: Border.all(color: c.line2),
           boxShadow: locked
               ? const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x24584A28),
-                    offset: Offset(0, 2),
-                  ),
+                  BoxShadow(color: Color(0x24584A28), offset: Offset(0, 2)),
                 ]
               : const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x405A4A2C),
-                    offset: Offset(0, 3),
-                  ),
+                  BoxShadow(color: Color(0x405A4A2C), offset: Offset(0, 3)),
                 ],
         ),
         child: Stack(
@@ -1720,7 +1706,6 @@ String _sheepSvg(int type) {
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
       '$body</svg>';
 }
-
 
 /// SVG 容易在每次 build 时重新解析；按牌型缓存一次，300 张牌共用。
 final Map<int, Widget> _sheepIconWidgets = <int, Widget>{};

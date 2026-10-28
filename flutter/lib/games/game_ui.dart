@@ -30,7 +30,7 @@ import 'game_common.dart'
 /// 版式常量（web 游戏页 390×844 实测）
 class GameMetrics {
   const GameMetrics._();
-  static const double headHeight = 56;
+  static const double headHeight = 64;
   static const double sidePad = 14;
   static const double bodyBottom = 12;
   static const double hudGap = 9;
@@ -114,17 +114,21 @@ class GameScaffold extends StatefulWidget {
     this.rankDifficulties = const [],
     this.rankInitial = '',
     this.rankAiSplit = false,
+    this.showSidePanels = true,
+    this.contentMaxWidth = 760,
   });
 
   final String gameKey;
   final String title;
 
-  /// HUD 上方的整行控件（难度分段器等），每项独占一行
+  /// 棋盘上方的整行控件（难度/模式分段器等），每项独占一行
   final List<Widget> above;
   final List<Widget> pills;
+
+  /// 棋盘下方的操作按钮（新游戏/撤销/排行榜等）
   final List<Widget> actions;
 
-  /// 自定义 HUD（如 gjump 的「pill + 按钮」单行 stretch 布局）；非空时忽略 pills/actions
+  /// 自定义 HUD 数据（仅只读数据，不含按钮）；非空时忽略 pills
   final Widget? hud;
   final Widget? board;
   final double boardGap;
@@ -142,6 +146,12 @@ class GameScaffold extends StatefulWidget {
   final List<(String, String)> rankDifficulties;
   final String rankInitial;
   final bool rankAiSplit;
+
+  /// false = 横屏也不显示左右侧栏（模式选择等非对局页面）。
+  final bool showSidePanels;
+
+  /// 居中内容最大宽度；模式选择页可传更宽的值。
+  final double contentMaxWidth;
 
   /// 测试时关掉轮询（golden 渲染用）
   static bool liveEnabled = true;
@@ -203,6 +213,344 @@ class _GameScaffoldState extends State<GameScaffold> {
     super.dispose();
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final mq = MediaQuery.of(context);
+    final screen = mq.size;
+    final landscape = screen.width > screen.height;
+    Widget page = Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(
+            isComplex: true,
+            willChange: false,
+            painter: _PageBgPainter(c),
+          ),
+        ),
+        landscape && widget.showSidePanels
+            ? _landscapeBody(context)
+            : _portraitBody(context),
+      ],
+    );
+    if (mq.textScaler.scale(10) != 10) {
+      page = MediaQuery(
+        data: mq.copyWith(textScaler: TextScaler.noScaling),
+        child: page,
+      );
+    }
+    return Scaffold(backgroundColor: c.surface, body: page);
+  }
+
+  Widget _portraitBody(BuildContext context) {
+    final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Column(
+      children: [
+        _portraitHeader(context),
+        Expanded(child: _centerArea(context, landscape: false)),
+        if (widget.showLive && !kbOpen)
+          SafeArea(top: false, child: GameLiveBar(list: _live)),
+      ],
+    );
+  }
+
+  Widget _portraitHeader(BuildContext context) {
+    final c = context.c;
+    final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        height: GameMetrics.headHeight,
+        padding: const EdgeInsets.symmetric(horizontal: GameMetrics.sidePad),
+        decoration: BoxDecoration(
+          color: c.surface,
+          border: Border(bottom: BorderSide(color: c.line)),
+        ),
+        child: Row(
+          children: [
+            if (!duo)
+              _RoundIconButton(
+                onTap: widget.onBack ?? () => popOrHome(context),
+                size: 38,
+                child: gameIcon(GameIcons.arrowLeft, size: 18, color: c.ink2),
+              )
+            else
+              const SizedBox(width: 38),
+            const SizedBox(width: 10),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.36,
+              ),
+              child: Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppFonts.zcool,
+                  fontFamilyFallback: AppFonts.fallback,
+                  fontSize: widget.titleSize ?? 18,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.6,
+                  color: c.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: _hudCompact(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hudCompact(BuildContext context) {
+    final data =
+        widget.hud ??
+        (widget.pills.isEmpty
+            ? null
+            : Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: GameMetrics.hudGap,
+                runSpacing: 4,
+                children: widget.pills,
+              ));
+    if (data == null) return const SizedBox.shrink();
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: data,
+    );
+  }
+
+  Widget _hudPanel(BuildContext context) {
+    if (widget.hud != null) return widget.hud!;
+    if (widget.pills.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: GameMetrics.hudGap,
+      runSpacing: GameMetrics.hudGap,
+      children: widget.pills,
+    );
+  }
+
+  Widget? _aboveRow() {
+    if (widget.above.isEmpty) return null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < widget.above.length; i++)
+          Padding(
+            padding: EdgeInsets.only(top: i == 0 ? 0 : GameMetrics.hudGap),
+            child: widget.above[i],
+          ),
+      ],
+    );
+  }
+
+  Widget? _actionsRow({required bool landscape}) {
+    final actions = landscape
+        ? widget.actions
+              .where(
+                (item) =>
+                    item is! GameRankAction &&
+                    !(item is GameActionButton && item.label.contains('排行')),
+              )
+              .toList()
+        : widget.actions;
+    if (actions.isEmpty) return null;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: GameMetrics.actionGap,
+      runSpacing: GameMetrics.actionGap,
+      children: actions,
+    );
+  }
+
+  Widget _centerArea(BuildContext context, {required bool landscape}) {
+    final above = _aboveRow();
+    final actions = _actionsRow(landscape: landscape);
+    return LayoutBuilder(
+      builder: (ctx, area) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            GameMetrics.sidePad,
+            8,
+            GameMetrics.sidePad,
+            0,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: math.max(0.0, area.maxHeight - 8),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (above != null) ...[above, const SizedBox(height: 16)],
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: widget.contentMaxWidth,
+                    ),
+                    child: widget.board ?? const SizedBox.shrink(),
+                  ),
+                  if (actions != null) ...[const SizedBox(height: 12), actions],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _landscapeBody(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final leftW = math.min(248.0, math.max(210.0, screen.width * 0.24));
+    final rightW = math.min(340.0, math.max(270.0, screen.width * 0.24));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(width: leftW, child: _landscapeRankSidebar(context)),
+        Expanded(
+          child: SafeArea(
+            bottom: false,
+            left: false,
+            right: false,
+            child: _centerArea(context, landscape: true),
+          ),
+        ),
+        SizedBox(
+          width: rightW,
+          child: _landscapeSidebar(
+            context,
+            showLive: widget.showLive && !kbOpen,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _landscapeRankSidebar(BuildContext context) {
+    final c = context.c;
+    final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.surface.withAlpha(242),
+        border: Border(right: BorderSide(color: c.line)),
+      ),
+      child: SafeArea(
+        right: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  if (!duo)
+                    _RoundIconButton(
+                      onTap: widget.onBack ?? () => popOrHome(context),
+                      size: 38,
+                      child: gameIcon(
+                        GameIcons.arrowLeft,
+                        size: 18,
+                        color: c.ink2,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 38),
+                  const SizedBox(width: 8),
+                  Text('排行榜', style: context.heading(size: 18, color: c.ink)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: GameTabletRankRail(
+                  game: _rankGameKey,
+                  title: widget.title,
+                  difficulties: widget.rankDifficulties,
+                  initial: widget.rankInitial,
+                  aiSplit: widget.rankAiSplit,
+                  enabled: GameScaffold.liveEnabled,
+                  showTitle: false,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _landscapeSidebar(BuildContext context, {required bool showLive}) {
+    final c = context.c;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.surface.withAlpha(242),
+        border: Border(left: BorderSide(color: c.line)),
+      ),
+      child: SafeArea(
+        left: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppFonts.zcool,
+                        fontFamilyFallback: AppFonts.fallback,
+                        fontSize: widget.titleSize ?? 18,
+                        height: 1.25,
+                        letterSpacing: 0.6,
+                        color: c.ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Text('数据看板', style: context.body(size: 10, color: c.inkSoft)),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: _hudPanel(context),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            if (showLive)
+              Expanded(flex: 5, child: _tabletLiveRail(context))
+            else
+              const Spacer(),
+          ],
+        ),
+      ),
+    );
+  }
+
   String get _rankGameKey {
     if (widget.rankGame != null) return widget.rankGame!;
     return const {
@@ -217,285 +565,11 @@ class _GameScaffoldState extends State<GameScaffold> {
           'gpeng': 'peng',
           'gidiom': 'idiom',
           'gfeihua': 'feihua',
+          'gbrake': 'brake',
+          'gliquid': 'liquid',
+          'gknockwater': 'knockwater',
         }[widget.gameKey] ??
         widget.gameKey;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final screen = MediaQuery.sizeOf(context);
-    final ts = widget.titleSize ?? GameMetrics.titleSize(screen.width);
-    final tabletLandscape =
-        screen.width >= 1100 && screen.width > screen.height;
-    final hudGroups = <Widget>[
-      if (widget.hud != null)
-        widget.hud!
-      else ...[
-        if (widget.pills.isNotEmpty)
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: GameMetrics.hudGap,
-            runSpacing: GameMetrics.hudGap,
-            children: widget.pills,
-          ),
-        if (widget.actions.isNotEmpty)
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: GameMetrics.actionGap,
-            runSpacing: GameMetrics.actionGap,
-            children: widget.actions,
-          ),
-      ],
-    ];
-    // 游戏页是按 390×844 逐像素复刻的定版式；系统字号放大（无障碍字体缩放）
-    // 会把规则卡 / HUD pill / 菜单按钮的文字撑出布局（成语接龙、飞花令的
-    // 「开始按钮与规则重叠」「最高分换行」都是它引起的），这里统一钳到 1.0，
-    // 与 web 端 CSS px 不随系统缩放的行为一致。
-    final mq = MediaQuery.of(context);
-    final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          widget.title,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: AppFonts.zcool,
-            fontFamilyFallback: AppFonts.fallback,
-            fontSize: ts,
-            fontWeight: FontWeight.w400,
-            height: 1.65,
-            letterSpacing: ts * 0.06,
-            color: c.ink,
-          ),
-        ),
-        ...widget.above,
-        const SizedBox(height: 8),
-        if (hudGroups.isNotEmpty)
-          SizedBox(
-            width: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < hudGroups.length; i++)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      top: i == 0 ? 0 : GameMetrics.hudGap,
-                    ),
-                    child: hudGroups[i],
-                  ),
-              ],
-            ),
-          ),
-        if (widget.board != null) ...[
-          SizedBox(height: widget.boardGap),
-          RepaintBoundary(child: widget.board!),
-        ],
-      ],
-    );
-
-    Widget normalBody() {
-      return Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: GameHead(
-              extraActions: widget.extraHeadActions,
-              onBack: widget.onBack ?? () => popOrHome(context),
-            ),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (ctx, cons) {
-                final top = GameMetrics.bodyTop(screen.height);
-                // web：.g-body 与 .g-live 同在 .page-g 的滚动流里；内容高于视口时
-                // 整页滚动（live 条只露出顶部）。liveInScroll 复刻该行为。
-                if (widget.liveInScroll) {
-                  final bodyAreaMax = math.max(
-                    0.0,
-                    cons.maxHeight - (kbOpen ? 0.0 : 56.7),
-                  );
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: bodyAreaMax),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              GameMetrics.sidePad,
-                              top,
-                              GameMetrics.sidePad,
-                              GameMetrics.bodyBottom,
-                            ),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 760,
-                                ),
-                                child: content,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (widget.showLive && !kbOpen)
-                          GameLiveBar(list: _live),
-                      ],
-                    ),
-                  );
-                }
-                final minH = math.max(
-                  0.0,
-                  cons.maxHeight - top - GameMetrics.bodyBottom,
-                );
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    GameMetrics.sidePad,
-                    top,
-                    GameMetrics.sidePad,
-                    GameMetrics.bodyBottom,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: minH),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 760),
-                        child: content,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (widget.showLive &&
-              !widget.liveInScroll &&
-              MediaQuery.viewInsetsOf(context).bottom <= 0)
-            GameLiveBar(list: _live),
-        ],
-      );
-    }
-
-    Widget tabletBody() {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(width: 248, child: _tabletSidebar(context)),
-          Expanded(
-            child: SafeArea(
-              bottom: false,
-              left: false,
-              right: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: content,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (widget.showLive)
-            SizedBox(width: 196, child: _tabletLiveRail(context)),
-        ],
-      );
-    }
-
-    Widget page = Stack(
-      children: [
-        Positioned.fill(
-          child: CustomPaint(
-            isComplex: true,
-            willChange: false,
-            painter: _PageBgPainter(c),
-          ),
-        ),
-        if (tabletLandscape) tabletBody() else normalBody(),
-      ],
-    );
-    if (mq.textScaler.scale(10) != 10) {
-      page = MediaQuery(
-        data: mq.copyWith(textScaler: TextScaler.noScaling),
-        child: page,
-      );
-    }
-    return Scaffold(backgroundColor: c.surface, body: page);
-  }
-
-  Widget _tabletSidebar(BuildContext context) {
-    final c = context.c;
-    final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface.withAlpha(238),
-        border: Border(right: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        right: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  if (!duo)
-                    _RoundIconButton(
-                      onTap:
-                          widget.onBack ??
-                          () => Navigator.of(context).maybePop(),
-                      size: 38,
-                      child: gameIcon(
-                        GameIcons.arrowLeft,
-                        size: 18,
-                        color: c.ink2,
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 38),
-                  const SizedBox(width: 9),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
-                    child: Image.asset(
-                      'assets/images/logo.webp',
-                      width: 30,
-                      height: 30,
-                      cacheWidth: 90,
-                    ),
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    '游戏空间',
-                    style: TextStyle(
-                      fontFamily: AppFonts.zcool,
-                      fontFamilyFallback: AppFonts.fallback,
-                      fontSize: 14.5,
-                      height: 1.4,
-                      letterSpacing: 0.6,
-                      color: c.ink,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Expanded(
-                child: GameTabletRankRail(
-                  game: _rankGameKey,
-                  title: widget.title,
-                  difficulties: widget.rankDifficulties,
-                  initial: widget.rankInitial,
-                  aiSplit: widget.rankAiSplit,
-                  enabled: GameScaffold.liveEnabled,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _tabletLiveRail(BuildContext context) {
@@ -976,6 +1050,67 @@ class GameScorePill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 轻量悬停反馈：鼠标移入轻微抬升并放大，移出回落。
+///
+/// 给不走 [GameActionButton] 的自定义按钮、分段器和可点击卡片补上桌面端反馈；
+/// 只负责视觉与指针光标，点击仍由外层 GestureDetector / Pressable 处理。
+class GameHover extends StatefulWidget {
+  const GameHover({
+    super.key,
+    required this.child,
+    this.enabled = true,
+    this.scale = 1.02,
+    this.lift = 1.5,
+  });
+
+  final Widget child;
+  final bool enabled;
+  final double scale;
+  final double lift;
+
+  @override
+  State<GameHover> createState() => _GameHoverState();
+}
+
+class _GameHoverState extends State<GameHover> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = widget.enabled && _hover;
+    return MouseRegion(
+      cursor: widget.enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) {
+        if (widget.enabled && !_hover) setState(() => _hover = true);
+      },
+      onExit: (_) {
+        if (_hover) setState(() => _hover = false);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, on ? -widget.lift : 0, 0),
+        child: AnimatedScale(
+          scale: on ? widget.scale : 1,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+/// 标记「排行榜」入口：横屏左栏已有常驻榜单时，GameScaffold 从按钮行移除。
+class GameRankAction extends StatelessWidget {
+  const GameRankAction({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
 }
 
 /// 操作按钮（web .g-btn / .g-btn.primary）

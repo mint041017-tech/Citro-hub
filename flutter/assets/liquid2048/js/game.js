@@ -1246,6 +1246,7 @@
       );
       this.decorateBlob(blob);
       blob.visualPop = 0.34;
+      blob.jiggle = 1;
       this.world.add(blob);
       this.world.containAll();
       this.world.separateAll(4);
@@ -1720,30 +1721,161 @@
       return blob.boundaryPoints();
     }
 
+    // 挤压程度 → 可鼓出的最大幅度（渲染层）
+    bulgeAmpFor(blob) {
+      let contacts = 0;
+      for (let i = 0; i < this.world.blobs.length; i++) {
+        const other = this.world.blobs[i];
+        if (other === blob) continue;
+        const dx = other.cx - blob.cx;
+        const dy = other.cy - blob.cy;
+        if (Math.hypot(dx, dy) < blob.visR + other.visR + 2.5) contacts++;
+      }
+      const areaLoss = Math.max(0, 1 - blob.area / blob.targetArea);
+      const squeeze = Math.min(1, contacts / 3 + areaLoss * 2.5);
+      return squeeze * Math.min(blob.R * 0.28, 12);
+    }
+
+    // 浓稠液体：向内收的两瓣晃动 + 顺速度缓慢拉长 + 缓慢流动的三瓣边缘；
+    // 轮廓只向内收，回弹漂浮时才轻微倾斜，绝不外扩穿透
+    visualBlobPoints(blob) {
+      const points = this.blobOuterPoints(blob);
+      const faceSeed = (blob.face && blob.face.seed) || 0;
+      const ripple = Math.max(0.6, Math.min(2.4, blob.R * 0.03));
+      const jiggle = Math.max(0, Math.min(1.2, blob.jiggle || 0));
+      const jiggleAmp = jiggle * Math.min(blob.R * 0.13, 8);
+      const jigglePhase = blob.jigglePhase || 0;
+      const jiggleDir = blob.jiggleDir === undefined ? -Math.PI / 2 : blob.jiggleDir;
+      const idleWave = Math.cos(this.time * 0.6 + faceSeed * 0.017);
+      const duangWave = 0.75 + 0.25 * Math.cos(jigglePhase);
+
+      // 形状跟随带滞后的流速：浓稠液体拉长后要过一会才回缩
+      const avx = blob.flowVx || 0;
+      const avy = blob.flowVy || 0;
+      const flow = Math.min(1, Math.hypot(avx, avy) / 520);
+      const flowAmp = flow * Math.min(blob.R * 0.36, 18);
+      const flowDir = Math.atan2(avy, avx);
+      const flowAxis = flowDir + Math.PI / 2;
+      const trailAmp = flow * Math.min(blob.R * 0.2, 10);
+      const float = Math.max(0, Math.min(1, (blob.floatT || 0) / 0.4));
+      const tilt = float * 0.06 * Math.sin(this.time * 1.3 + faceSeed * 0.02);
+      const cosT = Math.cos(tilt);
+      const sinT = Math.sin(tilt);
+      const liquidPhase = this.time * 0.35 + faceSeed * 0.03;
+
+      // 被挤压时往缝隙鼓出：鼓出量由到最近邻居/罐壁的余量封顶，绝不穿透
+      const bulgeAmp =
+        blob._bulgeAmp === undefined ? this.bulgeAmpFor(blob) : blob._bulgeAmp;
+      const neighbors = [];
+      for (let i = 0; i < this.world.blobs.length; i++) {
+        const other = this.world.blobs[i];
+        if (other === blob) continue;
+        const ox = other.cx - blob.cx;
+        const oy = other.cy - blob.cy;
+        const d = Math.hypot(ox, oy);
+        const touch = blob.visR + other.visR + 2.5;
+        if (d < touch + 16) {
+          const otherBulge =
+            other._bulgeAmp === undefined
+              ? this.bulgeAmpFor(other)
+              : other._bulgeAmp;
+          neighbors.push({
+            x: other.cx,
+            y: other.cy,
+            r: other.visR + otherBulge + 0.8,
+          });
+        }
+      }
+      const bounds = this.world.bounds;
+
+      for (let k = 0; k < points.length; k++) {
+        const pt = points[k];
+        const dx = pt.x - blob.cx;
+        const dy = pt.y - blob.cy;
+        const d = Math.hypot(dx, dy) || 1;
+        const angle = Math.atan2(dy, dx);
+        const idleLobe = Math.cos(angle * 2);
+        const duangLobe = Math.max(0, Math.cos(angle - jiggleDir));
+        const flowLobe = Math.max(0, Math.cos((angle - flowAxis) * 2));
+        const liquid =
+          Math.max(0, Math.cos(angle * 3 + liquidPhase)) * ripple * 0.9;
+        const trail =
+          Math.max(0, Math.cos(angle - (flowDir + Math.PI))) * trailAmp;
+        const wave =
+          Math.max(0, idleWave * idleLobe) * ripple +
+          duangWave * duangLobe * jiggleAmp +
+          flowLobe * flowAmp +
+          liquid +
+          trail;
+        let px = pt.x - (dx / d) * wave;
+        let py = pt.y - (dy / d) * wave;
+        if (tilt !== 0) {
+          const rx = px - blob.cx;
+          const ry = py - blob.cy;
+          px = blob.cx + rx * cosT - ry * sinT;
+          py = blob.cy + rx * sinT + ry * cosT;
+        }
+        if (bulgeAmp > 0.25) {
+          let free = Infinity;
+          for (let i = 0; i < neighbors.length; i++) {
+            const n = neighbors[i];
+            const gap = Math.hypot(px - n.x, py - n.y) - n.r;
+            if (gap < free) free = gap;
+          }
+          const wallGap =
+            Math.min(
+              px - bounds.left,
+              bounds.right - px,
+              py - bounds.top,
+              bounds.floor - py
+            ) - 0.6;
+          if (wallGap < free) free = wallGap;
+          if (free > 0.2) {
+            const rx = px - blob.cx;
+            const ry = py - blob.cy;
+            const rl = Math.hypot(rx, ry) || 1;
+            const push = Math.min(free, bulgeAmp);
+            px += (rx / rl) * push;
+            py += (ry / rl) * push;
+            if (push > (blob._bulgeUsed || 0)) blob._bulgeUsed = push;
+          }
+        }
+        pt.x = px;
+        pt.y = py;
+      }
+      return points;
+    }
+
     drawBlobs() {
       const blobs = this.world.blobs.slice().sort((a, b) => b.R - a.R);
+      const now = this.time;
+      const dt = Math.min(
+        0.05,
+        Math.max(0.001, now - (this._bulgeT || now - 1 / 60))
+      );
+      this._bulgeT = now;
+      const bulgeK = 1 - Math.exp(-2.0 * dt);
+      for (let i = 0; i < blobs.length; i++) {
+        blobs[i]._bulgeAmp = this.bulgeAmpFor(blobs[i]);
+        blobs[i]._bulgeUsed = 0;
+      }
+      // 第一遍算出每个果冻的实际鼓出量；第二遍按邻居实际鼓出预留，填缝更满，
+      // 且鼓出量按时间平滑，挤压/松开都像浓稠液体一样缓慢
+      for (let i = 0; i < blobs.length; i++) this.visualBlobPoints(blobs[i]);
+      for (let i = 0; i < blobs.length; i++) {
+        const actual = blobs[i]._bulgeUsed;
+        const drawn = blobs[i]._bulgeDraw || 0;
+        blobs[i]._bulgeDraw = drawn + (actual - drawn) * bulgeK;
+        blobs[i]._bulgeAmp = blobs[i]._bulgeDraw;
+      }
+      for (let i = 0; i < blobs.length; i++) {
+        blobs[i]._visPoints = this.visualBlobPoints(blobs[i]);
+      }
       for (let i = 0; i < blobs.length; i++) {
         const blob = blobs[i];
         if (blob.cx < -blob.R * 2 || blob.cx > this.W + blob.R * 2) continue;
 
-        const points = this.blobOuterPoints(blob);
-        const faceSeed = (blob.face && blob.face.seed) || 0;
-        const ripple = Math.max(0.7, Math.min(3.1, blob.R * 0.045));
-        for (let k = 0; k < points.length; k++) {
-          const pt = points[k];
-          const dx = pt.x - blob.cx;
-          const dy = pt.y - blob.cy;
-          const d = Math.hypot(dx, dy) || 1;
-          const wave =
-            (Math.sin(
-              this.time * 1.65 + k * 1.85 + faceSeed * 0.01
-            ) +
-              1) *
-            0.5 *
-            ripple;
-          pt.x -= (dx / d) * wave;
-          pt.y -= (dy / d) * wave;
-        }
+        const points = blob._visPoints;
         let radiusSum = 0;
         for (let k = 0; k < points.length; k++) {
           radiusSum += Math.hypot(
@@ -1771,13 +1903,17 @@
         let scale = 1;
         if (blob.visualPop > 0) {
           const t = 1 - blob.visualPop / 0.34;
-          scale = 1 + Math.sin(t * Math.PI) * 0.07;
+          scale = 1 + Math.sin(t * Math.PI) * 0.03;
         }
         let faceTilt = 0;
         if (blob.kinetic > 4) {
           let avgVx = 0;
           for (let k = 0; k < blob.n; k++) avgVx += blob.p[k].vx;
           faceTilt = clamp(avgVx / blob.n / 2600, -0.1, 0.1);
+        }
+        const floatAmt = Math.max(0, Math.min(1, (blob.floatT || 0) / 0.4));
+        if (floatAmt > 0) {
+          faceTilt += floatAmt * 0.05 * Math.sin(this.time * 1.3);
         }
 
         this.drawJelly(points, blob.cx, blob.cy, visualR, blob.level, {
@@ -1796,6 +1932,8 @@
       const opts = options || {};
       const def = levelDef(level);
       const scale = opts.scale === undefined ? 1 : opts.scale;
+      const scaleX = opts.scaleX === undefined ? scale : opts.scaleX;
+      const scaleY = opts.scaleY === undefined ? scale : opts.scaleY;
       const faceR = Math.max(4, opts.faceR || size * 0.8);
       const face = opts.face || {
         style: 0,
@@ -1806,9 +1944,9 @@
       const showFace = faceR > 16.5;
 
       ctx.save();
-      if (scale !== 1) {
+      if (scaleX !== 1 || scaleY !== 1) {
         ctx.translate(cx, cy);
-        ctx.scale(scale, scale);
+        ctx.scale(scaleX, scaleY);
         ctx.translate(-cx, -cy);
       }
 
@@ -1839,10 +1977,14 @@
         gradient.addColorStop(0.5, def.fill);
         gradient.addColorStop(1, shade(def.fill, -0.05));
       }
-      ctx.globalAlpha = 0.93;
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = gradient;
       ctx.fill();
       ctx.globalAlpha = 1;
+      // 湿边：黏液表面的高光轮廓
+      ctx.strokeStyle = "rgba(255,255,255,0.26)";
+      ctx.lineWidth = Math.max(1, size * 0.018);
+      ctx.stroke();
 
       ctx.save();
       ctx.clip();
@@ -2514,8 +2656,10 @@
         const angle = (i / n) * TAU;
         const wobble =
           1 +
-          Math.sin(this.time * 2.2 + i * 0.9 + phase) * 0.018 +
-          Math.cos(this.time * 1.7 + i * 1.4 + phase) * 0.012;
+          Math.sin(this.time * 2.2 + i * 0.9 + phase) *
+            (0.018 + (this.charging ? this.power : 0) * 0.022) +
+          Math.cos(this.time * 1.7 + i * 1.4 + phase) *
+            (0.012 + (this.charging ? this.power : 0) * 0.014);
         points.push({
           x: cx + Math.cos(angle) * radius * wobble,
           y: cy + Math.sin(angle) * radius * wobble,
@@ -2603,7 +2747,8 @@
       const pop = this.previewPop > 0
         ? 1 + Math.sin((1 - this.previewPop / 0.24) * Math.PI) * 0.09
         : 1;
-      const previewScale = (this.charging ? 0.96 + this.power * 0.05 : 1) * pop;
+      const charge = this.charging ? this.power : 0;
+      const previewScale = (this.charging ? 0.96 + charge * 0.05 : 1) * pop;
       const previewPoints = this.previewPoints(
         mx,
         my,
@@ -2612,6 +2757,8 @@
       );
       this.drawJelly(previewPoints, mx, my, radius, level, {
         scale: previewScale,
+        scaleX: previewScale * (1 + charge * 0.12),
+        scaleY: previewScale * (1 - charge * 0.08),
         faceR: radius * 0.8,
         face: this.activeFace || this.makeFace(),
         blink: false,

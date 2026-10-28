@@ -97,7 +97,7 @@ class SearchPage extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           for (final item in const [
-                            ('小游戏', '13 款原生小游戏'),
+                            ('小游戏', '15 款原生小游戏'),
                             ('资源库', 'Mod / 工具 / 外设驱动'),
                             ('食谱日记', '菜谱 / 冰箱 / 购物清单'),
                             ('Citro 社区', '动态 / 评论 / 消息'),

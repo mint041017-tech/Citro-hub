@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ 系统启动页：底色与 Flutter 启动插画边缘一致，避免先闪一块奶油色 -->
+<resources>
+    <style name="LaunchTheme" parent="android:Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">#FDFCF8</item>
+        <item name="android:statusBarColor">#FDFCF8</item>
+        <item name="android:navigationBarColor">#FDFCF8</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

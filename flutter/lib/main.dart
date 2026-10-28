@@ -323,8 +323,9 @@ class _SplashGateState extends State<SplashGate> {
       _booted = false;
       _error = '$e';
     }
-    // Windows 与 iPad 一样先完整展示启动插画，避免秒开时只闪一帧。
-    if (!kIsWeb && platform.isWindows) {
+    // Windows 与 iPad 一样先完整展示启动插画，避免秒开时只闪一帧；
+    // 安卓原生冷启动窗口没有插画，同样补足展示时间，否则一闪而过。
+    if (!kIsWeb && (platform.isWindows || platform.isAndroid)) {
       const minSplash = Duration(milliseconds: 1000);
       final elapsed = DateTime.now().difference(startedAt);
       if (elapsed < minSplash) {

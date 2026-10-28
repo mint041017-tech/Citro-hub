@@ -273,6 +273,24 @@ class GameSnakeView extends StatelessWidget {
       liveProgress: liveProgress,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
+      above: [_diffTabs(context)],
+      pills: [
+        GameScorePill(label: '分数', value: '$score', bump: score > 0),
+        GameScorePill(label: '最高分', value: best > 0 ? '$best' : '0'),
+      ],
+      actions: [
+        GameActionButton(
+          label: '新游戏',
+          icon: GameIcons.reset,
+          primary: true,
+          onTap: onNewGame,
+        ),
+        GameActionButton(
+          label: '排行榜',
+          icon: GameIcons.trophySimple,
+          onTap: onRank,
+        ),
+      ],
       boardGap: 0,
       board: LayoutBuilder(
         builder: (context, cons) {
@@ -304,10 +322,6 @@ class GameSnakeView extends StatelessWidget {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _diffTabs(context),
-              const SizedBox(height: 12),
-              _hud(context),
-              const SizedBox(height: 14),
               if (keyboard) ...[
                 _board(context, boardW),
                 const SizedBox(height: 8),
@@ -375,58 +389,33 @@ class GameSnakeView extends StatelessWidget {
   Widget _diffTab(BuildContext context, (String, String) item) {
     final c = context.c;
     final on = diff == item.$1;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onDiff == null ? null : () => onDiff!(item.$1),
-      child: Container(
-        width: 54,
-        height: 31,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: on ? c.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.transparent),
-        ),
-        child: Text(
-          item.$2,
-          style: TextStyle(
-            fontFamily: AppFonts.noto,
-            fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            height: 1.4,
-            color: on ? const Color(0xFF2E2C22) : c.ink2,
+    return GameHover(
+      enabled: onDiff != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onDiff == null ? null : () => onDiff!(item.$1),
+        child: Container(
+          width: 54,
+          height: 31,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? c.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.transparent),
+          ),
+          child: Text(
+            item.$2,
+            style: TextStyle(
+              fontFamily: AppFonts.noto,
+              fontFamilyFallback: AppFonts.bodyFallback,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.4,
+              color: on ? const Color(0xFF2E2C22) : c.ink2,
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  /// .g-hud：pills + actions 一行放不下时自动换行（web .g-hud flex-wrap），
-  /// 窄屏机型不会再把按钮挤出屏幕造成「不居中」的观感。
-  Widget _hud(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 9,
-      runSpacing: 8,
-      children: [
-        GameScorePill(label: '分数', value: '$score', bump: score > 0),
-        GameScorePill(label: '最高分', value: best > 0 ? '$best' : '0'),
-        GameActionButton(
-          label: '新游戏',
-          icon: GameIcons.reset,
-          primary: true,
-          height: 56.64,
-          onTap: onNewGame,
-        ),
-        GameActionButton(
-          label: '排行榜',
-          icon: GameIcons.trophySimple,
-          height: 56.64,
-          onTap: onRank,
-        ),
-      ],
     );
   }
 
@@ -541,20 +530,24 @@ class GameSnakeView extends StatelessWidget {
         top: row * step,
         width: cell,
         height: cell,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTurn == null ? null : () => onTurn!(dx, dy),
-          child: Container(
-            decoration: BoxDecoration(
-              color: c.surface2,
-              shape: BoxShape.circle,
-              border: Border.all(color: c.line2),
-            ),
-            child: Center(
-              child: AppIcon(
-                '<svg viewBox="0 0 24 24" fill="#000000">$path</svg>',
-                size: 26,
-                color: c.accentInk,
+        child: GameHover(
+          enabled: onTurn != null,
+          scale: 1.04,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTurn == null ? null : () => onTurn!(dx, dy),
+            child: Container(
+              decoration: BoxDecoration(
+                color: c.surface2,
+                shape: BoxShape.circle,
+                border: Border.all(color: c.line2),
+              ),
+              child: Center(
+                child: AppIcon(
+                  '<svg viewBox="0 0 24 24" fill="#000000">$path</svg>',
+                  size: 26,
+                  color: c.accentInk,
+                ),
               ),
             ),
           ),

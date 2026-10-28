@@ -137,7 +137,8 @@ class _CookPageState extends State<CookPage> {
           .toList();
       for (final r in recipes) {
         r.mine = true;
-        r.owner = _app?.user?.name;
+        // 收藏副本保留原作者；旧后端不返回 owner 时才回退成自己
+        if ((r.owner ?? '').trim().isEmpty) r.owner = _app?.user?.name;
       }
       final shop = ((j['shopping'] as List?) ?? [])
           .whereType<Map>()
@@ -1025,7 +1026,12 @@ class _CookPageState extends State<CookPage> {
                   ),
                   itemCount: list.length,
                   itemBuilder: (_, i) =>
-                      _recipeCard(context, list[i], tab == 'square'),
+                      _recipeCard(
+                        context,
+                        list[i],
+                        tab == 'square',
+                        cardWidth: cardWidth,
+                      ),
                 );
               },
             ),
@@ -1044,9 +1050,17 @@ class _CookPageState extends State<CookPage> {
 
   List<String> _pinned() => PrefsCook.pinned;
 
-  Widget _recipeCard(BuildContext context, Recipe r, bool square) {
+  Widget _recipeCard(
+    BuildContext context,
+    Recipe r,
+    bool square, {
+    double cardWidth = 0,
+  }) {
     final c = context.c;
     final pinned = _pinned().contains(r.id);
+    final authorMaxWidth = cardWidth > 0
+        ? math.max(56.0, math.min(96.0, cardWidth - 70))
+        : 96.0;
     return Pressable(
       onTap: () => _openDetail(r, square ? 'square' : 'mine'),
       onLongPress: !square && r.mine
@@ -1098,6 +1112,16 @@ class _CookPageState extends State<CookPage> {
                           cacheWidth: 540,
                           errorBuilder: (_, __, ___) =>
                               const SizedBox.shrink(),
+                        ),
+                      ),
+                    if (!square && r.fromOwner.isNotEmpty)
+                      Positioned(
+                        left: 6,
+                        top: 6,
+                        child: _ownerPill(
+                          context,
+                          r,
+                          maxWidth: authorMaxWidth,
                         ),
                       ),
                     Positioned(
@@ -1176,7 +1200,7 @@ class _CookPageState extends State<CookPage> {
     );
   }
 
-  Widget _ownerPill(BuildContext context, Recipe r) {
+  Widget _ownerPill(BuildContext context, Recipe r, {double maxWidth = 126}) {
     final c = context.c;
     final name = (r.owner != null && r.owner!.trim().isNotEmpty)
         ? r.owner!.trim()
@@ -1195,7 +1219,7 @@ class _CookPageState extends State<CookPage> {
       ),
     );
     return Container(
-      constraints: const BoxConstraints(maxWidth: 126),
+      constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.fromLTRB(3, 2, 8, 2),
       decoration: BoxDecoration(
         color: c.surface2.withAlpha(240),
@@ -1357,7 +1381,8 @@ class _CookPageState extends State<CookPage> {
                       final saved = await showCookEditor(context, r);
                       if (saved != null && mounted) {
                         saved.mine = true;
-                        saved.owner = context.app.user?.name;
+                        saved.owner = r.owner;
+                        saved.fromOwner = r.fromOwner;
                         setState(() {
                           mine.removeWhere((e) => e.id == saved.id);
                           mine.insert(0, saved);
@@ -1489,7 +1514,8 @@ class _CookPageState extends State<CookPage> {
                       final updated = await showDiaryDialog(context, r);
                       if (updated != null && mounted) {
                         updated.mine = true;
-                        updated.owner = context.app.user?.name;
+                        updated.owner = r.owner;
+                        updated.fromOwner = r.fromOwner;
                         setState(() {
                           final idx = mine.indexWhere(
                             (e) => e.id == updated.id,
@@ -1601,6 +1627,8 @@ class _CookPageState extends State<CookPage> {
   }
 
   Future<void> _collect(Recipe r) async {
+    final fromOwner = (r.owner ?? '').trim();
+    final me = context.app.user?.name;
     final copy = Recipe(
       name: r.name,
       emoji: r.emoji,
@@ -1623,12 +1651,16 @@ class _CookPageState extends State<CookPage> {
           .map((e) => CookStep(text: e.text, img: e.img, timer: e.timer))
           .toList(),
       note: r.note,
+      fromOwner: fromOwner,
       visibility: 'private',
     );
     try {
       final saved = await Api.saveRecipe(copy);
       saved.mine = true;
-      saved.owner = context.app.user?.name;
+      if (saved.fromOwner.isEmpty) saved.fromOwner = fromOwner;
+      if ((saved.owner ?? '').trim().isEmpty) {
+        saved.owner = saved.fromOwner.isNotEmpty ? saved.fromOwner : me;
+      }
       if (!mounted) return;
       setState(() {
         mine.insert(0, saved);

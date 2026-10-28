@@ -8,6 +8,7 @@ import 'package:web/web.dart' as web;
 
 import '../state/app_state.dart';
 import '../widgets/paper.dart';
+import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
     show
         GameActionButton,
@@ -180,12 +181,14 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       board: LayoutBuilder(
         builder: (context, cons) {
           final media = MediaQuery.sizeOf(context);
-          final wide = media.width >= 1100 && media.width > media.height;
-          final avail = cons.maxWidth.isFinite ? cons.maxWidth : 760.0;
-          final boardW = math.min(avail, 430.0);
-          final boardH = wide
-              ? math.min(720.0, math.max(400.0, media.height - 300))
-              : math.min(620.0, math.max(400.0, media.height - 420));
+          final avail = cons.maxWidth.isFinite
+              ? cons.maxWidth
+              : LiquidBoardMetrics.maxBoardWidth;
+          final boardW = LiquidBoardMetrics.boardWidth(avail);
+          final boardH = LiquidBoardMetrics.standardBoardHeight(
+            media,
+            MediaQuery.paddingOf(context),
+          );
           return SizedBox(
             width: boardW,
             height: boardH,

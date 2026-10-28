@@ -338,6 +338,9 @@ class Recipe {
   int updatedAt;
   String? owner;
   String? ownerAv;
+
+  /// 从食谱广场收藏时的原作者；自己写的食谱为空
+  String fromOwner;
   bool mine;
   int cookCount;
 
@@ -363,6 +366,7 @@ class Recipe {
     this.updatedAt = 0,
     this.owner,
     this.ownerAv,
+    this.fromOwner = '',
     this.mine = false,
     this.cookCount = 0,
   });
@@ -404,6 +408,7 @@ class Recipe {
     updatedAt: _asInt(j['updatedAt']),
     owner: j['owner']?.toString(),
     ownerAv: j['ownerAv']?.toString(),
+    fromOwner: '${j['fromOwner'] ?? ''}',
     mine: j['mine'] == true,
     cookCount: _asInt(j['cookCount']),
   );
@@ -425,6 +430,7 @@ class Recipe {
     'steps': steps.map((e) => e.toJson()).toList(),
     'note': note,
     'diary': diary.map((e) => e.toJson()).toList(),
+    'fromOwner': fromOwner,
     'visibility': visibility,
     'createdAt': createdAt,
   };

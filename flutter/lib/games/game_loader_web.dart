@@ -6,7 +6,6 @@ import 'g2048.dart' deferred as g2048;
 import 'gbrake_web.dart' deferred as gbrake;
 import 'gfeihua.dart' deferred as gfeihua;
 import 'gidiom.dart' deferred as gidiom;
-import 'gjigsaw.dart' deferred as gjigsaw hide JigsawModeX;
 import 'gjump.dart' deferred as gjump;
 import 'gliquid.dart' deferred as gliquid;
 import 'gmemory.dart' deferred as gmemory;
@@ -16,6 +15,7 @@ import 'gsheep.dart' deferred as gsheep;
 import 'gslide.dart' deferred as gslide;
 import 'gsnake.dart' deferred as gsnake;
 import 'gsudoku.dart' deferred as gsudoku;
+import 'knockwater/knockwater_page.dart' deferred as knockwater;
 
 Future<Widget> _loadPage(String key) async {
   switch (key) {
@@ -28,9 +28,6 @@ Future<Widget> _loadPage(String key) async {
     case 'gsudoku':
       await gsudoku.loadLibrary();
       return gsudoku.GameSudokuPage();
-    case 'gjigsaw':
-      await gjigsaw.loadLibrary();
-      return gjigsaw.GameJigsawPage();
     case 'gnono':
       await gnono.loadLibrary();
       return gnono.GameNonoPage();
@@ -61,6 +58,9 @@ Future<Widget> _loadPage(String key) async {
     case 'gliquid':
       await gliquid.loadLibrary();
       return gliquid.GameLiquidPage();
+    case 'gknockwater':
+      await knockwater.loadLibrary();
+      return knockwater.KnockwaterPage();
     default:
       return const _MissingGame();
   }

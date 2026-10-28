@@ -3,7 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-flutter build web --release --no-web-resources-cdn "$@"
+VERSION="$(awk '/^version:/{print $2; exit}' pubspec.yaml | cut -d+ -f1)"
+flutter build web --release --no-web-resources-cdn --dart-define=APP_VERSION="$VERSION" "$@"
 out="build/web"
 
 # The JS build only selects CanvasKit; these renderer payloads are never requested.

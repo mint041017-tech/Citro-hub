@@ -261,14 +261,29 @@ class GameNonoView extends StatelessWidget {
       liveProgress: liveProgress,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
-      hud: _NonoHud(
-        diff: diff,
-        seconds: seconds,
-        bestSeconds: bestSeconds,
-        onDiff: onDiff,
-        onNew: onNew,
-        onRank: onRank,
-      ),
+      above: [_NonoTabs(value: diff, onChanged: onDiff)],
+      pills: [
+        GameScorePill(label: '用时', value: gameFmtDuration(seconds)),
+        GameScorePill(
+          label: '最佳',
+          value: bestSeconds > 0 ? gameFmtDuration(bestSeconds) : '--',
+        ),
+      ],
+      actions: [
+        _NonoButton(
+          label: '新游戏',
+          icon: GameIcons.refresh,
+          primary: true,
+          onTap: onNew,
+        ),
+        GameRankAction(
+          child: _NonoButton(
+            label: '排行榜',
+            icon: GameIcons.trophy,
+            onTap: onRank,
+          ),
+        ),
+      ],
       board: _NonoBoard(
         size: size,
         grid: grid,
@@ -284,67 +299,6 @@ class GameNonoView extends StatelessWidget {
         onMark: onMark,
         onRetry: onRetry,
       ),
-    );
-  }
-}
-
-/// HUD：4 + 难度条 33 + 12 + 56.64 单行 + 12（与 web 竖向链条一致）。
-class _NonoHud extends StatelessWidget {
-  const _NonoHud({
-    required this.diff,
-    required this.seconds,
-    required this.bestSeconds,
-    this.onDiff,
-    this.onNew,
-    this.onRank,
-  });
-
-  final String diff;
-  final int seconds;
-  final int bestSeconds;
-  final ValueChanged<String>? onDiff;
-  final VoidCallback? onNew;
-  final VoidCallback? onRank;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 4),
-        _NonoTabs(value: diff, onChanged: onDiff),
-        const SizedBox(height: 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 9,
-          runSpacing: 8,
-          children: [
-            GameScorePill(label: '用时', value: gameFmtDuration(seconds)),
-            GameScorePill(
-              label: '最佳',
-              value: bestSeconds > 0 ? gameFmtDuration(bestSeconds) : '--',
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _NonoButton(
-                  label: '新游戏',
-                  icon: GameIcons.refresh,
-                  primary: true,
-                  onTap: onNew,
-                ),
-                const SizedBox(width: 8),
-                _NonoButton(
-                  label: '排行榜',
-                  icon: GameIcons.trophy,
-                  onTap: onRank,
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 11.4),
-      ],
     );
   }
 }
@@ -390,27 +344,30 @@ class _NonoTabs extends StatelessWidget {
     (String, String, double) it,
   ) {
     final on = it.$1 == value;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onChanged?.call(it.$1),
-      child: Container(
-        width: it.$3,
-        height: 31,
-        alignment: Alignment.center,
-        decoration: on
-            ? BoxDecoration(
-                color: c.accent,
-                borderRadius: BorderRadius.circular(999),
-              )
-            : null,
-        child: Text(
-          it.$2,
-          style: TextStyle(
-            fontFamily: AppFonts.noto,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
-            height: 1.4,
+    return GameHover(
+      enabled: onChanged != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onChanged?.call(it.$1),
+        child: Container(
+          width: it.$3,
+          height: 31,
+          alignment: Alignment.center,
+          decoration: on
+              ? BoxDecoration(
+                  color: c.accent,
+                  borderRadius: BorderRadius.circular(999),
+                )
+              : null,
+          child: Text(
+            it.$2,
+            style: TextStyle(
+              fontFamily: AppFonts.noto,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
+              height: 1.4,
+            ),
           ),
         ),
       ),
@@ -436,68 +393,71 @@ class _NonoButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: CssShadowLayer(
-        radius: 999,
-        shadows: primary
-            ? const [
-                CssShadowSpec(
-                  color: Color(0xA694530A),
-                  offset: Offset(0, 11),
-                  blur: 22,
-                  spread: -12,
-                ),
-              ]
-            : const [
-                CssShadowSpec(
-                  color: Color(0x803C301A),
-                  offset: Offset(0, 4),
-                  blur: 12,
-                  spread: -8,
-                ),
-              ],
-        child: SizedBox(
-          width: 103.73,
-          height: 56.64,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: primary
-                  ? null
-                  : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
-              gradient: primary
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-                    )
-                  : null,
-              border: Border.all(
-                color: primary
-                    ? const Color(0x2E94530A)
-                    : (c.dark ? c.line2 : const Color(0x294A3A22)),
-              ),
-            ),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  gameIcon(icon, size: 15, color: fg),
-                  const SizedBox(width: 7),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: .26,
-                      color: fg,
-                      height: 1.2,
-                    ),
+    return GameHover(
+      enabled: onTap != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: CssShadowLayer(
+          radius: 999,
+          shadows: primary
+              ? const [
+                  CssShadowSpec(
+                    color: Color(0xA694530A),
+                    offset: Offset(0, 11),
+                    blur: 22,
+                    spread: -12,
+                  ),
+                ]
+              : const [
+                  CssShadowSpec(
+                    color: Color(0x803C301A),
+                    offset: Offset(0, 4),
+                    blur: 12,
+                    spread: -8,
                   ),
                 ],
+          child: SizedBox(
+            width: 103.73,
+            height: 56.64,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: primary
+                    ? null
+                    : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
+                gradient: primary
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
+                      )
+                    : null,
+                border: Border.all(
+                  color: primary
+                      ? const Color(0x2E94530A)
+                      : (c.dark ? c.line2 : const Color(0x294A3A22)),
+                ),
+              ),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    gameIcon(icon, size: 15, color: fg),
+                    const SizedBox(width: 7),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: AppFonts.noto,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .26,
+                        color: fg,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -911,46 +871,49 @@ class _NonoRetryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const fg = Color(0xFF3B2A10);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: CssShadowLayer(
-        radius: 999,
-        shadows: const [
-          CssShadowSpec(
-            color: Color(0xA694530A),
-            offset: Offset(0, 11),
-            blur: 22,
-            spread: -12,
-          ),
-        ],
-        child: SizedBox(
-          height: 42,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-              ),
-              border: Border.all(color: const Color(0x2E94530A)),
+    return GameHover(
+      enabled: onTap != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: CssShadowLayer(
+          radius: 999,
+          shadows: const [
+            CssShadowSpec(
+              color: Color(0xA694530A),
+              offset: Offset(0, 11),
+              blur: 22,
+              spread: -12,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              // widthFactor:1 —— 没有它 Center 会撑满浮层宽度，
-              // 按钮被拉成整条棋盘宽（web 是 inline-flex 内容自适应）。
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  '再来一局',
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .26,
-                    color: fg,
-                    height: 1.2,
+          ],
+          child: SizedBox(
+            height: 42,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
+                ),
+                border: Border.all(color: const Color(0x2E94530A)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                // widthFactor:1 —— 没有它 Center 会撑满浮层宽度，
+                // 按钮被拉成整条棋盘宽（web 是 inline-flex 内容自适应）。
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    '再来一局',
+                    style: TextStyle(
+                      fontFamily: AppFonts.noto,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: .26,
+                      color: fg,
+                      height: 1.2,
+                    ),
                   ),
                 ),
               ),

@@ -10,6 +10,7 @@ import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/paper.dart';
+import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
     show
         GameActionButton,
@@ -251,7 +252,8 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.sizeOf(context);
-    final standard = media.width >= 1100 && media.width > media.height;
+    // 与 Web 的 GameScaffold 判定保持一致：横屏一律标准壳，同窗口同罐子。
+    final standard = media.width > media.height;
     _syncShellMode(standard);
     return standard ? _buildStandardShell(context) : _buildPhoneShell(context);
   }
@@ -278,9 +280,30 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
             ),
           ),
           Expanded(
-            child: platform.isTest
-                ? _testBody(context)
-                : _webPanel(context),
+            child: LayoutBuilder(
+              builder: (context, cons) {
+                final media = MediaQuery.sizeOf(context);
+                final boardW = LiquidBoardMetrics.boardWidth(
+                  math.min(
+                    cons.maxWidth,
+                    media.width - LiquidBoardMetrics.sidePad * 2,
+                  ),
+                );
+                final boardH = LiquidBoardMetrics.compactBoardHeight(
+                  media,
+                  MediaQuery.paddingOf(context),
+                );
+                return Center(
+                  child: SizedBox(
+                    width: boardW,
+                    height: boardH,
+                    child: platform.isTest
+                        ? _testBody(context)
+                        : _webPanel(context),
+                  ),
+                );
+              },
+            ),
           ),
           if (!platform.isTest)
             SafeArea(top: false, child: GameLiveBar(list: _live)),
@@ -326,9 +349,14 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       board: LayoutBuilder(
         builder: (context, cons) {
           final media = MediaQuery.sizeOf(context);
-          final avail = cons.maxWidth.isFinite ? cons.maxWidth : 760.0;
-          final boardW = math.min(avail, 430.0);
-          final boardH = math.min(720.0, math.max(400.0, media.height - 300));
+          final avail = cons.maxWidth.isFinite
+              ? cons.maxWidth
+              : LiquidBoardMetrics.maxBoardWidth;
+          final boardW = LiquidBoardMetrics.boardWidth(avail);
+          final boardH = LiquidBoardMetrics.standardBoardHeight(
+            media,
+            MediaQuery.paddingOf(context),
+          );
           return SizedBox(
             width: boardW,
             height: boardH,

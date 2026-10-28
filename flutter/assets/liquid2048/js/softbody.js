@@ -135,6 +135,15 @@
       this.thinTime = 0;
       this.aboveMouthTime = 0;
 
+      // 浓稠液体：形变只驱动渲染，不参与碰撞
+      this.jiggle = 0;
+      this.jigglePhase = Math.random() * TAU;
+      this.jiggleDir = -Math.PI / 2;
+      this.floatT = 0;
+      this.flowVx = 0;
+      this.flowVy = 0;
+      this.wasContact = false;
+
       this.blinkIn = 1.8 + Math.random() * 5.2;
       this.blinkFor = 0;
 
@@ -250,12 +259,16 @@
       const p = this.p;
       this.stepCx = this.cx;
       this.stepCy = this.cy;
+      const floating = this.floatT > 0 && !this.contact;
       this.contact = false;
+      // 太空浮动：刚离开支撑面的一小段时间内减重力，回弹弧线更轻更飘
+      const g = floating ? gravity * 0.55 : gravity;
+      if (this.floatT > 0) this.floatT = Math.max(0, this.floatT - h);
       for (let i = 0; i < this.n; i++) {
         const pt = p[i];
         pt.px = pt.x;
         pt.py = pt.y;
-        pt.vy += gravity * h;
+        pt.vy += g * h;
         pt.vx *= 0.9994;
         pt.vy *= 0.9994;
         pt.x += pt.vx * h;
@@ -417,12 +430,19 @@
       const nearWall =
         this.cx - this.R <= bounds.left + 6 ||
         this.cx + this.R >= bounds.right - 6;
-      const approxSpeed = Math.hypot(this.averageVx(), this.averageVy());
-      const slowNear = (nearFloor || nearWall) && approxSpeed < 420;
+      const approxVx = this.averageVx();
+      const approxVy = this.averageVy();
+      const approxSpeed = Math.hypot(approxVx, approxVy);
+      // 上升阶段（刚回弹）不算“贴地”，否则接触阻尼会把弹起吃掉
+      const rising = approxVy < -40;
+      const slowNear =
+        (nearFloor || nearWall) && approxSpeed < 420 && !rising;
       const effectiveContact = this.contact || slowNear;
       const contactDamping = effectiveContact ? (smallBlob ? 0.9955 : 0.9975) : 1;
       const cap = speedLimit || 2600;
       const maxSpeed = effectiveContact && smallBlob ? cap * 0.54 : cap;
+      let wallImpact = 0;
+      let wallDir = -Math.PI / 2;
 
       for (let i = 0; i < n; i++) {
         const pt = p[i];
@@ -438,14 +458,28 @@
           (pt.hit & 3) !== 0 &&
           (pt.x <= bounds.left + this.cr + 1.2 ||
             pt.x >= bounds.right - this.cr - 1.2);
-        const rebound = smallBlob ? 0.14 : 0.09;
+        const rebound = smallBlob ? 0.02 : 0.01;
         if (atFloor) {
+          if (incomingVy > 200 && incomingVy > wallImpact) {
+            wallImpact = incomingVy;
+            wallDir = -Math.PI / 2;
+          }
           vy = incomingVy > 90 ? -incomingVy * rebound : 0;
           vx *= 0.99;
         } else if (atWall) {
+          const ax = Math.abs(incomingVx);
+          if (ax > 200 && ax > wallImpact) {
+            wallImpact = ax;
+            wallDir =
+              pt.x <= bounds.left + this.cr + 1.2 ? 0 : Math.PI;
+          }
           vx = Math.abs(incomingVx) > 80 ? -incomingVx * rebound * 0.8 : 0;
           vy *= 0.999;
         } else if (atCeil) {
+          if (incomingVy < -200 && -incomingVy > wallImpact) {
+            wallImpact = -incomingVy;
+            wallDir = Math.PI / 2;
+          }
           vy = incomingVy < -80 ? -incomingVy * rebound * 0.8 : 0;
         }
         const floorContact = atFloor || (nearFloor && Math.hypot(vx, vy) < 420);
@@ -516,6 +550,33 @@
       }
 
       this.kinetic = kineticSum / n;
+      // 黏稠：形状跟随速度但有明显滞后，停下后缓慢回缩
+      const flowK = 1 - Math.exp(-1.7 * h);
+      this.flowVx += (sumVx / n - this.flowVx) * flowK;
+      this.flowVy += (sumVy / n - this.flowVy) * flowK;
+      if (wallImpact > 0) {
+        this.jiggle = Math.max(this.jiggle, Math.min(1, wallImpact / 900));
+        this.jiggleDir = wallDir;
+        // 落地时先卸掉下落的拉长，再慢慢摊开（splat）
+        this.flowVx *= 0.4;
+        this.flowVy *= 0.4;
+      }
+      const touching = this.contact || effectiveContact;
+      if (touching && !this.wasContact) {
+        const impact = Math.min(1, approxSpeed / 650);
+        if (impact > 0.25 && impact > this.jiggle) {
+          this.jiggle = impact;
+          this.jiggleDir = -Math.PI / 2;
+        }
+      }
+      if (!this.contact && approxVy < -260) {
+        this.floatT = Math.max(this.floatT, 0.35);
+      } else if (touching) {
+        this.floatT = 0;
+      }
+      this.wasContact = touching;
+      this.jiggle *= Math.exp(-(this.isSmall ? 0.75 : 0.6) * h);
+      this.jigglePhase += h * (this.isSmall ? 2.5 : 2.1);
       this.age += h;
       if (this.compactness < 0.42 || this.area < this.targetArea * 0.3) {
         this.thinTime += h;

@@ -885,31 +885,11 @@ class GameJumpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final hud = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         GameScorePill(label: '分数', value: '$score'),
         const SizedBox(width: 9),
         GameScorePill(label: '最高分', value: '$best'),
-        const SizedBox(width: 9),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GameActionButton(
-              label: '新游戏',
-              icon: GameIcons.reset,
-              primary: true,
-              height: 56.64,
-              onTap: onNew,
-            ),
-            const SizedBox(width: 8),
-            GameActionButton(
-              label: '排行榜',
-              icon: GameIcons.trophy,
-              height: 56.64,
-              onTap: onRank,
-            ),
-          ],
-        ),
       ],
     );
 
@@ -1000,6 +980,15 @@ class GameJumpView extends StatelessWidget {
       gameKey: 'gjump',
       title: '跳一跳',
       hud: hud,
+      actions: [
+        GameActionButton(
+          label: '新游戏',
+          icon: GameIcons.reset,
+          primary: true,
+          onTap: onNew,
+        ),
+        GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
+      ],
       boardGap: 18,
       board: board,
       liveProgress: liveProgress,

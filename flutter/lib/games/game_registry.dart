@@ -27,12 +27,6 @@ const kGameCards = <GameCardData>[
     gradient: _gOrange,
     art: _artSudoku,
   ),
-  GameCardData(
-    key: 'gjigsaw',
-    title: '异形数独',
-    gradient: _gGreen,
-    art: _artJigsaw,
-  ),
   GameCardData(key: 'gnono', title: '数织', gradient: _gGreen, art: _artNono),
   GameCardData(
     key: 'gslide',
@@ -63,6 +57,12 @@ const kGameCards = <GameCardData>[
     gradient: _gMint,
     art: _artLiquid,
   ),
+  GameCardData(
+    key: 'gknockwater',
+    title: '铃渡',
+    gradient: _gJade,
+    art: _artKnockwater,
+  ),
 ];
 
 List<Color> _gOrange(CitroColors c) => const [
@@ -88,6 +88,10 @@ List<Color> _gTeal(CitroColors c) => const [
 List<Color> _gMint(CitroColors c) => const [
   Color(0x30A9E5C8),
   Color(0x18FFC3D6),
+];
+List<Color> _gJade(CitroColors c) => const [
+  Color(0x2A2E6B62),
+  Color(0x16143F3D),
 ];
 
 Widget _tile(
@@ -617,6 +621,116 @@ Widget _artLiquid(BuildContext context) => SizedBox(
   child: CustomPaint(painter: _LiquidJarPainter(context.c)),
 );
 
+Widget _artKnockwater(BuildContext context) => SizedBox(
+  width: 62,
+  height: 48,
+  child: CustomPaint(painter: _KnockwaterArtPainter(context.c)),
+);
+
+/// 青玉水墨小卡：一汪深潭、三片花瓣、湾心与一枚水铃。
+class _KnockwaterArtPainter extends CustomPainter {
+  _KnockwaterArtPainter(this.c);
+
+  final CitroColors c;
+
+  void _petal(Canvas canvas, Offset at, double angle, double scale) {
+    canvas.save();
+    canvas.translate(at.dx, at.dy);
+    canvas.rotate(angle);
+    final path = Path()
+      ..moveTo(0, -4.6 * scale)
+      ..cubicTo(3.2 * scale, -2.6 * scale, 3.4 * scale, 1.6 * scale, 0, 4.2 * scale)
+      ..cubicTo(-3.4 * scale, 1.6 * scale, -3.2 * scale, -2.6 * scale, 0, -4.6 * scale)
+      ..close();
+    canvas.drawPath(path, Paint()..color = const Color(0xFFFFB69A));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.7
+        ..color = const Color(0x99C96B4E),
+    );
+    canvas.restore();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pond = Rect.fromCenter(
+      center: Offset(size.width * 0.5, size.height * 0.52),
+      width: size.width - 5,
+      height: size.height - 7,
+    );
+    canvas.drawOval(
+      pond,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF245B55), Color(0xFF123F3D), Color(0xFF071F1E)],
+          stops: <double>[0, 0.55, 1],
+        ).createShader(pond),
+    );
+    canvas.drawOval(
+      pond,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = const Color(0x73A9F5E6),
+    );
+
+    for (var i = 1; i <= 3; i++) {
+      final ripple = Rect.fromCenter(
+        center: Offset(size.width * 0.36, size.height * 0.56),
+        width: 9.0 * i,
+        height: 4.4 * i,
+      );
+      canvas.drawOval(
+        ripple,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7
+          ..color = const Color(0x40A9F5E6),
+      );
+    }
+
+    final bay = Offset(size.width * 0.73, size.height * 0.58);
+    canvas.drawCircle(bay, 5.6, Paint()..color = const Color(0x33E3B878));
+    canvas.drawCircle(
+      bay,
+      5.6,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xA6E3B878),
+    );
+
+    _petal(canvas, Offset(size.width * 0.46, size.height * 0.40), -0.55, 1);
+    _petal(canvas, Offset(size.width * 0.55, size.height * 0.70), 0.7, 0.9);
+    _petal(canvas, Offset(size.width * 0.60, size.height * 0.44), 1.9, 0.8);
+
+    final bell = Offset(size.width * 0.30, size.height * 0.64);
+    canvas.drawCircle(bell, 4.6, Paint()..color = const Color(0x33E3B878));
+    canvas.drawCircle(bell, 2.5, Paint()..color = const Color(0xFFF2E9D8));
+    canvas.drawCircle(
+      bell,
+      2.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..color = c.accentInk,
+    );
+    canvas.drawCircle(
+      Offset(bell.dx, bell.dy + 3.4),
+      0.9,
+      Paint()..color = c.accentInk,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _KnockwaterArtPainter oldDelegate) =>
+      oldDelegate.c != c;
+}
+
 class _LiquidJarPainter extends CustomPainter {
   _LiquidJarPainter(this.c);
 
@@ -731,54 +845,3 @@ class _LiquidJarPainter extends CustomPainter {
   bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => false;
 }
 
-Widget _artJigsaw(BuildContext context) {
-  final c = context.c;
-  final colors = [
-    c.accent.withAlpha(150),
-    c.mint.withAlpha(150),
-    c.accentLt.withAlpha(170),
-    c.stamp.withAlpha(90),
-    c.accent2.withAlpha(120),
-  ];
-  const regions = [
-    0, 0, 0, 1, 1, //
-    0, 0, 1, 1, 1, //
-    2, 2, 2, 3, 3, //
-    2, 2, 2, 3, 3, //
-    2, 2, 4, 4, 4, //
-  ];
-  const values = {0: '5', 6: '', 12: '3', 19: '1', 24: '2'};
-  return Container(
-    width: 40,
-    height: 40,
-    padding: const EdgeInsets.all(2),
-    decoration: BoxDecoration(
-      color: c.surface2.withAlpha(160),
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: GridView.count(
-      crossAxisCount: 5,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 1,
-      crossAxisSpacing: 1,
-      children: [
-        for (var i = 0; i < 25; i++)
-          Container(
-            decoration: BoxDecoration(
-              color: colors[regions[i]],
-              borderRadius: BorderRadius.circular(1.5),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              values[i] ?? '',
-              style: const TextStyle(
-                fontSize: 5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF4E4A40),
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
-}
