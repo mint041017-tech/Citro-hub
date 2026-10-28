@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "1.9.2",
-  "build_number": "1902",
-  "build_id": "e77267b92bbf86e94f9e44a5ea195c69",
-  "file": "Citro-web-1.9.2.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.2.zip",
-  "size": 21794857,
-  "sha256": "c1d47bae96c7e12d973be154a5a925bd9d0f0b5acc4f55a8f643577b554f3a68",
-  "published_at": "2026-10-28T10:58:43Z",
-  "notes": "1.9.2：咕噜果冻铺浓稠液体手感、四端罐子大小统一；食谱广场收藏保留原作者"
+  "version": "1.9.3",
+  "build_number": "1903",
+  "build_id": "1acab652ead1a177ef20db4244ab92d3",
+  "file": "Citro-web-1.9.3.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.3.zip",
+  "size": 21794584,
+  "sha256": "61a402598ef86e74f42d40128c380793fb64c5a0d3c11143f79be20e7592ad01",
+  "published_at": "2026-10-28T11:23:48Z",
+  "notes": "1.9.3：资源库与 Web 首页小工具新增 MsLab（毫秒实验室）无畏契约灵敏度调试"
 }

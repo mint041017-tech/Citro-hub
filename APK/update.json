@@ -1,13 +1,11 @@
 {
-  "version": "1.9.2",
-  "versionCode": 1902,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v1.9.2-release.apk",
+  "version": "1.9.3",
+  "versionCode": 1903,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v1.9.3-release.apk",
   "size": 84270122,
   "notes": [
-    "咕噜果冻铺改为浓稠液体手感：下落拉长、落地缓慢摊开、低回弹，受挤压时向缝隙鼓出",
-    "咕噜果冻铺 Android / Windows / Web 罐子大小统一，同一窗口观感一致",
-    "Android 启动页补足展示时间，冷启动不再一闪而过，Android 12 启动页配色统一",
-    "食谱广场收藏到食谱库后保留原作者，食谱卡片左上角与详情页继续显示作者"
+    "资源库新增 MsLab（毫秒实验室）无畏契约灵敏度调试工具",
+    "Web 桌面首页与游戏页小工具区同步加入 MsLab"
   ],
   "publishedAt": "2026-10-28",
   "force": false

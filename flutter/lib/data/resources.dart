@@ -127,6 +127,17 @@ const List<ToolItem> kTools = [
     versions: const [],
   ),
   ToolItem(
+    name: "MsLab",
+    desc: "毫秒实验室 · 无畏契约灵敏度调试",
+    section: "游戏工具",
+    icon:
+        "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v4l2.5 1.5\"/><path d=\"M12 1v3M12 20v3M1 12h3M20 12h3\"/>",
+    hash: null,
+    url: "https://mslab.gg/",
+    warn: null,
+    versions: const [],
+  ),
+  ToolItem(
     name: "瞄准专家",
     desc: "无畏契约预瞄架枪训练地图",
     section: "游戏工具",

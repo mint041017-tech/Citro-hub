@@ -3,7 +3,7 @@
 > 代码、工程文件、权限文案、图标、启动屏、隐私清单、通知/定位 Dart 适配已经完成。
 > 下面这些步骤依赖 macOS、Xcode、Apple 签名与真机，Windows 无法代替。
 >
-> 截至 2026-10-28：版本已升到 **1.9.2+1902**（pubspec 为唯一版本源，Runner/TimerWidget 均用
+> 截至 2026-10-28：版本已升到 **1.9.3+1903**（pubspec 为唯一版本源，Runner/TimerWidget 均用
 > `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）；1.9.2 的共享 Flutter 层、资源与权限文案已完成，
 > `flutter analyze` 改动文件无 error/warning，Android release / Windows / Web 构建通过。
 > **iOS 的 Xcode 编译、签名和真机运行仍未在 Mac 上验证**，第一次 Mac 构建可能还需要处理 Xcode/CocoaPods 版本差异。
@@ -68,7 +68,7 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=1.9.2
+  --dart-define=APP_VERSION=1.9.3
 ```
 
 手动构建时将 `APP_VERSION` 与 `pubspec.yaml` 的版本号保持一致。
@@ -126,5 +126,5 @@ flutter build ipa --release --export-method app-store \
 
 ## 6. 版本号规则
 
-- `pubspec.yaml` 的 `version: 1.9.2+1902` 决定 iOS `CFBundleShortVersionString` / `CFBundleVersion`。
+- `pubspec.yaml` 的 `version: 1.9.3+1903` 决定 iOS `CFBundleShortVersionString` / `CFBundleVersion`。
 - 每次上传 App Store Connect 必须递增 build number（+ 后面的数字）；仅改代码不升 build number 会被拒绝。

@@ -203,6 +203,16 @@ class WebGameToolsRow extends StatelessWidget {
           title: '视野live',
         ),
       ),
+      _WebGameTool(
+        title: 'MsLab',
+        desc: '毫秒灵敏度调试',
+        icon:
+            '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
+        background: c.noteG,
+        foreground: c.mintInk,
+        onTap: () =>
+            openCitroPage(context, 'https://mslab.gg/', title: 'MsLab'),
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
