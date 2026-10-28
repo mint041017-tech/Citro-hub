@@ -3,11 +3,11 @@
   "app_name": "citro",
   "version": "1.9.2",
   "build_number": "1902",
-  "build_id": "2d7b6eabef4db388f2338a1805bdd746",
+  "build_id": "e77267b92bbf86e94f9e44a5ea195c69",
   "file": "Citro-web-1.9.2.zip",
   "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.2.zip",
-  "size": 21794794,
-  "sha256": "4db37452887905a83b5a1475c61a5cb8bb34646483096c9a32297e5a415feab6",
-  "published_at": "2026-10-28T10:45:08Z",
+  "size": 21794857,
+  "sha256": "c1d47bae96c7e12d973be154a5a925bd9d0f0b5acc4f55a8f643577b554f3a68",
+  "published_at": "2026-10-28T10:58:43Z",
   "notes": "1.9.2：咕噜果冻铺浓稠液体手感、四端罐子大小统一；食谱广场收藏保留原作者"
 }
