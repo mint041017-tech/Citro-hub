@@ -3,11 +3,11 @@
   "app_name": "citro",
   "version": "1.9.3",
   "build_number": "1903",
-  "build_id": "1acab652ead1a177ef20db4244ab92d3",
+  "build_id": "6d5a0eee8b9b71524bb1bbe9f0a29e40",
   "file": "Citro-web-1.9.3.zip",
   "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.3.zip",
-  "size": 21794584,
-  "sha256": "61a402598ef86e74f42d40128c380793fb64c5a0d3c11143f79be20e7592ad01",
-  "published_at": "2026-10-28T11:23:48Z",
-  "notes": "1.9.3：资源库与 Web 首页小工具新增 MsLab（毫秒实验室）无畏契约灵敏度调试"
+  "size": 21794634,
+  "sha256": "df2fcdd149618851ab2bf5f3b8ca0b185b1d7dd3b24a7520f4c6ba74235593c9",
+  "published_at": "2026-10-28T11:38:16Z",
+  "notes": "1.9.3：资源库新增 MsLab（毫秒实验室）无畏契约灵敏度调试；Web 桌面首页小工具区同步加入"
 }
