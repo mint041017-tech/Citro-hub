@@ -85,5 +85,7 @@
 	<string>用于保存你选择的图片。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>用于获取你所在城市的天气；拒绝后仍可使用默认城市。</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>用于识别你所在城市并提供当地天气。</string>
 </dict>
 </plist>

@@ -5,6 +5,3 @@ const bool isMacOS = false;
 const bool isLinux = false;
 const bool isDesktop = false;
 const bool isTest = false;
-const String compileAiKey = '';
-
-String? platformEnvironment(String name) => null;

@@ -117,18 +117,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
     }
     _input.clear();
     _error = null;
-    if (!AiService.available) {
-      setState(() {
-        _messages.add(_ChatMessage(user: true, text: text));
-        if (deedMsg != null) {
-          _messages.add(deedMsg);
-        } else {
-          _error = 'AI 暂未配置';
-        }
-      });
-      _scrollToEnd();
-      return;
-    }
     final assistant = _ChatMessage(user: false, text: '', pending: true);
     setState(() {
       _messages.add(_ChatMessage(user: true, text: text));
@@ -521,11 +509,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 context.app.loggedIn
                     ? '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我，顺便收进「好事记录」笔记。'
                     : '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我就行。登录后会自动收录到「好事记录」笔记。',
-                style: context.body(
-                  size: 11.5,
-                  color: c.mintInk,
-                  height: 1.6,
-                ),
+                style: context.body(size: 11.5, color: c.mintInk, height: 1.6),
               ),
             ),
           ],

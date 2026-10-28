@@ -24,6 +24,7 @@ node build.js release
 ```
 
 产物：`../APK/Citro-v1.9.2-release.apk`（versionCode 1902 / versionName 1.9.2，签名与 v1.1.1 相同，可覆盖升级）。
+Android 与 iOS 构建脚本通过 `APP_VERSION` 设置应用版本并使用常规 Flutter 构建参数；无需读取本地 key 文件或嵌入 AI provider key。
 
 Windows 构建需要 VS 2022 Build Tools（C++ 工作负载）、NuGet CLI 与 Inno Setup 6：
 
@@ -73,7 +74,7 @@ Release 产物为 `build/web/`。桌面宽屏使用侧栏，窄屏使用底部�
 
 最终 IPA 必须在 macOS + Xcode 上签名构建，剩余步骤见
 [`../docs/ios-mac-checklist.md`](../docs/ios-mac-checklist.md)。快捷构建脚本：
-`bash ios/build_ipa.sh`（需先设置 Team、CocoaPods 与 GLM Key）。
+`bash ios/build_ipa.sh`（需先设置 Team 与 CocoaPods；AI provider key 只配置在 Node 服务端，不属于客户端构建配置）。
 
 - 后端：`https://chimu-claw.xyz/trashapi`（`lib/services/api.dart`）
 - 包名 / Bundle ID：`com.chimu.crew`；Android minSdk 24 / targetSdk 36；iOS 15.0+

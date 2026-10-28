@@ -54,8 +54,9 @@ cd flutter
 bash ios/build_ipa.sh
 ```
 
-脚本会读取 `pubspec.yaml` 的版本、从 `../密钥/glm.key` 或 `GLM_API_KEY` 注入 AI Key，
-然后执行 `flutter build ipa --release --export-method app-store`。产物在：
+脚本会读取 `pubspec.yaml` 的版本并通过 `APP_VERSION` 传给 Flutter，然后执行
+`flutter build ipa --release --export-method app-store`。客户端 AI 请求经自有服务
+`/trashapi/api/ai` 转发；provider `GLM_API_KEY` 只配置在 Node 服务端环境/配置中，IPA 构建不需要该密钥。产物在：
 
 ```text
 build/ios/ipa/
@@ -67,9 +68,10 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=1.9.2 \
-  --dart-define=GLM_API_KEY="<你的 GLM Key>"
+  --dart-define=APP_VERSION=1.9.2
 ```
+
+手动构建时将 `APP_VERSION` 与 `pubspec.yaml` 的版本号保持一致。
 
 第一次构建必须打开 Xcode 设置 Team；否则会报 `No profiles for 'com.chimu.crew' were found`。
 
@@ -120,7 +122,7 @@ flutter build ipa --release --export-method app-store \
 - 部署 `privacy.html`、`terms.html`、`account-deletion.html`；
 - 中国大陆区若上架：准备 ICP 备案、游戏版号/软著（如被按游戏类审核）、生成式 AI 相关备案/安全评估；
 - App Store 截图、预览、宣传文案与客服渠道；
-- 1.9.2 的 GLM Key 仍按 `GLM_API_KEY` 环境变量或 `../密钥/glm.key` 提供，密钥不入库、不打印。
+- 1.9.2 起 iOS / Android 构建不再注入 GLM Key，AI 统一走服务端代理（密钥不入库）。
 
 ## 6. 版本号规则
 
