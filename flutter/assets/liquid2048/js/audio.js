@@ -234,6 +234,37 @@
       this.noiseSweep({ dur: 0.35, from: 700, to: 120, gain: 0.03 });
     },
 
+    burst() {
+      // 闷响：罐子被撑开的那一下
+      this.tone({
+        freq: 170,
+        endFreq: 44,
+        dur: 0.5,
+        type: "sine",
+        gain: 0.16,
+      });
+      this.tone({
+        freq: 96,
+        endFreq: 38,
+        dur: 0.62,
+        type: "triangle",
+        gain: 0.12,
+        delay: 0.02,
+      });
+      // 玻璃碎片：几串高频短噪声
+      for (let i = 0; i < 6; i++) {
+        this.noiseSweep({
+          dur: 0.07 + Math.random() * 0.1,
+          from: 2600 + Math.random() * 2600,
+          to: 900 + Math.random() * 1100,
+          gain: 0.03,
+          q: 2.2,
+          delay: 0.015 + i * 0.032,
+        });
+      }
+      this.noiseSweep({ dur: 0.5, from: 1900, to: 160, gain: 0.045 });
+    },
+
     start() {
       this.tone({
         freq: 392,

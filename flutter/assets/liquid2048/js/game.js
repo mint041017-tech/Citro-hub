@@ -289,6 +289,7 @@
       this.hintVisible = false;
       this.toastTimer = 0;
       this.endTimer = 0;
+      this.burst = null;
       this.lastHudScore = -1;
 
       this.aim = 0;
@@ -399,13 +400,53 @@
       this.computeLayout();
       this.buildBackground();
       if (this.world) {
-        this.world.bounds = this.layout.bounds;
+        this.world.bounds = this.burst
+          ? this.burstBounds()
+          : this.layout.bounds;
         this.world.gravity = this.gravityValue();
         this.world.maxSpeed = this.speedLimit();
-        this.world.mouthY = this.layout.jarTop;
+        this.world.mouthY = this.burst ? null : this.layout.jarTop;
         if (oldLayout) this.world.rescale(oldLayout, this.layout);
         this.world.containAll();
       }
+    }
+
+    burstBounds() {
+      return {
+        left: -this.W,
+        right: this.W * 2,
+        top: -this.H * 2,
+        floor: this.layout.floorY - 2,
+      };
+    }
+
+    // 裂口的位置固定，只随罐子尺寸变化，不会每帧乱跳
+    buildCracks() {
+      const l = this.layout;
+      const rand = (seed) => {
+        const v = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+        return v - Math.floor(v);
+      };
+      const make = (x, y, dir, steps, spread, seed) => {
+        let px = x;
+        let py = y;
+        let angle = dir;
+        const points = [{ x: px, y: py }];
+        for (let i = 0; i < steps; i++) {
+          angle += (rand(seed + i) - 0.5) * spread;
+          const len = 11 + rand(seed + i + 0.5) * 15;
+          px += Math.cos(angle) * len;
+          py += Math.sin(angle) * len;
+          points.push({ x: px, y: py });
+        }
+        return points;
+      };
+      this.cracks = [
+        make(l.jarX0 + 1, l.jarTop + 2, 0.55, 5, 1.15, 3),
+        make(l.jarX1 - 1, l.jarTop + 2, Math.PI - 0.55, 5, 1.15, 9),
+        make(l.jarX0 + 1, l.floorY - 56, 0.35, 4, 1.05, 21),
+        make(l.jarX1 - 1, l.floorY - 78, Math.PI - 0.35, 4, 1.05, 31),
+      ];
     }
 
     computeLayout() {
@@ -466,14 +507,15 @@
           muzzle: 43 + scale * 8,
         },
         bounds: {
-          left: jarX0 + 5,
-          right: jarX1 - 5,
+          left: jarX0 + 2,
+          right: jarX1 - 2,
           top: Math.max(24, jarTop - 180),
-          floor: floorY - 5,
+          floor: floorY - 2,
         },
         dangerY: jarTop + 2,
         gravityFactor: clamp(scale, 0.68, 1.7),
       };
+      this.buildCracks();
     }
 
     speedLimit() {
@@ -598,6 +640,7 @@
       this.overflowClear = 0;
       this.shake = 0;
       this.endTimer = 0;
+      this.burst = null;
       this.aim = 0;
       this.charging = false;
       this.chargeTime = 0;
@@ -643,15 +686,16 @@
 
     seedJar() {
       const levels = [2, 3, 2, 3];
-      const offsets = [-0.21, -0.07, 0.07, 0.21];
+      // 开局四颗就挨在一起，不留下显眼的空档
+      const offsets = [-0.195, -0.065, 0.065, 0.195];
       const faceStyles = [0, 2, 5, 8];
       const { cx, jarW, bounds } = this.layout;
 
       levels.forEach((level, index) => {
         const radius = this.levelRadius(level);
-        const x = cx + offsets[index] * jarW + rand(-5, 5);
-        const y =
-          bounds.floor - radius - 8 - (index % 2 === 0 ? 0 : radius * 0.4);
+        const x = cx + offsets[index] * jarW + rand(-3, 3);
+        // 都放在各自的落地高度，开局不会互相砸出横向力把整排顶散
+        const y = bounds.floor - radius - 8;
         const blob = new SoftBlob(level, x, y, radius, 0, 0);
         this.decorateBlob(blob, faceStyles[index % faceStyles.length]);
         this.world.add(blob);
@@ -734,9 +778,102 @@
       this.state = "ending";
       this.charging = false;
       this.power = 0;
-      this.endTimer = 0.9;
-      this.shake = Math.max(this.shake, 9);
-      Audio.over();
+      this.endTimer = 1.35;
+      this.shake = Math.max(this.shake, 24);
+      this.startBurst();
+      Audio.burst();
+    }
+
+    startBurst() {
+      const l = this.layout;
+      const rand = (a, b) => a + Math.random() * (b - a);
+      const shards = [];
+      const shardShape = () => {
+        const s = rand(6, 16);
+        return [
+          { x: -s * rand(0.5, 1), y: -s * rand(0.2, 0.8) },
+          { x: s * rand(0.5, 1.1), y: -s * rand(0.5, 0.9) },
+          { x: s * rand(0.1, 0.8), y: s * rand(0.4, 1) },
+          { x: -s * rand(0.3, 0.9), y: s * rand(0.2, 0.8) },
+        ];
+      };
+      for (let i = 0; i < 9; i++) {
+        const x = l.jarX0 + (l.jarW * (i + 0.5)) / 9;
+        shards.push({
+          x,
+          y: l.jarTop + rand(-2, 6),
+          vx: (x - l.cx) * rand(1.2, 2.4) + rand(-60, 60),
+          vy: rand(-560, -160),
+          rot: rand(0, TAU),
+          spin: rand(-9, 9),
+          pts: shardShape(),
+          life: rand(1.5, 2.4),
+          maxLife: 2.4,
+        });
+      }
+      for (let side = 0; side < 2; side++) {
+        const x = side === 0 ? l.jarX0 : l.jarX1;
+        for (let i = 0; i < 4; i++) {
+          shards.push({
+            x: x + (side === 0 ? -2 : 2),
+            y: l.jarTop + (l.jarH * (i + 0.5)) / 4,
+            vx: (side === 0 ? -1 : 1) * rand(120, 440),
+            vy: rand(-260, 40),
+            rot: rand(0, TAU),
+            spin: rand(-8, 8),
+            pts: shardShape(),
+            life: rand(1.4, 2.2),
+            maxLife: 2.4,
+          });
+        }
+      }
+
+      const drops = [];
+      for (let i = 0; i < 26; i++) {
+        const def = levelDef(1 + Math.floor(Math.random() * Math.min(9, this.maxLevel + 2)));
+        drops.push({
+          type: "dot",
+          x: l.jarX0 + Math.random() * l.jarW,
+          y: l.jarTop + Math.random() * l.jarH * 0.3,
+          vx: rand(-320, 320),
+          vy: rand(-620, -120),
+          size: rand(2.5, 7),
+          life: rand(0.6, 1.2),
+          maxLife: 1.2,
+          color: Math.random() < 0.5 ? def.fill : def.edge,
+          gravity: 1500,
+        });
+      }
+      this.effects.push(...drops);
+
+      // 罐子破开后不再兜住果冻，让它们跟着碎玻璃一起冲出来
+      for (let i = 0; i < this.world.blobs.length; i++) {
+        const blob = this.world.blobs[i];
+        const side = blob.cx < l.cx ? -1 : 1;
+        blob.addVelocity(side * rand(60, 260), rand(-460, -140));
+        blob.floatT = 0;
+      }
+      this.world.bounds = this.burstBounds();
+      this.world.mouthY = null;
+
+      this.burst = { t: 0, shards };
+    }
+
+    updateBurst(dt) {
+      if (!this.burst) return;
+      this.burst.t += dt;
+      const shards = this.burst.shards;
+      let write = 0;
+      for (let i = 0; i < shards.length; i++) {
+        const s = shards[i];
+        s.vy += 1600 * dt;
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.rot += s.spin * dt;
+        s.life -= dt;
+        if (s.life > 0 && s.y < this.H + 90) shards[write++] = s;
+      }
+      shards.length = write;
     }
 
     showEnd() {
@@ -753,7 +890,7 @@
       if (newBest) {
         this.finalCopyEl.textContent = "刷新了本机纪录，这罐果冻很争气。";
       } else {
-        this.finalCopyEl.textContent = "罐口溢出来了，这罐就打烊。";
+        this.finalCopyEl.textContent = "果冻们冲出罐子，这罐就打烊。";
       }
       this.renderScoreBoard();
       this.setOverlay(this.endOverlay, true);
@@ -1101,14 +1238,20 @@
     }
 
     updateIdle(dt) {
+      if (this.burst) {
+        this.world.step(dt);
+        this.updateBurst(dt);
+      }
       this.shake = Math.max(0, this.shake - dt * 20);
       if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 7);
       this.updateFX(dt);
     }
 
     updateEnding(dt) {
+      this.world.step(dt);
+      this.updateBurst(dt);
       this.updateFX(dt);
-      this.shake = Math.max(0, this.shake - dt * 14);
+      this.shake = Math.max(0, this.shake - dt * 26);
       this.endTimer -= dt;
       if (this.endTimer <= 0) {
         this.showEnd();
@@ -1156,17 +1299,16 @@
 
       for (let i = 0; i < blobs.length; i++) {
         const a = blobs[i];
-        if (used.has(a) || a.age < 0.16) continue;
+        if (used.has(a) || a.age < 0.12) continue;
         for (let j = i + 1; j < blobs.length; j++) {
           const b = blobs[j];
-          if (used.has(b) || b.age < 0.16) continue;
+          if (used.has(b) || b.age < 0.12) continue;
           if (a.level !== b.level) continue;
           const dx = a.cx - b.cx;
           const dy = a.cy - b.cy;
-          // Small drops collide as circles (centre distance R + R + 0.4),
-          // so their merge threshold must sit just beyond that gap.
-          const reach =
-            (a.R + b.R) * (a.isSmall || b.isSmall ? 1.03 : 0.97);
+          // 贴住就合：物理分离会留 0.4~1px 的皮面间隙，判定要略大于它，
+          // 否则两颗球明明挨在一起却永远差一点，合成会时灵时不灵。
+          const reach = a.R + b.R + 1.8;
           if (dx * dx + dy * dy <= reach * reach) {
             used.add(a);
             used.add(b);
@@ -1359,6 +1501,8 @@
       if (crowded) {
         this.overflowClear = 0;
         this.overflowTime += dt;
+        const pressure = clamp(this.overflowTime / 3.2, 0, 1);
+        this.shake = Math.max(this.shake, pressure * 2.1);
         if (!this.overflowWarned && this.overflowTime > 0.35) {
           this.overflowWarned = true;
           Audio.warn();
@@ -1459,13 +1603,21 @@
       }
 
       this.drawShelf();
-      this.drawJarBack();
-      this.drawBlobs();
-      this.drawEffects();
-      this.drawJarFront();
-      this.drawOverflowWarning();
-      this.drawLauncher();
-      this.drawFloats();
+      if (this.burst) {
+        this.drawJarRuin();
+        this.drawBlobs();
+        this.drawEffects();
+        this.drawBurstShards();
+        this.drawFloats();
+      } else {
+        this.drawJarBack();
+        this.drawBlobs();
+        this.drawEffects();
+        this.drawJarFront();
+        this.drawOverflowWarning();
+        this.drawLauncher();
+        this.drawFloats();
+      }
 
       ctx.restore();
     }
@@ -1676,6 +1828,133 @@
       if (this.W - l.jarX1 > 90) {
         this.drawJarTag();
       }
+
+      if (this.overflowTime > 0.05) {
+        this.drawJarCracks(clamp(this.overflowTime / 3.2, 0, 1));
+      }
+    }
+
+    // 撑爆预警：裂纹从罐口和罐壁一点点长开，越接近爆炸越深
+    drawJarCracks(progress) {
+      if (!this.cracks || progress <= 0) return;
+      const ctx = this.ctx;
+      const reach = clamp((progress - 0.1) / 0.75, 0, 1);
+      if (reach <= 0) return;
+      ctx.save();
+      this.jarClosedPath(ctx);
+      ctx.clip();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let c = 0; c < this.cracks.length; c++) {
+        const crack = this.cracks[c];
+        const n = Math.max(2, Math.ceil(crack.length * reach));
+        ctx.beginPath();
+        ctx.moveTo(crack[0].x, crack[0].y);
+        for (let i = 1; i < n; i++) {
+          ctx.lineTo(crack[i].x, crack[i].y);
+        }
+        ctx.strokeStyle = `rgba(38, 49, 63, ${0.26 + progress * 0.5})`;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + progress * 0.4})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 爆开的罐子只剩下半截，断口是锯齿状
+    drawJarRuin() {
+      const ctx = this.ctx;
+      const l = this.layout;
+      const topY = l.floorY - Math.min(150, l.jarH * 0.33);
+      const steps = 12;
+      const edge = [];
+      for (let i = 0; i <= steps; i++) {
+        const x = l.jarX0 + (l.jarW * i) / steps;
+        const jag =
+          Math.sin(i * 3.1 + 0.7) * 12 + Math.sin(i * 7.9 + 2.1) * 7;
+        edge.push({ x, y: topY + jag });
+      }
+      const r = Math.min(26, l.jarW * 0.08);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(l.jarX0, l.floorY - r);
+      ctx.quadraticCurveTo(l.jarX0, l.floorY, l.jarX0 + r, l.floorY);
+      ctx.lineTo(l.jarX1 - r, l.floorY);
+      ctx.quadraticCurveTo(l.jarX1, l.floorY, l.jarX1, l.floorY - r);
+      ctx.lineTo(l.jarX1, edge[steps].y);
+      for (let i = steps; i >= 0; i--) {
+        ctx.lineTo(edge[i].x, edge[i].y);
+      }
+      ctx.closePath();
+
+      const glass = ctx.createLinearGradient(0, topY, 0, l.floorY);
+      glass.addColorStop(0, "rgba(226, 244, 236, 0.4)");
+      glass.addColorStop(0.5, "rgba(214, 242, 232, 0.22)");
+      glass.addColorStop(1, "rgba(190, 224, 211, 0.3)");
+      ctx.fillStyle = glass;
+      ctx.fill();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+
+      // 断口内沿的高光
+      ctx.beginPath();
+      ctx.moveTo(edge[0].x, edge[0].y);
+      for (let i = 1; i <= steps; i++) ctx.lineTo(edge[i].x, edge[i].y);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.clip();
+      ctx.globalAlpha = 0.14;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(l.jarX0 + l.jarW * 0.13, topY);
+      ctx.lineTo(l.jarX0 + l.jarW * 0.23, topY);
+      ctx.lineTo(l.jarX0 + l.jarW * 0.01, l.floorY);
+      ctx.lineTo(l.jarX0 - l.jarW * 0.07, l.floorY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    drawBurstShards() {
+      if (!this.burst) return;
+      const ctx = this.ctx;
+      const shards = this.burst.shards;
+      for (let i = 0; i < shards.length; i++) {
+        const s = shards[i];
+        const alpha = clamp(s.life / s.maxLife, 0, 1);
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.rot);
+        ctx.globalAlpha = Math.min(1, alpha * 1.8);
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        for (let k = 1; k < s.pts.length; k++) {
+          ctx.lineTo(s.pts[k].x, s.pts[k].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(204, 235, 224, 0.55)";
+        ctx.fill();
+        ctx.strokeStyle = `rgba(38, 49, 63, ${0.3 + 0.45 * alpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        ctx.lineTo(s.pts[1].x, s.pts[1].y);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
     }
 
     drawJarTag() {
@@ -1729,39 +2008,29 @@
         if (other === blob) continue;
         const dx = other.cx - blob.cx;
         const dy = other.cy - blob.cy;
-        if (Math.hypot(dx, dy) < blob.visR + other.visR + 2.5) contacts++;
+        if (Math.hypot(dx, dy) < blob.R + other.R + 3.5) contacts++;
       }
       const areaLoss = Math.max(0, 1 - blob.area / blob.targetArea);
-      const squeeze = Math.min(1, contacts / 3 + areaLoss * 2.5);
-      return squeeze * Math.min(blob.R * 0.28, 12);
+      const squeeze = Math.min(1, contacts * 0.62 + areaLoss * 3);
+      return squeeze * Math.min(blob.R * 0.3, 14);
     }
 
-    // 浓稠液体：向内收的两瓣晃动 + 顺速度缓慢拉长 + 缓慢流动的三瓣边缘；
-    // 轮廓只向内收，回弹漂浮时才轻微倾斜，绝不外扩穿透
+    // Q 弹果冻：整体保持圆形，只留轻微的呼吸和落地压扁回弹；
+    // 被挤压时往缝隙鼓出，鼓出量由邻居/罐壁的实际余量封顶，绝不穿透
     visualBlobPoints(blob) {
       const points = this.blobOuterPoints(blob);
       const faceSeed = (blob.face && blob.face.seed) || 0;
-      const ripple = Math.max(0.6, Math.min(2.4, blob.R * 0.03));
+      const ripple = Math.max(0.15, Math.min(0.4, blob.R * 0.005));
       const jiggle = Math.max(0, Math.min(1.2, blob.jiggle || 0));
       const jiggleAmp = jiggle * Math.min(blob.R * 0.13, 8);
       const jigglePhase = blob.jigglePhase || 0;
-      const jiggleDir = blob.jiggleDir === undefined ? -Math.PI / 2 : blob.jiggleDir;
-      const idleWave = Math.cos(this.time * 0.6 + faceSeed * 0.017);
-      const duangWave = 0.75 + 0.25 * Math.cos(jigglePhase);
-
-      // 形状跟随带滞后的流速：浓稠液体拉长后要过一会才回缩
-      const avx = blob.flowVx || 0;
-      const avy = blob.flowVy || 0;
-      const flow = Math.min(1, Math.hypot(avx, avy) / 520);
-      const flowAmp = flow * Math.min(blob.R * 0.36, 18);
-      const flowDir = Math.atan2(avy, avx);
-      const flowAxis = flowDir + Math.PI / 2;
-      const trailAmp = flow * Math.min(blob.R * 0.2, 10);
-      const float = Math.max(0, Math.min(1, (blob.floatT || 0) / 0.4));
-      const tilt = float * 0.06 * Math.sin(this.time * 1.3 + faceSeed * 0.02);
+      const jiggleDir =
+        blob.jiggleDir === undefined ? -Math.PI / 2 : blob.jiggleDir;
+      const duang = Math.cos(jigglePhase);
+      const float = Math.max(0, Math.min(1, (blob.floatT || 0) / 0.28));
+      const tilt = float * 0.035 * Math.sin(this.time * 1.6 + faceSeed * 0.02);
       const cosT = Math.cos(tilt);
       const sinT = Math.sin(tilt);
-      const liquidPhase = this.time * 0.35 + faceSeed * 0.03;
 
       // 被挤压时往缝隙鼓出：鼓出量由到最近邻居/罐壁的余量封顶，绝不穿透
       const bulgeAmp =
@@ -1773,16 +2042,12 @@
         const ox = other.cx - blob.cx;
         const oy = other.cy - blob.cy;
         const d = Math.hypot(ox, oy);
-        const touch = blob.visR + other.visR + 2.5;
-        if (d < touch + 16) {
-          const otherBulge =
-            other._bulgeAmp === undefined
-              ? this.bulgeAmpFor(other)
-              : other._bulgeAmp;
+        if (d < blob.R + other.R + 18) {
           neighbors.push({
             x: other.cx,
             y: other.cy,
-            r: other.visR + otherBulge + 0.8,
+            // 按对方实际变形后的轮廓留位；两侧各填一半缝宽，谁也不会穿过去
+            r: (other.visR || other.R) - 0.4,
           });
         }
       }
@@ -1794,50 +2059,58 @@
         const dy = pt.y - blob.cy;
         const d = Math.hypot(dx, dy) || 1;
         const angle = Math.atan2(dy, dx);
-        const idleLobe = Math.cos(angle * 2);
-        const duangLobe = Math.max(0, Math.cos(angle - jiggleDir));
-        const flowLobe = Math.max(0, Math.cos((angle - flowAxis) * 2));
-        const liquid =
-          Math.max(0, Math.cos(angle * 3 + liquidPhase)) * ripple * 0.9;
-        const trail =
-          Math.max(0, Math.cos(angle - (flowDir + Math.PI))) * trailAmp;
-        const wave =
-          Math.max(0, idleWave * idleLobe) * ripple +
-          duangWave * duangLobe * jiggleAmp +
-          flowLobe * flowAmp +
-          liquid +
-          trail;
-        let px = pt.x - (dx / d) * wave;
-        let py = pt.y - (dy / d) * wave;
+        const nx = dx / d;
+        const ny = dy / d;
+        // 呼吸：两瓣缓慢起伏，正负抵消，平均轮廓仍贴着物理半径
+        const breathe =
+          Math.cos(angle * 2 + faceSeed * 0.03) *
+          ripple *
+          (0.7 + 0.3 * Math.sin(this.time * 1.15 + faceSeed * 0.01));
+        // 回弹：沿冲击轴压扁、垂直轴鼓出，快速弹两下就收住
+        const squash =
+          -Math.cos((angle - jiggleDir) * 2) * jiggleAmp * duang * 0.85;
+        const wave = breathe + squash;
+
+        const baseX = pt.x;
+        const baseY = pt.y;
+        let px = baseX + nx * Math.min(0, wave);
+        let py = baseY + ny * Math.min(0, wave);
         if (tilt !== 0) {
           const rx = px - blob.cx;
           const ry = py - blob.cy;
           px = blob.cx + rx * cosT - ry * sinT;
           py = blob.cy + rx * sinT + ry * cosT;
         }
-        if (bulgeAmp > 0.25) {
+
+        const baseOut = Math.max(0, wave);
+        const out = baseOut + bulgeAmp;
+        if (out > 0.15) {
           let free = Infinity;
           for (let i = 0; i < neighbors.length; i++) {
             const n = neighbors[i];
-            const gap = Math.hypot(px - n.x, py - n.y) - n.r;
+            const gap = Math.hypot(baseX - n.x, baseY - n.y) - n.r;
             if (gap < free) free = gap;
           }
           const wallGap =
             Math.min(
-              px - bounds.left,
-              bounds.right - px,
-              py - bounds.top,
-              bounds.floor - py
-            ) - 0.6;
-          if (wallGap < free) free = wallGap;
-          if (free > 0.2) {
+              baseX - bounds.left,
+              bounds.right - baseX,
+              baseY - bounds.top,
+              bounds.floor - baseY
+            ) - 0.5;
+          const atWall = wallGap < free;
+          if (atWall) free = wallGap;
+          // 邻居之间各填一半，贴在一起又不越界；贴罐壁时整段都可以填
+          const share = atWall ? free : free * 0.5;
+          if (share > 0.12) {
             const rx = px - blob.cx;
             const ry = py - blob.cy;
             const rl = Math.hypot(rx, ry) || 1;
-            const push = Math.min(free, bulgeAmp);
+            const push = Math.min(share, out);
             px += (rx / rl) * push;
             py += (ry / rl) * push;
-            if (push > (blob._bulgeUsed || 0)) blob._bulgeUsed = push;
+            const fill = Math.max(0, push - baseOut);
+            if (fill > (blob._bulgeUsed || 0)) blob._bulgeUsed = fill;
           }
         }
         pt.x = px;
@@ -1854,13 +2127,13 @@
         Math.max(0.001, now - (this._bulgeT || now - 1 / 60))
       );
       this._bulgeT = now;
-      const bulgeK = 1 - Math.exp(-2.0 * dt);
+      const bulgeK = 1 - Math.exp(-5.0 * dt);
       for (let i = 0; i < blobs.length; i++) {
         blobs[i]._bulgeAmp = this.bulgeAmpFor(blobs[i]);
         blobs[i]._bulgeUsed = 0;
       }
-      // 第一遍算出每个果冻的实际鼓出量；第二遍按邻居实际鼓出预留，填缝更满，
-      // 且鼓出量按时间平滑，挤压/松开都像浓稠液体一样缓慢
+      // 第一遍算出每个果冻实际填缝的鼓出量；第二遍按邻居实际鼓出量预留，
+      // 并做时间平滑，贴住邻居但不穿透
       for (let i = 0; i < blobs.length; i++) this.visualBlobPoints(blobs[i]);
       for (let i = 0; i < blobs.length; i++) {
         const actual = blobs[i]._bulgeUsed;
@@ -1981,9 +2254,9 @@
       ctx.fillStyle = gradient;
       ctx.fill();
       ctx.globalAlpha = 1;
-      // 湿边：黏液表面的高光轮廓
-      ctx.strokeStyle = "rgba(255,255,255,0.26)";
-      ctx.lineWidth = Math.max(1, size * 0.018);
+      // 薄薄的糖果高光，保持果冻质感，不做水光
+      ctx.strokeStyle = "rgba(255,255,255,0.16)";
+      ctx.lineWidth = Math.max(1, size * 0.014);
       ctx.stroke();
 
       ctx.save();
@@ -1997,44 +2270,11 @@
         cy - size * 0.44,
         size * 1.18
       );
-      glow.addColorStop(0, "rgba(255, 255, 255, 0.62)");
-      glow.addColorStop(0.3, "rgba(255, 255, 255, 0.18)");
+      glow.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+      glow.addColorStop(0.3, "rgba(255, 255, 255, 0.12)");
       glow.addColorStop(1, "rgba(255, 255, 255, 0)");
       ctx.fillStyle = glow;
       ctx.fillRect(cx - size * 1.4, cy - size * 1.4, size * 2.8, size * 2.8);
-
-      const causticX = cx + size * (0.28 + Math.sin(this.time * 0.9 + face.seed) * 0.045);
-      const caustic = ctx.createRadialGradient(
-        causticX,
-        cy - size * 0.28,
-        0,
-        causticX,
-        cy - size * 0.28,
-        size * 0.42
-      );
-      caustic.addColorStop(0, "rgba(255, 255, 255, 0.28)");
-      caustic.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = caustic;
-      ctx.fillRect(cx - size, cy - size, size * 2, size * 2);
-
-      const streak = this.time * 0.8 + face.seed * 0.02;
-      ctx.save();
-      ctx.globalAlpha = 0.2;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = Math.max(1.8, size * 0.032);
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.ellipse(
-        cx + Math.sin(streak) * size * 0.02,
-        cy - size * 0.34,
-        size * 0.56,
-        size * 0.29,
-        0.07,
-        Math.PI * 1.04,
-        Math.PI * 1.46
-      );
-      ctx.stroke();
-      ctx.restore();
 
       ctx.globalAlpha = 0.2;
       ctx.fillStyle = "#ffffff";
@@ -2079,15 +2319,15 @@
 
       const bottom = ctx.createLinearGradient(0, cy, 0, cy + size);
       bottom.addColorStop(0, "rgba(255, 255, 255, 0)");
-      bottom.addColorStop(1, "rgba(255, 255, 255, 0.18)");
+      bottom.addColorStop(1, "rgba(255, 255, 255, 0.1)");
       ctx.fillStyle = bottom;
       ctx.fillRect(cx - size, cy, size * 2, size);
       ctx.restore();
 
       traceSmooth(ctx, points, 0.9);
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
-      ctx.lineWidth = Math.max(2.4, size * 0.08);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+      ctx.lineWidth = Math.max(1.5, size * 0.05);
       ctx.stroke();
       traceSmooth(ctx, points, 0.9);
       ctx.strokeStyle = def.edge;
@@ -2948,13 +3188,13 @@
       ctx.font = `700 9px ${UI_FONT}`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
-      ctx.fillText("满罐线", l.jarX1 - 16, l.dangerY - 5);
+      ctx.fillText("爆罐线", l.jarX1 - 16, l.dangerY - 5);
 
       const remain = Math.max(0, 3.2 - this.overflowTime);
       const text =
         remain > 0.1
-          ? `罐子要满了 · ${remain.toFixed(1)}s`
-          : "罐子要满了";
+          ? `罐子快撑爆了 · ${remain.toFixed(1)}s`
+          : "罐子快撑爆了";
       ctx.font = `700 11px ${UI_FONT}`;
       const width = ctx.measureText(text).width + 26;
       const bx = l.cx - width / 2;

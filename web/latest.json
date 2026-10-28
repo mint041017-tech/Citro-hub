@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "1.9.3",
-  "build_number": "1903",
-  "build_id": "6d5a0eee8b9b71524bb1bbe9f0a29e40",
-  "file": "Citro-web-1.9.3.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.3.zip",
-  "size": 21794634,
-  "sha256": "df2fcdd149618851ab2bf5f3b8ca0b185b1d7dd3b24a7520f4c6ba74235593c9",
-  "published_at": "2026-10-28T11:38:16Z",
-  "notes": "1.9.3：资源库新增 MsLab（毫秒实验室）无畏契约灵敏度调试；Web 桌面首页小工具区同步加入"
+  "version": "1.9.5",
+  "build_number": "1905",
+  "build_id": "cff8baa6b242fb7a15416904e3e27e54",
+  "file": "Citro-web-1.9.5.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.5.zip",
+  "size": 21797831,
+  "sha256": "f2e1cabc476a25131eda3fe9f4ff71b871053cd5d4eb46e9b54b37330e0d3695",
+  "published_at": "2026-10-28T14:28:40Z",
+  "notes": "1.9.5：咕噜果冻铺 Q 弹手感、贴紧必合、撑爆罐子判负；四端同步"
 }

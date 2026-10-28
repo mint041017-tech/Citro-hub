@@ -162,7 +162,7 @@
     }
 
     get rigidity() {
-      return clamp(42 / this.R, 0.85, 2.1);
+      return clamp(52 / this.R, 1.0, 2.2);
     }
 
     measure() {
@@ -259,10 +259,8 @@
       const p = this.p;
       this.stepCx = this.cx;
       this.stepCy = this.cy;
-      const floating = this.floatT > 0 && !this.contact;
       this.contact = false;
-      // 太空浮动：刚离开支撑面的一小段时间内减重力，回弹弧线更轻更飘
-      const g = floating ? gravity * 0.55 : gravity;
+      const g = gravity;
       if (this.floatT > 0) this.floatT = Math.max(0, this.floatT - h);
       for (let i = 0; i < this.n; i++) {
         const pt = p[i];
@@ -323,7 +321,7 @@
     solveSurfaceTension() {
       const p = this.p;
       const n = this.n;
-      const smooth = 0.03 * this.rigidity;
+      const smooth = 0.045 * this.rigidity;
       for (let i = 0; i < n; i++) {
         const prev = p[(i - 1 + n) % n];
         const next = p[(i + 1) % n];
@@ -369,7 +367,7 @@
         this.compactness < 0.45
           ? 1 + (0.45 - this.compactness) * 12
           : 1;
-      const k = 0.08 * this.rigidity * thinBoost;
+      const k = 0.115 * this.rigidity * thinBoost;
       const target = this.ringR;
       for (let i = 0; i < n; i++) {
         const pt = p[i];
@@ -436,13 +434,15 @@
       // 上升阶段（刚回弹）不算“贴地”，否则接触阻尼会把弹起吃掉
       const rising = approxVy < -40;
       const slowNear =
-        (nearFloor || nearWall) && approxSpeed < 420 && !rising;
+        (nearFloor || nearWall) && approxSpeed < 150 && !rising;
       const effectiveContact = this.contact || slowNear;
-      const contactDamping = effectiveContact ? (smallBlob ? 0.9955 : 0.9975) : 1;
+      const contactDamping = effectiveContact ? (smallBlob ? 0.9986 : 0.999) : 1;
       const cap = speedLimit || 2600;
-      const maxSpeed = effectiveContact && smallBlob ? cap * 0.54 : cap;
+      const maxSpeed = effectiveContact && smallBlob ? cap * 0.72 : cap;
       let wallImpact = 0;
       let wallDir = -Math.PI / 2;
+      let floorHits = 0;
+      let wallHits = 0;
 
       for (let i = 0; i < n; i++) {
         const pt = p[i];
@@ -458,31 +458,33 @@
           (pt.hit & 3) !== 0 &&
           (pt.x <= bounds.left + this.cr + 1.2 ||
             pt.x >= bounds.right - this.cr - 1.2);
-        const rebound = smallBlob ? 0.02 : 0.01;
+        const rebound = smallBlob ? 0.4 : 0.22;
         if (atFloor) {
+          floorHits++;
           if (incomingVy > 200 && incomingVy > wallImpact) {
             wallImpact = incomingVy;
             wallDir = -Math.PI / 2;
           }
-          vy = incomingVy > 90 ? -incomingVy * rebound : 0;
-          vx *= 0.99;
+          vy = incomingVy > 60 ? -incomingVy * rebound : 0;
+          vx *= 0.994;
         } else if (atWall) {
+          wallHits++;
           const ax = Math.abs(incomingVx);
           if (ax > 200 && ax > wallImpact) {
             wallImpact = ax;
             wallDir =
               pt.x <= bounds.left + this.cr + 1.2 ? 0 : Math.PI;
           }
-          vx = Math.abs(incomingVx) > 80 ? -incomingVx * rebound * 0.8 : 0;
-          vy *= 0.999;
+          vx = Math.abs(incomingVx) > 50 ? -incomingVx * rebound * 0.8 : 0;
+          vy *= 0.9995;
         } else if (atCeil) {
           if (incomingVy < -200 && -incomingVy > wallImpact) {
             wallImpact = -incomingVy;
             wallDir = Math.PI / 2;
           }
-          vy = incomingVy < -80 ? -incomingVy * rebound * 0.8 : 0;
+          vy = incomingVy < -50 ? -incomingVy * rebound * 0.8 : 0;
         }
-        const floorContact = atFloor || (nearFloor && Math.hypot(vx, vy) < 420);
+        const floorContact = atFloor || (nearFloor && Math.hypot(vx, vy) < 160);
 
         vx *= 0.9997 * contactDamping;
         vy *= 0.9997 * contactDamping;
@@ -493,12 +495,12 @@
           vx *= s;
           vy *= s;
         } else if (
-          speed2 < (floorContact ? (smallBlob ? 16 : 9) : 0.02)
+          speed2 < (floorContact ? (smallBlob ? 4 : 2.5) : 0.02)
         ) {
           vx = 0;
           vy = 0;
         }
-        if (vy < -320) vy = -320;
+        if (vy < -1400) vy = -1400;
 
         pt.vx = vx;
         pt.vy = vy;
@@ -508,11 +510,41 @@
         kineticSum += Math.abs(vx) + Math.abs(vy);
       }
 
+      // 落地/贴墙时只该改变法向速度，切向动量要保留；否则形变求解会在
+      // 罐底给整颗果冻“蹬”出一段横向漂移，像自己在走。
+      if (floorHits > 0) {
+        const avgVx = sumVx / n;
+        const keepVx = Math.abs(approxVx) > 30 ? approxVx * 0.999 : 0;
+        const adjX = (keepVx - avgVx) * 0.9;
+        if (Math.abs(adjX) > 0.001) {
+          for (let i = 0; i < n; i++) p[i].vx += adjX;
+        }
+      }
+      if (wallHits > 0) {
+        const avgVy = sumVy / n;
+        const keepVy = Math.abs(approxVy) > 30 ? approxVy * 0.999 : 0;
+        const adjY = (keepVy - avgVy) * 0.9;
+        if (Math.abs(adjY) > 0.001) {
+          for (let i = 0; i < n; i++) p[i].vy += adjY;
+        }
+      }
+      if (floorHits > 0 || wallHits > 0) {
+        sumVx = 0;
+        sumVy = 0;
+        kineticSum = 0;
+        for (let i = 0; i < n; i++) {
+          const pt = p[i];
+          sumVx += pt.vx;
+          sumVy += pt.vy;
+          kineticSum += Math.abs(pt.vx) + Math.abs(pt.vy);
+        }
+      }
+
       // Resting on another blob is not free fall: cancel most of the
       // whole-body velocity while leaving the internal wobble untouched.
       // Without this the position solver keeps pushing a body back out of the
       // pile while its stored downward speed stays near the cap forever.
-      if (this.contact) {
+      if (this.contact || effectiveContact) {
         const avgVx = sumVx / n;
         const avgVy = sumVy / n;
         // A body wedged in the pile barely moves its centre from step to
@@ -539,7 +571,7 @@
       if (effectiveContact) {
         const avgVx = sumVx / n;
         const avgVy = sumVy / n;
-        const blend = smallBlob ? 0.014 : 0.01;
+        const blend = smallBlob ? 0.006 : 0.008;
         kineticSum = 0;
         for (let i = 0; i < n; i++) {
           const pt = p[i];
@@ -569,14 +601,14 @@
           this.jiggleDir = -Math.PI / 2;
         }
       }
-      if (!this.contact && approxVy < -260) {
-        this.floatT = Math.max(this.floatT, 0.35);
+      if (!this.contact && approxVy < -400) {
+        this.floatT = Math.max(this.floatT, 0.28);
       } else if (touching) {
         this.floatT = 0;
       }
       this.wasContact = touching;
-      this.jiggle *= Math.exp(-(this.isSmall ? 0.75 : 0.6) * h);
-      this.jigglePhase += h * (this.isSmall ? 2.5 : 2.1);
+      this.jiggle *= Math.exp(-(this.isSmall ? 2.8 : 2.2) * h);
+      this.jigglePhase += h * (this.isSmall ? 8.5 : 7.0);
       this.age += h;
       if (this.compactness < 0.42 || this.area < this.targetArea * 0.3) {
         this.thinTime += h;
@@ -795,13 +827,13 @@
         for (let i = 0; i < blobs.length; i++) {
           const blob = blobs[i];
           const small = blob.isSmall;
-          const mx = small ? blob.meanX() : 0;
-          const my = small ? blob.meanY() : 0;
+          const mx = blob.meanX();
+          const my = blob.meanY();
           blob.solveShape();
-          if (small) {
-            blob.recenterShape(mx, my);
-            blob.confineCircle(this.bounds);
-          }
+          // 形变只改变形状，不应把整颗果冻挪走；大小球都做中心回正，
+          // 否则大球落地时会被不对称的形变推着横向漂移。
+          blob.recenterShape(mx, my);
+          if (small) blob.confineCircle(this.bounds);
           blob.solveWalls(this.bounds);
         }
         this.resolveCollisions(0.5);
@@ -916,7 +948,11 @@
               (forceVisible ||
                 this.mergeGrace > 0 ||
                 a.visualPop > 0 ||
-                b.visualPop > 0)
+                b.visualPop > 0 ||
+                a.jiggle > 0.12 ||
+                b.jiggle > 0.12 ||
+                a.compactness < 0.97 ||
+                b.compactness < 0.97)
             ) {
               this.resolvePolygonPair(a, b, k * 0.8);
             }
@@ -931,11 +967,13 @@
       const dx = b.cx - a.cx;
       const dy = b.cy - a.cy;
       const d = Math.sqrt(dx * dx + dy * dy);
-      // Use the real deformed outline radius so a squashed drop cannot sink
-      // visibly into its neighbour between polygon passes.
+      // 用稳定半径做圆碰撞：果冻晃动时外凸的节点不能把整颗球永久顶开，
+      // 否则两颗球会越挤越散，留下很大的空档。
       const minD = Math.max(
-        a.R + b.R + 0.4,
-        (a.visR || a.R) + (b.visR || b.R) - 0.4
+        a.R + b.R + 1.2,
+        Math.min(a.visR || a.R, a.R + 0.5) +
+          Math.min(b.visR || b.R, b.R + 0.5) -
+          0.4
       );
       if (d >= minD) return;
 
@@ -985,7 +1023,7 @@
 
       if (!deepest) return;
 
-      const margin = 0.35 + Math.min(1.2, (small.R + big.R) * 0.007);
+      const margin = 0.5 + Math.min(0.8, (small.R + big.R) * 0.005);
       const maxPush = 4 + Math.min(small.R, big.R) * 0.06;
       const push =
         Math.min(deepest.depth + margin, maxPush) * stiffness;
@@ -1028,7 +1066,7 @@
       if (!(total > 0)) return;
       const wa = invA / total;
       const wb = invB / total;
-      const margin = 0.35 + Math.min(1.2, (a.R + b.R) * 0.007);
+      const margin = 0.5 + Math.min(0.8, (a.R + b.R) * 0.005);
       const maxPush = 4 + Math.min(a.R, b.R) * 0.06;
       let touched = false;
 
@@ -1166,7 +1204,9 @@
           const massB = b.n / b.invMass;
           // Small drops visibly bounce off each other; big blobs stay mostly
           // inelastic so a full jar does not turn into a pinball machine.
-          const bounce = a.isSmall || b.isSmall ? 1.6 : 0.9;
+          // 果冻球之间只留一点点弹性，主要靠挤压形变表现 Q 弹；
+          // 弹得太狠会把整堆球从中间顶散，越玩缝越大。
+          const bounce = a.isSmall || b.isSmall ? 0.75 : 0.45;
           const impulse = (-closing / (1 / massA + 1 / massB)) * bounce;
           const dax = (nx * impulse) / massA;
           const day = (ny * impulse) / massA;

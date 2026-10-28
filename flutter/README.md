@@ -1,4 +1,4 @@
-# Citro · Flutter 原生版（v1.9.3）
+# Citro · Flutter 原生版（v1.9.5）
 
 Chimu Crew 的 Web / Android / iOS / Windows 客户端。页面与游戏均用 Flutter Widget 原生实现，
 视觉按站点 393×852 手账 UI 逐页对齐；Web 的「极限刹车」使用 Flutter 3D 场景，
@@ -23,7 +23,7 @@ cd X:\flutter
 node build.js release
 ```
 
-产物：`../APK/Citro-v1.9.3-release.apk`（versionCode 1903 / versionName 1.9.3，签名与 v1.1.1 相同，可覆盖升级）。
+产物：`../APK/Citro-v1.9.5-release.apk`（versionCode 1905 / versionName 1.9.5，签名与 v1.1.1 相同，可覆盖升级）。
 Android 与 iOS 构建脚本通过 `APP_VERSION` 设置应用版本并使用常规 Flutter 构建参数；无需读取本地 key 文件或嵌入 AI provider key。
 
 Windows 构建需要 VS 2022 Build Tools（C++ 工作负载）、NuGet CLI 与 Inno Setup 6：
@@ -31,8 +31,8 @@ Windows 构建需要 VS 2022 Build Tools（C++ 工作负载）、NuGet CLI 与 I
 ```powershell
 # 在 flutter/ 目录
 node tool/build_windows.js
-# ../WIN/Citro-v1.9.3-win64/            便携版
-# ../exe/Citro-v1.9.3-win64-setup.exe   用户级安装包
+# ../WIN/Citro-v1.9.5-win64/            便携版
+# ../exe/Citro-v1.9.5-win64-setup.exe   用户级安装包
 # ../exe/update.json                    应用内更新清单（含 SHA-256）
 ```
 
