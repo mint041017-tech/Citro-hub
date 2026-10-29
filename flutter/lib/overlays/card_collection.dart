@@ -11,6 +11,7 @@ import '../widgets/paper.dart';
 import 'card_draw.dart';
 
 Future<void> showCardCollection(BuildContext context) {
+  unawaited(AppState.instance.syncCardsFromCloud());
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,

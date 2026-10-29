@@ -68,6 +68,59 @@ function checkinStatus(u) {
   };
 }
 
+/* ---------------- 卡面收藏（账号级同步） ----------------
+   卡面目录在客户端/OBS，服务端只保存账号的收藏 id、抽卡次数与当日状态；
+   抽卡由服务端从客户端提交的候选目录里随机选，保证同一账号各端结果一致。 */
+const CARD_ID_RE = /^[\p{L}\p{N}_-]{1,20}\/\d{1,6}$/u;
+function cardIdList(value, max) {
+  const out = [];
+  const seen = new Set();
+  if (!Array.isArray(value)) return out;
+  for (const raw of value) {
+    if (out.length >= max) break;
+    const id = String(raw || '').trim();
+    if (!CARD_ID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+function cardState(u) {
+  const c = (u && u.cards && typeof u.cards === 'object' && !Array.isArray(u.cards)) ? u.cards : {};
+  const d = dayStr();
+  const today = c.todayDate === d && CARD_ID_RE.test(String(c.todayCard || ''))
+    ? String(c.todayCard) : null;
+  return {
+    date: d,
+    owned: cardIdList(c.owned, 500),
+    credits: Math.max(0, Math.min(999, parseInt(c.credits, 10) || 0)),
+    today: today,
+    gameRounds: c.gameDate === d ? Math.max(0, parseInt(c.gameRounds, 10) || 0) : 0,
+    gameDraws: c.gameDate === d ? Math.max(0, parseInt(c.gameDraws, 10) || 0) : 0,
+    flags: {
+      post: c.postDate === d,
+      recipe: c.recipeDate === d,
+      chat: c.chatDate === d
+    }
+  };
+}
+function cardEnsure(u) {
+  if (!u.cards || typeof u.cards !== 'object' || Array.isArray(u.cards)) u.cards = {};
+  return u.cards;
+}
+function cardAddOwned(c, id) {
+  const owned = cardIdList(c.owned, 500);
+  if (!owned.includes(id) && owned.length < 500) owned.push(id);
+  c.owned = owned;
+}
+function cardPick(candidates, owned, exclude) {
+  const ownedSet = new Set(owned);
+  const fresh = candidates.filter(function (id) { return !ownedSet.has(id) && id !== exclude; });
+  const pool = fresh.length ? fresh : candidates.filter(function (id) { return id !== exclude; });
+  if (!pool.length) return null;
+  return pool[crypto.randomInt(pool.length)];
+}
+
 function writeAtomic(file, obj) {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -2511,6 +2564,135 @@ const server = http.createServer(async function (req, res) {
     }
     if (dirty) saveUsers();
     return json(res, 200, checkinStatus(bu));
+  }
+
+  /* ===== 卡面收藏：账号级同步 / 抽卡 / 今日卡 ===== */
+  if (req.method === 'POST' && url === '/api/cards/sync') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = (await body()) || {};
+    const c = cardEnsure(bu);
+    const d = dayStr();
+    const migrate = b.migrate === true;
+    const merged = new Set(cardIdList(c.owned, 500));
+    cardIdList(b.owned, 500).forEach(function (id) { merged.add(id); });
+    c.owned = Array.from(merged).slice(0, 500);
+    /* 次数/每日计数只在首次迁移时合并；之后以服务端为准，避免旧设备把已消耗的次数顶回去。 */
+    if (migrate) {
+      c.credits = Math.max(
+        Math.min(999, parseInt(c.credits, 10) || 0),
+        Math.min(999, parseInt(b.credits, 10) || 0)
+      );
+    }
+    /* 当日卡先到先得；重抽只走 /api/cards/today，不在这里覆盖。 */
+    if (!(c.todayDate === d && CARD_ID_RE.test(String(c.todayCard || '')))) {
+      const incoming = String(b.today || '').trim();
+      if (CARD_ID_RE.test(incoming)) {
+        c.todayDate = d;
+        c.todayCard = incoming;
+        cardAddOwned(c, incoming);
+      }
+    }
+    if (migrate) {
+      const rounds = Math.max(
+        c.gameDate === d ? parseInt(c.gameRounds, 10) || 0 : 0,
+        Math.min(1000000, parseInt(b.gameRounds, 10) || 0)
+      );
+      const draws = Math.max(
+        c.gameDate === d ? parseInt(c.gameDraws, 10) || 0 : 0,
+        Math.min(1000000, parseInt(b.gameDraws, 10) || 0)
+      );
+      c.gameDate = d;
+      c.gameRounds = rounds;
+      c.gameDraws = draws;
+      const flags = (b.flags && typeof b.flags === 'object') ? b.flags : {};
+      if (flags.post === true) c.postDate = d;
+      if (flags.recipe === true) c.recipeDate = d;
+      if (flags.chat === true) c.chatDate = d;
+    }
+    saveUsers();
+    return json(res, 200, { ok: true, state: cardState(bu) });
+  }
+
+  if (req.method === 'POST' && url === '/api/cards/today') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = (await body()) || {};
+    const candidates = cardIdList(b.candidates, 500);
+    if (!candidates.length) return json(res, 400, { err: '卡面目录为空' });
+    const c = cardEnsure(bu);
+    const d = dayStr();
+    const current = c.todayDate === d && CARD_ID_RE.test(String(c.todayCard || ''))
+      ? String(c.todayCard) : null;
+    if (current && b.reroll !== true) {
+      return json(res, 200, { ok: true, card: current, state: cardState(bu) });
+    }
+    const chosen = cardPick(candidates, cardState(bu).owned, b.reroll === true ? current : null);
+    if (!chosen) return json(res, 400, { err: '没有可抽的卡面' });
+    c.todayDate = d;
+    c.todayCard = chosen;
+    cardAddOwned(c, chosen);
+    saveUsers();
+    return json(res, 200, { ok: true, card: chosen, state: cardState(bu) });
+  }
+
+  if (req.method === 'POST' && url === '/api/cards/draw') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = (await body()) || {};
+    const candidates = cardIdList(b.candidates, 500);
+    if (!candidates.length) return json(res, 400, { err: '卡面目录为空' });
+    const before = cardState(bu);
+    if (before.credits <= 0) return json(res, 400, { err: '还没有抽卡机会' });
+    const chosen = cardPick(candidates, before.owned, null);
+    if (!chosen) return json(res, 400, { err: '没有可抽的卡面' });
+    const c = cardEnsure(bu);
+    c.credits = before.credits - 1;
+    cardAddOwned(c, chosen);
+    saveUsers();
+    return json(res, 200, { ok: true, card: chosen, state: cardState(bu) });
+  }
+
+  if (req.method === 'POST' && url === '/api/cards/grant') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'cards-grant', 120, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = (await body()) || {};
+    const source = String(b.source || '');
+    const c = cardEnsure(bu);
+    const d = dayStr();
+    let granted = false;
+    if (source === 'gameRound') {
+      let rounds = c.gameDate === d ? Math.max(0, parseInt(c.gameRounds, 10) || 0) : 0;
+      let draws = c.gameDate === d ? Math.max(0, parseInt(c.gameDraws, 10) || 0) : 0;
+      rounds = Math.min(1000000, rounds + 1);
+      if (rounds % 7 === 0 && draws < 2) {
+        draws += 1;
+        c.credits = Math.min(999, Math.max(0, parseInt(c.credits, 10) || 0) + 1);
+        granted = true;
+      }
+      c.gameDate = d;
+      c.gameRounds = rounds;
+      c.gameDraws = draws;
+    } else if (source === 'post' || source === 'recipe' || source === 'chat') {
+      const key = source + 'Date';
+      if (c[key] !== d) {
+        c[key] = d;
+        c.credits = Math.min(999, Math.max(0, parseInt(c.credits, 10) || 0) + 1);
+        granted = true;
+      }
+    } else {
+      return json(res, 400, { err: '未知的抽卡机会来源' });
+    }
+    saveUsers();
+    return json(res, 200, { ok: true, granted: granted, state: cardState(bu) });
   }
 
   /* ===== ★星盘：本命盘 / 行运盘（Kerykeion 本地计算，登录后可用） ===== */

@@ -112,6 +112,23 @@ class Api {
 
   static Future<Map<String, dynamic>> me() => get('/api/auth/me');
 
+  static Future<Map<String, dynamic>> cardsSync(Map<String, dynamic> state) =>
+      post('/api/cards/sync', state);
+
+  static Future<Map<String, dynamic>> cardsToday({
+    required List<String> candidates,
+    bool reroll = false,
+  }) => post('/api/cards/today', {
+    'candidates': candidates,
+    'reroll': reroll,
+  });
+
+  static Future<Map<String, dynamic>> cardsDraw(List<String> candidates) =>
+      post('/api/cards/draw', {'candidates': candidates});
+
+  static Future<Map<String, dynamic>> cardsGrant(String source) =>
+      post('/api/cards/grant', {'source': source});
+
   static Future<Map<String, dynamic>> login(String phone, String password) =>
       post('/api/auth/login', {'phone': phone, 'password': password}, false);
 

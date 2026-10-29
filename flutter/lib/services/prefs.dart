@@ -51,6 +51,7 @@ class Prefs {
       PrefKeys.cardPostDay,
       PrefKeys.cardRecipeDay,
       PrefKeys.cardChatDay,
+      PrefKeys.cardOwner,
     ];
     for (final key in keys) {
       await _sp.remove(key);
@@ -88,6 +89,7 @@ class PrefKeys {
   static const cardPostDay = 'citro_card_post_day';
   static const cardRecipeDay = 'citro_card_recipe_day';
   static const cardChatDay = 'citro_card_chat_day';
+  static const cardOwner = 'citro_card_owner';
   static const cardsIndexCache = 'citro_cards_index';
   static const weatherLat = 'citro_weather_lat';
   static const weatherLon = 'citro_weather_lon';

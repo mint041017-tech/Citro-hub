@@ -149,6 +149,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
         _startNotifyPolling();
         unawaited(syncZodiac());
+        unawaited(syncCardsFromCloud());
       }
     } catch (_) {
       // 离线时保留本地登录态，网络恢复后再校验。
@@ -185,6 +186,8 @@ class AppState extends ChangeNotifier {
     Api.token = null;
     await Prefs.setString(PrefKeys.token, null);
     await Prefs.setString(PrefKeys.authUser, null);
+    await Prefs.setString(PrefKeys.cardOwner, null);
+    await _clearLocalCardState();
     notifyListeners();
   }
 
@@ -197,6 +200,7 @@ class AppState extends ChangeNotifier {
     _startNotifyPolling();
     unawaited(syncZodiac());
     unawaited(_loadCheckin());
+    unawaited(syncCardsFromCloud());
   }
 
   Future<void> register(
@@ -213,6 +217,7 @@ class AppState extends ChangeNotifier {
     _startNotifyPolling();
     unawaited(syncZodiac());
     unawaited(_loadCheckin());
+    unawaited(syncCardsFromCloud());
   }
 
   Future<void> logout() async {
@@ -643,6 +648,13 @@ class AppState extends ChangeNotifier {
 
   /* ---------------- 卡面收藏 ---------------- */
 
+  /// 卡面按北京时间跨日，和后端 dayStr() 对齐。
+  static String _cardDayKey(DateTime d) {
+    final c = d.toUtc().add(const Duration(hours: 8));
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${c.year.toString().padLeft(4, '0')}-${two(c.month)}-${two(c.day)}';
+  }
+
   Set<String> get ownedCards =>
       Prefs.getStringList(PrefKeys.cardsOwned).toSet();
 
@@ -655,9 +667,123 @@ class AppState extends ChangeNotifier {
     if (raw == null) return null;
     final split = raw.indexOf(':');
     if (split <= 0) return null;
-    if (raw.substring(0, split) != _dayKey(DateTime.now())) return null;
+    if (raw.substring(0, split) != _cardDayKey(DateTime.now())) return null;
     final id = raw.substring(split + 1);
     return id.isEmpty ? null : id;
+  }
+
+  List<String> _cardCandidates() => [for (final card in CardCatalog.all) card.id];
+
+  Map<String, dynamic> _localCardPayload({required bool migrate}) {
+    final day = _cardDayKey(DateTime.now());
+    final payload = <String, dynamic>{
+      'owned': ownedCards.toList(),
+      'today': todayCardId,
+      'migrate': migrate,
+    };
+    if (migrate) {
+      payload['credits'] = cardCredits;
+      payload['gameRounds'] = _todayCount(PrefKeys.cardGameRounds);
+      payload['gameDraws'] = _todayCount(PrefKeys.cardGameDraws);
+      payload['flags'] = {
+        'post': Prefs.getString(PrefKeys.cardPostDay) == day,
+        'recipe': Prefs.getString(PrefKeys.cardRecipeDay) == day,
+        'chat': Prefs.getString(PrefKeys.cardChatDay) == day,
+      };
+    }
+    return payload;
+  }
+
+  Future<void> _clearLocalCardState() async {
+    await Prefs.setStringList(PrefKeys.cardsOwned, const []);
+    await Prefs.setString(PrefKeys.cardsToday, null);
+    await Prefs.setInt(PrefKeys.cardCredits, 0);
+    await Prefs.setString(PrefKeys.cardGameRounds, null);
+    await Prefs.setString(PrefKeys.cardGameDraws, null);
+    await Prefs.setString(PrefKeys.cardPostDay, null);
+    await Prefs.setString(PrefKeys.cardRecipeDay, null);
+    await Prefs.setString(PrefKeys.cardChatDay, null);
+    notifyListeners();
+  }
+
+  Future<void> _applyCardCloud(Map<String, dynamic> state) async {
+    final owned = (state['owned'] as List? ?? const [])
+        .whereType<String>()
+        .toList();
+    await Prefs.setStringList(PrefKeys.cardsOwned, owned);
+    await Prefs.setInt(
+      PrefKeys.cardCredits,
+      (state['credits'] as num?)?.toInt() ?? 0,
+    );
+    final day = state['date']?.toString() ?? _cardDayKey(DateTime.now());
+    final today = state['today']?.toString() ?? '';
+    await Prefs.setString(
+      PrefKeys.cardsToday,
+      today.isEmpty ? null : '$day:$today',
+    );
+    await Prefs.setString(
+      PrefKeys.cardGameRounds,
+      '$day:${(state['gameRounds'] as num?)?.toInt() ?? 0}',
+    );
+    await Prefs.setString(
+      PrefKeys.cardGameDraws,
+      '$day:${(state['gameDraws'] as num?)?.toInt() ?? 0}',
+    );
+    final flags = state['flags'] is Map
+        ? Map<String, dynamic>.from(state['flags'] as Map)
+        : const <String, dynamic>{};
+    await Prefs.setString(
+      PrefKeys.cardPostDay,
+      flags['post'] == true ? day : null,
+    );
+    await Prefs.setString(
+      PrefKeys.cardRecipeDay,
+      flags['recipe'] == true ? day : null,
+    );
+    await Prefs.setString(
+      PrefKeys.cardChatDay,
+      flags['chat'] == true ? day : null,
+    );
+    notifyListeners();
+  }
+
+  /// 登录后把本机已有机进度合并到账号，其他端随后会拿到同一份收藏与次数。
+  Future<void> syncCardsFromCloud({bool force = false}) async {
+    if (user == null || Api.token == null) return;
+    try {
+      final owner = Prefs.getString(PrefKeys.cardOwner);
+      var migrate = owner == null || owner.isEmpty;
+      if (!force && owner != null && owner.isNotEmpty && owner != user!.name) {
+        await _clearLocalCardState();
+        migrate = false;
+      }
+      final local = (owner == null || owner.isEmpty || owner == user!.name)
+          ? _localCardPayload(migrate: migrate)
+          : <String, dynamic>{};
+      final j = await Api.cardsSync(local);
+      await Prefs.setString(PrefKeys.cardOwner, user!.name);
+      final state = j['state'] is Map
+          ? Map<String, dynamic>.from(j['state'] as Map)
+          : j;
+      await _applyCardCloud(state);
+    } catch (_) {}
+  }
+
+  Future<CardFace?> _cloudToday({required bool reroll}) async {
+    if (user == null || Api.token == null) return null;
+    await CardCatalog.ensureLoaded();
+    final candidates = _cardCandidates();
+    if (candidates.isEmpty) return null;
+    try {
+      final j = await Api.cardsToday(candidates: candidates, reroll: reroll);
+      if (j['state'] is Map) {
+        await _applyCardCloud(Map<String, dynamic>.from(j['state'] as Map));
+      }
+      return CardCatalog.byId(j['card']?.toString());
+    } on ApiException catch (e) {
+      if (e.code != 0 && e.code != 404) return null;
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _unlockCard(String id) async {
@@ -671,13 +797,17 @@ class AppState extends ChangeNotifier {
   /// 今日打卡的卡面：同一天保持稳定，打卡/转运时各抽一次。
   Future<CardFace?> ensureTodayCard() async {
     await CardCatalog.ensureLoaded();
+    if (user != null && Api.token != null) {
+      final cloud = await _cloudToday(reroll: false);
+      if (cloud != null) return cloud;
+    }
     final current = CardCatalog.byId(todayCardId);
     if (current != null) return current;
     final picked = CardCatalog.pick(owned: ownedCards);
     if (picked == null) return null;
     await Prefs.setString(
       PrefKeys.cardsToday,
-      '${_dayKey(DateTime.now())}:${picked.id}',
+      '${_cardDayKey(DateTime.now())}:${picked.id}',
     );
     await _unlockCard(picked.id);
     notifyListeners();
@@ -686,12 +816,16 @@ class AppState extends ChangeNotifier {
 
   Future<CardFace?> redrawTodayCard() async {
     await CardCatalog.ensureLoaded();
+    if (user != null && Api.token != null) {
+      final cloud = await _cloudToday(reroll: true);
+      if (cloud != null) return cloud;
+    }
     final current = CardCatalog.byId(todayCardId);
     final picked = CardCatalog.pick(owned: ownedCards, exclude: current?.id);
     if (picked == null) return null;
     await Prefs.setString(
       PrefKeys.cardsToday,
-      '${_dayKey(DateTime.now())}:${picked.id}',
+      '${_cardDayKey(DateTime.now())}:${picked.id}',
     );
     await _unlockCard(picked.id);
     notifyListeners();
@@ -701,6 +835,24 @@ class AppState extends ChangeNotifier {
   Future<CardFace?> drawCardFromCredit() async {
     if (cardCredits <= 0) return null;
     await CardCatalog.ensureLoaded();
+    if (user != null && Api.token != null) {
+      final candidates = _cardCandidates();
+      if (candidates.isNotEmpty) {
+        try {
+          final j = await Api.cardsDraw(candidates);
+          if (j['state'] is Map) {
+            await _applyCardCloud(Map<String, dynamic>.from(j['state'] as Map));
+          }
+          final face = CardCatalog.byId(j['card']?.toString());
+          if (face != null) return face;
+        } on ApiException catch (e) {
+          if (e.code != 0 && e.code != 404) {
+            if (e.code == 400) await syncCardsFromCloud(force: true);
+            return null;
+          }
+        } catch (_) {}
+      }
+    }
     final picked = CardCatalog.pick(owned: ownedCards);
     if (picked == null) return null;
     await Prefs.setInt(PrefKeys.cardCredits, cardCredits - 1);
@@ -715,15 +867,45 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> _firstToday(String key) async {
-    final today = _dayKey(DateTime.now());
+    final today = _cardDayKey(DateTime.now());
     if (Prefs.getString(key) == today) return false;
     await Prefs.setString(key, today);
     return true;
   }
 
+  Future<bool> _grantCardDraw(String source, String dayKey) async {
+    if (user != null && Api.token != null) {
+      try {
+        final j = await Api.cardsGrant(source);
+        if (j['state'] is Map) {
+          await _applyCardCloud(Map<String, dynamic>.from(j['state'] as Map));
+        }
+        return j['granted'] == true;
+      } on ApiException catch (e) {
+        if (e.code != 0 && e.code != 404) return false;
+      } catch (_) {}
+    }
+    if (!await _firstToday(dayKey)) return false;
+    await _addCardCredit();
+    return true;
+  }
+
   /// 每完成 7 局任意游戏给一次抽卡机会，每天最多两次。
   Future<bool> noteGameRound() async {
-    final today = _dayKey(DateTime.now());
+    if (user != null && Api.token != null) {
+      try {
+        final j = await Api.cardsGrant('gameRound');
+        if (j['state'] is Map) {
+          await _applyCardCloud(Map<String, dynamic>.from(j['state'] as Map));
+        }
+        final granted = j['granted'] == true;
+        if (granted) cardPromptTick.value++;
+        return granted;
+      } on ApiException catch (e) {
+        if (e.code != 0 && e.code != 404) return false;
+      } catch (_) {}
+    }
+    final today = _cardDayKey(DateTime.now());
     final rounds = _bumpTodayCount(PrefKeys.cardGameRounds);
     if (rounds % 7 != 0) return false;
     final draws = _todayCount(PrefKeys.cardGameDraws);
@@ -734,36 +916,27 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> grantPostCardDraw() async {
-    if (!await _firstToday(PrefKeys.cardPostDay)) return false;
-    await _addCardCredit();
-    return true;
-  }
+  Future<bool> grantPostCardDraw() =>
+      _grantCardDraw('post', PrefKeys.cardPostDay);
 
-  Future<bool> grantRecipeCardDraw() async {
-    if (!await _firstToday(PrefKeys.cardRecipeDay)) return false;
-    await _addCardCredit();
-    return true;
-  }
+  Future<bool> grantRecipeCardDraw() =>
+      _grantCardDraw('recipe', PrefKeys.cardRecipeDay);
 
-  Future<bool> grantChatCardDraw() async {
-    if (!await _firstToday(PrefKeys.cardChatDay)) return false;
-    await _addCardCredit();
-    return true;
-  }
+  Future<bool> grantChatCardDraw() =>
+      _grantCardDraw('chat', PrefKeys.cardChatDay);
 
   int _todayCount(String key) {
     final raw = Prefs.getString(key);
     if (raw == null) return 0;
     final split = raw.indexOf(':');
     if (split <= 0) return 0;
-    if (raw.substring(0, split) != _dayKey(DateTime.now())) return 0;
+    if (raw.substring(0, split) != _cardDayKey(DateTime.now())) return 0;
     return int.tryParse(raw.substring(split + 1)) ?? 0;
   }
 
   int _bumpTodayCount(String key) {
     final next = _todayCount(key) + 1;
-    Prefs.setString(key, '${_dayKey(DateTime.now())}:$next');
+    Prefs.setString(key, '${_cardDayKey(DateTime.now())}:$next');
     return next;
   }
 

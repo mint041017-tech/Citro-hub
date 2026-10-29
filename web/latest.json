@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "1.9.8",
-  "build_number": "1908",
-  "build_id": "8c307040c31233419bc8aa036cee2826",
-  "file": "Citro-web-1.9.8.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.8.zip",
-  "size": 27119257,
-  "sha256": "ae05b7fc0573c0bce7007179e881b96b565cd19e7556c5134a89ba9d06bd346f",
-  "published_at": "2026-10-29T17:08:11Z",
-  "notes": "1.9.8：听隅圆形番茄钟与播放胶囊、收藏标题置顶、安卓多轨修复；四端动效统一与减少动态；卡面收藏/抽卡、CiCi 发图、铃渡、数独二版与果冻 Q 弹累积同步"
+  "version": "1.9.9",
+  "build_number": "1909",
+  "build_id": "7df59215daad791d9eb273ccba602aed",
+  "file": "Citro-web-1.9.9.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.9.zip",
+  "size": 27122049,
+  "sha256": "bd4aa4e623790fffd657bdf2fdf79e4ad0f4c8d10822ce1d91bd828026b73c3d",
+  "published_at": "2026-10-29T17:42:11Z",
+  "notes": "1.9.9：卡面收藏、今日卡与抽卡次数改为账号级跨端同步；首次登录合并本机进度，切换账号不串数据；旧版后端自动回退本机逻辑"
 }
