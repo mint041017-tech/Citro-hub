@@ -9,7 +9,10 @@ import '../overlays/pomodoro_sheet.dart';
 import '../services/lantern_api.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../tingyu/tingyu_controller.dart';
+import '../tingyu/tingyu_play_chip.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
 
@@ -140,15 +143,58 @@ class WebDesktopHeader extends StatelessWidget {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           reverse: true,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (LanternApi.currentWindow() != null) ...[
-                _LanternNavButton(onTap: () => showLanternSheet(context)),
-                const SizedBox(width: 9),
-              ],
-              const WebThemeMenu(),
-            ],
+          child: ListenableBuilder(
+            listenable: NookController.instance,
+            builder: (context, _) {
+              final playing = NookController.instance.playing;
+              final reduce = CitroMotion.reduced(context);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (LanternApi.currentWindow() != null) ...[
+                    _LanternNavButton(onTap: () => showLanternSheet(context)),
+                    const SizedBox(width: 9),
+                  ],
+                  AnimatedSize(
+                    duration: reduce ? Duration.zero : CitroMotion.size,
+                    curve: CitroMotion.easeOut,
+                    alignment: Alignment.centerRight,
+                    child: AnimatedSwitcher(
+                      duration: reduce ? Duration.zero : CitroMotion.popover,
+                      switchInCurve: CitroMotion.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      transitionBuilder: (child, animation) {
+                        final fade = FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        );
+                        if (reduce) return fade;
+                        return FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: Tween<double>(
+                              begin: .96,
+                              end: 1,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: playing
+                          ? const Padding(
+                              key: ValueKey('web-tingyu-chip'),
+                              padding: EdgeInsets.only(left: 9),
+                              child: TingyuPlayChip(),
+                            )
+                          : const SizedBox.shrink(
+                              key: ValueKey('web-tingyu-chip-idle'),
+                            ),
+                    ),
+                  ),
+                  const WebThemeMenu(),
+                ],
+              );
+            },
           ),
         ),
       ),

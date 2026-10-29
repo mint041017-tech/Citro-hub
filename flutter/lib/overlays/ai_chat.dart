@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/ai.dart';
+import '../services/media.dart';
 import '../state/app_state.dart';
 import '../services/models.dart';
 import '../theme/app_theme.dart';
@@ -15,7 +18,13 @@ class _ChatMessage {
   final bool user;
   String text;
   bool pending;
-  _ChatMessage({required this.user, required this.text, this.pending = false});
+  final String? image;
+  _ChatMessage({
+    required this.user,
+    required this.text,
+    this.pending = false,
+    this.image,
+  });
 }
 
 final List<_ChatMessage> _history = [];
@@ -56,6 +65,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
   final List<_ChatMessage> _deedHistory = [];
   bool _sending = false;
   bool _deedShared = false;
+  String? _pendingImage;
+  bool _picking = false;
+  bool _chatRewarded = false;
 
   // 转运对话单独一份记录，不把「好事」混进日常 CiCi 历史。
   List<_ChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
@@ -65,6 +77,12 @@ class _AiChatSheetState extends State<_AiChatSheet>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final got = await AppState.instance.grantChatCardDraw();
+      if (!mounted || !got) return;
+      setState(() => _chatRewarded = true);
+    });
   }
 
   @override
@@ -106,34 +124,100 @@ class _AiChatSheetState extends State<_AiChatSheet>
   Future<void> _send([String? preset]) async {
     if (_sending) return;
     final text = (preset ?? _input.text).trim();
-    if (text.isEmpty) return;
-    final firstDeed = widget.goodDeed && !_deedShared;
-    _ChatMessage? deedMsg;
-    if (firstDeed) {
-      _deedShared = true;
-      widget.onGoodDeed?.call();
-      deedMsg = _ChatMessage(user: false, text: _deedDoneText);
-      unawaited(_recordDeed(text, deedMsg));
-    }
+    final image = preset == null ? _pendingImage : null;
+    if (text.isEmpty && image == null) return;
     _input.clear();
     _error = null;
-    final assistant = _ChatMessage(user: false, text: '', pending: true);
+    final user = _ChatMessage(user: true, text: text, image: image);
     setState(() {
-      _messages.add(_ChatMessage(user: true, text: text));
-      if (deedMsg != null) _messages.add(deedMsg);
-      _messages.add(assistant);
+      _pendingImage = null;
+      _messages.add(user);
       _sending = true;
     });
     _scrollToEnd();
 
+    if (widget.goodDeed && !_deedShared) {
+      await _reviewDeed(user);
+      return;
+    }
+    final assistant = _ChatMessage(user: false, text: '', pending: true);
+    setState(() => _messages.add(assistant));
+    _scrollToEnd();
+    await _streamReply(assistant);
+  }
+
+  Future<void> _reviewDeed(_ChatMessage user) async {
+    final assistant = _ChatMessage(user: false, text: '', pending: true);
+    setState(() => _messages.add(assistant));
+    _scrollToEnd();
+    try {
+      final result = await AiService.reviewGoodDeed(
+        text: user.text,
+        image: user.image,
+      );
+      if (!mounted) return;
+      if (result == null) {
+        setState(() {
+          assistant.pending = false;
+          assistant.text = '审核暂时没连上，等会儿再把这件事发我一次吧。';
+        });
+        return;
+      }
+      if (!result.pass) {
+        setState(() {
+          assistant.pending = false;
+          assistant.text = result.reply;
+        });
+        return;
+      }
+      _deedShared = true;
+      widget.onGoodDeed?.call();
+      final done = _ChatMessage(
+        user: false,
+        text: '${result.reply}\n\n$_deedDoneText',
+      );
+      setState(() {
+        assistant.pending = false;
+        assistant.text = result.reply;
+        _messages.add(done);
+      });
+      unawaited(
+        _recordDeed(
+          user.text.isEmpty ? '分享了公益捐赠截图' : user.text,
+          done,
+        ),
+      );
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        assistant.pending = false;
+        assistant.text = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        assistant.pending = false;
+        assistant.text = '网络有点不稳，稍后再试。';
+      });
+    } finally {
+      if (mounted) setState(() => _sending = false);
+      _scrollToEnd();
+    }
+  }
+
+  Future<void> _streamReply(_ChatMessage assistant) async {
     final source = _messages
-        .where((m) => !m.pending && m.text.isNotEmpty)
-        .map((m) => {'role': m.user ? 'user' : 'assistant', 'content': m.text})
+        .where((m) => !m.pending && (m.text.isNotEmpty || m.image != null))
+        .map(
+          (m) => <String, dynamic>{
+            'role': m.user ? 'user' : 'assistant',
+            'content': _contentFor(m),
+          },
+        )
         .toList();
     final messages = source.length > 14
         ? source.sublist(source.length - 14)
         : source;
-
     try {
       await for (final chunk in AiService.streamChat(
         messages,
@@ -171,12 +255,48 @@ class _AiChatSheetState extends State<_AiChatSheet>
     }
   }
 
+  dynamic _contentFor(_ChatMessage message) {
+    if (message.image == null) return message.text;
+    return <Map<String, dynamic>>[
+      if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
+      {
+        'type': 'image_url',
+        'image_url': {'url': message.image},
+      },
+    ];
+  }
+
+  Future<void> _pickImage() async {
+    if (_picking || _sending) return;
+    setState(() => _picking = true);
+    try {
+      final raw = await MediaService.pickImageBytes(
+        maxWidth: 1600,
+        quality: 90,
+      );
+      if (raw == null) return;
+      final compressed = await MediaService.compressCookImage(
+        raw,
+        maxDim: 1280,
+        quality: 84,
+        limit: 300 * 1024,
+      );
+      if (!mounted) return;
+      setState(() => _pendingImage = MediaService.dataUrl(compressed));
+    } catch (_) {
+      if (mounted) AppToast.show(context, '图片读取失败，换一张试试');
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
   void _clear() {
     if (_sending) return;
     setState(() {
       _messages.clear();
       _error = null;
       _deedShared = false;
+      _pendingImage = null;
     });
   }
 
@@ -187,8 +307,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (!mounted) return;
     setState(() {
       message.text = saved
-          ? '$_deedDoneText\n已自动收录到「好事记录」笔记 📝'
-          : '$_deedDoneText\n笔记暂时没存上，稍后再试。';
+          ? '${message.text}\n已自动收录到「好事记录」笔记 📝'
+          : '${message.text}\n笔记暂时没存上，稍后再试。';
     });
   }
 
@@ -273,19 +393,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     child: Row(
                       children: [
                         Container(
-                          width: 36,
-                          height: 36,
+                          width: 38,
+                          height: 38,
+                          padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: c.accent,
+                            color: c.accent.withAlpha(70),
                             shape: BoxShape.circle,
                             border: Border.all(color: c.line2),
                             boxShadow: CitroColors.shadows.note(c),
                           ),
-                          child: Center(
-                            child: AppIcon(
-                              strokeSvg(AppIcons.sparkle, width: 2),
-                              size: 19,
-                              color: const Color(0xFF2E2C22),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/cici_avatar.webp',
+                              fit: BoxFit.cover,
+                              cacheWidth: 152,
                             ),
                           ),
                         ),
@@ -373,6 +494,41 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     ),
                   ),
                   DashedLine(color: c.line2.withAlpha(150)),
+                  if (_chatRewarded)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.hl.withAlpha(120),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: c.accent.withAlpha(80)),
+                        ),
+                        child: Row(
+                          children: [
+                            AppIcon(
+                              strokeSvg(AppIcons.sparkle, width: 2),
+                              size: 13,
+                              color: c.accentInk,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
+                                style: context.body(
+                                  size: 10.5,
+                                  weight: FontWeight.w600,
+                                  color: c.accentInk,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: _messages.isEmpty
                         ? _welcome(context)
@@ -430,7 +586,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(18, 0, 18, 2),
                     child: Text(
-                      'AI 生成内容仅供参考；对话会发送至第三方 AI 服务处理，请勿发送敏感信息。',
+                      'AI 生成内容仅供参考；文字与图片会发送至第三方 AI 服务处理，请勿发送敏感信息。',
                       textAlign: TextAlign.center,
                       style: context.body(size: 9.5, color: c.inkSoft),
                     ),
@@ -462,12 +618,23 @@ class _AiChatSheetState extends State<_AiChatSheet>
             children: [
               Transform.rotate(
                 angle: -3 * math.pi / 180,
-                child: Image.asset(
-                  'assets/images/cats/23757.webp',
-                  width: 82,
-                  height: 82,
-                  fit: BoxFit.contain,
-                  cacheWidth: 250,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: c.accent.withAlpha(70),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.line),
+                    boxShadow: CitroColors.shadows.note(c),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/cici_avatar.webp',
+                      fit: BoxFit.cover,
+                      cacheWidth: 216,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -507,8 +674,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
               child: Text(
                 context.app.loggedIn
-                    ? '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我，顺便收进「好事记录」笔记。'
-                    : '认真做过的小事都算数：帮同学带饭、给流浪猫添水、把工位收拾干净……写下来发给我就行。登录后会自动收录到「好事记录」笔记。',
+                    ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会收进「好事记录」笔记。'
+                    : '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后才能获得转运机会。',
                 style: context.body(size: 11.5, color: c.mintInk, height: 1.6),
               ),
             ),
@@ -577,13 +744,30 @@ class _AiChatSheetState extends State<_AiChatSheet>
             ),
             boxShadow: CitroColors.shadows.note(c),
           ),
-          child: Text(
-            m.text,
-            style: context.body(
-              size: 13,
-              color: const Color(0xFF2E2C22),
-              height: 1.65,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (m.image != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: _LocalImage(
+                    dataUrl: m.image!,
+                    width: 178,
+                    height: 132,
+                  ),
+                ),
+                if (m.text.isNotEmpty) const SizedBox(height: 6),
+              ],
+              if (m.text.isNotEmpty)
+                Text(
+                  m.text,
+                  style: context.body(
+                    size: 13,
+                    color: const Color(0xFF2E2C22),
+                    height: 1.65,
+                  ),
+                ),
+            ],
           ),
         ),
       );
@@ -594,19 +778,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 28,
+            height: 28,
             margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(1.5),
             decoration: BoxDecoration(
               color: c.hl,
               shape: BoxShape.circle,
               border: Border.all(color: c.line),
             ),
-            child: Center(
-              child: AppIcon(
-                strokeSvg(AppIcons.sparkle, width: 2),
-                size: 13,
-                color: c.accentInk,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/cici_avatar.webp',
+                fit: BoxFit.cover,
+                cacheWidth: 112,
               ),
             ),
           ),
@@ -666,25 +851,110 @@ class _AiChatSheetState extends State<_AiChatSheet>
         color: c.surface.withAlpha(235),
         border: Border(top: BorderSide(color: c.line)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 40, maxHeight: 108),
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
-              decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: c.line2),
+          if (_pendingImage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: _LocalImage(
+                          dataUrl: _pendingImage!,
+                          width: 58,
+                          height: 58,
+                        ),
+                      ),
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _pendingImage = null),
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: c.ink,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: c.surface, width: 1.4),
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '图片会和文字一起发给 CiCi',
+                      style: context.body(size: 10.5, color: c.inkSoft),
+                    ),
+                  ),
+                ],
               ),
-              child: TextField(
-                controller: _input,
-                focusNode: _focus,
-                autofocus: true,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              GestureDetector(
+                onTap: _picking || _sending ? null : _pickImage,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  margin: const EdgeInsets.only(right: 7, bottom: 1),
+                  decoration: BoxDecoration(
+                    color: c.surface2,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.line2),
+                  ),
+                  child: Center(
+                    child: _picking
+                        ? SizedBox(
+                            width: 15,
+                            height: 15,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.8,
+                              color: c.accent,
+                            ),
+                          )
+                        : AppIcon(
+                            strokeSvg(AppIcons.image, width: 2),
+                            size: 18,
+                            color: c.accentInk,
+                          ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minHeight: 40,
+                    maxHeight: 108,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  decoration: BoxDecoration(
+                    color: c.surface2,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: c.line2),
+                  ),
+                  child: TextField(
+                    controller: _input,
+                    focusNode: _focus,
+                    autofocus: true,
+                    minLines: 1,
+                    maxLines: 4,
+                    textAlignVertical: TextAlignVertical.center,
+                    textInputAction: TextInputAction.send,
                 onTap: () {
                   _focus.requestFocus();
                   SystemChannels.textInput.invokeMethod<void>('TextInput.show');
@@ -696,16 +966,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 },
                 onSubmitted: (_) => _send(),
                 onTapOutside: (_) => _focus.unfocus(),
-                style: context.body(size: 13, height: 1.5),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  hintText: '和 CiCi 聊聊…',
-                  hintStyle: context.body(size: 12.5, color: c.inkSoft),
+                    style: context.body(size: 13, height: 1.5),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      hintText: '和 CiCi 聊聊…',
+                      hintStyle: context.body(
+                        size: 12.5,
+                        color: c.inkSoft,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: _sending ? null : _send,
@@ -736,8 +1010,73 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
             ),
           ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _LocalImage extends StatefulWidget {
+  const _LocalImage({
+    required this.dataUrl,
+    required this.width,
+    required this.height,
+  });
+
+  final String dataUrl;
+  final double width;
+  final double height;
+
+  @override
+  State<_LocalImage> createState() => _LocalImageState();
+}
+
+class _LocalImageState extends State<_LocalImage> {
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _decode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LocalImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dataUrl != widget.dataUrl) _decode();
+  }
+
+  void _decode() {
+    try {
+      final comma = widget.dataUrl.indexOf(',');
+      _bytes = comma < 0
+          ? null
+          : base64Decode(widget.dataUrl.substring(comma + 1));
+    } catch (_) {
+      _bytes = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    if (_bytes == null) {
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        color: c.surface2,
+        child: Icon(Icons.broken_image_outlined, size: 18, color: c.inkSoft),
+      );
+    }
+    return Image.memory(
+      _bytes!,
+      width: widget.width,
+      height: widget.height,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      cacheWidth: (widget.width * 2.2).round(),
     );
   }
 }

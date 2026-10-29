@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_keys.dart';
+import 'overlays/pomodoro_sheet.dart';
 import 'overlays/timer_overlay.dart';
 import 'perf_probe.dart';
 import 'routes.dart';
@@ -15,6 +16,7 @@ import 'services/web_route.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/breakpoints.dart';
+import 'theme/motion.dart';
 import 'theme/scroll_behavior.dart';
 import 'theme/tokens.dart';
 import 'widgets/corner_guard.dart';
@@ -207,6 +209,8 @@ class _CitroAppState extends State<CitroApp> {
           themeMode: _themeMode,
           theme: buildCitroTheme(CitroColors.light),
           darkTheme: buildCitroTheme(CitroColors.darkColors),
+          themeAnimationCurve: CitroMotion.easeOut,
+          themeAnimationDuration: CitroMotion.modal,
           scrollBehavior: const CitroScrollBehavior(),
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
@@ -264,6 +268,7 @@ class _CitroAppState extends State<CitroApp> {
                     children: [
                       child ?? const SizedBox.shrink(),
                       const TimerCapsuleOverlay(),
+                      const PomodoroDoneWatcher(),
                     ],
                   ),
                 ),
@@ -338,8 +343,8 @@ class _SplashGateState extends State<SplashGate> {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 180),
-      switchInCurve: Curves.easeOut,
+      duration: CitroMotion.popover,
+      switchInCurve: CitroMotion.easeOut,
       switchOutCurve: Curves.easeIn,
       child: !_ready
           ? const SplashScreen(key: ValueKey('splash'))

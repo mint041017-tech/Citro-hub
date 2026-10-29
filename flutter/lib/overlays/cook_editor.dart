@@ -9,6 +9,7 @@ import '../services/api.dart';
 import '../services/image_store.dart';
 import '../services/media.dart';
 import '../services/models.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
@@ -608,7 +609,15 @@ class _CookEditorState extends State<_CookEditor> {
     try {
       final saved = await Api.saveRecipe(r);
       if (!mounted) return;
-      AppToast.show(context, '食谱已保存');
+      final cardReward =
+          widget.initial == null && r.visibility == 'public'
+          ? await context.app.grantRecipeCardDraw()
+          : false;
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        cardReward ? '食谱已保存 · 获得一次卡面抽卡机会' : '食谱已保存',
+      );
       Navigator.of(context).pop(saved);
     } on Exception catch (e) {
       if (mounted)

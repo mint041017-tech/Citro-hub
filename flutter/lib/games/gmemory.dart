@@ -637,11 +637,15 @@ class _MemoryTileState extends State<_MemoryTile>
   }
 }
 
-List<CssShadowSpec> _cardShadows() => const [
-  CssShadowSpec(color: Color(0x0E5A4A2C), offset: Offset(0, 1), blur: 2),
+List<CssShadowSpec> _cardShadows(CitroColors c) => [
   CssShadowSpec(
-    color: Color(0x4D5A4A2C),
-    offset: Offset(0, 8),
+    color: c.dark ? const Color(0x33000000) : const Color(0x0E5A4A2C),
+    offset: const Offset(0, 1),
+    blur: 2,
+  ),
+  CssShadowSpec(
+    color: c.dark ? const Color(0x66000000) : const Color(0x4D5A4A2C),
+    offset: const Offset(0, 8),
     blur: 20,
     spread: -12,
   ),
@@ -656,18 +660,25 @@ class _CardBack extends StatelessWidget {
     final c = context.c;
     return CssShadowLayer(
       radius: 10,
-      shadows: _cardShadows(),
+      shadows: _cardShadows(c),
       child: SizedBox.expand(
         child: Container(
           decoration: BoxDecoration(
-            color: c.accent,
+            color: c.dark ? const Color(0xFF4F361C) : c.accent,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: c.accent2),
+            border: Border.all(
+              color: c.dark ? const Color(0xFF7A5124) : c.accent2,
+            ),
           ),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: const Color(0x4DFFFDF8), width: 3),
+              border: Border.all(
+                color: c.dark
+                    ? const Color(0x33FFD9A0)
+                    : const Color(0x4DFFFDF8),
+                width: 3,
+              ),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -681,7 +692,9 @@ class _CardBack extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     height: 1,
                     letterSpacing: 1.98,
-                    color: c.ink.withValues(alpha: 0.6),
+                    color: c.dark
+                        ? const Color(0xA6FFD9A0)
+                        : c.ink.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -693,7 +706,7 @@ class _CardBack extends StatelessWidget {
                     fontSize: 21.06,
                     fontWeight: FontWeight.w400,
                     height: 1,
-                    color: c.ink,
+                    color: c.dark ? const Color(0xFFFFE0AE) : c.ink,
                   ),
                 ),
               ],
@@ -717,7 +730,7 @@ class _CardFront extends StatelessWidget {
     final c = context.c;
     return CssShadowLayer(
       radius: 10,
-      shadows: _cardShadows(),
+      shadows: _cardShadows(c),
       child: SizedBox.expand(
         child: Container(
           decoration: BoxDecoration(

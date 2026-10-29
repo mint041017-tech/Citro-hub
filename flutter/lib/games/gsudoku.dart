@@ -12,7 +12,6 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
-import '../widgets/browser_effects.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import 'game_ui.dart';
@@ -51,12 +50,14 @@ class _SudokuMove {
     required this.value,
     required this.notes,
     required this.given,
+    this.clearedNotes = const {},
   });
 
   final int index;
   final int value;
   final Set<int> notes;
   final bool given;
+  final Map<int, Set<int>> clearedNotes;
 }
 
 class _GameSudokuPageState extends State<GameSudokuPage> {
@@ -76,6 +77,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   bool _paused = false;
   bool _over = false;
   bool _win = false;
+  bool _roundCounted = false;
   bool _loading = false;
   bool _hideLargeNotice = false;
   String? _error;
@@ -218,6 +220,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       _paused = false;
       _over = false;
       _win = false;
+      _roundCounted = false;
       _loading = true;
       _hideLargeNotice = false;
       _error = null;
@@ -247,6 +250,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       _over = false;
       _paused = false;
       _win = false;
+      _roundCounted = false;
       _revision++;
     });
     _progress.value = '${mode.title} · ${difficulty.label} · 正在生成唯一解…';
@@ -287,6 +291,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         _paused = false;
         _over = false;
         _win = false;
+        _roundCounted = false;
           _loading = false;
         _error = null;
         _layer = 0;
@@ -346,6 +351,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
                 Expanded(
                   child: GameActionButton(
                     label: '换一个模式',
+                    expand: true,
                     onTap: () => Navigator.pop(ctx, false),
                   ),
                 ),
@@ -354,6 +360,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
                   child: GameActionButton(
                     label: '仍然开始',
                     primary: true,
+                    expand: true,
                     onTap: () => Navigator.pop(ctx, true),
                   ),
                 ),
@@ -391,6 +398,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
                 Expanded(
                   child: GameActionButton(
                     label: '继续本局',
+                    expand: true,
                     onTap: () => Navigator.pop(ctx, false),
                   ),
                 ),
@@ -399,6 +407,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
                   child: GameActionButton(
                     label: '放弃并返回',
                     primary: true,
+                    expand: true,
                     onTap: () => Navigator.pop(ctx, true),
                   ),
                 ),
@@ -428,6 +437,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       _paused = false;
       _over = false;
       _win = false;
+      _roundCounted = false;
       _layer = 0;
       _focusGrid = 0;
       _cubeFace = SudokuCubeFace.top;
@@ -661,6 +671,30 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     _keyFocus.requestFocus();
   }
 
+  Map<int, Set<int>> _peerNotesToClear(int index, int value) {
+    final puzzle = _puzzle;
+    if (puzzle == null) return const {};
+    final cleared = <int, Set<int>>{};
+    final visited = <int>{};
+    for (final unit in puzzle.units) {
+      if (!unit.contains(index)) continue;
+      for (final peer in unit) {
+        if (peer == index || !visited.add(peer)) continue;
+        if (peer < 0 || peer >= _notes.length) continue;
+        if (_notes[peer].contains(value)) {
+          cleared[peer] = Set<int>.from(_notes[peer]);
+        }
+      }
+    }
+    return cleared;
+  }
+
+  void _clearPeerNotes(Map<int, Set<int>> cleared, int value) {
+    for (final index in cleared.keys) {
+      _notes[index].remove(value);
+    }
+  }
+
   void _input(int n) {
     if (_loading || _over || _paused || _selected < 0) return;
     if (_selected >= _given.length || _given[_selected]) return;
@@ -688,19 +722,24 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       });
       return;
     }
+    final solution = _puzzle!.solution[_selected];
+    final clearedNotes = n == solution
+        ? _peerNotesToClear(_selected, n)
+        : const <int, Set<int>>{};
     _history.add(
       _SudokuMove(
         index: _selected,
         value: old,
         notes: oldNotes,
         given: oldGiven,
+        clearedNotes: clearedNotes,
       ),
     );
-    final solution = _puzzle!.solution[_selected];
     if (n == solution) {
       setState(() {
         _board[_selected] = n;
         _notes[_selected].clear();
+        _clearPeerNotes(clearedNotes, n);
         _revision++;
       });
       GameSfx.move();
@@ -745,6 +784,9 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     setState(() {
       _board[move.index] = move.value;
       _notes[move.index] = Set<int>.from(move.notes);
+      for (final entry in move.clearedNotes.entries) {
+        _notes[entry.key] = Set<int>.from(entry.value);
+      }
       if (move.index < _given.length) _given[move.index] = move.given;
       _selected = move.index;
       _revision++;
@@ -767,17 +809,21 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     final oldNotes = index < _notes.length
         ? Set<int>.from(_notes[index])
         : <int>{};
+    final solution = puzzle.solution[index];
+    final clearedNotes = _peerNotesToClear(index, solution);
     _history.add(
       _SudokuMove(
         index: index,
         value: _board[index],
         notes: oldNotes,
         given: index < _given.length && _given[index],
+        clearedNotes: clearedNotes,
       ),
     );
     setState(() {
-      _board[index] = puzzle.solution[index];
+      _board[index] = solution;
       _notes[index].clear();
+      _clearPeerNotes(clearedNotes, solution);
       if (index < _given.length) _given[index] = true;
       _hints--;
       _selected = index;
@@ -811,7 +857,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     GameSfx.win();
     final app = context.app;
     app.saveLocalBest(_scoreKey, score);
-    app.submitScore(_scoreKey, score);
+    app.submitScore(_scoreKey, score, countRound: !_roundCounted);
     setState(() => _revision++);
   }
 
@@ -829,7 +875,9 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     if (_over) return;
     _timer?.cancel();
     _over = true;
+    _roundCounted = true;
     GameSfx.lose();
+    unawaited(AppState.instance.noteGameRound());
     setState(() => _revision++);
   }
 
@@ -1337,6 +1385,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           description: '',
           action: '继续游戏',
           onAction: _togglePause,
+          solid: true,
         ),
       ),
     if (_over)
@@ -2435,6 +2484,7 @@ class _BoardOverlay extends StatelessWidget {
     required this.action,
     required this.onAction,
     this.fail = false,
+    this.solid = false,
   });
 
   final String title;
@@ -2442,11 +2492,12 @@ class _BoardOverlay extends StatelessWidget {
   final String action;
   final VoidCallback? onAction;
   final bool fail;
+  final bool solid;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return CssShadowLayer(
+    final card = CssShadowLayer(
       radius: 14,
       shadows: const [
         CssShadowSpec(color: Color(0x0F5A4A2C), offset: Offset(0, 2), blur: 4),
@@ -2459,18 +2510,19 @@ class _BoardOverlay extends StatelessWidget {
       ],
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: CitroBackdropBlur(
-          sigma: 6,
-          child: Container(
-            decoration: BoxDecoration(
-              color: c.dark
-                  ? c.surface.withAlpha(0xF0)
-                  : const Color(0xF0FBF7EC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: c.line),
-            ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: solid
+                ? (c.dark ? c.surface2 : const Color(0xFFFFFDF8))
+                : (c.dark
+                      ? c.surface.withAlpha(0xF0)
+                      : const Color(0xF0FBF7EC)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: c.line),
+          ),
             padding: const EdgeInsets.all(16),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
@@ -2510,6 +2562,15 @@ class _BoardOverlay extends StatelessWidget {
             ),
           ),
         ),
+    );
+    if (!solid) return card;
+    return Container(
+      color: c.dark ? c.surface : const Color(0xFFFBF7EC),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 300),
+        child: card,
       ),
     );
   }

@@ -165,15 +165,21 @@ class _GameBrakePageState extends State<GameBrakePage>
           : (world.crashKind == 'break'
                 ? '踏板力度达到 1612 N，整车失控翻滚飞出'
                 : '没能在路障前刹停，再果断一点');
-      if (ok && world.score > 0) {
-        if (world.score > best) {
-          best = world.score;
-          AppState.instance.saveLocalBest('brake', best);
+      if (ok) {
+        if (world.score > 0) {
+          if (world.score > best) {
+            best = world.score;
+            AppState.instance.saveLocalBest('brake', best);
+          }
+          if (!submitted) {
+            submitted = true;
+            AppState.instance.submitScore('brake', world.score);
+          }
+        } else {
+          unawaited(AppState.instance.noteGameRound());
         }
-        if (!submitted) {
-          submitted = true;
-          AppState.instance.submitScore('brake', world.score);
-        }
+      } else {
+        unawaited(AppState.instance.noteGameRound());
       }
       _progress.value = ok ? '本局 ${world.score} 分' : '挑战失败';
       if (mounted) setState(() {});

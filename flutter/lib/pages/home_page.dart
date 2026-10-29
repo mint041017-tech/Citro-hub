@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -11,16 +10,17 @@ import '../overlays/ai_chat.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/extra_sheets.dart';
 import '../overlays/lantern_sheet.dart';
-import '../overlays/pomodoro_sheet.dart';
 import '../overlays/zodiac_modal.dart';
 import '../services/lantern_api.dart';
 import '../services/models.dart';
 import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
-import '../services/pomodoro.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../tingyu/tingyu_controller.dart';
+import '../tingyu/tingyu_play_chip.dart';
 import '../utils/lunar.dart';
 import '../widgets/paper.dart';
 import '../widgets/weather_widgets.dart';
@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> {
                           const LanternEntry(),
                           const SizedBox(width: 8),
                         ],
-                        const Clock(),
+                        const TingyuHomeButton(),
                       ],
                     ),
                   ),
@@ -348,123 +348,74 @@ class AccountCap extends StatelessWidget {
   }
 }
 
-class Clock extends StatefulWidget {
-  const Clock({super.key});
-
-  @override
-  State<Clock> createState() => _ClockState();
-}
-
-class _ClockState extends State<Clock> {
-  DateTime _now = DateTime.now();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleTick();
-  }
-
-  /// 时钟只显示到分钟：对齐到整分钟刷新，避免整个首页每秒重建。
-  void _scheduleTick() {
-    _timer?.cancel();
-    final now = DateTime.now();
-    final next = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      now.hour,
-      now.minute,
-    ).add(const Duration(minutes: 1));
-    _timer = Timer(next.difference(now) + const Duration(milliseconds: 30), () {
-      if (!mounted) return;
-      setState(() => _now = DateTime.now());
-      _scheduleTick();
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+class TingyuHomeButton extends StatelessWidget {
+  const TingyuHomeButton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final now = _now;
-    const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    final date = '${now.month}.${now.day.toString().padLeft(2, '0')}';
-    final time =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    return Pressable(
-      onTap: () => showPomodoroOverlay(context),
-      child: SizedBox(
-        width: 100,
-        height: 64,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
+    return ListenableBuilder(
+      listenable: NookController.instance,
+      builder: (context, _) {
+        final playing = NookController.instance.playing;
+        final reduce = CitroMotion.reduced(context);
+        final child = playing
+            ? const TingyuPlayChip(key: ValueKey('tingyu-play-chip'))
+            : Semantics(
+                key: const ValueKey('tingyu-home-entry'),
+                button: true,
+                label: '听隅',
+                child: Tooltip(
+                  message: '听隅',
+                  child: Pressable(
+                    onTap: () => Navigator.of(context).pushNamed('/tingyu'),
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [c.surface2, c.surface],
+                        ),
+                        border: Border.all(color: c.line2),
+                        boxShadow: CitroColors.shadows.paper(c),
+                      ),
+                      child: Center(
+                        child: AppIcon(
+                          strokeSvg(AppIcons.wave, width: 2),
+                          size: 22,
+                          color: c.accentInk,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+        return AnimatedSize(
+          duration: reduce ? Duration.zero : CitroMotion.size,
+          curve: CitroMotion.easeOut,
           alignment: Alignment.centerRight,
-          child: AnimatedBuilder(
-            animation: PomodoroState.instance,
-            builder: (context, child) => Stack(
-              clipBehavior: Clip.none,
-              children: [
-                child!,
-                if (PomodoroState.instance.active)
-                  const Positioned(
-                    top: -3,
-                    right: 0,
-                    child: Text(
-                      '🍅',
-                      style: TextStyle(fontSize: 12, height: 1),
-                    ),
-                  ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      date,
-                      style: context.body(
-                        size: 13,
-                        weight: FontWeight.w700,
-                        color: c.inkSoft,
-                        letterSpacing: .2,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      week[now.weekday % 7],
-                      style: context.body(
-                        size: 13,
-                        weight: FontWeight.w800,
-                        color: c.inkSoft,
-                      ),
-                    ),
-                  ],
+          child: AnimatedSwitcher(
+            duration: reduce ? Duration.zero : CitroMotion.popover,
+            switchInCurve: CitroMotion.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) {
+              final fade = FadeTransition(opacity: animation, child: child);
+              if (reduce) return fade;
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: .96, end: 1).animate(animation),
+                  child: child,
                 ),
-                const SizedBox(height: 1),
-                Text(
-                  time,
-                  style: context.display(
-                    size: 27,
-                    weight: FontWeight.w700,
-                    color: c.ink,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
+            child: child,
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

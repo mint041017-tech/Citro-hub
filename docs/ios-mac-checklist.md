@@ -3,10 +3,11 @@
 > 代码、工程文件、权限文案、图标、启动屏、隐私清单、通知/定位 Dart 适配已经完成。
 > 下面这些步骤依赖 macOS、Xcode、Apple 签名与真机，Windows 无法代替。
 >
-> 截至 2026-10-28：版本已升到 **1.9.5+1905**（pubspec 为唯一版本源，Runner/TimerWidget 均用
-> `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）；1.9.5 的改动集中在共享的咕噜果冻 JS 资源
-> （Q 弹手感、贴紧必合、撑爆罐子判负），iOS 侧无需额外工程配置；`flutter analyze` 无 error/warning，
-> Android release / Windows / Web 1.9.5 构建已通过并上传 OBS。
+> 截至 2026-10-30：版本已升到 **1.9.8+1908**（pubspec 为唯一版本源，Runner/TimerWidget 均用
+> `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）；1.9.8 的改动集中在共享 Dart/资源层
+> （听隅完善与播放胶囊、四端动效统一、卡面收藏与抽卡、CiCi 发图/善举审核、铃渡、果冻与数独、深色模式）；
+> iOS 侧沿用已有 ActivityKit Live Activity 组件，无需额外工程配置；`flutter analyze` 无 error/warning。
+> Android release / Windows / Web 1.9.8 制品已在 Windows 构建，iOS 的 Xcode 编译、签名与真机运行仍需在 Mac 验证。
 > **iOS 的 Xcode 编译、签名和真机运行仍未在 Mac 上验证**，第一次 Mac 构建可能还需要处理 Xcode/CocoaPods 版本差异。
 
 ## 0. 前置
@@ -69,7 +70,7 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=1.9.5
+  --dart-define=APP_VERSION=1.9.8
 ```
 
 手动构建时将 `APP_VERSION` 与 `pubspec.yaml` 的版本号保持一致。

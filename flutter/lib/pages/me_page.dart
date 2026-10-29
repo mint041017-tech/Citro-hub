@@ -5,13 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
+import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
+import '../overlays/card_collection.dart';
 import '../overlays/delete_account.dart';
 import '../overlays/notes_modal.dart';
 import '../overlays/profile_modal.dart';
 import '../overlays/update_dialog.dart';
 import '../services/api.dart';
+import '../services/models.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
@@ -226,94 +229,15 @@ class MePage extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: web ? 22 : 16),
-                    Pressable(
-                      onTap: () {
-                        if (user == null) {
-                          showAuthModal(context);
-                        } else {
-                          showProfileModal(context);
-                        }
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(web ? 20 : 14),
-                        decoration: BoxDecoration(
-                          color: c.surface2,
-                          borderRadius: BorderRadius.circular(web ? 18 : 14),
-                          border: Border.all(color: c.line),
-                          boxShadow: CitroColors.shadows.paper(c),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: web ? 64 : 48,
-                              height: web ? 64 : 48,
-                              decoration: BoxDecoration(
-                                color: user == null ? c.accent : c.hl,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: c.line2),
-                                image: user?.av != null
-                                    ? DecorationImage(
-                                        image: ResizeImage(
-                                          NetworkImage(Api.imageUrl(user!.av)),
-                                          width: 144,
-                                        ),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: user?.av != null
-                                  ? null
-                                  : Center(
-                                      child: Text(
-                                        user?.name.isNotEmpty == true
-                                            ? user!.name[0]
-                                            : '友',
-                                        style: context.display(
-                                          size: web ? 27 : 22,
-                                          weight: FontWeight.w700,
-                                          color: const Color(0xFF2E2C22),
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    user?.name ?? '未登录',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: context.display(
-                                      size: web ? 21 : 17,
-                                      weight: FontWeight.w700,
-                                      color: c.ink,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    user == null
-                                        ? '点击登录 / 注册'
-                                        : '社区成员 · 数据云端同步',
-                                    style: context.body(
-                                      size: web ? 13 : 12,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (user != null)
-                              AppIcon(
-                                strokeSvg(AppIcons.chevronRight, width: 2),
-                                size: 17,
-                                color: c.inkSoft,
-                              ),
-                          ],
-                        ),
-                      ),
+                    _profileHero(
+                      context,
+                      state,
+                      user,
+                      web: web,
+                      floating: floating,
                     ),
+                    const SizedBox(height: 12),
+                    CardCollectionEntry(compact: !web && !floating),
                     if (kIsWeb) ...[
                       SizedBox(height: web ? 28 : 18),
                       _section(c, '应用'),
@@ -456,6 +380,264 @@ class MePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _profileHero(
+    BuildContext context,
+    AppState state,
+    User? user, {
+    required bool web,
+    required bool floating,
+  }) {
+    final c = context.c;
+    final avatarSize = web ? 66.0 : (floating ? 58.0 : 52.0);
+    return Pressable(
+      onTap: () {
+        if (user == null) {
+          showAuthModal(context);
+        } else {
+          showProfileModal(context);
+        }
+      },
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(web ? 20 : 16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: c.dark
+                ? const [Color(0xFF32271C), Color(0xFF241D16)]
+                : const [Color(0xFFFFF3DC), Color(0xFFF4E2C2)],
+          ),
+          border: Border.all(color: c.accent.withAlpha(mediumBorderAlpha(c))),
+          boxShadow: CitroColors.shadows.paper(c),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -22,
+              bottom: -30,
+              child: IgnorePointer(
+                child: Transform.rotate(
+                  angle: -10 * math.pi / 180,
+                  child: Opacity(
+                    opacity: c.dark ? .07 : .09,
+                    child: Image.asset(
+                      'assets/images/logo.webp',
+                      width: web ? 168 : 132,
+                      cacheWidth: 336,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -30,
+              top: -54,
+              child: IgnorePointer(
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [c.accent.withAlpha(42), c.accent.withAlpha(0)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                web ? 22 : 15,
+                web ? 20 : 14,
+                web ? 18 : 13,
+                web ? 18 : 13,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: avatarSize,
+                        height: avatarSize,
+                        decoration: BoxDecoration(
+                          color: user == null ? c.accent : c.hl,
+                          borderRadius: BorderRadius.circular(web ? 16 : 14),
+                          border: Border.all(color: c.surface, width: 2),
+                          boxShadow: CitroColors.shadows.note(c),
+                          image: user?.av != null
+                              ? DecorationImage(
+                                  image: ResizeImage(
+                                    NetworkImage(Api.imageUrl(user!.av)),
+                                    width: 160,
+                                  ),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: user?.av != null
+                            ? null
+                            : Center(
+                                child: Text(
+                                  user?.name.isNotEmpty == true
+                                      ? user!.name[0]
+                                      : '友',
+                                  style: context.display(
+                                    size: avatarSize * .42,
+                                    weight: FontWeight.w700,
+                                    color: const Color(0xFF2E2C22),
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    user?.name ?? '未登录',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.display(
+                                      size: web ? 22 : (floating ? 20 : 18),
+                                      weight: FontWeight.w700,
+                                      color: c.ink,
+                                    ),
+                                  ),
+                                ),
+                                if (user != null) ...[
+                                  const SizedBox(width: 7),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: c.mintSoft,
+                                      borderRadius: BorderRadius.circular(99),
+                                      border: Border.all(color: c.mintLine),
+                                    ),
+                                    child: Text(
+                                      state.loggedIn ? '云端同步' : '游客',
+                                      style: context.body(
+                                        size: 8.5,
+                                        weight: FontWeight.w700,
+                                        color: c.mintInk,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user == null
+                                  ? '点击登录 / 注册，收藏与记录会跟着你'
+                                  : '今天也把日子过成喜欢的样子',
+                              maxLines: 2,
+                              style: context.body(
+                                size: web ? 12.5 : 11,
+                                color: c.inkSoft,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (user != null)
+                        AppIcon(
+                          strokeSvg(AppIcons.chevronRight, width: 2),
+                          size: 17,
+                          color: c.inkSoft,
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: web ? 18 : 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: web ? 14 : 6,
+                      vertical: web ? 11 : 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.surface.withAlpha(c.dark ? 34 : 110),
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(color: c.line2.withAlpha(120)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _heroStat(
+                            context,
+                            '连续打卡',
+                            '${state.checkinStreak} 天',
+                          ),
+                        ),
+                        _heroDivider(c),
+                        Expanded(
+                          child: _heroStat(
+                            context,
+                            '卡面收藏',
+                            CardCatalog.all.isEmpty
+                                ? '—'
+                                : '${state.cardOwnedCount}/${CardCatalog.all.length}',
+                          ),
+                        ),
+                        _heroDivider(c),
+                        Expanded(
+                          child: _heroStat(
+                            context,
+                            '抽卡机会',
+                            '${state.cardCredits} 次',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int mediumBorderAlpha(CitroColors c) => c.dark ? 70 : 80;
+
+  Widget _heroDivider(CitroColors c) => Container(
+    width: 1,
+    height: 24,
+    margin: const EdgeInsets.symmetric(horizontal: 4),
+    color: c.line2.withAlpha(140),
+  );
+
+  Widget _heroStat(BuildContext context, String label, String value) {
+    final c = context.c;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.display(
+            size: 17,
+            weight: FontWeight.w700,
+            color: c.accentInk,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: context.body(size: 9.5, color: c.inkSoft)),
+      ],
     );
   }
 

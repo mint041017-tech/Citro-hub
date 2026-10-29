@@ -4,6 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5ecdb">
+  <script>
+    (function () {
+      try {
+        if (new URLSearchParams(location.search).get("theme") === "dark") {
+          document.documentElement.classList.add("citro-dark");
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", "#121218");
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>咕噜果冻铺 · 软体合并小游戏</title>
   <link rel="stylesheet" href="styles.css">
@@ -138,6 +149,11 @@
   <script src="js/game.js"></script>
   <script>
     (function () {
+      ["contextmenu", "selectstart", "dragstart"].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+          event.preventDefault();
+        }, { passive: false });
+      });
       if (window.parent && window.parent !== window) {
         document.body.classList.add("citro-standard");
       }
@@ -182,8 +198,14 @@
         var originalShowEnd = game.showEnd.bind(game);
         game.showEnd = function () {
           originalShowEnd();
-          if (lastOver === game.score) return;
-          lastOver = game.score;
+          var overKey =
+            Math.round(game.score || 0) +
+            "|" +
+            (game.maxLevel || 1) +
+            "|" +
+            (game.shots || 0);
+          if (lastOver === overKey) return;
+          lastOver = overKey;
           send({
             __citroLiquid: 1,
             type: "over",

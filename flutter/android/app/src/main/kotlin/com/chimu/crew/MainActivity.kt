@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ClipData
 import android.content.ComponentCallbacks2
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
@@ -18,6 +19,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -74,6 +78,11 @@ class MainActivity : FlutterActivity() {
                 "cancelAll" -> {
                     NotificationManagerCompat.from(this).cancelAll()
                     result.success(true)
+                }
+                "vibrate" -> {
+                    val kind = call.argument<String>("kind") ?: "breath"
+                    val ok = runCatching { vibrate(kind) }.getOrDefault(false)
+                    result.success(ok)
                 }
                 else -> result.notImplemented()
             }
@@ -195,12 +204,37 @@ class MainActivity : FlutterActivity() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setShowWhen(false)
+            // 进程被杀时系统仍在计时；到点后再留一分钟自动收起，避免常驻通知残留。
+            .setTimeoutAfter(remaining + 60_000L)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pending)
             .build()
         NotificationManagerCompat.from(this).notify(id, notification)
+        return true
+    }
+
+    /* 呼吸换相用短促轻震，番茄钟完成用三段长震；都走系统 Vibrator。 */
+    private fun vibrate(kind: String): Boolean {
+        val pattern = when (kind) {
+            "done" -> longArrayOf(0, 260, 140, 260, 140, 420)
+            "tick" -> longArrayOf(0, 25)
+            else -> longArrayOf(0, 55)
+        }
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        if (!vibrator.hasVibrator()) return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(pattern, -1)
+        }
         return true
     }
 

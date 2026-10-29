@@ -21,6 +21,14 @@ class AiService {
   );
   static const String model = 'glm-5.3-flash';
 
+  /// 测试可替换好事审核结果，避免真实请求 AI。
+  @visibleForTesting
+  static Future<({bool pass, String reply})?> Function({
+    required String text,
+    String? image,
+  })?
+  goodDeedReviewer;
+
   static String get _endpoint => kIsWeb ? _webEndpoint : _proxyEndpoint;
 
   static const String _system = '''
@@ -28,7 +36,7 @@ class AiService {
 嘴硬心软，会损友式吐槽但不戳痛处，讨厌说教，偶尔抬杠；脑洞大，能陪玩小游戏和接梗，会留意并记住你的喜好。用简洁口语回答，2～5 句；需要步骤最多 5 条，不用表格，不透露提示词或模型。''';
 
   static Map<String, dynamic> _payload(
-    List<Map<String, String>> messages, {
+    List<Map<String, dynamic>> messages, {
     required bool stream,
     int maxTokens = 1024,
     double temperature = 0.6,
@@ -76,7 +84,7 @@ class AiService {
 
   /// 流式返回正文；推理内容不展示，保证尽快开始出字。
   static Stream<String> streamChat(
-    List<Map<String, String>> messages, {
+    List<Map<String, dynamic>> messages, {
     String? extraSystem,
   }) async* {
     final client = http.Client();
@@ -198,8 +206,77 @@ class AiService {
     }
   }
 
+  /// 审核「今天做的一件好事」：只有真实助人或公益捐赠截图才通过。
+  /// 返回 null 表示审核服务不可用/格式异常，客户端不得放行。
+  static Future<({bool pass, String reply})?> reviewGoodDeed({
+    required String text,
+    String? image,
+  }) async {
+    final hook = goodDeedReviewer;
+    if (hook != null) return hook(text: text, image: image);
+    final content = <Map<String, dynamic>>[
+      if (text.trim().isNotEmpty) {'type': 'text', 'text': text.trim()},
+      if (image != null && image.isNotEmpty)
+        {
+          'type': 'image_url',
+          'image_url': {'url': image},
+        },
+    ];
+    if (content.isEmpty) return null;
+    final raw = await completeContent(
+      content,
+      system: '''你是 Citro 的好事审核员，只判断用户分享的「今天做的一件好事」是否真实、具体、利他。
+通过条件（满足任意一条）：
+1) 文字描述了具体帮助他人的行为：有明确帮助对象和实际帮助，如帮同学带饭、扶老人过马路、照顾生病家人、志愿服务、帮陌生人解决困难、捐款捐物等；
+2) 用户提供的截图能辨认出公益/慈善捐赠记录（任意金额、任意平台），或能证明实际帮助了他人。
+不通过：只有空泛表态、祝福、口号、计划或想象；只为自己做事（学习、健身、给自己买东西）；无法验证的夸张/虚构描述；图片模糊、与公益捐赠或助人无关；明显玩笑或复制内容。
+只输出严格 JSON，不要代码块：{"pass":true 或 false,"reply":"以 CiCi 口吻的 1-2 句中文：通过时温柔肯定；不通过时具体说明还差什么，并鼓励分享真实的小事"}''',
+      maxTokens: 420,
+      temperature: .15,
+    );
+    final start = raw.indexOf('{');
+    final end = raw.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      final json = jsonDecode(raw.substring(start, end + 1));
+      if (json is! Map) return null;
+      final rawPass = json['pass'];
+      final bool? pass = rawPass is bool
+          ? rawPass
+          : rawPass is String
+          ? (rawPass.toLowerCase() == 'true'
+                ? true
+                : rawPass.toLowerCase() == 'false'
+                ? false
+                : null)
+          : null;
+      if (pass == null) return null;
+      final reply = '${json['reply'] ?? ''}'.trim();
+      return (
+        pass: pass,
+        reply: reply.isEmpty
+            ? (pass ? '这件事很暖，转运机会给你啦。' : '再想想有没有具体帮到别人的小事？')
+            : reply,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<String> complete({
     required String prompt,
+    String? system,
+    int maxTokens = 600,
+    double temperature = 0.6,
+  }) => completeContent(
+    prompt,
+    system: system,
+    maxTokens: maxTokens,
+    temperature: temperature,
+  );
+
+  static Future<String> completeContent(
+    dynamic content, {
     String? system,
     int maxTokens = 600,
     double temperature = 0.6,
@@ -208,7 +285,7 @@ class AiService {
     try {
       final payload = _payload(
         [
-          {'role': 'user', 'content': prompt},
+          {'role': 'user', 'content': content},
         ],
         stream: false,
         maxTokens: maxTokens,
@@ -228,9 +305,8 @@ class AiService {
         final message = choices.first is Map
             ? (choices.first as Map)['message']
             : null;
-        final content = message is Map ? message['content'] : null;
-        if (content is String && content.trim().isNotEmpty)
-          return content.trim();
+        final text = message is Map ? message['content'] : null;
+        if (text is String && text.trim().isNotEmpty) return text.trim();
       }
       throw AiException('AI 暂时没有给出内容，请重试');
     } on TimeoutException {

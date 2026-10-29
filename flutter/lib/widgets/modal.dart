@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'paper.dart';
 
@@ -18,14 +19,16 @@ Future<T?> showCitroDialog<T>(
     barrierDismissible: dismissible,
     barrierLabel: '关闭',
     barrierColor: barrier ?? const Color(0xB223211C),
-    transitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: CitroMotion.modal,
     pageBuilder: (ctx, anim, sec) => builder(ctx),
     transitionBuilder: (ctx, anim, sec, child) {
       final curved = CurvedAnimation(
         parent: anim,
-        curve: Curves.easeOutCubic,
+        curve: CitroMotion.easeOut,
         reverseCurve: Curves.easeInCubic,
       );
+      final fade = FadeTransition(opacity: curved, child: child);
+      if (CitroMotion.reduced(ctx)) return fade;
       return FadeTransition(
         opacity: curved,
         child: ScaleTransition(

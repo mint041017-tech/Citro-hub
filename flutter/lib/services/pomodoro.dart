@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 
+import 'chime.dart';
+import 'haptics.dart';
+import 'notifications.dart';
+import 'platform.dart' as platform;
 import 'prefs.dart';
 
 class PomodoroState extends ChangeNotifier {
@@ -12,12 +16,17 @@ class PomodoroState extends ChangeNotifier {
 
   static const int focusSeconds = 25 * 60;
   static const int shortSeconds = 5 * 60;
+  static const int _ongoingId = 7800;
+  static const int _finishId = 7801;
 
   static const _longKey = 'citro_pomo_long';
   static String get _todayKey {
     final d = DateTime.now();
     return 'citro_pomo_${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
+
+  /// 到点事件：值为下一轮模式（focus / short / long），由全局监听器弹窗。
+  final ValueNotifier<String?> finished = ValueNotifier<String?>(null);
 
   String mode = 'focus';
   int total = focusSeconds;
@@ -29,6 +38,9 @@ class PomodoroState extends ChangeNotifier {
   int longMinutes = 15;
   int todayCount = 0;
   String? notice;
+  String? pendingNextMode;
+  bool nookUi = false;
+  bool _inited = false;
 
   bool get active => running || (remain < total && remain > 0);
   int get longSeconds => longMinutes * 60;
@@ -52,9 +64,27 @@ class PomodoroState extends ChangeNotifier {
     return '$m:$s';
   }
 
+  String get _ongoingLabel => switch (mode) {
+    'short' => '☕ 短休中',
+    'long' => '🌿 长休中',
+    _ => '🍅 专注中',
+  };
+
+  String get _finishTitle => mode == 'focus' ? '🍅 专注完成' : '休息结束';
+
+  String get _finishBody =>
+      mode == 'focus' ? '起来走走，喝口水休息一下吧。' : '把心收回来，继续下一轮专注。';
+
+  void ensureInit() {
+    if (_inited) return;
+    _inited = true;
+    init();
+  }
+
   void init() {
     longMinutes = Prefs.getInt(_longKey, 15).clamp(15, 30);
     todayCount = Prefs.getInt(_todayKey, 0);
+    _inited = true;
     notifyListeners();
   }
 
@@ -63,11 +93,13 @@ class PomodoroState extends ChangeNotifier {
     running = false;
     done = false;
     notice = null;
+    pendingNextMode = null;
     mode = next;
     total = next == 'focus'
         ? focusSeconds
         : (next == 'short' ? shortSeconds : longSeconds);
     remain = total.toDouble();
+    _clearNotifications();
     notifyListeners();
   }
 
@@ -89,13 +121,18 @@ class PomodoroState extends ChangeNotifier {
       remain = total.toDouble();
       done = false;
     }
-    endAt = DateTime.now().add(Duration(milliseconds: (remain * 1000).round()));
+    final end = DateTime.now().add(
+      Duration(milliseconds: (remain * 1000).round()),
+    );
+    endAt = end;
     running = true;
     done = false;
+    pendingNextMode = null;
     notice = null;
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => tick());
     notifyListeners();
+    if (!platform.isTest) unawaited(_armNotifications(end));
   }
 
   void pause() {
@@ -103,6 +140,7 @@ class PomodoroState extends ChangeNotifier {
     _syncRemain();
     running = false;
     _ticker?.cancel();
+    _clearNotifications();
     notifyListeners();
   }
 
@@ -110,8 +148,10 @@ class PomodoroState extends ChangeNotifier {
     _ticker?.cancel();
     running = false;
     done = false;
+    pendingNextMode = null;
     notice = null;
     remain = total.toDouble();
+    _clearNotifications();
     notifyListeners();
   }
 
@@ -136,11 +176,9 @@ class PomodoroState extends ChangeNotifier {
     running = false;
     done = true;
     remain = 0;
-    SystemSound.play(SystemSoundType.alert);
-    HapticFeedback.heavyImpact();
-
+    final completedMode = mode;
     final String nextMode;
-    if (mode == 'focus') {
+    if (completedMode == 'focus') {
       todayCount += 1;
       await Prefs.setInt(_todayKey, todayCount);
       nextMode = todayCount % 4 == 0 ? 'long' : 'short';
@@ -149,18 +187,64 @@ class PomodoroState extends ChangeNotifier {
       nextMode = 'focus';
       notice = '休息结束，继续专注';
     }
+    pendingNextMode = nextMode;
+    _clearOngoing();
+    unawaited(Chime.done());
+    unawaited(Haptics.done());
     notifyListeners();
+    _publishFinished(nextMode);
+  }
 
-    Future.delayed(const Duration(milliseconds: 1900), () {
-      if (!done) return;
-      done = false;
-      notice = null;
-      mode = nextMode;
-      total = nextMode == 'focus'
-          ? focusSeconds
-          : (nextMode == 'short' ? shortSeconds : longSeconds);
-      remain = total.toDouble();
-      notifyListeners();
-    });
+  void _publishFinished(String nextMode) {
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        finished.value = nextMode;
+      });
+      SchedulerBinding.instance.scheduleFrame();
+    } else {
+      finished.value = nextMode;
+    }
+  }
+
+  /// 对话框按钮：切到下一轮；startNow 时立即开始。
+  void beginNext({bool startNow = false}) {
+    final next = pendingNextMode ?? (mode == 'focus' ? 'short' : 'focus');
+    pendingNextMode = null;
+    switchMode(next);
+    if (startNow) start();
+  }
+
+  /// 对话框被点外部/返回关闭：切到下一轮但保持未开始。
+  void settleFinished() {
+    if (!done) return;
+    beginNext();
+  }
+
+  Future<void> _armNotifications(DateTime end) async {
+    try {
+      await Notifications.requestPermission();
+      if (!running || endAt != end) return;
+      await Notifications.showTimerOngoing(_ongoingId, _ongoingLabel, end);
+      await Notifications.schedule(
+        _finishId,
+        _finishTitle,
+        _finishBody,
+        end,
+        channelId: 'citro_pomodoro',
+        channelName: '番茄钟',
+      );
+    } catch (_) {}
+  }
+
+  void _clearOngoing() {
+    if (platform.isTest) return;
+    unawaited(Notifications.cancel(_ongoingId));
+  }
+
+  void _clearNotifications() {
+    if (platform.isTest) return;
+    unawaited(Notifications.cancel(_ongoingId));
+    unawaited(Notifications.cancel(_finishId));
   }
 }

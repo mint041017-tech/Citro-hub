@@ -38,6 +38,8 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   bool _loading = true;
   bool _submitting = false;
   bool _standardShell = false;
+  bool _isDark = false;
+  bool _themeInitialized = false;
   String _progress = '开局准备中';
   int _score = 0;
   int _best = 0;
@@ -47,13 +49,40 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   final ValueNotifier<String> _liveProgress = ValueNotifier('开局准备中');
 
   static const _baseUrl = 'https://liquid2048.local/';
+  static const _disableSelectionScript = '''
+(function () {
+  document.documentElement.style.userSelect = 'none';
+  document.documentElement.style.webkitUserSelect = 'none';
+  document.documentElement.style.webkitTouchCallout = 'none';
+  if (window.__citroSelectionGuard) return;
+  window.__citroSelectionGuard = true;
+  ['contextmenu', 'selectstart', 'dragstart'].forEach(function (type) {
+    document.addEventListener(type, function (event) {
+      event.preventDefault();
+    }, { passive: false });
+  });
+})();
+''';
 
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     if (platform.isTest) return;
-    unawaited(_prepare());
-    _startLive();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (!_themeInitialized) {
+      _themeInitialized = true;
+      _isDark = dark;
+      unawaited(_prepare());
+      _startLive();
+    } else if (_isDark != dark) {
+      _isDark = dark;
+      unawaited(_applyThemeMode());
+    }
   }
 
   @override
@@ -135,6 +164,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         name: await rootBundle.loadString('assets/liquid2048/js/$name.js'),
     };
     var html = index.replaceFirst(RegExp(r'<link rel="icon"[^>]*>'), '');
+    if (_isDark) {
+      html = html.replaceFirst(
+        '<html lang="zh-CN">',
+        '<html lang="zh-CN" class="citro-dark">',
+      );
+    }
     html = html.replaceFirst(
       '<link rel="stylesheet" href="styles.css">',
       '<style>$css</style>',
@@ -154,7 +189,11 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   Future<Map<String, dynamic>> _onScore(Map<String, dynamic> body) async {
     final score = (body['score'] as num?)?.toInt() ?? 0;
-    if (score <= 0 || _submitting) return {'ok': false};
+    if (score <= 0) {
+      unawaited(AppState.instance.noteGameRound());
+      return {'ok': false};
+    }
+    if (_submitting) return {'ok': false};
     _submitting = true;
     try {
       final res = await AppState.instance.submitScore('liquid', score);
@@ -202,6 +241,18 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  Future<void> _applyThemeMode() async {
+    final web = _web;
+    if (web == null) return;
+    try {
+      await web.evaluateJavascript(
+        source:
+            "document.documentElement.classList.toggle('citro-dark', ${_isDark ? 'true' : 'false'});"
+            "window.__gulu && window.__gulu.setDarkMode(${_isDark ? 'true' : 'false'});",
+      );
+    } catch (_) {}
   }
 
   Future<void> _applyShellMode(bool standard) async {
@@ -389,6 +440,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
               safeBrowsingEnabled: false,
               disableVerticalScroll: true,
               disableHorizontalScroll: true,
+              disableLongPressContextMenuOnLinks: true,
               useOnDownloadStart: false,
               allowFileAccess: false,
               allowContentAccess: false,
@@ -419,8 +471,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                 unawaited(_loadInto(controller, html));
               }
             },
-            onLoadStop: (_, _) {
+            onLoadStop: (controller, _) {
               if (mounted) setState(() => _loading = false);
+              unawaited(
+                controller.evaluateJavascript(source: _disableSelectionScript),
+              );
+              unawaited(_applyThemeMode());
               unawaited(_applyShellMode(_standardShell));
             },
             onReceivedError: (_, request, error) {

@@ -32,6 +32,8 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   late final JSFunction _messageListener;
   bool _loading = true;
   bool _submitting = false;
+  bool _themeInitialized = false;
+  bool _isDark = false;
   int _score = 0;
   int _best = 0;
   List<int> _next = const [];
@@ -41,7 +43,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   void initState() {
     super.initState();
     _iframe = web.HTMLIFrameElement()
-      ..src = Uri.base.resolve('assets/assets/liquid2048/index.html').toString()
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%'
@@ -60,6 +61,26 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
     );
     _messageListener = ((web.MessageEvent event) => _onMessage(event)).toJS;
     web.window.addEventListener('message', _messageListener);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (!_themeInitialized) {
+      _themeInitialized = true;
+      _isDark = dark;
+      _loadIframe();
+    } else if (_isDark != dark) {
+      _isDark = dark;
+      _loadIframe();
+    }
+  }
+
+  void _loadIframe() {
+    final theme = _isDark ? 'dark' : 'light';
+    _iframe.src =
+        '${Uri.base.resolve('assets/assets/liquid2048/index.html')}?theme=$theme';
   }
 
   @override
@@ -124,7 +145,11 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   }
 
   Future<void> _submitScore(int score) async {
-    if (score <= 0 || _submitting) return;
+    if (score <= 0) {
+      unawaited(AppState.instance.noteGameRound());
+      return;
+    }
+    if (_submitting) return;
     _submitting = true;
     try {
       final res = await AppState.instance.submitScore('liquid', score);

@@ -122,32 +122,34 @@
       var panel = document.getElementById('result');
       if (!panel || panel.classList.contains('hidden')) return;
       var title = document.getElementById('resultTitle');
-      if (!title || !title.classList.contains('ok')) return;
+      if (!title) return;
+      var ok = title.classList.contains('ok');
       var score = Math.round(numberFrom('statScore'));
-      if (!(score > 0)) return;
+      if (!Number.isFinite(score)) return;
       var v0 = numberFrom('statV0');
       var stop = numberFrom('statTime');
-      var key = score + '|' + v0 + '|' + stop;
+      var key = score + '|' + v0 + '|' + stop + '|' + (ok ? 'ok' : 'fail');
       if (key === lastKey) return;
       lastKey = key;
 
       var msg = document.getElementById('submitMsg');
-      if (msg) msg.textContent = '正在上传成绩…';
+      if (ok && msg) msg.textContent = '正在上传成绩…';
 
-      call('citroScore', [{ score: score, v0: v0, stopTime: stop }]).then(
-        function (res) {
-          var el = document.getElementById('submitMsg');
-          if (!el) return;
-          if (res && res.ok) {
-            var rank = parseInt(res.rank, 10) || 0;
-            el.textContent = rank > 0
-              ? '已上榜 · 当前第 ' + rank + ' 名'
-              : '成绩已上榜 · 最高 ' + (res.best || score) + ' 分';
-          } else {
-            el.textContent = '成绩上传失败，请检查网络后再试';
-          }
+      call('citroScore', [
+        { score: score, v0: v0, stopTime: stop, failed: !ok }
+      ]).then(function (res) {
+        if (!ok) return;
+        var el = document.getElementById('submitMsg');
+        if (!el) return;
+        if (res && res.ok) {
+          var rank = parseInt(res.rank, 10) || 0;
+          el.textContent = rank > 0
+            ? '已上榜 · 当前第 ' + rank + ' 名'
+            : '成绩已上榜 · 最高 ' + (res.best || score) + ' 分';
+        } else {
+          el.textContent = '成绩上传失败，请检查网络后再试';
         }
-      );
+      });
     }
 
     function onResultChange() {

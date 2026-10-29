@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/cards.dart';
 import '../data/fortunes.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../utils/lunar.dart';
 import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
 import 'ai_chat.dart';
+import 'card_draw.dart';
 
 Future<void> showFortuneOverlay(BuildContext context) async {
   await showGeneralDialog(
@@ -57,7 +59,7 @@ class _FortuneDialog extends StatefulWidget {
 }
 
 class _FortuneDialogState extends State<_FortuneDialog>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const _cardRadius = BorderRadius.all(Radius.circular(24));
   static const _flipDuration = Duration(milliseconds: 900);
   static const _flipCurve = Cubic(.22, 1.12, .32, 1);
@@ -68,53 +70,46 @@ class _FortuneDialogState extends State<_FortuneDialog>
   bool loading = true;
 
   late final AnimationController _flip;
-  late final int _backIndex;
+  late final AnimationController _entrance;
+  late final AnimationController _aura;
+  CardFace? _card;
   Timer? _introTimer;
   bool _frontUp = false;
   bool _flipBusy = false;
   bool _transferBusy = false;
 
-  String get _backAsset =>
-      'assets/card/card_${(_backIndex + 1).toString().padLeft(2, '0')}.webp';
-
-  /// 一年内 12 张卡背打乱后按天轮换：每天稳定随机、相邻日不重复。
-  static int _backIndexFor(DateTime d) {
-    final order = List<int>.generate(12, (i) => i);
-    var seed = (d.year * 92821 + 17) & 0x7fffffff;
-    int next() {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed;
-    }
-
-    for (var i = order.length - 1; i > 0; i--) {
-      final j = next() % (i + 1);
-      final tmp = order[i];
-      order[i] = order[j];
-      order[j] = tmp;
-    }
-    final day = d.difference(DateTime(d.year, 1, 1)).inDays;
-    return order[day % order.length];
-  }
-
   @override
   void initState() {
     super.initState();
-    _backIndex = _backIndexFor(DateTime.now());
     _flip = AnimationController(vsync: this, duration: _flipDuration, value: 0);
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 980),
+    )..forward();
+    _aura = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..forward();
     _load();
+    _loadCard();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(
-        precacheImage(AssetImage(_backAsset), context).catchError((_) {}),
-      );
       _introTimer = Timer(const Duration(seconds: 1), _flipToFront);
     });
+  }
+
+  Future<void> _loadCard() async {
+    final card = await AppState.instance.ensureTodayCard();
+    if (!mounted) return;
+    setState(() => _card = card);
   }
 
   @override
   void dispose() {
     _introTimer?.cancel();
     _flip.dispose();
+    _entrance.dispose();
+    _aura.dispose();
     super.dispose();
   }
 
@@ -211,7 +206,12 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final next = await AppState.instance.useFortuneTransfer();
     if (!mounted) return;
     if (next != null) {
-      setState(() => idx = next);
+      final card = await AppState.instance.redrawTodayCard();
+      if (!mounted) return;
+      setState(() {
+        idx = next;
+        if (card != null) _card = card;
+      });
       // 留一点时间让用户看到卡背，再翻开新签。
       await Future<void>.delayed(const Duration(milliseconds: 160));
       if (!mounted) return;
@@ -412,10 +412,54 @@ class _FortuneDialogState extends State<_FortuneDialog>
               20,
               16 + MediaQuery.paddingOf(context).bottom,
             ),
-            child: Container(
-              key: _cardKey,
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 400),
+            child: AnimatedBuilder(
+              animation: _entrance,
+              builder: (context, child) {
+                final t = Curves.easeOutBack.transform(
+                  _entrance.value.clamp(0.0, 1.0),
+                );
+                final fade = Curves.easeOut.transform(
+                  (_entrance.value * 1.5).clamp(0.0, 1.0),
+                );
+                return Opacity(
+                  opacity: fade,
+                  child: Transform.translate(
+                    offset: Offset(0, 92 * (1 - t)),
+                    child: Transform.rotate(
+                      angle: -.05 * (1 - t),
+                      child: Transform.scale(
+                        scale: .84 + .16 * t,
+                        child: child,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: -40,
+                    right: -40,
+                    top: -40,
+                    bottom: -40,
+                    child: IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _aura,
+                        builder: (context, _) => CustomPaint(
+                          painter: _FortuneAuraPainter(
+                            t: _aura.value,
+                            color: c.accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    key: _cardKey,
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxWidth: 400),
               decoration: BoxDecoration(
                 borderRadius: _cardRadius,
                 boxShadow: const [
@@ -911,7 +955,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
-                                  '轻点卡片 · 翻看卡背',
+                                  _card == null
+                                      ? '轻点卡片 · 翻看卡背'
+                                      : '轻点卡片 · 翻看今日卡面 · ${_card!.categoryName}',
                                   textAlign: TextAlign.center,
                                   style: context.body(
                                     size: 10,
@@ -1009,6 +1055,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   ),
                 ],
               ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1017,18 +1066,21 @@ class _FortuneDialogState extends State<_FortuneDialog>
   }
 
   Widget _buildBack(BuildContext context) {
+    final card = _card;
     return ClipRRect(
       borderRadius: _cardRadius,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            _backAsset,
-            fit: BoxFit.cover,
-            alignment: const Alignment(0, .3),
-            cacheWidth: 1200,
-            gaplessPlayback: true,
-            errorBuilder: (_, __, ___) => const DecoratedBox(
+          if (card != null)
+            CardFaceImage(
+              card: card,
+              fit: BoxFit.cover,
+              cacheWidth: 1200,
+              borderRadius: BorderRadius.zero,
+            )
+          else
+            const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1037,7 +1089,6 @@ class _FortuneDialogState extends State<_FortuneDialog>
                 ),
               ),
             ),
-          ),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1086,6 +1137,29 @@ class _FortuneDialogState extends State<_FortuneDialog>
               ),
             ),
           ),
+          if (card != null)
+            Positioned(
+              right: 14,
+              bottom: 13,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x73000000),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: const Color(0x2EFFF6E4)),
+                ),
+                child: Text(
+                  '${card.categoryName} · ${card.label}',
+                  style: context.body(
+                    size: 9.5,
+                    weight: FontWeight.w600,
+                    color: const Color(0xD9FFF6E4),
+                    letterSpacing: .8,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1141,6 +1215,60 @@ class _FortuneDialogState extends State<_FortuneDialog>
     }
     return h % 9;
   }
+}
+
+/// 打卡卡面出场时的暖色光晕：缓慢旋转的射线 + 呼吸光斑。
+class _FortuneAuraPainter extends CustomPainter {
+  _FortuneAuraPainter({required this.t, required this.color});
+
+  final double t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * .5);
+    final radius = math.min(size.width, size.height) * .62;
+    final glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withAlpha(34),
+          color.withAlpha(12),
+          color.withAlpha(0),
+        ],
+        stops: const [0, .55, 1],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, glow);
+
+    final ray = Paint()..strokeWidth = 1.2;
+    for (var i = 0; i < 24; i++) {
+      final angle = i * math.pi * 2 / 24 + t * math.pi * 2 / 24;
+      final pulse = .5 + .5 * math.sin(t * math.pi * 2 + i * .9);
+      ray.color = color.withAlpha((8 + 14 * pulse).round());
+      final inner = radius * (.46 + .02 * pulse);
+      final outer = radius * (.66 + .06 * pulse);
+      canvas.drawLine(
+        center + Offset(math.cos(angle), math.sin(angle)) * inner,
+        center + Offset(math.cos(angle), math.sin(angle)) * outer,
+        ray,
+      );
+    }
+    for (var i = 0; i < 16; i++) {
+      final phase = (t + i / 16) % 1;
+      final angle = i * 2.399 + phase * math.pi * 2;
+      final dist = radius * (.5 + .18 * phase);
+      final p = center + Offset(math.cos(angle), math.sin(angle)) * dist;
+      final fade = math.sin(phase * math.pi);
+      canvas.drawCircle(
+        p,
+        1.2 + 1.6 * fade,
+        Paint()..color = color.withAlpha((16 + 70 * fade).round()),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FortuneAuraPainter old) =>
+      old.t != t || old.color != color;
 }
 
 /// 翻面时扫过卡面的一道暖光；只在动画期间显形。

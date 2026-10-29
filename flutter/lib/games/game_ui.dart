@@ -1123,6 +1123,7 @@ class GameActionButton extends StatelessWidget {
     this.primary = false,
     this.enabled = true,
     this.height = 42,
+    this.expand = false,
   });
 
   final String label;
@@ -1130,6 +1131,9 @@ class GameActionButton extends StatelessWidget {
   final String? icon;
   final bool primary;
   final bool enabled;
+
+  /// 弹窗里成对按钮需要等宽撑满；游戏 HUD 保持按内容宽度。
+  final bool expand;
 
   /// web 手机端 .g-btn min-height 42；gjump 等单行 HUD 里按钮被 stretch 到 56.64
   final double height;
@@ -1158,8 +1162,10 @@ class GameActionButton extends StatelessWidget {
           ),
         ),
         Container(
+          width: expand ? double.infinity : null,
           height: height,
           padding: const EdgeInsets.symmetric(horizontal: 22),
+          alignment: expand ? Alignment.center : null,
           decoration: BoxDecoration(
             color: primary
                 ? null

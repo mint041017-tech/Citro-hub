@@ -458,6 +458,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
   bool _over = false;
   bool _won = false;
   bool _submitted = false;
+  bool _roundCounted = false;
   double? _bestSecs;
   bool _bestLoaded = false;
 
@@ -513,6 +514,10 @@ class _GameSheepPageState extends State<GameSheepPage> {
   // --- 开局 / 关卡 ---------------------------------------------------------
 
   void _newGame() {
+    if (_over && !_won && !_roundCounted) {
+      _roundCounted = true;
+      unawaited(AppState.instance.noteGameRound());
+    }
     _ticker?.cancel();
     _levelTimer?.cancel();
     _level = 0;
@@ -523,6 +528,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
     _over = false;
     _won = false;
     _submitted = false;
+    _roundCounted = false;
     _levelTimes.clear();
     _history.clear();
     _start = DateTime.now();
@@ -658,6 +664,10 @@ class _GameSheepPageState extends State<GameSheepPage> {
       _stopTicker();
       GameSfx.lose();
       _showFailOverlay();
+      if (_revived && !_roundCounted) {
+        _roundCounted = true;
+        unawaited(AppState.instance.noteGameRound());
+      }
     }
   }
 
@@ -683,7 +693,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
     _submitted = true;
     if (_bestSecs == null || secs < _bestSecs!) _bestSecs = secs;
     final score = math.max(1, _base - secs.floor());
-    context.app.submitScore('sheep', score);
+    context.app.submitScore('sheep', score, countRound: !_roundCounted);
   }
 
   // --- 快照 / 撤销 ---------------------------------------------------------

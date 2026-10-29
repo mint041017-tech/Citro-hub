@@ -62,6 +62,16 @@ class Notifications {
             importance: Importance.high,
           ),
         );
+        await android?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'citro_pomodoro',
+            '番茄钟',
+            description: '番茄钟到点提醒',
+            importance: Importance.high,
+            playSound: true,
+            enableVibration: false,
+          ),
+        );
       } catch (_) {}
       ready = true;
     } catch (_) {
@@ -220,8 +230,10 @@ class Notifications {
     int id,
     String title,
     String body,
-    DateTime when,
-  ) async {
+    DateTime when, {
+    String channelId = 'citro_reminders',
+    String channelName = 'Citro 提醒',
+  }) async {
     if (!enabled) return;
     await ensureInit();
     if (!ready) return;
@@ -245,10 +257,10 @@ class Notifications {
         title,
         body,
         tz.TZDateTime.from(when, tz.local),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'citro_reminders',
-            'Citro 提醒',
+            channelId,
+            channelName,
             importance: Importance.max,
             priority: Priority.high,
             icon: 'ic_stat_chimu',

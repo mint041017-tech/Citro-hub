@@ -8,6 +8,7 @@ import '../services/api.dart';
 import '../services/media.dart';
 import '../services/models.dart';
 import '../services/voice.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
@@ -152,7 +153,14 @@ class _ComposerState extends State<_Composer> {
         voiceDur: voice?.seconds ?? 0,
       );
       if (!mounted) return;
-      AppToast.show(context, '发布成功');
+      final cardReward = images.isNotEmpty
+          ? await context.app.grantPostCardDraw()
+          : false;
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        cardReward ? '发布成功 · 获得一次卡面抽卡机会' : '发布成功',
+      );
       widget.onCreated(post);
       Navigator.of(context).pop();
     } on Exception catch (e) {

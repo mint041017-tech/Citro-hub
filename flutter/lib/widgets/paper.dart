@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
 /// 24px 网格纸 + 纸纹。对应 .main-root 的背景。
@@ -615,6 +617,8 @@ class AppIcons {
   static const sparkle =
       '<path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"/>';
   static const play = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  static const wave =
+      '<path d="M3 12h2M19 12h2"/><path d="M7 8v8M11 5v14M15 8v8"/>';
   static const trash =
       '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
   static const image =
@@ -694,9 +698,14 @@ class _PressableState extends State<Pressable> {
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null || widget.onLongPress != null;
     final c = context.c;
+    final reduce = CitroMotion.reduced(context);
     // Windows 上鼠标悬停会连续触发大半径阴影重绘，是掉帧的主要来源之一。
     final cheapHover = !kIsWeb && platform.isWindows;
     final hoverShadow = (widget.hoverShadow ?? !kIsWeb) && !cheapHover;
+    final lift = _hover && !_down && !reduce ? -widget.hoverLift : 0.0;
+    final scale = _down && !reduce
+        ? widget.scale
+        : (_hover && !reduce ? 1.016 : (_focused && !reduce ? 1.016 : 1.0));
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) {
@@ -730,13 +739,9 @@ class _PressableState extends State<Pressable> {
           onTapCancel: () => setState(() => _down = false),
           onTapUp: (_) => setState(() => _down = false),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(
-              0,
-              _hover && !_down ? -widget.hoverLift : 0,
-              0,
-            ),
+            duration: reduce ? Duration.zero : CitroMotion.press,
+            curve: CitroMotion.easeOut,
+            transform: Matrix4.translationValues(0, lift, 0),
             decoration: BoxDecoration(
               borderRadius: widget.borderRadius,
               boxShadow: hoverShadow && widget.borderRadius != null
@@ -755,11 +760,9 @@ class _PressableState extends State<Pressable> {
                   : const [],
             ),
             child: AnimatedScale(
-              scale: _down
-                  ? widget.scale
-                  : (_hover ? 1.016 : (_focused ? 1.016 : 1)),
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOutCubic,
+              scale: scale,
+              duration: reduce ? Duration.zero : CitroMotion.press,
+              curve: CitroMotion.easeOut,
               child:
                   widget.hoverColor == null && widget.hoverOverlayColor == null
                   ? widget.child
@@ -772,6 +775,7 @@ class _PressableState extends State<Pressable> {
                               child: AnimatedOpacity(
                                 opacity: _hover ? 1 : 0,
                                 duration: const Duration(milliseconds: 140),
+                                curve: CitroMotion.easeColor,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: widget.hoverColor,
@@ -790,6 +794,7 @@ class _PressableState extends State<Pressable> {
                               child: AnimatedOpacity(
                                 opacity: _hover ? 1 : 0,
                                 duration: const Duration(milliseconds: 140),
+                                curve: CitroMotion.easeColor,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: widget.hoverOverlayColor,
@@ -821,16 +826,91 @@ class AppToast {
   }) {
     final overlay = Overlay.of(context, rootOverlay: true);
     _entry?.remove();
-    _entry = OverlayEntry(
-      builder: (ctx) {
-        final c = ctx.c;
-        // v1.6.2：全局轻提示统一显示在屏幕上方（用户反馈：文字游戏上下
-        // 各有一条 toast，且键盘弹出时底部提示被遮）。
-        return Positioned(
-          left: 24,
-          right: 24,
-          top: MediaQuery.paddingOf(ctx).top + 88,
-          child: Center(
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (ctx) => _ToastBubble(
+        message: message,
+        hold: duration,
+        onDismissed: () {
+          if (identical(_entry, entry)) _entry = null;
+          if (entry.mounted) entry.remove();
+        },
+      ),
+    );
+    _entry = entry;
+    overlay.insert(entry);
+  }
+}
+
+class _ToastBubble extends StatefulWidget {
+  const _ToastBubble({
+    required this.message,
+    required this.hold,
+    required this.onDismissed,
+  });
+
+  final String message;
+  final Duration hold;
+  final VoidCallback onDismissed;
+
+  @override
+  State<_ToastBubble> createState() => _ToastBubbleState();
+}
+
+class _ToastBubbleState extends State<_ToastBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: CitroMotion.toast,
+    reverseDuration: CitroMotion.toastReverse,
+  );
+  late final Animation<double> _opacity = CurvedAnimation(
+    parent: _controller,
+    curve: CitroMotion.easeOut,
+  );
+  late final Animation<Offset> _offset = Tween<Offset>(
+    begin: const Offset(0, -.18),
+    end: Offset.zero,
+  ).animate(_opacity);
+  Timer? _holdTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.forward();
+    _holdTimer = Timer(widget.hold, _dismiss);
+  }
+
+  Future<void> _dismiss() async {
+    if (!mounted) return;
+    await _controller.reverse();
+    if (mounted) widget.onDismissed();
+  }
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final reduce = CitroMotion.reduced(context);
+    // v1.6.2：全局轻提示统一显示在屏幕上方（用户反馈：文字游戏上下
+    // 各有一条 toast，且键盘弹出时底部提示被遮）。
+    return Positioned(
+      left: 24,
+      right: 24,
+      top: MediaQuery.paddingOf(context).top + 88,
+      child: Center(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: SlideTransition(
+            position: reduce
+                ? const AlwaysStoppedAnimation(Offset.zero)
+                : _offset,
             child: Material(
               color: Colors.transparent,
               child: Container(
@@ -844,21 +924,16 @@ class AppToast {
                   boxShadow: CitroColors.shadows.paper(c),
                 ),
                 child: Text(
-                  message,
-                  style: ctx.body(size: 13, color: c.surface2),
+                  widget.message,
+                  style: context.body(size: 13, color: c.surface2),
                   textAlign: TextAlign.center,
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
-    overlay.insert(_entry!);
-    Future.delayed(duration, () {
-      _entry?.remove();
-      _entry = null;
-    });
   }
 }
 

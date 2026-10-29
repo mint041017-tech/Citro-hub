@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
 import 'tokens.dart';
 
 class CitroSkin extends ThemeExtension<CitroSkin> {
@@ -112,9 +114,14 @@ ThemeData buildCitroTheme(CitroColors colors) {
               TargetPlatform.fuchsia: CitroFastPageTransitionsBuilder(),
             }
           : const {
-              TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-              // Windows 统一使用短促淡入：省掉整页横推 + 边缘阴影的栅格开销。
+              // 四端统一使用短时长；iOS/macOS 保留 Cupertino 转场以不丢边缘返回手势。
+              // Android 不再使用 450ms 的 FadeForwards，避免同一操作在手机上明显更慢。
+              TargetPlatform.android: CitroFastSlidePageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
               TargetPlatform.windows: CitroFastSlidePageTransitionsBuilder(),
+              TargetPlatform.linux: CitroFastPageTransitionsBuilder(),
+              TargetPlatform.fuchsia: CitroFastPageTransitionsBuilder(),
             },
     ),
     textTheme: base.textTheme.apply(
@@ -154,8 +161,11 @@ class CitroFastSlidePageTransitionsBuilder extends PageTransitionsBuilder {
   ) {
     final curved = CurvedAnimation(
       parent: animation,
-      curve: Curves.easeOutCubic,
+      curve: CitroMotion.easeOut,
     );
+    if (CitroMotion.reduced(context)) {
+      return FadeTransition(opacity: curved, child: child);
+    }
     return SlideTransition(
       position: Tween<Offset>(
         begin: const Offset(.04, 0),
@@ -182,8 +192,11 @@ class CitroFastPageTransitionsBuilder extends PageTransitionsBuilder {
   ) {
     final curved = CurvedAnimation(
       parent: animation,
-      curve: Curves.easeOutCubic,
+      curve: CitroMotion.easeOut,
     );
+    if (CitroMotion.reduced(context)) {
+      return FadeTransition(opacity: curved, child: child);
+    }
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(

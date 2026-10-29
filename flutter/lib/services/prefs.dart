@@ -43,6 +43,14 @@ class Prefs {
       PrefKeys.playRecords,
       PrefKeys.playCooldown,
       PrefKeys.fishConfig,
+      PrefKeys.cardsOwned,
+      PrefKeys.cardsToday,
+      PrefKeys.cardCredits,
+      PrefKeys.cardGameRounds,
+      PrefKeys.cardGameDraws,
+      PrefKeys.cardPostDay,
+      PrefKeys.cardRecipeDay,
+      PrefKeys.cardChatDay,
     ];
     for (final key in keys) {
       await _sp.remove(key);
@@ -72,6 +80,15 @@ class PrefKeys {
   static const checkinTransferUsed = 'citro_checkin_transfer_used';
   static const gameBest = 'citro_game_best';
   static const gameMuted = 'citro_game_mute';
+  static const cardsOwned = 'citro_cards_owned';
+  static const cardsToday = 'citro_cards_today';
+  static const cardCredits = 'citro_card_credits';
+  static const cardGameRounds = 'citro_card_game_rounds';
+  static const cardGameDraws = 'citro_card_game_draws';
+  static const cardPostDay = 'citro_card_post_day';
+  static const cardRecipeDay = 'citro_card_recipe_day';
+  static const cardChatDay = 'citro_card_chat_day';
+  static const cardsIndexCache = 'citro_cards_index';
   static const weatherLat = 'citro_weather_lat';
   static const weatherLon = 'citro_weather_lon';
   static const weatherCity = 'citro_weather_city';

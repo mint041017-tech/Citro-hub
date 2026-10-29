@@ -1345,20 +1345,52 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/ai') {
     if (!GLM_API_KEY) return json(res, 503, { err: 'AI 服务暂未配置' });
     if (limited(ip, 'ai', 30, 60000)) return json(res, 429, { err: 'AI 请求太频繁，请稍后再试' });
-    const rawAi = await readBody(req, 256 * 1024);
+    const rawAi = await readBody(req, 6 * 1024 * 1024);
     let b = null;
     try { b = rawAi ? JSON.parse(rawAi) : null; } catch (e) { return json(res, 400, { err: '请求格式错误' }); }
     const rawMessages = b && Array.isArray(b.messages) ? b.messages : [];
     const messages = [];
     let chars = 0;
+    let imageBytes = 0;
     for (const item of rawMessages.slice(0, 30)) {
       if (!item || typeof item !== 'object') continue;
       const role = String(item.role || '');
-      const content = String(item.content || '');
-      if (!['system', 'user', 'assistant'].includes(role) || !content) continue;
-      chars += content.length;
+      if (!['system', 'user', 'assistant'].includes(role)) continue;
+      const rawContent = item.content;
+      if (typeof rawContent === 'string') {
+        if (!rawContent) continue;
+        chars += rawContent.length;
+        if (chars > 32000) return json(res, 400, { err: '对话内容过长' });
+        messages.push({ role: role, content: rawContent });
+        continue;
+      }
+      /* 视觉消息：文字 + 图片。只允许压缩后的 dataURL 或本桶 OBS 图片，防止 SSRF。 */
+      if (!Array.isArray(rawContent)) continue;
+      const parts = [];
+      let textLen = 0;
+      for (const part of rawContent.slice(0, 4)) {
+        if (!part || typeof part !== 'object') continue;
+        const type = String(part.type || '');
+        if (type === 'text') {
+          const text = String(part.text || '');
+          if (!text) continue;
+          textLen += text.length;
+          parts.push({ type: 'text', text: text });
+        } else if (type === 'image_url' && role === 'user') {
+          const url = String((part.image_url && part.image_url.url) || '');
+          const dataOk = /^data:image\/(jpeg|jpg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(url);
+          const obsOk = /^https:\/\/obs\.chimu-claw\.xyz\/[^\s]+$/i.test(url);
+          if (!dataOk && !obsOk) return json(res, 400, { err: '图片格式不支持' });
+          if (url.length > 3.2 * 1024 * 1024) return json(res, 400, { err: '图片过大' });
+          imageBytes += url.length;
+          if (imageBytes > 4.5 * 1024 * 1024) return json(res, 400, { err: '图片总量过大' });
+          parts.push({ type: 'image_url', image_url: { url: url } });
+        }
+      }
+      if (!parts.length) continue;
+      chars += textLen;
       if (chars > 32000) return json(res, 400, { err: '对话内容过长' });
-      messages.push({ role: role, content: content });
+      messages.push({ role: role, content: parts });
     }
     if (!messages.length) return json(res, 400, { err: '缺少对话内容' });
     const maxTokens = Math.max(64, Math.min(2048, Number(b.max_tokens) || 1024));

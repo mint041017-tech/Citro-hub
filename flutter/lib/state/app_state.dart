@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../data/cards.dart';
 import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/location.dart';
@@ -44,6 +45,9 @@ class AppState extends ChangeNotifier {
   /// 弹层开合非常频繁；用独立 notifier 通知计时胶囊，不触发 AppScope
   /// 全量重建（否则每开一个弹窗都会重建后台社区页与首页卡片）。
   final ValueNotifier<bool> popupActiveNotifier = ValueNotifier<bool>(false);
+
+  /// 每完成 7 局游戏获得抽卡机会时 +1，由 RootShell 监听并弹出抽卡提示。
+  final ValueNotifier<int> cardPromptTick = ValueNotifier<int>(0);
   bool get popupActive => popupActiveNotifier.value;
   Set<String> _blockedUsers = <String>{};
   Timer? _notifyTimer;
@@ -65,6 +69,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() async {
     await Prefs.init();
+    CardCatalog.onChanged = () => notifyListeners();
+    unawaited(CardCatalog.ensureLoaded());
     notificationsEnabled = Prefs.getBool(PrefKeys.notificationsEnabled, true);
     Notifications.enabled = notificationsEnabled;
     final mode = Prefs.getString(PrefKeys.theme);
@@ -492,8 +498,13 @@ class AppState extends ChangeNotifier {
     await Prefs.setString(PrefKeys.gameBest, jsonEncode(m));
   }
 
-  Future<Map<String, dynamic>> submitScore(String game, int score) async {
+  Future<Map<String, dynamic>> submitScore(
+    String game,
+    int score, {
+    bool countRound = true,
+  }) async {
     await saveLocalBest(game, score);
+    if (countRound) unawaited(noteGameRound());
     try {
       return await Api.gameScore(
         game,
@@ -628,6 +639,132 @@ class AppState extends ChangeNotifier {
       } catch (_) {}
     }
     throw AiException('星语格式异常，请重试');
+  }
+
+  /* ---------------- 卡面收藏 ---------------- */
+
+  Set<String> get ownedCards =>
+      Prefs.getStringList(PrefKeys.cardsOwned).toSet();
+
+  int get cardOwnedCount => ownedCards.length;
+
+  int get cardCredits => Prefs.getInt(PrefKeys.cardCredits, 0);
+
+  String? get todayCardId {
+    final raw = Prefs.getString(PrefKeys.cardsToday);
+    if (raw == null) return null;
+    final split = raw.indexOf(':');
+    if (split <= 0) return null;
+    if (raw.substring(0, split) != _dayKey(DateTime.now())) return null;
+    final id = raw.substring(split + 1);
+    return id.isEmpty ? null : id;
+  }
+
+  Future<void> _unlockCard(String id) async {
+    if (id.isEmpty) return;
+    final owned = Prefs.getStringList(PrefKeys.cardsOwned);
+    if (owned.contains(id)) return;
+    owned.add(id);
+    await Prefs.setStringList(PrefKeys.cardsOwned, owned);
+  }
+
+  /// 今日打卡的卡面：同一天保持稳定，打卡/转运时各抽一次。
+  Future<CardFace?> ensureTodayCard() async {
+    await CardCatalog.ensureLoaded();
+    final current = CardCatalog.byId(todayCardId);
+    if (current != null) return current;
+    final picked = CardCatalog.pick(owned: ownedCards);
+    if (picked == null) return null;
+    await Prefs.setString(
+      PrefKeys.cardsToday,
+      '${_dayKey(DateTime.now())}:${picked.id}',
+    );
+    await _unlockCard(picked.id);
+    notifyListeners();
+    return picked;
+  }
+
+  Future<CardFace?> redrawTodayCard() async {
+    await CardCatalog.ensureLoaded();
+    final current = CardCatalog.byId(todayCardId);
+    final picked = CardCatalog.pick(owned: ownedCards, exclude: current?.id);
+    if (picked == null) return null;
+    await Prefs.setString(
+      PrefKeys.cardsToday,
+      '${_dayKey(DateTime.now())}:${picked.id}',
+    );
+    await _unlockCard(picked.id);
+    notifyListeners();
+    return picked;
+  }
+
+  Future<CardFace?> drawCardFromCredit() async {
+    if (cardCredits <= 0) return null;
+    await CardCatalog.ensureLoaded();
+    final picked = CardCatalog.pick(owned: ownedCards);
+    if (picked == null) return null;
+    await Prefs.setInt(PrefKeys.cardCredits, cardCredits - 1);
+    await _unlockCard(picked.id);
+    notifyListeners();
+    return picked;
+  }
+
+  Future<void> _addCardCredit() async {
+    await Prefs.setInt(PrefKeys.cardCredits, cardCredits + 1);
+    notifyListeners();
+  }
+
+  Future<bool> _firstToday(String key) async {
+    final today = _dayKey(DateTime.now());
+    if (Prefs.getString(key) == today) return false;
+    await Prefs.setString(key, today);
+    return true;
+  }
+
+  /// 每完成 7 局任意游戏给一次抽卡机会，每天最多两次。
+  Future<bool> noteGameRound() async {
+    final today = _dayKey(DateTime.now());
+    final rounds = _bumpTodayCount(PrefKeys.cardGameRounds);
+    if (rounds % 7 != 0) return false;
+    final draws = _todayCount(PrefKeys.cardGameDraws);
+    if (draws >= 2) return false;
+    await Prefs.setString(PrefKeys.cardGameDraws, '$today:${draws + 1}');
+    await _addCardCredit();
+    cardPromptTick.value++;
+    return true;
+  }
+
+  Future<bool> grantPostCardDraw() async {
+    if (!await _firstToday(PrefKeys.cardPostDay)) return false;
+    await _addCardCredit();
+    return true;
+  }
+
+  Future<bool> grantRecipeCardDraw() async {
+    if (!await _firstToday(PrefKeys.cardRecipeDay)) return false;
+    await _addCardCredit();
+    return true;
+  }
+
+  Future<bool> grantChatCardDraw() async {
+    if (!await _firstToday(PrefKeys.cardChatDay)) return false;
+    await _addCardCredit();
+    return true;
+  }
+
+  int _todayCount(String key) {
+    final raw = Prefs.getString(key);
+    if (raw == null) return 0;
+    final split = raw.indexOf(':');
+    if (split <= 0) return 0;
+    if (raw.substring(0, split) != _dayKey(DateTime.now())) return 0;
+    return int.tryParse(raw.substring(split + 1)) ?? 0;
+  }
+
+  int _bumpTodayCount(String key) {
+    final next = _todayCount(key) + 1;
+    Prefs.setString(key, '${_dayKey(DateTime.now())}:$next');
+    return next;
   }
 
   Future<bool> checkIn() async {

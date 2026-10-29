@@ -17,6 +17,16 @@
 }
 
 html,
+body,
+*,
+*::before,
+*::after {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+html,
 body {
   width: 100%;
   height: 100%;
@@ -1261,4 +1271,106 @@ button {
     opacity: 1;
     transform: translateY(0) scale(1) rotate(0);
   }
+}
+
+/* ---------- 深色主题：跟随 Citro 的 dark tokens ---------- */
+html.citro-dark {
+  --paper: #121218;
+  --card: #1e1f27;
+  --ink: #f1eee5;
+  --ink-soft: #a49e90;
+  --line: rgba(255, 246, 228, 0.16);
+  --coral: #ff8f7d;
+  --coral-deep: #e0796a;
+  --mint: #6f9c81;
+  --butter: #7c6330;
+}
+
+html.citro-dark body {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(111, 156, 129, 0.12), transparent 30%),
+    radial-gradient(circle at 88% 92%, rgba(255, 123, 103, 0.08), transparent 32%),
+    radial-gradient(rgba(255, 246, 228, 0.05) 1px, transparent 1.2px);
+}
+
+html.citro-dark .brand-mark i:nth-child(3),
+html.citro-dark .howto li:nth-child(3) .step {
+  background: #6b4049;
+}
+
+html.citro-dark .score-card,
+html.citro-dark .icon-btn,
+html.citro-dark .brand-mark {
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+html.citro-dark .next-box,
+html.citro-dark .play-hint {
+  border-color: rgba(255, 246, 228, 0.22);
+  background: rgba(30, 31, 39, 0.78);
+}
+
+html.citro-dark .next-chip {
+  border-color: rgba(255, 246, 228, 0.62);
+  box-shadow:
+    inset -3px -4px 0 rgba(255, 255, 255, 0.1),
+    inset 3px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+html.citro-dark .overlay {
+  background: rgba(8, 8, 12, 0.72);
+}
+
+html.citro-dark .card {
+  background:
+    linear-gradient(rgba(30, 31, 39, 0.97), rgba(30, 31, 39, 0.97)),
+    radial-gradient(rgba(255, 246, 228, 0.07) 1px, transparent 1.2px);
+  box-shadow:
+    10px 12px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 0 6px rgba(255, 246, 228, 0.06);
+}
+
+html.citro-dark .result-row {
+  background: rgba(255, 246, 228, 0.06);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+html.citro-dark .mascot {
+  box-shadow:
+    inset -9px -12px 0 rgba(255, 255, 255, 0.08),
+    6px 8px 0 rgba(0, 0, 0, 0.3);
+}
+
+html.citro-dark .doodle.arc {
+  border-color: rgba(255, 246, 228, 0.2);
+}
+
+html.citro-dark .ghost-btn {
+  text-decoration-color: rgba(255, 246, 228, 0.3);
+}
+
+html.citro-dark .primary-btn {
+  background: var(--coral-deep);
+  border-color: var(--coral-deep);
+  color: #23211c;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+}
+
+html.citro-dark .primary-btn:hover {
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.35);
+}
+
+html.citro-dark .primary-btn:active {
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+html.citro-dark .toast {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+html.citro-dark .tape {
+  opacity: 0.55;
 }

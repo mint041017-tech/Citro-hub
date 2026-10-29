@@ -166,6 +166,14 @@ class WebGameToolsRow extends StatelessWidget {
     final c = context.c;
     final tools = <_WebGameTool>[
       _WebGameTool(
+        title: '听隅',
+        desc: '白噪音混音',
+        icon: AppIcons.wave,
+        background: c.mintSoft,
+        foreground: c.mintInk,
+        onTap: () => Navigator.of(context).pushNamed('/tingyu'),
+      ),
+      _WebGameTool(
         title: '玩法抽签',
         desc: '无畏契约整活',
         icon: AppIcons.sparkle,

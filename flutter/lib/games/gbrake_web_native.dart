@@ -243,6 +243,10 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
     final reported = (body['score'] as num?)?.toInt() ?? 0;
     final computed = stop > 0 ? (v0 * v0 / stop).round() : 0;
     final score = reported > 0 ? reported : computed;
+    if (body['failed'] == true) {
+      await AppState.instance.noteGameRound();
+      return {'ok': false, 'failed': true};
+    }
     if (score <= 0) return {'ok': false, 'err': 'empty score'};
     final res = await AppState.instance.submitScore('brake', score);
     return {

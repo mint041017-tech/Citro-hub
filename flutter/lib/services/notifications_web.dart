@@ -80,8 +80,10 @@ class Notifications {
     int id,
     String title,
     String body,
-    DateTime when,
-  ) async {
+    DateTime when, {
+    String channelId = 'citro_reminders',
+    String channelName = 'Citro 提醒',
+  }) async {
     if (!enabled) return;
     await ensureInit();
     if (!ready) return;

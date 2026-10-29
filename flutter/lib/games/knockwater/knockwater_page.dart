@@ -109,6 +109,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
   bool _showEnd = false;
   bool _showSelect = false;
   bool _progressSaved = false;
+  bool _roundCounted = false;
   double _lastCheckpointAt = -1;
   String? _lastCheckpointJson;
   bool _hintVisible = false;
@@ -230,6 +231,10 @@ class _KnockwaterPageState extends State<KnockwaterPage>
         unawaited(_completeAndSubmit());
       } else {
         unawaited(_progress.clearCheckpoint());
+        if (!_roundCounted) {
+          _roundCounted = true;
+          unawaited(AppState.instance.noteGameRound());
+        }
       }
     }
     if (_engine.status == GameStatus.playing &&
@@ -283,7 +288,13 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     final total = _starTotal;
     if (total > 0) {
       // 现有游戏接口：内部吞掉网络异常，失败不影响结算。
-      unawaited(AppState.instance.submitScore('knockwater', total));
+      unawaited(
+        AppState.instance.submitScore(
+          'knockwater',
+          total,
+          countRound: !_roundCounted,
+        ),
+      );
     }
   }
 
@@ -301,6 +312,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     if (restored == null) unawaited(_progress.clearCheckpoint());
     _bindAudio(next);
     _progressSaved = false;
+    _roundCounted = false;
     _lastCheckpointAt = -1;
     _lastCheckpointJson = null;
     setState(() {

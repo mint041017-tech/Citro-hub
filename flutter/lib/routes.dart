@@ -9,6 +9,8 @@ import 'pages/play_page.dart';
 import 'pages/root_shell.dart';
 import 'pages/search_page.dart';
 import 'pages/sens_page.dart';
+import 'theme/motion.dart';
+import 'tingyu/tingyu_page.dart';
 
 class CitroRoutes {
   static const home = '/home';
@@ -20,6 +22,7 @@ class CitroRoutes {
   static const play = '/play';
   static const sens = '/sens';
   static const search = '/search';
+  static const tingyu = '/tingyu';
 
   static const tabs = <String>[home, games, community, resources];
   static const _games = <String>{
@@ -56,6 +59,7 @@ class CitroRoutes {
         path == play ||
         path == sens ||
         path == search ||
+        path == tingyu ||
         _games.contains(path)) {
       return path;
     }
@@ -69,6 +73,7 @@ class CitroRoutes {
     if (route == play) return const PlayPage();
     if (route == sens) return const SensPage();
     if (route == search) return const SearchPage();
+    if (route == tingyu) return const TingyuPage();
     if (_games.contains(route)) return buildGamePage(route.substring(1));
     return RootShell(initialIndex: tabs.indexOf(route));
   }
@@ -86,12 +91,14 @@ class _CitroPageRoute<T> extends MaterialPageRoute<T> {
   _CitroPageRoute({required super.builder, super.settings});
 
   @override
-  Duration get transitionDuration => kIsWeb || platform.isWindows
-      ? const Duration(milliseconds: 160)
-      : super.transitionDuration;
+  Duration get transitionDuration =>
+      kIsWeb || platform.isWindows
+      ? CitroMotion.pageDesktop
+      : CitroMotion.pageTouch;
 
   @override
-  Duration get reverseTransitionDuration => kIsWeb || platform.isWindows
-      ? const Duration(milliseconds: 140)
-      : super.reverseTransitionDuration;
+  Duration get reverseTransitionDuration =>
+      kIsWeb || platform.isWindows
+      ? CitroMotion.pageDesktopReverse
+      : CitroMotion.pageTouchReverse;
 }

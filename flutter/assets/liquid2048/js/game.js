@@ -92,8 +92,8 @@
     return levelCache[level];
   }
 
-  const SPAWN_LADDER = [2, 3, 4, 5, 6, 7, 8];
-  const SPAWN_UNLOCK_MERGES = [0, 1, 3, 6, 10, 15, 21];
+  const SPAWN_LADDER = [2, 3, 4, 5, 6, 7];
+  const SPAWN_WEIGHTS = [8, 5, 3, 2, 1, 1];
 
   const INK = "#26313f";
   const CREAM = "#fffaf0";
@@ -261,6 +261,7 @@
       this.scoreBoardEl = document.getElementById("scoreBoard");
 
       this.state = "start";
+      this.dark = document.documentElement.classList.contains("citro-dark");
       this.time = 0;
       this.lastFrame = 0;
       this.best = this.loadBest();
@@ -277,7 +278,7 @@
       this.score = 0;
       this.maxLevel = 1;
       this.shots = 0;
-      this.queue = [2, 3, 2, 4];
+      this.queue = [2, 2, 2, 2];
       this.queueSignature = "";
       this.combo = 0;
       this.comboTimer = 0;
@@ -535,8 +536,24 @@
       return (1000 + 2000 * clamp(power, 0, 1)) * factor;
     }
 
+    themeInk() {
+      return this.dark ? "#f1eee5" : INK;
+    }
+
+    themeCard() {
+      return this.dark ? "#1e1f27" : "#fffaf0";
+    }
+
+    setDarkMode(dark) {
+      const next = !!dark;
+      if (this.dark === next) return;
+      this.dark = next;
+      if (this.layout) this.buildBackground();
+    }
+
     buildBackground() {
       const { W, H, cx } = this.layout;
+      const dark = this.dark;
       const dpr = this.dpr;
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(W * dpr);
@@ -544,7 +561,7 @@
       const g = canvas.getContext("2d");
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      g.fillStyle = "#f5ecdb";
+      g.fillStyle = dark ? "#14141b" : "#f5ecdb";
       g.fillRect(0, 0, W, H);
 
       let wash = g.createRadialGradient(
@@ -555,8 +572,8 @@
         H * 0.08,
         Math.max(W, H) * 0.58
       );
-      wash.addColorStop(0, "rgba(169, 229, 200, 0.4)");
-      wash.addColorStop(0.6, "rgba(169, 229, 200, 0.08)");
+      wash.addColorStop(0, dark ? "rgba(120, 184, 154, 0.16)" : "rgba(169, 229, 200, 0.4)");
+      wash.addColorStop(0.6, dark ? "rgba(120, 184, 154, 0.03)" : "rgba(169, 229, 200, 0.08)");
       wash.addColorStop(1, "rgba(169, 229, 200, 0)");
       g.fillStyle = wash;
       g.fillRect(0, 0, W, H);
@@ -569,8 +586,8 @@
         H * 0.92,
         Math.max(W, H) * 0.48
       );
-      wash.addColorStop(0, "rgba(255, 123, 103, 0.16)");
-      wash.addColorStop(0.65, "rgba(255, 123, 103, 0.04)");
+      wash.addColorStop(0, dark ? "rgba(255, 123, 103, 0.08)" : "rgba(255, 123, 103, 0.16)");
+      wash.addColorStop(0.65, dark ? "rgba(255, 123, 103, 0.02)" : "rgba(255, 123, 103, 0.04)");
       wash.addColorStop(1, "rgba(255, 123, 103, 0)");
       g.fillStyle = wash;
       g.fillRect(0, 0, W, H);
@@ -581,7 +598,7 @@
         return seed / 2147483647;
       };
 
-      g.fillStyle = "rgba(38, 49, 63, 0.052)";
+      g.fillStyle = dark ? "rgba(241, 238, 229, 0.06)" : "rgba(38, 49, 63, 0.052)";
       for (let y = 18; y < H; y += 24) {
         for (let x = 16; x < W; x += 24) {
           if (random() < 0.52) continue;
@@ -591,7 +608,7 @@
         }
       }
 
-      g.strokeStyle = "rgba(38, 49, 63, 0.12)";
+      g.strokeStyle = dark ? "rgba(241, 238, 229, 0.12)" : "rgba(38, 49, 63, 0.12)";
       g.lineWidth = 1.2;
       g.setLineDash([2, 7]);
       g.beginPath();
@@ -599,7 +616,7 @@
       g.stroke();
       g.setLineDash([]);
 
-      g.fillStyle = "rgba(38, 49, 63, 0.18)";
+      g.fillStyle = dark ? "rgba(241, 238, 229, 0.18)" : "rgba(38, 49, 63, 0.18)";
       for (let i = 0; i < 9; i++) {
         const x = W * (0.06 + random() * 0.88);
         const y = H * (0.08 + random() * 0.55);
@@ -610,7 +627,7 @@
         g.fill();
       }
 
-      g.strokeStyle = "rgba(38, 49, 63, 0.1)";
+      g.strokeStyle = dark ? "rgba(241, 238, 229, 0.1)" : "rgba(38, 49, 63, 0.1)";
       g.lineWidth = 1.4;
       for (let i = 0; i < 3; i++) {
         const x = W * (0.05 + random() * 0.2);
@@ -631,8 +648,6 @@
       this.score = 0;
       this.shots = 0;
       this.spawnUnlocked = new Set([SPAWN_LADDER[0]]);
-      this.spawnMergeCounts = new Map();
-      this.lastSpawnLevel = 0;
       this.combo = 0;
       this.comboTimer = 0;
       this.overflowTime = 0;
@@ -662,7 +677,7 @@
       this.world.maxSpeed = this.speedLimit();
       this.world.mouthY = this.layout.jarTop;
 
-      this.queue = [2, 3, 2, 4];
+      this.queue = [2, 2, 2, 2];
       while (this.queue.length < 4) this.queue.push(this.rollLevel(true));
 
       this.maxLevel = 1;
@@ -685,9 +700,9 @@
     }
 
     seedJar() {
-      const levels = [2, 3, 2, 3];
-      // 开局四颗就挨在一起，不留下显眼的空档
-      const offsets = [-0.195, -0.065, 0.065, 0.195];
+      const levels = [2, 2, 2, 2];
+      // 四颗同级果冻要留出比合并判定更大的缝，避免开局自动连合。
+      const offsets = [-0.27, -0.09, 0.09, 0.27];
       const faceStyles = [0, 2, 5, 8];
       const { cx, jarW, bounds } = this.layout;
 
@@ -1134,26 +1149,23 @@
     }
 
     rollLevel(intro) {
-      if (intro) return Math.random() < 0.6 ? 2 : 3;
+      if (intro) return SPAWN_LADDER[0];
 
-      // sobosuba 的出货池：已解锁的档位等概率随机，避开刚投出的同级。
-      const pool = [];
+      let totalWeight = 0;
       for (const level of this.spawnUnlocked) {
-        if (level !== this.lastSpawnLevel) pool.push(level);
+        totalWeight += SPAWN_WEIGHTS[SPAWN_LADDER.indexOf(level)];
       }
-      const source = pool.length ? pool : [...this.spawnUnlocked];
-      const level = source[Math.floor(Math.random() * source.length)];
-      this.lastSpawnLevel = level;
-      return level;
+      let roll = Math.random() * totalWeight;
+      for (const level of this.spawnUnlocked) {
+        roll -= SPAWN_WEIGHTS[SPAWN_LADDER.indexOf(level)];
+        if (roll < 0) return level;
+      }
+      return SPAWN_LADDER[0];
     }
 
     unlockSpawnLevel(level) {
       const index = SPAWN_LADDER.indexOf(level);
-      if (index <= 0 || index >= SPAWN_UNLOCK_MERGES.length) return;
-      if (this.spawnUnlocked.has(level)) return;
-      const count = (this.spawnMergeCounts.get(level) || 0) + 1;
-      this.spawnMergeCounts.set(level, count);
-      if (count < SPAWN_UNLOCK_MERGES[index]) return;
+      if (index <= 0 || this.spawnUnlocked.has(level)) return;
       this.spawnUnlocked.add(level);
       const labels = [...this.spawnUnlocked]
         .map((lv) => formatBlobValue(levelDef(lv).value))
@@ -1403,7 +1415,7 @@
         maxLife: 0.95,
         rise: 38,
         size: 20 + Math.min(8, resultLevel * 0.8),
-        color: this.combo > 1 ? "#d9584a" : INK,
+        color: this.combo > 1 ? "#d9584a" : this.themeInk(),
       });
 
       if (this.combo > 1) {
@@ -1635,9 +1647,10 @@
         floorY + 12,
         jarW * 0.55
       );
-      shadow.addColorStop(0, "rgba(38, 49, 63, 0.15)");
-      shadow.addColorStop(0.7, "rgba(38, 49, 63, 0.05)");
-      shadow.addColorStop(1, "rgba(38, 49, 63, 0)");
+      const shelfInk = this.dark ? "241, 238, 229" : "38, 49, 63";
+      shadow.addColorStop(0, `rgba(${shelfInk}, ${this.dark ? 0.22 : 0.15})`);
+      shadow.addColorStop(0.7, `rgba(${shelfInk}, ${this.dark ? 0.08 : 0.05})`);
+      shadow.addColorStop(1, `rgba(${shelfInk}, 0)`);
       ctx.fillStyle = shadow;
       ctx.beginPath();
       ctx.ellipse(cx, floorY + 12, jarW * 0.54, 18, 0, 0, TAU);
@@ -1646,7 +1659,7 @@
       const shelfY = floorY + 3;
       const shelfH = 10;
       const shelfPad = Math.min(54, jarW * 0.09);
-      ctx.fillStyle = "rgba(222, 203, 176, 0.7)";
+      ctx.fillStyle = this.dark ? "rgba(92, 72, 50, 0.85)" : "rgba(222, 203, 176, 0.7)";
       roundRectPath(
         ctx,
         jarX0 - shelfPad,
@@ -1656,11 +1669,11 @@
         4
       );
       ctx.fill();
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.24)";
+      ctx.strokeStyle = `rgba(${shelfInk}, ${this.dark ? 0.3 : 0.24})`;
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(246, 237, 221, 0.9)";
+      ctx.fillStyle = this.dark ? "rgba(126, 100, 70, 0.9)" : "rgba(246, 237, 221, 0.9)";
       roundRectPath(
         ctx,
         jarX0 - shelfPad,
@@ -1670,7 +1683,7 @@
         2
       );
       ctx.fill();
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.2)";
+      ctx.strokeStyle = `rgba(${shelfInk}, ${this.dark ? 0.26 : 0.2})`;
       ctx.stroke();
       ctx.restore();
     }
@@ -1719,12 +1732,12 @@
         0,
         l.floorY
       );
-      floorShade.addColorStop(0, "rgba(38, 49, 63, 0)");
-      floorShade.addColorStop(1, "rgba(38, 49, 63, 0.075)");
+      floorShade.addColorStop(0, "rgba(0, 0, 0, 0)");
+      floorShade.addColorStop(1, `rgba(0, 0, 0, ${this.dark ? 0.2 : 0.075})`);
       ctx.fillStyle = floorShade;
       ctx.fillRect(l.jarX0, l.floorY - 42, l.jarW, 42);
 
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.1)";
+      ctx.strokeStyle = this.dark ? "rgba(241, 238, 229, 0.16)" : "rgba(38, 49, 63, 0.1)";
       ctx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = l.jarTop + l.jarH * (i / 4);
@@ -1732,7 +1745,7 @@
         ctx.moveTo(l.jarX0 + 16, y);
         ctx.lineTo(l.jarX0 + 34, y);
         ctx.stroke();
-        ctx.fillStyle = "rgba(38, 49, 63, 0.22)";
+        ctx.fillStyle = this.dark ? "rgba(241, 238, 229, 0.42)" : "rgba(38, 49, 63, 0.22)";
         ctx.font = `600 8px ${NUM_FONT}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -1745,8 +1758,8 @@
         0,
         l.jarTop + 34
       );
-      rimShade.addColorStop(0, "rgba(38, 49, 63, 0.08)");
-      rimShade.addColorStop(1, "rgba(38, 49, 63, 0)");
+      rimShade.addColorStop(0, this.dark ? "rgba(255, 255, 255, 0.05)" : "rgba(38, 49, 63, 0.08)");
+      rimShade.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = rimShade;
       ctx.fillRect(l.jarX0, l.jarTop, l.jarW, 34);
       ctx.restore();
@@ -1773,7 +1786,7 @@
       ctx.fillStyle = sheen;
       ctx.fillRect(l.jarX0, l.jarTop, l.jarW, l.jarH);
 
-      ctx.globalAlpha = 0.12;
+      ctx.globalAlpha = this.dark ? 0.035 : 0.12;
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.moveTo(l.jarX0 + l.jarW * 0.13, l.jarTop);
@@ -1784,7 +1797,7 @@
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.strokeStyle = `rgba(255, 255, 255, ${this.dark ? 0.25 : 0.55})`;
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(l.jarX0 + 10, l.jarTop + 28);
@@ -1793,7 +1806,7 @@
       ctx.restore();
 
       this.jarOpenPath(ctx);
-      ctx.strokeStyle = INK;
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 2.5;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
@@ -1807,7 +1820,7 @@
       ctx.restore();
 
       const lip = 9;
-      ctx.strokeStyle = INK;
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 2.5;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -1853,7 +1866,7 @@
         for (let i = 1; i < n; i++) {
           ctx.lineTo(crack[i].x, crack[i].y);
         }
-        ctx.strokeStyle = `rgba(38, 49, 63, ${0.26 + progress * 0.5})`;
+        ctx.strokeStyle = `rgba(${this.dark ? "241, 238, 229" : "38, 49, 63"}, ${0.26 + progress * 0.5})`;
         ctx.lineWidth = 1.6;
         ctx.stroke();
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + progress * 0.4})`;
@@ -1896,7 +1909,7 @@
       glass.addColorStop(1, "rgba(190, 224, 211, 0.3)");
       ctx.fillStyle = glass;
       ctx.fill();
-      ctx.strokeStyle = INK;
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 2.4;
       ctx.lineJoin = "round";
       ctx.stroke();
@@ -1942,7 +1955,7 @@
         ctx.closePath();
         ctx.fillStyle = "rgba(204, 235, 224, 0.55)";
         ctx.fill();
-        ctx.strokeStyle = `rgba(38, 49, 63, ${0.3 + 0.45 * alpha})`;
+        ctx.strokeStyle = `rgba(${this.dark ? "241, 238, 229" : "38, 49, 63"}, ${0.3 + 0.45 * alpha})`;
         ctx.lineWidth = 1.2;
         ctx.lineJoin = "round";
         ctx.stroke();
@@ -1964,7 +1977,7 @@
       const y = l.jarTop + 54;
 
       ctx.save();
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.5)";
+      ctx.strokeStyle = this.dark ? "rgba(241, 238, 229, 0.5)" : "rgba(38, 49, 63, 0.5)";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(l.jarX1 - 2, l.jarTop + 32);
@@ -1973,24 +1986,24 @@
 
       ctx.translate(x + 24, y + 6);
       ctx.rotate(0.1);
-      ctx.fillStyle = "#fffaf0";
-      ctx.strokeStyle = INK;
+      ctx.fillStyle = this.themeCard();
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 1.4;
       roundRectPath(ctx, -22, -14, 48, 30, 5);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = INK;
+      ctx.fillStyle = this.themeInk();
       ctx.font = `800 8px ${NUM_FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("NO. 6", 2, -3);
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.35)";
+      ctx.strokeStyle = this.dark ? "rgba(241, 238, 229, 0.35)" : "rgba(38, 49, 63, 0.35)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(-13, 5);
       ctx.lineTo(15, 5);
       ctx.stroke();
-      ctx.fillStyle = "rgba(38, 49, 63, 0.55)";
+      ctx.fillStyle = this.dark ? "rgba(241, 238, 229, 0.6)" : "rgba(38, 49, 63, 0.55)";
       ctx.font = `600 6px ${NUM_FONT}`;
       ctx.fillText("SOFT JELLY", 1, 11);
       ctx.restore();
@@ -2924,7 +2937,7 @@
       this.drawAimGuide(mx, my, dirX, dirY, radius);
 
       ctx.save();
-      ctx.strokeStyle = "rgba(38, 49, 63, 0.28)";
+      ctx.strokeStyle = this.dark ? "rgba(241, 238, 229, 0.32)" : "rgba(38, 49, 63, 0.28)";
       ctx.lineWidth = 1.3;
       ctx.setLineDash([2, 6]);
       ctx.beginPath();
@@ -2933,8 +2946,8 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = "#e8d6b9";
-      ctx.strokeStyle = INK;
+      ctx.fillStyle = this.dark ? "#7a6448" : "#e8d6b9";
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.arc(l.launcher.x, l.launcher.y - 6, 6, 0, TAU);
@@ -2955,8 +2968,8 @@
       ctx.quadraticCurveTo(15, 22, 17, -2);
       ctx.quadraticCurveTo(0, -8, -17, -2);
       ctx.closePath();
-      ctx.fillStyle = "#fffaf0";
-      ctx.strokeStyle = INK;
+      ctx.fillStyle = this.themeCard();
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 2;
       ctx.lineJoin = "round";
       ctx.fill();
@@ -2972,7 +2985,7 @@
       ctx.fillStyle = rgba(def.fill, 0.6);
       ctx.fill();
 
-      ctx.fillStyle = INK;
+      ctx.fillStyle = this.themeInk();
       roundRectPath(ctx, -5, -4, 10, 8, 3);
       ctx.fill();
 
@@ -3096,7 +3109,7 @@
       for (let i = 0; i < points.length; i += step) {
         const t = i / points.length;
         ctx.globalAlpha = alpha * (1 - t * 0.8);
-        ctx.fillStyle = INK;
+        ctx.fillStyle = this.themeInk();
         ctx.beginPath();
         ctx.arc(
           points[i].x,
@@ -3109,7 +3122,7 @@
       }
       const last = points[points.length - 1];
       ctx.globalAlpha = alpha * 0.7;
-      ctx.strokeStyle = INK;
+      ctx.strokeStyle = this.themeInk();
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 4]);
       ctx.beginPath();

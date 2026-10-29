@@ -1,6 +1,8 @@
 import ActivityKit
+import AudioToolbox
 import Flutter
 import Foundation
+import UIKit
 
 final class CitroTimerChannel {
   static let shared = CitroTimerChannel()
@@ -40,6 +42,18 @@ final class CitroTimerChannel {
         }
         Task { @MainActor in
           await CitroTimerLiveActivityManager.shared.cancel()
+          result(true)
+        }
+      case "vibrate":
+        let args = call.arguments as? [String: Any] ?? [:]
+        let kind = args["kind"] as? String ?? "breath"
+        DispatchQueue.main.async {
+          if kind == "done" {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+          } else {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+          }
           result(true)
         }
       default:

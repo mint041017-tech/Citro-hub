@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../overlays/card_draw.dart';
 import '../overlays/update_dialog.dart';
 import '../perf_probe.dart';
 import '../services/notifications.dart';
@@ -11,6 +12,7 @@ import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/breakpoints.dart';
+import '../theme/motion.dart';
 import '../widgets/tab_bar.dart';
 import '../games/gbrake_web.dart';
 import '../widgets/tablet_shell.dart';
@@ -42,6 +44,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   );
   bool _switching = false;
   Timer? _updateTimer;
+  Timer? _cardPromptTimer;
+  double _swipeDx = 0;
 
   @override
   void initState() {
@@ -49,6 +53,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     instance = this;
     index = widget.initialIndex.clamp(0, 3);
     _visited = List<bool>.generate(4, (i) => i == index);
+    AppState.instance.cardPromptTick.addListener(_onCardPrompt);
     _fade = AnimationController(
       vsync: this,
       value: 1,
@@ -114,10 +119,40 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _cardPromptTimer?.cancel();
+    AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
     _fade.dispose();
     _slide.dispose();
     if (instance == this) instance = null;
     super.dispose();
+  }
+
+  void _onCardPrompt() {
+    _cardPromptTimer?.cancel();
+    _cardPromptTimer = Timer(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+      final state = AppState.instance;
+      if (state.cardCredits <= 0 || state.popupActive) return;
+      unawaited(showCardDrawPrompt(context, credits: state.cardCredits));
+    });
+  }
+
+  Widget _withSwipe(Widget child) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (_) => _swipeDx = 0,
+      onHorizontalDragUpdate: (details) => _swipeDx += details.delta.dx,
+      onHorizontalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (_swipeDx <= -46 || v < -380) {
+          switchTo(index + 1);
+        } else if (_swipeDx >= 46 || v > 380) {
+          switchTo(index - 1);
+        }
+        _swipeDx = 0;
+      },
+      child: child,
+    );
   }
 
   void switchTo(int i) => unawaited(_switchTab(i));
@@ -135,8 +170,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     }
     _switching = true;
     final dir = i > index ? 1.0 : -1.0;
+    final reduce = CitroMotion.reduced(context);
     // Windows 上整页位移会带来额外的栅格化开销，只保留淡入。
-    final smoothOnly = !kIsWeb && platform.isWindows;
+    final smoothOnly = (!kIsWeb && platform.isWindows) || reduce;
     PerfProbe.beginFrameCollection();
     // 单程动画：立即换页，新页用 90ms 滑入+轻微淡入，总耗时控制在 100ms 内。
     setState(() {
@@ -147,6 +183,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
         end: Offset.zero,
       );
     });
+    if (reduce) {
+      _fade.value = 1;
+      _slide.value = 1;
+      PerfProbe.endFrameCollection('tab_$i');
+      if (mounted) _switching = false;
+      return;
+    }
     _fade.value = .55;
     await Future.wait([_fade.forward(), _slide.forward(from: 0)]);
     if (PerfProbe.enabled) {
@@ -164,7 +207,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
         return Transform.translate(
           offset: _slideTween.evaluate(_slide),
           child: FadeTransition(
-            opacity: CurvedAnimation(parent: _fade, curve: Curves.easeOut),
+            opacity: CurvedAnimation(parent: _fade, curve: CitroMotion.easeOut),
             child: child,
           ),
         );
@@ -280,7 +323,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     contentWidth: constraints.maxWidth,
                     tabletNav: false,
                     duo: duo,
-                    child: _pageStack(),
+                    child: _withSwipe(_pageStack()),
                   ),
                 ),
                 if (!desktop &&
