@@ -6,7 +6,8 @@
 ## 0. 当前基线
 
 - 仓库：`https://github.com/mint041017-tech/Citro-hub`
-- 分支/tag：`main`；tag `v1.9.9`（commit `94c1eb4`）
+- 分支：`main`（当前 `cd6d70a`，包含 `app dist/` 文档）；tag `v1.9.9`（`94c1eb4`）只含 iOS 代码，不含本目录文档
+- Mac 构建请用 `main`，不要只 checkout tag；功能仍是 1.9.9+1909，二者 iOS 代码一致
 - 版本：`1.9.9+1909`（`flutter/pubspec.yaml` 为唯一版本源）
 - Bundle ID：Runner `com.chimu.crew`；TimerWidget `com.chimu.crew.TimerWidget`
 - 部署目标：Runner iOS 15.0；Widget iOS 16.1
@@ -35,7 +36,7 @@
 - [ ] Xcode 16+，`sudo xcodebuild -license accept`
 - [ ] CocoaPods、Flutter 3.47.7
 - [ ] 付费 Apple Developer Program；App Store Connect 可登录；Free Apps 协议已生效
-- [ ] 克隆/更新仓库，checkout `v1.9.9`；`git status` 干净
+- [ ] 克隆/更新仓库，checkout `main`（当前 `cd6d70a`）；`git status` 干净
 - [ ] `cd flutter && flutter pub get`
 - [ ] `cd ios && pod install --repo-update`
 - [ ] 打开 `ios/Runner.xcworkspace`（不是 `.xcodeproj`）
@@ -97,7 +98,7 @@
 你在一台 Mac 上处理 Citro iOS 1.9.9 的出包与上传。
 
 项目：https://github.com/mint041017-tech/Citro-hub
-tag：v1.9.9（commit 94c1eb4）
+分支：main（当前 commit cd6d70a；版本仍是 1.9.9+1909）
 Flutter 工程：仓库根目录下的 flutter/
 
 先读：
@@ -110,7 +111,7 @@ Flutter 工程：仓库根目录下的 flutter/
 
 执行步骤：
 1. 检查 macOS、Xcode、CocoaPods、Flutter 版本，输出实际版本号。
-2. 克隆或更新仓库，checkout v1.9.9；确认 git status 干净且 HEAD 为 94c1eb4。
+2. 克隆或更新仓库，checkout main；确认 git status 干净且 HEAD 为 cd6d70a（或更新的 main）。
 3. cd flutter && flutter pub get；cd ios && pod install --repo-update。
 4. 打开 ios/Runner.xcworkspace，确认 Runner、CitroTimerWidget、RunnerTests 使用同一 Team 并开启自动签名。如果 Team 未配置，停下来让我在 Xcode 里选择，不要猜 Team ID。
 5. 确认 pubspec.yaml 版本为 1.9.9+1909；Runner Bundle ID 为 com.chimu.crew；Widget 为 com.chimu.crew.TimerWidget。
