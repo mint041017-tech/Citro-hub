@@ -20,6 +20,7 @@
 | `privacy.html` | 隐私政策公开页（应用商店隐私政策 URL） |
 | `terms.html` | 用户协议公开页 |
 | `account-deletion.html` | 账号注销/数据删除说明公开页（应用商店数据删除 URL） |
+| `support.html` | App Store 支持页（来源：`app dist/support.html`，发布时复制到站点根目录） |
 
 ## 2. 大文件（服务器已有就不用重传）
 

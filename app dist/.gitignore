@@ -1,0 +1,16 @@
+# 真实审核账号、密码、App Store Connect API Key、证书不要入库
+private/
+review-credentials/
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# 截图原图/成品体积大，按需本地保留
+screenshots/raw/
+screenshots/final/
+
+.DS_Store
+
+# 交付用 ZIP 不进入 Git（本地/Release 分发）
+exports/
