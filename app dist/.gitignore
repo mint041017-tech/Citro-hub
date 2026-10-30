@@ -6,9 +6,8 @@ review-credentials/
 *.cer
 *.mobileprovision
 
-# 截图原图/成品体积大，按需本地保留
+# 截图原图体积大，按需本地保留；成品截图入库
 screenshots/raw/
-screenshots/final/
 
 .DS_Store
 
