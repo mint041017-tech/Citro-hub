@@ -10,7 +10,8 @@
 - 设备：iPhone 运行时锁竖屏；iPad 支持全方向与分屏
 - API：`https://chimu-claw.xyz/trashapi`
 - 已有：应用内隐私政策/用户协议、应用内账号注销、举报、拉黑、PrivacyInfo.xcprivacy、`ITSAppUsesNonExemptEncryption=false`
-- 未完成：Mac 出包与上传、生产 `trash.js` 部署、三个法务页与支持页公网核验、真实数据恢复、演示账号、截图、中国区备案/AI 合规评估
+- 已完成：TestFlight 1909、演示账号 `CitroReview`、iPhone 6.3"/iPad 13" 各 6 张截图并上传 ASC、App 审核信息
+- 未完成：生产 `trash.js` 部署、三个法务页与支持页公网核验、真实数据恢复、中国区备案/AI 合规评估
 - 需要决策：社区发布前内容过滤（当前代码有举报/拉黑，但未看到发布前敏感词过滤；Apple 1.2 可能要求）
 
 > 仓库发布清单仍把生产 `trash.js`、法务页部署和真实数据恢复列为待办；提交前必须实际核验，不要只看文档。
@@ -18,6 +19,7 @@
 ## 本次同步
 
 - 新增 `app dist/` 全套上架材料和支持页。
+- 新增 `screenshots/final/` 12 张 App Store 截图，并在根 README 展示；截图已上传 ASC。
 - 根目录 `privacy.html` 的公开文本已对齐 App 内政策：补 AI 图片、卡面/抽卡/每日运签/好事记录、注销删除范围；仍需部署到公网。
 - `docs/citro-部署上传清单.md` 已加入 `support.html` 部署项。
 - 未改线上后端、数据库和 iOS 工程；生产 `trash.js` 与真实数据恢复仍需执行。
@@ -40,6 +42,7 @@
 | `support.html` | App Store 支持页，部署为 `https://chimu-claw.xyz/support.html` |
 | `scripts/capture-ios-screenshots.sh` | Mac 模拟器截图辅助脚本（手动切页，逐张截屏） |
 | `scripts/verify-public-urls.sh` | 公网法务页与基础 API 的可访问性检查 |
+| `screenshots/final/` | iPhone 6.3" 与 iPad 13" 各 6 张 App Store 截图（JPG） |
 
 ## 使用顺序
 
