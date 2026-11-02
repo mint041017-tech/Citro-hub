@@ -20,6 +20,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/app_image.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
@@ -232,6 +233,7 @@ class _CommunityPageState extends State<CommunityPage> {
       });
       _loadInbox();
       _startPoll();
+      _precacheFeed(list);
     } catch (e) {
       if (mounted) {
         setState(() => loaded = true);
@@ -240,6 +242,19 @@ class _CommunityPageState extends State<CommunityPage> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  /// 首屏前几条动态的图片先落盘并解码，滚动时不至于逐张等网络。
+  void _precacheFeed(List<Post> list) {
+    final urls = <String>[];
+    for (final p in list.take(4)) {
+      for (final path in p.imgs.take(1)) {
+        final url = Api.imageUrl(path);
+        if (url.isNotEmpty) urls.add(url);
+      }
+    }
+    if (urls.isEmpty) return;
+    AppImage.precache(context, urls, width: 900);
   }
 
   void _startPoll() {
@@ -855,38 +870,21 @@ class _CommunityPageState extends State<CommunityPage> {
             children: [
               GestureDetector(
                 onTap: () => _openUserPosts(mine: true),
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [c.accentLt, c.accent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(color: c.surface2, width: 2),
-                    image: user.av != null
-                        ? DecorationImage(
-                            image: ResizeImage(
-                              NetworkImage(Api.imageUrl(user.av)),
-                              width: 150,
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                child: _CommunityAvatar(
+                  url: Api.imageUrl(user.av),
+                  size: 50,
+                  cacheWidth: 150,
+                  initial: user.name.isEmpty ? '·' : user.name[0],
+                  textStyle: context.display(
+                    size: 21,
+                    color: const Color(0xFF2E2C22),
                   ),
-                  child: user.av != null
-                      ? null
-                      : Center(
-                          child: Text(
-                            user.name.isEmpty ? '·' : user.name[0],
-                            style: context.display(
-                              size: 21,
-                              color: const Color(0xFF2E2C22),
-                            ),
-                          ),
-                        ),
+                  gradient: LinearGradient(
+                    colors: [c.accentLt, c.accent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: c.surface2, width: 2),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1361,35 +1359,18 @@ class _PostCardState extends State<_PostCard> {
             children: [
               GestureDetector(
                 onTap: widget.onAvatar,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: c.hl,
-                    border: Border.all(color: c.line2),
-                    image: p.av != null
-                        ? DecorationImage(
-                            image: ResizeImage(
-                              NetworkImage(Api.imageUrl(p.av)),
-                              width: 132,
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                child: _CommunityAvatar(
+                  url: Api.imageUrl(p.av),
+                  size: 44,
+                  cacheWidth: 132,
+                  initial: p.nick.isEmpty ? '?' : p.nick[0],
+                  textStyle: context.display(
+                    size: 19,
+                    weight: FontWeight.w700,
+                    color: c.accentInk,
                   ),
-                  child: p.av != null
-                      ? null
-                      : Center(
-                          child: Text(
-                            p.nick.isEmpty ? '?' : p.nick[0],
-                            style: context.display(
-                              size: 19,
-                              weight: FontWeight.w700,
-                              color: c.accentInk,
-                            ),
-                          ),
-                        ),
+                  color: c.hl,
+                  border: Border.all(color: c.line2),
                 ),
               ),
               const SizedBox(width: 9),
@@ -1786,11 +1767,12 @@ class _PostCardState extends State<_PostCard> {
             borderRadius: BorderRadius.circular(9),
             child: AspectRatio(
               aspectRatio: 1.45,
-              child: Image.network(
+              child: AppImage(
                 Api.imageUrl(imgs.first),
                 fit: BoxFit.cover,
                 cacheWidth: 900,
-                errorBuilder: (_, __, ___) => Container(color: context.c.noteP),
+                placeholder: Container(color: context.c.noteP),
+                errorBuilder: (_, _, _) => Container(color: context.c.noteP),
               ),
             ),
           ),
@@ -1818,11 +1800,12 @@ class _PostCardState extends State<_PostCard> {
                       borderRadius: BorderRadius.circular(8),
                       child: AspectRatio(
                         aspectRatio: 1,
-                        child: Image.network(
+                        child: AppImage(
                           Api.imageUrl(imgs[i]),
                           fit: BoxFit.cover,
                           cacheWidth: 720,
-                          errorBuilder: (_, __, ___) =>
+                          placeholder: Container(color: context.c.noteP),
+                          errorBuilder: (_, _, _) =>
                               Container(color: context.c.noteP),
                         ),
                       ),
@@ -2044,31 +2027,14 @@ class _PostCardState extends State<_PostCard> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.surface2,
-                border: Border.all(color: c.line),
-                image: cm.av != null
-                    ? DecorationImage(
-                        image: ResizeImage(
-                          NetworkImage(Api.imageUrl(cm.av)),
-                          width: 90,
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: cm.av != null
-                  ? null
-                  : Center(
-                      child: Text(
-                        cm.nick.isEmpty ? '?' : cm.nick[0],
-                        style: context.body(size: 12, color: c.accentInk),
-                      ),
-                    ),
+            _CommunityAvatar(
+              url: Api.imageUrl(cm.av),
+              size: 30,
+              cacheWidth: 90,
+              initial: cm.nick.isEmpty ? '?' : cm.nick[0],
+              textStyle: context.body(size: 12, color: c.accentInk),
+              color: c.surface2,
+              border: Border.all(color: c.line),
             ),
             const SizedBox(width: 7),
             Expanded(
@@ -2133,12 +2099,19 @@ class _PostCardState extends State<_PostCard> {
                               tag: tag,
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(5),
-                                child: Image.network(
-                                  Api.imageUrl(cm.imgs.first),
+                                child: SizedBox(
                                   width: 72,
                                   height: 72,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 216,
+                                  child: AppImage(
+                                    Api.imageUrl(cm.imgs.first),
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 216,
+                                    placeholder: Container(
+                                      color: context.c.noteP,
+                                    ),
+                                    errorBuilder: (_, _, _) =>
+                                        Container(color: context.c.noteP),
+                                  ),
                                 ),
                               ),
                             ),
@@ -2212,6 +2185,57 @@ class _LocalCommentImageState extends State<_LocalCommentImage> {
       fit: BoxFit.cover,
       cacheWidth: 132,
       gaplessPlayback: true,
+    );
+  }
+}
+
+/// 社区头像：原生端走 AppImage 的磁盘缓存，避免每次打开都重新下载。
+class _CommunityAvatar extends StatelessWidget {
+  const _CommunityAvatar({
+    required this.url,
+    required this.size,
+    required this.cacheWidth,
+    required this.initial,
+    required this.textStyle,
+    this.color,
+    this.gradient,
+    this.border,
+  });
+
+  final String url;
+  final double size;
+  final int cacheWidth;
+  final String initial;
+  final TextStyle textStyle;
+  final Color? color;
+  final Gradient? gradient;
+  final BoxBorder? border;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Center(child: Text(initial, style: textStyle));
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        gradient: gradient,
+      ),
+      foregroundDecoration: border == null
+          ? null
+          : BoxDecoration(shape: BoxShape.circle, border: border),
+      child: url.isEmpty
+          ? fallback
+          : ClipOval(
+              child: AppImage(
+                url,
+                fit: BoxFit.cover,
+                cacheWidth: cacheWidth,
+                placeholder: fallback,
+                errorBuilder: (_, _, _) => fallback,
+              ),
+            ),
     );
   }
 }
@@ -2458,35 +2482,18 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 8, 8),
                 child: Row(
                   children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.hl,
-                        border: Border.all(color: c.line2),
-                        image: widget.avatar != null
-                            ? DecorationImage(
-                                image: ResizeImage(
-                                  NetworkImage(Api.imageUrl(widget.avatar)),
-                                  width: 138,
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
+                    _CommunityAvatar(
+                      url: Api.imageUrl(widget.avatar),
+                      size: 46,
+                      cacheWidth: 138,
+                      initial: widget.nick.isEmpty ? '?' : widget.nick[0],
+                      textStyle: context.display(
+                        size: 19,
+                        weight: FontWeight.w700,
+                        color: c.accentInk,
                       ),
-                      child: widget.avatar != null
-                          ? null
-                          : Center(
-                              child: Text(
-                                widget.nick.isEmpty ? '?' : widget.nick[0],
-                                style: context.display(
-                                  size: 19,
-                                  weight: FontWeight.w700,
-                                  color: c.accentInk,
-                                ),
-                              ),
-                            ),
+                      color: c.hl,
+                      border: Border.all(color: c.line2),
                     ),
                     const SizedBox(width: 10),
                     Expanded(

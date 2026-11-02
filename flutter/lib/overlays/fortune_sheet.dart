@@ -10,6 +10,7 @@ import '../data/fortunes.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
+import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
@@ -400,8 +401,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: c.dark
-          ? [const Color(0xFF2C2720), const Color(0xFF201D18)]
-          : [const Color(0xFFF5F0E6), const Color(0xFFE8DCC8)],
+          ? [const Color(0xFF312A21), const Color(0xFF1A1611)]
+          : [const Color(0xFFFFFBF2), const Color(0xFFF1E3CD)],
     );
 
     return Listener(
@@ -465,607 +466,783 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     key: _cardKey,
                     width: double.infinity,
                     constraints: const BoxConstraints(maxWidth: 400),
-              decoration: BoxDecoration(
-                borderRadius: _cardRadius,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x246E5030),
-                    blurRadius: 60,
-                    offset: Offset(0, 24),
-                  ),
-                  BoxShadow(
-                    color: Color(0x1A6E5030),
-                    blurRadius: 22,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _onCardTap,
-                    child: AnimatedBuilder(
-                      animation: _flip,
-                      child: ClipRRect(
-                        borderRadius: _cardRadius,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(gradient: frontGradient),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 30, 20, 16),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                    decoration: BoxDecoration(
+                      borderRadius: _cardRadius,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x246E5030),
+                          blurRadius: 60,
+                          offset: Offset(0, 24),
+                        ),
+                        BoxShadow(
+                          color: Color(0x1A6E5030),
+                          blurRadius: 22,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _onCardTap,
+                          child: AnimatedBuilder(
+                            animation: _flip,
+                            child: ClipRRect(
+                              borderRadius: _cardRadius,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: frontGradient,
+                                ),
+                                child: Stack(
                                   children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            festId != null
-                                                ? '${festivalName(festId)}特别签'
-                                                : '今日打卡',
-                                            style: context.display(
-                                              size: 24,
-                                              weight: FontWeight.w700,
-                                              color: c.ink,
+                                    Positioned(
+                                      left: -34,
+                                      top: -46,
+                                      child: IgnorePointer(
+                                        child: Container(
+                                          width: 190,
+                                          height: 190,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: RadialGradient(
+                                              colors: [
+                                                c.accent.withAlpha(
+                                                  c.dark ? 26 : 34,
+                                                ),
+                                                c.accent.withAlpha(0),
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                '${today.day}',
-                                                style: context.display(
-                                                  size: 52,
-                                                  weight: FontWeight.w400,
-                                                  color: c.accentInk,
-                                                  height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(9),
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              border: Border.all(
+                                                color: c.accent.withAlpha(
+                                                  c.dark ? 42 : 70,
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
-                                              Flexible(
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  alignment:
-                                                      Alignment.bottomLeft,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          bottom: 5,
-                                                        ),
-                                                    child: Text(
-                                                      '${today.year}年${today.month}月 · ${weekdayChinese(today)}',
-                                                      maxLines: 1,
-                                                      style: context.body(
-                                                        size: 12,
-                                                        color: c.ink2,
-                                                      ),
-                                                    ),
-                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        22,
+                                        30,
+                                        22,
+                                        18,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 6,
+                                                height: 6,
+                                                decoration: BoxDecoration(
+                                                  color: c.accent,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 7),
+                                              Text(
+                                                festId != null
+                                                    ? '${festivalName(festId)}特别签'
+                                                    : '今日打卡',
+                                                style: context.heading(
+                                                  size: 14,
+                                                  color: c.accentInk,
+                                                  letterSpacing: .8,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 9),
+                                              Expanded(
+                                                child: Container(
+                                                  height: 1,
+                                                  color: c.accent.withAlpha(58),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 9),
+                                              Text(
+                                                'DAILY DRAW',
+                                                style: context.body(
+                                                  size: 7.5,
+                                                  weight: FontWeight.w700,
+                                                  color: c.inkSoft,
+                                                  letterSpacing: 1.7,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 5),
-                                          Wrap(
-                                            spacing: 6,
-                                            runSpacing: 5,
-                                            children: tags,
-                                          ),
-                                          if (nt != null) ...[
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              '距 ${_termName(nt)} ${dayDiff(today, nt)} 天',
-                                              style: context.body(
-                                                size: 10.5,
-                                                color: c.inkSoft,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Transform.rotate(
-                                      angle: 3 * math.pi / 180,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 22,
-                                          right: 3,
-                                        ),
-                                        child: Image.asset(
-                                          'assets/images/cats/${23757 + catIndex}.webp',
-                                          width: 96,
-                                          height: 96,
-                                          fit: BoxFit.contain,
-                                          cacheWidth: 288,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                AnimatedOpacity(
-                                  opacity: loading ? 0 : 1,
-                                  duration: const Duration(milliseconds: 380),
-                                  child: AnimatedScale(
-                                    scale: loading ? .96 : 1,
-                                    duration: const Duration(milliseconds: 380),
-                                    curve: Curves.easeOut,
-                                    child: Container(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        16,
-                                        16,
-                                        16,
-                                        14,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: c.dark
-                                            ? const Color(0x0DFFFFFF)
-                                            : const Color(0x0D23211C),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: c.dark
-                                              ? const Color(0x14FFF6E4)
-                                              : const Color(0x1423211C),
-                                        ),
-                                      ),
-                                      child: loading
-                                          ? const SizedBox(
-                                              height: 160,
-                                              child: Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
-                                              ),
-                                            )
-                                          : Column(
-                                              children: [
-                                                Row(
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: Column(
                                                   crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Expanded(
-                                                      flex: 4,
-                                                      child: FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        child: ShaderMask(
-                                                          shaderCallback: (rect) =>
-                                                              LinearGradient(
-                                                                colors: [
-                                                                  c.accent,
-                                                                  c.accent2,
-                                                                ],
-                                                                begin: Alignment
-                                                                    .topLeft,
-                                                                end: Alignment
-                                                                    .bottomRight,
-                                                              ).createShader(
-                                                                rect,
+                                                    Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .end,
+                                                      children: [
+                                                        Text(
+                                                          '${today.day}',
+                                                          style: context
+                                                              .display(
+                                                                size: 56,
+                                                                color:
+                                                                    c.accentInk,
+                                                                height: .95,
                                                               ),
-                                                          child: Text(
-                                                            fortune.lv,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            maxLines: 1,
-                                                            style: context
-                                                                .display(
-                                                                  size: 46,
-                                                                  weight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  color: Colors
-                                                                      .white,
-                                                                  height: 1.05,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 10,
+                                                        ),
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                bottom: 7,
+                                                              ),
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              Text(
+                                                                '${today.year} / ${today.month.toString().padLeft(2, '0')}',
+                                                                style: context.body(
+                                                                  size: 10.5,
+                                                                  color:
+                                                                      c.inkSoft,
+                                                                  letterSpacing:
+                                                                      1.1,
                                                                 ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 2,
+                                                              ),
+                                                              Text(
+                                                                weekdayChinese(
+                                                                  today,
+                                                                ),
+                                                                style: context
+                                                                    .heading(
+                                                                      size: 15,
+                                                                      color: c
+                                                                          .ink2,
+                                                                    ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
-                                                      ),
+                                                      ],
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      flex: 5,
-                                                      child: Column(
+                                                    const SizedBox(height: 9),
+                                                    Wrap(
+                                                      spacing: 6,
+                                                      runSpacing: 5,
+                                                      children: tags,
+                                                    ),
+                                                    if (nt != null) ...[
+                                                      const SizedBox(height: 6),
+                                                      Text(
+                                                        '距 ${_termName(nt)} ${dayDiff(today, nt)} 天',
+                                                        style: context.body(
+                                                          size: 10,
+                                                          color: c.inkSoft,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              _catSticker(context, catIndex),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 14),
+                                          AnimatedOpacity(
+                                            opacity: loading ? 0 : 1,
+                                            duration: const Duration(
+                                              milliseconds: 380,
+                                            ),
+                                            child: AnimatedScale(
+                                              scale: loading ? .97 : 1,
+                                              duration: const Duration(
+                                                milliseconds: 380,
+                                              ),
+                                              curve: Curves.easeOut,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                      14,
+                                                      15,
+                                                      14,
+                                                      15,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: c.surface.withAlpha(
+                                                    c.dark ? 26 : 148,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(18),
+                                                  border: Border.all(
+                                                    color: c.accent.withAlpha(
+                                                      c.dark ? 40 : 58,
+                                                    ),
+                                                  ),
+                                                  boxShadow: const [
+                                                    BoxShadow(
+                                                      color: Color(0x0F5A4A2C),
+                                                      blurRadius: 12,
+                                                      offset: Offset(0, 5),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: loading
+                                                    ? const SizedBox(
+                                                        height: 168,
+                                                        child: Center(
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                              ),
+                                                        ),
+                                                      )
+                                                    : Column(
                                                         children: [
-                                                          Text(
-                                                            fortune.name,
-                                                            style: context
-                                                                .display(
-                                                                  size: 21,
-                                                                  weight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  color: c.ink,
-                                                                  letterSpacing:
-                                                                      2.2,
+                                                          Row(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              _fortuneSeal(
+                                                                context,
+                                                                fortune.lv,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 14,
+                                                              ),
+                                                              Expanded(
+                                                                child: Column(
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .stretch,
+                                                                  children: [
+                                                                    Text(
+                                                                      fortune
+                                                                          .name,
+                                                                      textAlign:
+                                                                          TextAlign
+                                                                              .center,
+                                                                      maxLines:
+                                                                          1,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                      style: context.display(
+                                                                        size:
+                                                                            23,
+                                                                        weight:
+                                                                            FontWeight.w700,
+                                                                        color: c
+                                                                            .ink,
+                                                                        letterSpacing:
+                                                                            3.4,
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                      height: 6,
+                                                                    ),
+                                                                    Container(
+                                                                      padding: const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            9,
+                                                                      ),
+                                                                      decoration: BoxDecoration(
+                                                                        color: c.accent.withAlpha(
+                                                                          c.dark
+                                                                              ? 14
+                                                                              : 18,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                              12,
+                                                                            ),
+                                                                        border: Border.all(
+                                                                          color: c
+                                                                              .accent
+                                                                              .withAlpha(
+                                                                                48,
+                                                                              ),
+                                                                        ),
+                                                                      ),
+                                                                      child: Column(
+                                                                        children: [
+                                                                          for (final line
+                                                                              in fortune.poem)
+                                                                            Text(
+                                                                              line,
+                                                                              textAlign: TextAlign.center,
+                                                                              style: context.display(
+                                                                                size: 13.5,
+                                                                                weight: FontWeight.w600,
+                                                                                color: c.ink,
+                                                                                height: 1.75,
+                                                                              ),
+                                                                            ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ),
+                                                              ),
+                                                            ],
                                                           ),
                                                           const SizedBox(
-                                                            height: 6,
+                                                            height: 12,
                                                           ),
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      10,
-                                                                  vertical: 8,
+                                                          Row(
+                                                            children: [
+                                                              Expanded(
+                                                                child: Container(
+                                                                  height: 1,
+                                                                  color: c.line2
+                                                                      .withAlpha(
+                                                                        120,
+                                                                      ),
                                                                 ),
-                                                            decoration: BoxDecoration(
-                                                              gradient: LinearGradient(
-                                                                begin: Alignment
-                                                                    .topCenter,
-                                                                end: Alignment
-                                                                    .bottomCenter,
-                                                                colors: [
-                                                                  const Color(
-                                                                    0x1AB8924A,
-                                                                  ),
-                                                                  const Color(
-                                                                    0x0AB8924A,
-                                                                  ),
-                                                                ],
                                                               ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    12,
-                                                                  ),
-                                                              border: Border.all(
-                                                                color:
-                                                                    const Color(
-                                                                      0x38B8924A,
+                                                              Padding(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          8,
                                                                     ),
+                                                                child: Text(
+                                                                  '✦',
+                                                                  style: context
+                                                                      .body(
+                                                                        size: 9,
+                                                                        color: c
+                                                                            .accentInk,
+                                                                      ),
+                                                                ),
                                                               ),
+                                                              Expanded(
+                                                                child: Container(
+                                                                  height: 1,
+                                                                  color: c.line2
+                                                                      .withAlpha(
+                                                                        120,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 10,
+                                                          ),
+                                                          Text(
+                                                            fortune.desc,
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            style: context.body(
+                                                              size: 12.5,
+                                                              color: c.ink2,
+                                                              height: 1.65,
                                                             ),
-                                                            child: Column(
-                                                              children: [
-                                                                for (final line
-                                                                    in fortune
-                                                                        .poem)
-                                                                  Text(
-                                                                    line,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style: context.display(
-                                                                      size:
-                                                                          13.5,
-                                                                      weight: FontWeight
-                                                                          .w600,
-                                                                      color:
-                                                                          c.ink,
-                                                                      height:
-                                                                          1.7,
-                                                                    ),
-                                                                  ),
-                                                              ],
-                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 12,
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              Expanded(
+                                                                child: _yiJi(
+                                                                  context,
+                                                                  '宜',
+                                                                  fortune.yi,
+                                                                  good: true,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              Expanded(
+                                                                child: _yiJi(
+                                                                  context,
+                                                                  '忌',
+                                                                  fortune.ji,
+                                                                  good: false,
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ],
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 12),
-                                                Text(
-                                                  fortune.desc,
-                                                  textAlign: TextAlign.center,
-                                                  style: context.body(
-                                                    size: 12.5,
-                                                    color: c.ink2,
-                                                    height: 1.55,
+                                              ),
+                                            ),
+                                          ),
+                                          if (!loading &&
+                                              isBad &&
+                                              festId == null) ...[
+                                            const SizedBox(height: 12),
+                                            _transferBox(context, state),
+                                          ],
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              11,
+                                              8,
+                                              11,
+                                              8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: c.dark
+                                                  ? const Color(0x0FFFFFFF)
+                                                  : const Color(0x0A5A4A2C),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: c.line2.withAlpha(90),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration: BoxDecoration(
+                                                    color: c.accent,
+                                                    shape: BoxShape.circle,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 12),
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 10,
-                                                              vertical: 8,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: c.dark
-                                                              ? const Color(
-                                                                  0x1AC9D3B2,
-                                                                )
-                                                              : const Color(
-                                                                  0xFFEAF2E3,
-                                                                ),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                10,
-                                                              ),
-                                                          border: Border.all(
-                                                            color: c.mintLine,
-                                                          ),
-                                                        ),
-                                                        child: Row(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Container(
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        4,
-                                                                    vertical: 1,
-                                                                  ),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                    color: c
-                                                                        .mintSoft,
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          4,
-                                                                        ),
-                                                                  ),
-                                                              child: Text(
-                                                                '宜',
-                                                                style: context.body(
-                                                                  size: 10,
-                                                                  weight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  color:
-                                                                      c.mintInk,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 6,
-                                                            ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                fortune.yi,
-                                                                style: context
-                                                                    .body(
-                                                                      size:
-                                                                          11.5,
-                                                                      color: c
-                                                                          .mintInk,
-                                                                      height:
-                                                                          1.35,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    state.checkinStreak > 0
+                                                        ? '连续打卡 ${state.checkinStreak} 天 · 明日再来'
+                                                        : '明天再来抽一签',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: context.body(
+                                                      size: 10.5,
+                                                      color: c.inkSoft,
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 10,
-                                                              vertical: 8,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: c.dark
-                                                              ? const Color(
-                                                                  0x14E0796A,
-                                                                )
-                                                              : const Color(
-                                                                  0xFFFBE9E4,
-                                                                ),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                10,
-                                                              ),
-                                                          border: Border.all(
-                                                            color: c.dark
-                                                                ? const Color(
-                                                                    0x33E0796A,
-                                                                  )
-                                                                : const Color(
-                                                                    0xFFF0D2C8,
-                                                                  ),
-                                                          ),
-                                                        ),
-                                                        child: Row(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Container(
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        4,
-                                                                    vertical: 1,
-                                                                  ),
-                                                              decoration: BoxDecoration(
-                                                                color: c.dark
-                                                                    ? const Color(
-                                                                        0x33E0796A,
-                                                                      )
-                                                                    : const Color(
-                                                                        0xFFF5DCD4,
-                                                                      ),
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      4,
-                                                                    ),
-                                                              ),
-                                                              child: Text(
-                                                                '忌',
-                                                                style: context.body(
-                                                                  size: 10,
-                                                                  weight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  color:
-                                                                      c.stamp,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 6,
-                                                            ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                fortune.ji,
-                                                                style: context
-                                                                    .body(
-                                                                      size:
-                                                                          11.5,
-                                                                      color: c
-                                                                          .stamp,
-                                                                      height:
-                                                                          1.35,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    _card == null
+                                                        ? '轻点翻看卡面'
+                                                        : '轻点翻看 · ${_card!.categoryName}',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    textAlign: TextAlign.right,
+                                                    style: context.body(
+                                                      size: 9.5,
+                                                      color: c.inkSoft
+                                                          .withAlpha(170),
+                                                      letterSpacing: .2,
                                                     ),
-                                                  ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                    ),
-                                  ),
-                                ),
-                                if (!loading && isBad && festId == null) ...[
-                                  const SizedBox(height: 12),
-                                  _transferBox(context, state),
-                                ],
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      state.checkinStreak > 0
-                                          ? '连续打卡 ${state.checkinStreak} 天 · 明日再来'
-                                          : '明天再来抽一签',
-                                      style: context.body(
-                                        size: 11,
-                                        color: c.inkSoft,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  _card == null
-                                      ? '轻点卡片 · 翻看卡背'
-                                      : '轻点卡片 · 翻看今日卡面 · ${_card!.categoryName}',
-                                  textAlign: TextAlign.center,
-                                  style: context.body(
-                                    size: 10,
-                                    color: c.inkSoft.withAlpha(170),
-                                    letterSpacing: .3,
+                              ),
+                            ),
+                            builder: (context, child) {
+                              final t = _flip.value;
+                              final angle = t * math.pi;
+                              final showFront = angle > math.pi / 2;
+                              final pulse = math.sin(
+                                math.pi * t.clamp(0.0, 1.0),
+                              );
+                              final scale = 1 - .035 * pulse;
+                              return Transform.translate(
+                                offset: Offset(0, -6 * pulse),
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.identity()
+                                    ..setEntry(3, 2, .0014)
+                                    ..rotateY(angle)
+                                    ..scaleByDouble(scale, scale, 1, 1),
+                                  child: Stack(
+                                    children: [
+                                      Opacity(
+                                        opacity: showFront ? 1 : 0,
+                                        child: IgnorePointer(
+                                          ignoring: !showFront,
+                                          child: Transform(
+                                            alignment: Alignment.center,
+                                            transform: showFront
+                                                ? Matrix4.rotationY(math.pi)
+                                                : Matrix4.identity(),
+                                            child: child,
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned.fill(
+                                        child: Opacity(
+                                          opacity: showFront ? 0 : 1,
+                                          child: IgnorePointer(
+                                            ignoring: showFront,
+                                            child: back,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: ClipRRect(
+                              borderRadius: _cardRadius,
+                              child: _FlipShine(controller: _flip),
                             ),
                           ),
                         ),
-                      ),
-                      builder: (context, child) {
-                        final t = _flip.value;
-                        final angle = t * math.pi;
-                        final showFront = angle > math.pi / 2;
-                        final pulse = math.sin(math.pi * t.clamp(0.0, 1.0));
-                        final scale = 1 - .035 * pulse;
-                        return Transform.translate(
-                          offset: Offset(0, -6 * pulse),
-                          child: Transform(
-                            alignment: Alignment.center,
-                            transform: Matrix4.identity()
-                              ..setEntry(3, 2, .0014)
-                              ..rotateY(angle)
-                              ..scaleByDouble(scale, scale, 1, 1),
-                            child: Stack(
-                              children: [
-                                Opacity(
-                                  opacity: showFront ? 1 : 0,
-                                  child: IgnorePointer(
-                                    ignoring: !showFront,
-                                    child: Transform(
-                                      alignment: Alignment.center,
-                                      transform: showFront
-                                          ? Matrix4.rotationY(math.pi)
-                                          : Matrix4.identity(),
-                                      child: child,
-                                    ),
-                                  ),
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Pressable(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: c.surface.withAlpha(235),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withAlpha(80),
                                 ),
-                                Positioned.fill(
-                                  child: Opacity(
-                                    opacity: showFront ? 0 : 1,
-                                    child: IgnorePointer(
-                                      ignoring: showFront,
-                                      child: back,
-                                    ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x38000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
                                   ),
+                                ],
+                              ),
+                              child: Center(
+                                child: AppIcon(
+                                  strokeSvg(AppIcons.close, width: 2),
+                                  size: 14,
+                                  color: c.ink2,
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: ClipRRect(
-                        borderRadius: _cardRadius,
-                        child: _FlipShine(controller: _flip),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Pressable(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: c.surface.withAlpha(235),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withAlpha(80)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x38000000),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
                         ),
-                        child: Center(
-                          child: AppIcon(
-                            strokeSvg(AppIcons.close, width: 2),
-                            size: 14,
-                            color: c.ink2,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
                   ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _catSticker(BuildContext context, int catIndex) {
+    final c = context.c;
+    final size = MediaQuery.sizeOf(context).width < 380 ? 78.0 : 92.0;
+    return Transform.rotate(
+      angle: 2.6 * math.pi / 180,
+      child: Container(
+        width: size,
+        height: size,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: c.noteY,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.accent.withAlpha(86)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A3A2812),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            'assets/images/cats/${23757 + catIndex}.webp',
+            fit: BoxFit.contain,
+            cacheWidth: 288,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fortuneSeal(BuildContext context, String level) {
+    final c = context.c;
+    final stamp = c.stamp;
+    return Container(
+      width: 78,
+      height: 78,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [stamp, Color.lerp(stamp, Colors.black, .16)!],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: stamp.withAlpha(58),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(5),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: const Color(0x66FFF6E4)),
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '今日签',
+                    style: TextStyle(
+                      fontFamily: AppFonts.noto,
+                      fontFamilyFallback: AppFonts.bodyFallback,
+                      fontSize: 8.5,
+                      letterSpacing: 2,
+                      color: Color(0xCCFFF6E4),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      level,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontFamily: AppFonts.zcool,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: Color(0xFFFFF7E8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _yiJi(
+    BuildContext context,
+    String mark,
+    String text, {
+    required bool good,
+  }) {
+    final c = context.c;
+    final tone = good ? c.mintInk : c.stamp;
+    final bg = good
+        ? (c.dark ? const Color(0x1AC9D3B2) : const Color(0xFFEAF2E3))
+        : (c.dark ? const Color(0x14E0796A) : const Color(0xFFFBE9E4));
+    final border = good
+        ? c.mintLine
+        : (c.dark ? const Color(0x33E0796A) : const Color(0xFFF0D2C8));
+    return Container(
+      padding: const EdgeInsets.fromLTRB(9, 9, 9, 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: good
+                  ? c.mintSoft
+                  : (c.dark
+                        ? const Color(0x33E0796A)
+                        : const Color(0xFFF5DCD4)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              mark,
+              style: context.body(
+                size: 10,
+                weight: FontWeight.w800,
+                color: tone,
+              ),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: context.body(size: 11, color: tone, height: 1.4),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1235,11 +1412,7 @@ class _FortuneAuraPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) * .62;
     final glow = Paint()
       ..shader = RadialGradient(
-        colors: [
-          color.withAlpha(34),
-          color.withAlpha(12),
-          color.withAlpha(0),
-        ],
+        colors: [color.withAlpha(34), color.withAlpha(12), color.withAlpha(0)],
         stops: const [0, .55, 1],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, glow);

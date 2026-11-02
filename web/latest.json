@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "2.0.0",
-  "build_number": "2000",
-  "build_id": "a3297a7537ba89dae2765d38ff1786eb",
-  "file": "Citro-web-2.0.0.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.0.zip",
-  "size": 31581222,
-  "sha256": "19c68cfcf225819ea3f8563389097e03fdb5cae372e29b4c547c3b5b0056a953",
-  "published_at": "2026-11-02T11:26:31Z",
-  "notes": "2.0.0：CiCi 自定义性格、好事同步社区动态、星象与日历更多尺寸、减弱动态效果、动效流畅度优化与数独返回修复"
+  "version": "2.0.1",
+  "build_number": "2001",
+  "build_id": "f080a28a950eae9989867602c4429c2b",
+  "file": "Citro-web-2.0.1.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.1.zip",
+  "size": 30915907,
+  "sha256": "f70884b98dbae5d33fb0d3c99ca6e83abdefda5f2abaf6f83b6b2bf79bb06804",
+  "published_at": "2026-11-02T19:01:36Z",
+  "notes": "2.0.1：社区图片本地磁盘缓存、首屏预取，信息流二次打开更快；星象卡、主题菜单、打卡页与听隅顶栏细节优化"
 }

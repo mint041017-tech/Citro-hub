@@ -13,6 +13,9 @@ class ImageStore {
   static const _memoryMax = 80;
   static final Map<String, Uint8List> _memory = {};
 
+  /// 同步读取内存缓存。已加载过的图可以首帧直接出图，不必再等 Future。
+  static Uint8List? peek(String url) => _memory[url];
+
   static Future<Uint8List?> load(String url) async {
     if (url.isEmpty) return null;
     final hit = _memory[url];

@@ -342,18 +342,7 @@ class MePage extends StatelessWidget {
             value: state.reduceMotion,
             onChanged: (v) => state.setReduceMotion(v),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _themeChip(context, '浅色', ThemeMode.light),
-                _themeChip(context, '深色', ThemeMode.dark),
-                _themeChip(context, '跟随系统', ThemeMode.system),
-              ],
-            ),
-          ),
+          const _ThemeRow(),
         ]),
         const SizedBox(height: 18),
         _section(c, '隐私与协议'),
@@ -406,6 +395,11 @@ class MePage extends StatelessWidget {
             children: [
               _contactChip(context, 'KOOK 25343821', '25343821'),
               _contactChip(context, '微信 Tangerine-1017', 'Tangerine-1017'),
+              _contactChip(
+                context,
+                '邮箱 mint10177@outlook.com',
+                'mint10177@outlook.com',
+              ),
             ],
           ),
         ),
@@ -793,34 +787,6 @@ class MePage extends StatelessWidget {
     );
   }
 
-  Widget _themeChip(BuildContext context, String label, ThemeMode mode) {
-    final state = context.app;
-    final active = state.themeMode == mode;
-    final c = context.c;
-    return Pressable(
-      onTap: () => state.setThemeMode(mode),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 18 : 14,
-          vertical: kIsWeb ? 10 : 7,
-        ),
-        decoration: BoxDecoration(
-          color: active ? c.hl : c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: active ? c.accent : c.line2.withAlpha(150)),
-        ),
-        child: Text(
-          label,
-          style: context.body(
-            size: 12.5,
-            weight: FontWeight.w600,
-            color: active ? c.accentInk : c.ink2,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _contactChip(BuildContext context, String label, String value) {
     final c = context.c;
     return Pressable(
@@ -961,6 +927,278 @@ class _MeToggleRow extends StatelessWidget {
             inactiveTrackColor: c.line2,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ThemeRow extends StatelessWidget {
+  const _ThemeRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: kIsWeb ? 14 : 0,
+        vertical: kIsWeb ? 11 : 8,
+      ),
+      child: Row(
+        children: [
+          AppIcon(
+            strokeSvg(AppIcons.sun, width: 2),
+            size: 20,
+            color: c.accentInk,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('深浅色', style: context.body(size: 13.5, color: c.ink)),
+                Text(
+                  '浅色、深色或跟随系统',
+                  style: context.body(size: 9.5, color: c.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          const _ThemeDropdown(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeDropdown extends StatefulWidget {
+  const _ThemeDropdown();
+
+  @override
+  State<_ThemeDropdown> createState() => _ThemeDropdownState();
+}
+
+class _ThemeDropdownState extends State<_ThemeDropdown> {
+  static const _modes = <ThemeMode>[
+    ThemeMode.light,
+    ThemeMode.dark,
+    ThemeMode.system,
+  ];
+
+  static String _label(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => '浅色',
+    ThemeMode.dark => '深色',
+    ThemeMode.system => '跟随系统',
+  };
+
+  static String _icon(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => AppIcons.sun,
+    ThemeMode.dark => AppIcons.moon,
+    ThemeMode.system => AppIcons.monitor,
+  };
+
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _entry;
+
+  @override
+  void dispose() {
+    _removeEntry();
+    super.dispose();
+  }
+
+  void _toggle() {
+    if (_entry == null) {
+      _show();
+    } else {
+      _close();
+    }
+  }
+
+  void _show() {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    _entry = OverlayEntry(
+      builder: (overlayContext) {
+        final c = overlayContext.c;
+        final current = AppScope.of(overlayContext).themeMode;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _close,
+              ),
+            ),
+            CompositedTransformFollower(
+              link: _link,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(0, 6),
+              child: _menu(overlayContext, c, current),
+            ),
+          ],
+        );
+      },
+    );
+    overlay.insert(_entry!);
+    setState(() {});
+  }
+
+  void _close() {
+    _removeEntry();
+    if (mounted) setState(() {});
+  }
+
+  void _removeEntry() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  void _select(ThemeMode mode) {
+    _close();
+    AppScope.of(context).setThemeMode(mode);
+  }
+
+  Widget _menu(BuildContext context, CitroColors c, ThemeMode current) {
+    final width = kIsWeb ? 150.0 : 140.0;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.scale(
+          scale: .96 + .04 * t,
+          alignment: Alignment.topRight,
+          child: child,
+        ),
+      ),
+      child: Material(
+        color: c.surface2,
+        elevation: 12,
+        shadowColor: c.dark ? Colors.black : const Color(0x405A4A2C),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: c.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          key: const ValueKey('me-theme-menu'),
+          width: width,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final mode in _modes) _item(context, c, mode, current),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _item(
+    BuildContext context,
+    CitroColors c,
+    ThemeMode mode,
+    ThemeMode current,
+  ) {
+    final active = mode == current;
+    return InkWell(
+      onTap: () => _select(mode),
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        height: 42,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              AppIcon(
+                strokeSvg(_icon(mode), width: 2),
+                size: 17,
+                color: active ? c.accentInk : c.inkSoft,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _label(mode),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: 13,
+                    weight: active ? FontWeight.w700 : FontWeight.w400,
+                    color: active ? c.accentInk : c.ink2,
+                  ),
+                ),
+              ),
+              if (active)
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: c.accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final current = context.app.themeMode;
+    final width = kIsWeb ? 150.0 : 140.0;
+    return CompositedTransformTarget(
+      link: _link,
+      child: Semantics(
+        button: true,
+        label: '深浅色，当前${_label(current)}',
+        child: Pressable(
+          key: const ValueKey('me-theme-dropdown'),
+          onTap: _toggle,
+          child: Container(
+            width: width,
+            height: kIsWeb ? 36 : 32,
+            padding: const EdgeInsets.only(left: 10, right: 8),
+            decoration: BoxDecoration(
+              color: c.surface,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: c.line2.withAlpha(160)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppIcon(
+                  strokeSvg(_icon(current), width: 2),
+                  size: 14,
+                  color: c.accentInk,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _label(current),
+                  style: context.body(
+                    size: 11.5,
+                    weight: FontWeight.w600,
+                    color: c.ink2,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                AppIcon(
+                  strokeSvg(AppIcons.chevronDown, width: 2),
+                  size: 12,
+                  color: c.inkSoft,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

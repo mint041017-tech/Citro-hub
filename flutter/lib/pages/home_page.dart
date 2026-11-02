@@ -25,7 +25,6 @@ import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
-import '../widgets/weather_widgets.dart';
 import '../widgets/tablet_shell.dart';
 import 'cook_page.dart';
 import 'web_home.dart';
@@ -1126,329 +1125,116 @@ class ZodiacCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.app;
     final c = context.c;
+    final tone = _ZodiacTone.of(c);
     final sign = zodiacById(state.zodiacSign);
     final f = state.zodiacFortune;
     final now = DateTime.now();
     final dateText =
         '${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} ${weekdayChinese(now)}';
     return PaperCard(
+      radius: 18,
+      padding: EdgeInsets.zero,
+      color: tone.bottom,
+      borderColor: tone.border,
+      shadow: PaperShadow.paper,
+      clip: true,
       tapeColor: c.tape2,
-      tapeAngle: 2.5,
-      padding: const EdgeInsets.fromLTRB(16, 13, 16, 14),
+      tapeAngle: -2.4,
+      tapeWidth: 96,
+      tapeHeight: 22,
       onTap: () => showZodiacModal(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // 首页把星象卡放在滚动容器里，高度是无界的；此时给卡片一个固定高度，
-          // 否则 Column 里的 Expanded 无法布局，整页会空白。
           final cardHeight = constraints.hasBoundedHeight
               ? constraints.maxHeight
-              : 260.0;
-          final compact = cardHeight < 320;
-          final horizontal = constraints.maxWidth >= 280;
-          // 迷你尺寸：只保留分数、星座与星语标签，避免 1x1 卡片溢出。
-          final micro = constraints.maxWidth < 210 || cardHeight < 210;
-          final microBody = micro && f != null && sign != null
-              ? _zodiacMicro(context, sign, f)
-              : null;
-          final leftWidth = (constraints.maxWidth * .38).clamp(112.0, 152.0);
+              : 272.0;
+          final maxW = constraints.maxWidth;
+          final micro = maxW < 232 || cardHeight < 218;
+          final horizontal = maxW >= 316 && cardHeight >= 238;
+          final tall = cardHeight >= 342;
           return SizedBox(
-            height: constraints.hasBoundedHeight ? null : cardHeight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            width: constraints.maxWidth,
+            height: cardHeight,
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    Text(
-                      '今日星象',
-                      style: context.heading(
-                        size: 12.5,
-                        color: c.accentInk,
-                        letterSpacing: .3,
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [tone.top, tone.mid, tone.bottom],
+                        stops: const [0, .55, 1],
                       ),
                     ),
-                    const Spacer(),
-                    if (!micro)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.dark
-                              ? const Color(0x0AFFFFFF)
-                              : const Color(0x33F7BC78),
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
-                            color: c.dark ? c.line : const Color(0x1A94530A),
-                          ),
-                        ),
-                        child: Text(
-                          dateText,
-                          style: context.body(
-                            size: 10,
-                            color: c.inkSoft,
-                            letterSpacing: .2,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 5),
-                if (microBody != null)
-                  Expanded(child: microBody)
-                else if (sign == null)
-                  Expanded(child: Center(child: _zodiacPick(context)))
-                else ...[
-                  if (!horizontal)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (f != null)
-                          ZodiacRing(score: f.score)
-                        else
-                          SizedBox(
-                            width: 66,
-                            height: 66,
-                            child: Center(
-                              child: state.zodiacLoading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text(
-                                      '✦',
-                                      style: context.display(
-                                        size: 22,
-                                        color: c.inkSoft.withAlpha(120),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${sign.symbol} ${sign.name}',
-                                style: context.heading(
-                                  size: 23,
-                                  color: c.ink,
-                                  height: 1.1,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${sign.range} · ${sign.element}',
-                                style: context.body(
-                                  size: 10.5,
-                                  color: c.inkSoft,
-                                ),
-                              ),
-                              const SizedBox(height: 7),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: c.dark
-                                      ? c.hl
-                                      : const Color(0x3DF7BC78),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: c.dark
-                                        ? c.line
-                                        : const Color(0x2914530A),
-                                  ),
-                                ),
-                                child: Text(
-                                  '✦ ${f?.tag ?? '星语生成中'}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.body(
-                                    size: 11,
-                                    color: c.dark
-                                        ? c.accentInk
-                                        : const Color(0xFF8A4B08),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _ZodiacSkyPainter(
+                      star: tone.star,
+                      constellation: tone.constellation,
                     ),
-                  if (f == null) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      state.zodiacError ??
-                          (state.zodiacLoading ? '星语生成中…' : '点开卡片生成今日星语'),
-                      style: context.body(
-                        size: 12.5,
-                        color: state.zodiacError != null ? c.stamp : c.inkSoft,
-                        height: 1.5,
-                      ),
-                    ),
-                  ] else if (horizontal) ...[
-                    const SizedBox(height: 6),
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: leftWidth,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ZodiacRing(score: f.score),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${sign.symbol} ${sign.name}',
-                                  style: context.heading(
-                                    size: 21,
-                                    color: c.ink,
-                                    height: 1.1,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${sign.range} · ${sign.element}',
-                                  style: context.body(
-                                    size: 10.5,
-                                    color: c.inkSoft,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: c.dark
-                                          ? c.hl
-                                          : const Color(0x3DF7BC78),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: c.dark
-                                            ? c.line
-                                            : const Color(0x2914530A),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '✦ ${f.tag}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: context.body(
-                                        size: 11,
-                                        color: c.dark
-                                            ? c.accentInk
-                                            : const Color(0xFF8A4B08),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Expanded(
-                                  child: ClipRect(
-                                    child: Align(
-                                      alignment: Alignment.topLeft,
-                                      child: Text(
-                                        f.text,
-                                        maxLines: compact ? 3 : 5,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: context.body(
-                                          size: 13,
-                                          color: c.ink2,
-                                          height: 1.6,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (!compact) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '幸运色 ${f.color}  ·  数字 ${f.number}  ·  幸运物 ${f.item}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: context.body(
-                                      size: 10,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _ZStat(value: f.love, label: '爱情'),
-                        _ZStat(value: f.work, label: '事业'),
-                        _ZStat(value: f.wealth, label: '财运'),
-                        _ZStat(value: f.health, label: '健康'),
-                      ],
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 9),
-                    DashedLine(
-                      color: c.dark ? c.line : const Color(0x294A3A22),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ClipRect(
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            f.text,
-                            maxLines: compact ? 2 : 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.body(
-                              size: 13.5,
-                              color: c.ink2,
-                              height: 1.6,
-                            ),
-                          ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(.78, -.92),
+                          radius: 1.15,
+                          colors: [tone.glow, tone.glow.withAlpha(0)],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _ZStat(value: f.love, label: '爱情'),
-                        _ZStat(value: f.work, label: '事业'),
-                        _ZStat(value: f.wealth, label: '财运'),
-                        _ZStat(value: f.health, label: '健康'),
-                      ],
+                  ),
+                ),
+                if (sign != null)
+                  Positioned(
+                    right: -14,
+                    top: 16,
+                    child: IgnorePointer(
+                      child: Text(
+                        sign.symbol,
+                        style: TextStyle(
+                          fontFamily: AppFonts.noto,
+                          fontSize: micro ? 104 : 152,
+                          height: 1,
+                          color: tone.watermark,
+                        ),
+                      ),
                     ),
-                    if (!compact) ...[
-                      const SizedBox(height: 7),
-                      Text(
-                        '幸运色 ${f.color}  ·  数字 ${f.number}  ·  幸运物 ${f.item}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.body(size: 10, color: c.inkSoft),
+                  ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    micro ? 12 : 14,
+                    16,
+                    micro ? 12 : 14,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _header(context, dateText, tone, micro: micro),
+                      SizedBox(height: micro ? 6 : 8),
+                      Expanded(
+                        child: sign == null
+                            ? _picker(context, tone, micro: micro)
+                            : _body(
+                                context,
+                                state,
+                                sign,
+                                f,
+                                tone,
+                                micro: micro,
+                                horizontal: horizontal,
+                                tall: tall,
+                              ),
                       ),
                     ],
-                  ],
-                ],
+                  ),
+                ),
               ],
             ),
           );
@@ -1457,127 +1243,786 @@ class ZodiacCard extends StatelessWidget {
     );
   }
 
-  /// 迷你星象卡：只保留分数环、星座与星语标签。
-  Widget _zodiacMicro(BuildContext context, ZodiacSign sign, ZodiacFortune f) {
-    final c = context.c;
+  Widget _header(
+    BuildContext context,
+    String dateText,
+    _ZodiacTone tone, {
+    required bool micro,
+  }) {
     return Row(
       children: [
-        ZodiacRing(score: f.score, size: 56),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${sign.symbol} ${sign.name}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.heading(size: 17, color: c.ink, height: 1.1),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '✦ ${f.tag}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(size: 10.5, color: c.inkSoft),
-              ),
-            ],
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(color: tone.chipBg, shape: BoxShape.circle),
+          child: Center(
+            child: Text(
+              '✦',
+              style: TextStyle(fontSize: 9, height: 1, color: tone.accent),
+            ),
           ),
         ),
+        const SizedBox(width: 7),
+        Text(
+          '今日星象',
+          style: context.heading(
+            size: micro ? 11.5 : 12.5,
+            color: tone.accentInk,
+            letterSpacing: 1.1,
+          ),
+        ),
+        if (!micro) ...[
+          const SizedBox(width: 7),
+          Text(
+            'DAILY ZODIAC',
+            style: context.body(
+              size: 7.5,
+              weight: FontWeight.w700,
+              color: tone.inkSoft.withAlpha(180),
+              letterSpacing: 1.4,
+            ),
+          ),
+        ],
+        const Spacer(),
+        if (!micro)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: tone.chipBg,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: tone.chipLine),
+            ),
+            child: Text(
+              dateText,
+              style: context.body(
+                size: 9,
+                color: tone.inkSoft,
+                letterSpacing: .3,
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _zodiacPick(BuildContext context) {
-    final c = context.c;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 300;
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: compact ? 4 : 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '选一个本命星座，解锁今日星象',
-                style: context.body(
-                  size: compact ? 11.5 : 13,
-                  color: c.inkSoft,
+  Widget _body(
+    BuildContext context,
+    AppState state,
+    ZodiacSign sign,
+    ZodiacFortune? f,
+    _ZodiacTone tone, {
+    required bool micro,
+    required bool horizontal,
+    required bool tall,
+  }) {
+    final ringSize = micro
+        ? 54.0
+        : (tall ? (horizontal ? 96.0 : 88.0) : (horizontal ? 84.0 : 76.0));
+    if (micro) {
+      return Row(
+        children: [
+          _score(f, tone, size: ringSize),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${sign.symbol} ${sign.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(
+                    size: 18,
+                    color: tone.ink,
+                    height: 1.1,
+                  ),
                 ),
-              ),
-              SizedBox(height: compact ? 6 : 10),
-              Wrap(
-                spacing: compact ? 4 : 8,
-                runSpacing: compact ? 4 : 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final z in kZodiacSigns)
-                    Pressable(
-                      onTap: () => showZodiacModal(context),
-                      child: Container(
-                        padding: compact
-                            ? const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 4,
-                              )
-                            : const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 5,
-                              ),
-                        decoration: BoxDecoration(
-                          color: c.hl,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: c.line),
-                        ),
-                        child: Text(
-                          '${z.symbol} ${z.name}',
-                          style: context.body(
-                            size: compact ? 10.5 : 12,
-                            color: c.accentInk,
-                          ),
+                const SizedBox(height: 3),
+                Text(
+                  f == null
+                      ? (state.zodiacError != null ? '星语生成失败' : '星语生成中…')
+                      : '✦ ${f.tag}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: 10,
+                    color: f == null ? tone.inkSoft : tone.accentInk,
+                  ),
+                ),
+                if (f != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '${sign.range} · ${sign.element}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(size: 9, color: tone.inkSoft),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    if (horizontal) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: ringSize + 18,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _score(f, tone, size: ringSize),
+                const SizedBox(height: 6),
+                Text(
+                  '综合运势',
+                  style: context.body(
+                    size: 8.5,
+                    weight: FontWeight.w700,
+                    color: tone.inkSoft,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${sign.symbol} ${sign.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(
+                    size: 20,
+                    color: tone.ink,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  '${sign.range} · ${sign.element}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(size: 9.5, color: tone.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 1, color: tone.line),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _tagPill(context, state, f, tone),
+                ),
+                const SizedBox(height: 7),
+                Expanded(
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        f?.text ?? _pendingText(state),
+                        maxLines: tall ? 6 : 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.body(
+                          size: 12.5,
+                          color: tone.ink2,
+                          height: 1.62,
                         ),
                       ),
                     ),
+                  ),
+                ),
+                if (tall && f != null) ...[
+                  const SizedBox(height: 6),
+                  _luckChips(f, tone),
+                ],
+                if (f != null) ...[
+                  const SizedBox(height: 8),
+                  _metrics(f, tone, compact: !tall),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            _score(f, tone, size: ringSize),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${sign.symbol} ${sign.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.heading(
+                      size: 22,
+                      color: tone.ink,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${sign.range} · ${sign.element}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(size: 10, color: tone.inkSoft),
+                  ),
+                  const SizedBox(height: 7),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _tagPill(context, state, f, tone),
+                  ),
                 ],
               ),
-              SizedBox(height: compact ? 6 : 10),
-              Text(
-                '点击选择 →',
-                style: context.display(
-                  size: compact ? 11.5 : 13,
-                  color: c.accentInk,
+            ),
+          ],
+        ),
+        const SizedBox(height: 9),
+        if (f != null) ...[
+          Expanded(
+            child: ClipRect(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  f.text,
+                  maxLines: tall ? 5 : 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: 12.5,
+                    color: tone.ink2,
+                    height: 1.62,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _metrics(f, tone, compact: !tall),
+        ] else
+          Expanded(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Text(
+                _pendingText(state),
+                style: context.body(
+                  size: 12,
+                  color: state.zodiacError != null ? tone.error : tone.inkSoft,
+                  height: 1.55,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _pendingText(AppState state) =>
+      state.zodiacError ?? (state.zodiacLoading ? '星语生成中…' : '点开卡片生成今日星语');
+
+  Widget _score(ZodiacFortune? f, _ZodiacTone tone, {required double size}) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _ZodiacScorePainter(
+          score: f?.score,
+          accent: tone.accent,
+          track: tone.chipLine,
+          halo: tone.glow,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (f != null) ...[
+                Text(
+                  '${f.score}',
+                  style: TextStyle(
+                    fontFamily: AppFonts.kalam,
+                    fontSize: size * .31,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                    color: tone.accentInk,
+                  ),
+                ),
+                Text(
+                  '综合',
+                  style: TextStyle(
+                    fontFamily: AppFonts.noto,
+                    fontFamilyFallback: AppFonts.bodyFallback,
+                    fontSize: math.max(7, size * .105),
+                    height: 1.25,
+                    letterSpacing: 1,
+                    color: tone.inkSoft,
+                  ),
+                ),
+              ] else
+                Text(
+                  '✦',
+                  style: TextStyle(fontSize: size * .3, color: tone.accent),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tagPill(
+    BuildContext context,
+    AppState state,
+    ZodiacFortune? f,
+    _ZodiacTone tone,
+  ) {
+    final text = f == null
+        ? (state.zodiacError != null ? '星语生成失败' : '星语生成中…')
+        : '✦ ${f.tag}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: tone.chipBg,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: tone.chipLine),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.body(
+          size: 10.5,
+          weight: FontWeight.w600,
+          color: f == null ? tone.inkSoft : tone.accentInk,
+          letterSpacing: .4,
+        ),
+      ),
+    );
+  }
+
+  Widget _metrics(ZodiacFortune f, _ZodiacTone tone, {required bool compact}) {
+    return Row(
+      children: [
+        _stat('爱情', f.love, compact, tone),
+        _metricDivider(tone),
+        _stat('事业', f.work, compact, tone),
+        _metricDivider(tone),
+        _stat('财运', f.wealth, compact, tone),
+        _metricDivider(tone),
+        _stat('健康', f.health, compact, tone),
+      ],
+    );
+  }
+
+  Widget _stat(String label, int value, bool compact, _ZodiacTone tone) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '$value',
+                  style: TextStyle(
+                    fontFamily: AppFonts.kalam,
+                    fontSize: compact ? 14 : 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                    color: tone.accentInk,
+                  ),
+                ),
+                Text(
+                  '分',
+                  style: TextStyle(
+                    fontFamily: AppFonts.noto,
+                    fontSize: 7,
+                    height: 1,
+                    color: tone.inkSoft,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: compact ? 2 : 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppFonts.noto,
+                fontFamilyFallback: AppFonts.bodyFallback,
+                fontSize: 8.5,
+                height: 1.2,
+                color: tone.inkSoft,
+              ),
+            ),
+            if (!compact) ...[
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: value.clamp(0, 100) / 100,
+                  minHeight: 2.4,
+                  backgroundColor: tone.accent.withAlpha(24),
+                  valueColor: AlwaysStoppedAnimation(tone.accent),
                 ),
               ),
             ],
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _metricDivider(_ZodiacTone tone) =>
+      Container(width: 1, height: 18, color: tone.line);
+
+  Widget _luckChips(ZodiacFortune f, _ZodiacTone tone) => Wrap(
+    spacing: 5,
+    runSpacing: 4,
+    children: [
+      _luckChip('幸运色', f.color, tone),
+      _luckChip('幸运数', f.number, tone),
+      _luckChip('幸运物', f.item, tone),
+    ],
+  );
+
+  Widget _luckChip(String label, String value, _ZodiacTone tone) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: tone.chipBg,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: tone.chipLine),
+    ),
+    child: Text(
+      '$label $value',
+      style: TextStyle(
+        fontFamily: AppFonts.noto,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: 8.5,
+        height: 1.2,
+        color: tone.inkSoft,
+      ),
+    ),
+  );
+
+  Widget _picker(
+    BuildContext context,
+    _ZodiacTone tone, {
+    required bool micro,
+  }) {
+    if (micro) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('还没有本命星座', style: context.body(size: 11, color: tone.inkSoft)),
+            const SizedBox(height: 8),
+            Pressable(
+              onTap: () => showZodiacModal(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: tone.chipBg,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: tone.chipLine),
+                ),
+                child: Text(
+                  '选择星座 →',
+                  style: context.body(
+                    size: 10.5,
+                    weight: FontWeight.w600,
+                    color: tone.accentInk,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 290;
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '选一个本命星座，解锁今日星象',
+              style: context.body(
+                size: compact ? 10.5 : 11.5,
+                color: tone.inkSoft,
+              ),
+            ),
+            SizedBox(height: compact ? 6 : 8),
+            Wrap(
+              spacing: compact ? 4 : 6,
+              runSpacing: compact ? 4 : 6,
+              alignment: WrapAlignment.center,
+              children: [
+                for (final z in kZodiacSigns)
+                  Pressable(
+                    onTap: () => showZodiacModal(context),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 6 : 8,
+                        vertical: compact ? 4 : 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tone.chipBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: tone.chipLine),
+                      ),
+                      child: Text(
+                        '${z.symbol} ${z.name}',
+                        style: context.body(
+                          size: compact ? 9.5 : 10.5,
+                          color: tone.accentInk,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: compact ? 5 : 7),
+            Text(
+              '点击选择 →',
+              style: context.display(
+                size: compact ? 10.5 : 11.5,
+                color: tone.accentInk,
+              ),
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class _ZStat extends StatelessWidget {
-  final int value;
-  final String label;
-  const _ZStat({required this.value, required this.label});
+/// 星象卡的纸面配色：浅色跟随纸卡，深色跟随暗色主题，保持同一套占星符号。
+class _ZodiacTone {
+  const _ZodiacTone({
+    required this.top,
+    required this.mid,
+    required this.bottom,
+    required this.accent,
+    required this.accentInk,
+    required this.ink,
+    required this.ink2,
+    required this.inkSoft,
+    required this.line,
+    required this.chipBg,
+    required this.chipLine,
+    required this.star,
+    required this.constellation,
+    required this.watermark,
+    required this.glow,
+    required this.border,
+    required this.error,
+  });
+
+  final Color top;
+  final Color mid;
+  final Color bottom;
+  final Color accent;
+  final Color accentInk;
+  final Color ink;
+  final Color ink2;
+  final Color inkSoft;
+  final Color line;
+  final Color chipBg;
+  final Color chipLine;
+  final Color star;
+  final Color constellation;
+  final Color watermark;
+  final Color glow;
+  final Color border;
+  final Color error;
+
+  factory _ZodiacTone.of(CitroColors c) => c.dark
+      ? _ZodiacTone(
+          top: const Color(0xFF272735),
+          mid: const Color(0xFF20202B),
+          bottom: const Color(0xFF1B1B24),
+          accent: c.accent,
+          accentInk: c.accentInk,
+          ink: c.ink,
+          ink2: c.ink2,
+          inkSoft: c.inkSoft,
+          line: c.line2.withAlpha(120),
+          chipBg: c.accent.withAlpha(26),
+          chipLine: c.accent.withAlpha(65),
+          star: c.accentLt.withAlpha(130),
+          constellation: c.accent.withAlpha(70),
+          watermark: c.accent.withAlpha(14),
+          glow: c.accent.withAlpha(30),
+          border: c.accent.withAlpha(50),
+          error: c.stamp,
+        )
+      : _ZodiacTone(
+          top: const Color(0xFFFFFBF2),
+          mid: const Color(0xFFFBF3E3),
+          bottom: const Color(0xFFF5EAD7),
+          accent: c.accent,
+          accentInk: c.accentInk,
+          ink: c.ink,
+          ink2: c.ink2,
+          inkSoft: c.inkSoft,
+          line: c.line2.withAlpha(90),
+          chipBg: c.accent.withAlpha(22),
+          chipLine: c.accent.withAlpha(55),
+          star: c.accentInk.withAlpha(55),
+          constellation: c.accent.withAlpha(65),
+          watermark: c.accent.withAlpha(12),
+          glow: c.accent.withAlpha(26),
+          border: c.accent.withAlpha(55),
+          error: c.stamp,
+        );
+}
+
+/// 星象卡的纸面星点：低对比度，不抢纸卡本身的信息。
+class _ZodiacSkyPainter extends CustomPainter {
+  const _ZodiacSkyPainter({required this.star, required this.constellation});
+
+  final Color star;
+  final Color constellation;
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            '$value',
-            style: context.display(size: 17, color: c.accentInk, height: 1.1),
-          ),
-          const SizedBox(height: 1),
-          Text(label, style: context.body(size: 9.5, color: c.inkSoft)),
-        ],
-      ),
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    final baseAlpha = (star.a * 255).round();
+    for (var i = 0; i < 28; i++) {
+      final fx = ((i * 37 + 11) % 97) / 97;
+      final fy = ((i * 53 + 7) % 89) / 89;
+      final r = i % 7 == 0 ? 1.6 : (i % 3 == 0 ? 1.0 : .7);
+      final factor = .35 + .65 * ((i * 23) % 100) / 100;
+      paint.color = star.withAlpha((baseAlpha * factor).round());
+      canvas.drawCircle(Offset(fx * size.width, fy * size.height), r, paint);
+    }
+    final line = Paint()
+      ..color = constellation
+      ..strokeWidth = .8;
+    final points = [
+      Offset(size.width * .16, size.height * .30),
+      Offset(size.width * .28, size.height * .20),
+      Offset(size.width * .37, size.height * .35),
+      Offset(size.width * .52, size.height * .25),
+    ];
+    for (var i = 0; i < points.length - 1; i++) {
+      canvas.drawLine(points[i], points[i + 1], line);
+    }
+    for (final p in points) {
+      canvas.drawCircle(p, 1.7, Paint()..color = constellation);
+      canvas.drawCircle(
+        p,
+        4.6,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .7
+          ..color = constellation.withAlpha(70),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ZodiacSkyPainter oldDelegate) =>
+      oldDelegate.star != star || oldDelegate.constellation != constellation;
+}
+
+/// 金色刻度环：12 格刻度 + 进度弧 + 中心光面。
+class _ZodiacScorePainter extends CustomPainter {
+  const _ZodiacScorePainter({
+    this.score,
+    required this.accent,
+    required this.track,
+    required this.halo,
+  });
+
+  final int? score;
+  final Color accent;
+  final Color track;
+  final Color halo;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 2;
+    final glow = Paint()
+      ..shader = RadialGradient(
+        colors: [halo, halo.withAlpha(0)],
+        stops: const [.44, 1],
+      ).createShader(Rect.fromCircle(center: center, radius: radius + 3));
+    canvas.drawCircle(center, radius + 3, glow);
+
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.2
+      ..color = track.withAlpha(70);
+    canvas.drawCircle(center, radius - 1.6, trackPaint);
+
+    final tick = Paint()
+      ..strokeWidth = .9
+      ..strokeCap = StrokeCap.round
+      ..color = track.withAlpha(85);
+    for (var i = 0; i < 12; i++) {
+      final a = i * math.pi / 6 - math.pi / 2;
+      final inner = radius - 8;
+      final outer = radius - 4;
+      canvas.drawLine(
+        center + Offset(math.cos(a), math.sin(a)) * inner,
+        center + Offset(math.cos(a), math.sin(a)) * outer,
+        tick,
+      );
+    }
+
+    final pct = (score ?? 0).clamp(0, 100) / 100;
+    if (score != null) {
+      final arc = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.2
+        ..strokeCap = StrokeCap.round
+        ..color = accent;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 1.6),
+        -math.pi / 2,
+        math.pi * 2 * pct,
+        false,
+        arc,
+      );
+    }
+
+    canvas.drawCircle(
+      center,
+      radius - 9,
+      Paint()..color = accent.withAlpha(12),
+    );
+    canvas.drawCircle(
+      center,
+      radius - 9,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = track.withAlpha(70),
     );
   }
+
+  @override
+  bool shouldRepaint(covariant _ZodiacScorePainter oldDelegate) =>
+      oldDelegate.score != score ||
+      oldDelegate.accent != accent ||
+      oldDelegate.track != track ||
+      oldDelegate.halo != halo;
 }
 
 class QuoteCard extends StatelessWidget {

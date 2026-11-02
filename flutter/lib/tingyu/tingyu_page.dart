@@ -76,6 +76,7 @@ class _TingyuPageState extends State<TingyuPage> {
                       elevation: 0,
                       scrolledUnderElevation: 0,
                       shadowColor: Colors.transparent,
+                      centerTitle: false,
                       leading: IconButton(
                         tooltip: '返回',
                         color: theme.colorScheme.onSurface,
@@ -85,20 +86,15 @@ class _TingyuPageState extends State<TingyuPage> {
                         ),
                         onPressed: () => _closeTingyu(context),
                       ),
-                      titleSpacing: 0,
-                      title: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '听隅',
-                            style: TextStyle(
-                              fontFamily: AppFonts.zcool,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
+                      titleSpacing: 4,
+                      title: Text(
+                        '听隅',
+                        style: TextStyle(
+                          fontFamily: AppFonts.zcool,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                       actions: [
                         TingyuPomoTicker(
@@ -115,7 +111,7 @@ class _TingyuPageState extends State<TingyuPage> {
                         ),
                         Padding(
                           padding: EdgeInsets.only(
-                            right: 12 + CitroDesktopShell.windowControlsWidth,
+                            right: 8 + CitroDesktopShell.windowControlsWidth,
                           ),
                           child: TingyuTopClock(compact: size.width < 380),
                         ),

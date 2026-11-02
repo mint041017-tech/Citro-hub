@@ -67,20 +67,26 @@ class AppImage extends StatefulWidget {
 }
 
 class _AppImageState extends State<AppImage> {
+  Uint8List? _bytes;
   Future<Uint8List?>? _future;
+
+  void _load() {
+    if (kIsWeb) return;
+    final cached = ImageStore.peek(widget.url);
+    _bytes = cached;
+    _future = cached == null ? ImageStore.load(widget.url) : null;
+  }
 
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) _future = ImageStore.load(widget.url);
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant AppImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url && !kIsWeb) {
-      _future = ImageStore.load(widget.url);
-    }
+    if (oldWidget.url != widget.url) _load();
   }
 
   Widget _network() {
@@ -109,6 +115,18 @@ class _AppImageState extends State<AppImage> {
     );
   }
 
+  Widget _memoryImage(Uint8List bytes) {
+    return Image.memory(
+      bytes,
+      fit: widget.fit,
+      alignment: widget.alignment,
+      cacheWidth: widget.cacheWidth,
+      gaplessPlayback: true,
+      frameBuilder: _frame,
+      errorBuilder: widget.errorBuilder ?? (_, _, _) => const SizedBox.shrink(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.url.isEmpty) {
@@ -116,22 +134,13 @@ class _AppImageState extends State<AppImage> {
           const SizedBox.shrink();
     }
     if (kIsWeb) return _network();
+    final cached = _bytes;
+    if (cached != null) return _memoryImage(cached);
     return FutureBuilder<Uint8List?>(
       future: _future,
       builder: (context, snap) {
         final bytes = snap.data;
-        if (bytes != null) {
-          return Image.memory(
-            bytes,
-            fit: widget.fit,
-            alignment: widget.alignment,
-            cacheWidth: widget.cacheWidth,
-            gaplessPlayback: true,
-            frameBuilder: _frame,
-            errorBuilder:
-                widget.errorBuilder ?? (_, _, _) => const SizedBox.shrink(),
-          );
-        }
+        if (bytes != null) return _memoryImage(bytes);
         if (snap.connectionState != ConnectionState.done) {
           return widget.placeholder ?? const SizedBox.shrink();
         }
