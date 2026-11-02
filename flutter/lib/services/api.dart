@@ -129,6 +129,14 @@ class Api {
   static Future<Map<String, dynamic>> cardsGrant(String source) =>
       post('/api/cards/grant', {'source': source});
 
+  /// 首页布局按账号同步：四个布局桶一起上传 / 下载。
+  static Future<Map<String, dynamic>> homeLayoutGet() =>
+      get('/api/home/layout');
+
+  static Future<Map<String, dynamic>> homeLayoutSave(
+    Map<String, Object?> layout,
+  ) => post('/api/home/layout', {'layout': layout});
+
   static Future<Map<String, dynamic>> login(String phone, String password) =>
       post('/api/auth/login', {'phone': phone, 'password': password}, false);
 

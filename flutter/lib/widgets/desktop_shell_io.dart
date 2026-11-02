@@ -6,15 +6,21 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../app_keys.dart';
+import '../theme/motion.dart';
 import 'windows_title_bar.dart';
 
 /// Windows 桌面壳：完全无边框窗口 + iPad 内容区。
 ///
 /// TitleBarStyle.hidden 去掉原生标题栏，保留 DWM 圆角/阴影；四周缩放由 DragToResizeArea 补齐。
+/// 窗口三键不再占一条标题栏，而是悬浮在内容右上角；顶部只留一条窄拖拽区。
 class CitroDesktopShell {
   static bool get enabled => Platform.isWindows;
 
-  static const double titleBarHeight = 38;
+  /// 顶部安全留白：让页面 SafeArea 自动避开悬浮窗控。
+  static const double titleBarHeight = 30;
+
+  /// 悬浮窗控（三枚 26px 圆钮 + 间距 + 右边距）占用的宽度。
+  static const double windowControlsWidth = 118;
 
   static final _lifecycle = _WindowLifecycle();
   static bool _hooked = false;
@@ -39,7 +45,7 @@ class CitroDesktopShell {
       } catch (_) {}
       await windowManager.show();
       await windowManager.focus();
-      unawaited(_fadeOpacity(from: 0, to: 1, durationMs: 90));
+      unawaited(_fadeOpacity(from: 0, to: 1, durationMs: 160));
     });
     await windowManager.setMinimumSize(const Size(780, 560));
     if (!_hooked) {
@@ -60,7 +66,9 @@ class CitroDesktopShell {
     final steps = (durationMs / frameMs).ceil().clamp(1, 60);
     try {
       for (var i = 1; i <= steps; i++) {
-        await windowManager.setOpacity(from + (to - from) * (i / steps));
+        // 用 ease-out 收尾：开头快、结尾稳，避免窗口透明度线性变化显得生硬。
+        final t = CitroMotion.easeOut.transform(i / steps);
+        await windowManager.setOpacity(from + (to - from) * t);
         await Future<void>.delayed(const Duration(milliseconds: frameMs));
       }
       await windowManager.setOpacity(to);
@@ -69,20 +77,63 @@ class CitroDesktopShell {
 
   static Widget wrap(BuildContext context, Widget child) {
     if (!enabled) return child;
+    final media = MediaQuery.maybeOf(context);
+    final content = media == null
+        ? child
+        : MediaQuery(
+            data: media.copyWith(
+              padding: media.padding.copyWith(
+                top: media.padding.top > titleBarHeight
+                    ? media.padding.top
+                    : titleBarHeight,
+              ),
+            ),
+            child: child,
+          );
     return DragToResizeArea(
       resizeEdgeSize: 6,
-      child: Column(
+      child: Stack(
         children: [
-          // 标题栏在 Navigator 之外，必须给一个 Material 祖先，
+          Positioned.fill(child: _DesktopShortcuts(child: content)),
+          // 顶部窄拖拽带：双击还原/最大化，右侧为悬浮窗控让位。
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: windowControlsWidth,
+            height: titleBarHeight,
+            child: _WindowDragArea(),
+          ),
+          // 窗控在 Navigator 之外，必须给一个 Material 祖先，
           // 否则会继承 MaterialApp 的黄色双下划线兜底文本样式。
-          const RepaintBoundary(
-            child: Material(
-              type: MaterialType.transparency,
-              child: CitroWindowTitleBar(height: titleBarHeight),
+          const Positioned(
+            top: 4,
+            right: 10,
+            child: RepaintBoundary(
+              child: Material(
+                type: MaterialType.transparency,
+                child: CitroWindowControls(),
+              ),
             ),
           ),
-          Expanded(child: _DesktopShortcuts(child: child)),
         ],
+      ),
+    );
+  }
+}
+
+/// 顶部透明拖拽带：拖动移动窗口，双击在最大化/还原之间切换。
+///
+/// 外层 opaque 命中测试只是为了挡住下方页面点击，双击/拖动由 DragToMoveArea 处理。
+class _WindowDragArea extends StatelessWidget {
+  const _WindowDragArea();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      child: const MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: DragToMoveArea(child: SizedBox.expand()),
       ),
     );
   }
@@ -99,7 +150,7 @@ class _WindowLifecycle with WindowListener {
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
-    await CitroDesktopShell._fadeOpacity(from: 1, to: 0, durationMs: 90);
+    await CitroDesktopShell._fadeOpacity(from: 1, to: 0, durationMs: 120);
     try {
       await windowManager.setPreventClose(false);
       await windowManager.close();

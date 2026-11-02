@@ -18,9 +18,13 @@ import '../services/platform.dart' as platform;
 import '../services/voice.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
+import '../widgets/shared_element.dart';
 import '../widgets/tablet_shell.dart';
 import '../widgets/voice_bubble.dart';
 import 'web_scrapbook.dart';
@@ -277,7 +281,7 @@ class _CommunityPageState extends State<CommunityPage> {
     final items = inbox
         .where((n) => !AppState.instance.isBlocked(n.nick))
         .toList();
-    await showModalBottomSheet<void>(
+    await showCitroSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -302,7 +306,7 @@ class _CommunityPageState extends State<CommunityPage> {
               )
               .toList();
     var changed = false;
-    await showModalBottomSheet<void>(
+    await showCitroSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -457,21 +461,37 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
-  void _viewImage(String path) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black,
-      builder: (ctx) => GestureDetector(
-        onTap: () => Navigator.pop(ctx),
-        child: InteractiveViewer(
-          child: Center(
-            child: Image.network(
-              Api.imageUrl(path),
-              fit: BoxFit.contain,
-              cacheWidth: 1280,
-            ),
-          ),
+  /// 全屏查看同一条内容里的多张图：翻页、缩放、Hero 都交给 CitroImageViewer，
+  /// 列表与评论只提供图片数组和起始索引。
+  void _viewImages(
+    List<String> paths,
+    int index,
+    Object Function(int index) tagOf,
+    int cacheWidth,
+  ) {
+    if (paths.isEmpty) return;
+    // 用透明 PageRoute 而不是 DialogRoute：Hero 只在 PageRoute 之间才会飞。
+    Navigator.of(context, rootNavigator: true).push<void>(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black,
+        barrierDismissible: true,
+        transitionDuration: CitroMotion.modal,
+        reverseTransitionDuration: CitroMotion.modalReverse,
+        pageBuilder: (ctx, animation, secondary) => CitroImageViewer(
+          urls: paths.map(Api.imageUrl).toList(),
+          initialIndex: index.clamp(0, paths.length - 1),
+          tagOf: tagOf,
+          cacheWidth: cacheWidth,
         ),
+        transitionsBuilder: (ctx, animation, secondary, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: CitroMotion.easeOut,
+            reverseCurve: CitroMotion.exit,
+          );
+          return FadeTransition(opacity: curved, child: child);
+        },
       ),
     );
   }
@@ -512,11 +532,19 @@ class _CommunityPageState extends State<CommunityPage> {
     final showPosts =
         app.loggedIn && !(loading && !loaded) && filtered.isNotEmpty;
     final prelude = <Widget>[
-      _header(context),
+      CitroReveal(rise: 8, child: _header(context)),
       if (!app.loggedIn)
-        _gate(context)
+        CitroReveal(
+          rise: 8,
+          delay: CitroMotion.staggerStep,
+          child: _gate(context),
+        )
       else ...[
-        _cover(context, app),
+        CitroReveal(
+          rise: 8,
+          delay: CitroMotion.staggerStep,
+          child: _cover(context, app),
+        ),
         if (showSearch) ...[const SizedBox(height: 8), _searchBox(context)],
         const SizedBox(height: 10),
         if (loading && !loaded)
@@ -556,7 +584,12 @@ class _CommunityPageState extends State<CommunityPage> {
                         ),
                         slivers: [
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(side, 8, side, 0),
+                            padding: EdgeInsets.fromLTRB(
+                              side,
+                              AppSpacing.pageTop(width),
+                              side,
+                              0,
+                            ),
                             sliver: SliverList(
                               delegate: SliverChildListDelegate(prelude),
                             ),
@@ -588,7 +621,12 @@ class _CommunityPageState extends State<CommunityPage> {
                         physics: const AlwaysScrollableScrollPhysics(
                           parent: BouncingScrollPhysics(),
                         ),
-                        padding: EdgeInsets.fromLTRB(side, 8, side, 110),
+                        padding: EdgeInsets.fromLTRB(
+                          side,
+                          AppSpacing.pageTop(width),
+                          side,
+                          110,
+                        ),
                         itemCount: itemCount,
                         itemBuilder: (context, index) {
                           if (index < prelude.length) return prelude[index];
@@ -664,7 +702,7 @@ class _CommunityPageState extends State<CommunityPage> {
               voiceDur: voiceDur,
             ),
         onDeleteComment: (comment) => _deleteComment(p, comment),
-        onViewImage: _viewImage,
+        onViewImage: _viewImages,
         onReportPost: () => _reportPost(context, p),
         onReportComment: (comment) => _reportComment(context, p, comment),
         onBlockUser: (nick) => _blockNick(context, nick),
@@ -728,7 +766,6 @@ class _CommunityPageState extends State<CommunityPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: PaperCard(
-          rotate: -1,
           tapeColor: c.tape,
           tapeAngle: -2.4,
           padding: const EdgeInsets.fromLTRB(24, 30, 24, 42),
@@ -767,7 +804,7 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                '登录账号即可发帖、点赞、抱一抱和评论；热榜按点赞量实时排行，精彩内容永久留档。',
+                '登录账号即可发帖、点赞和评论；热榜按点赞量实时排行，精彩内容永久留档。',
                 textAlign: TextAlign.center,
                 style: context.body(size: 12.5, color: c.ink2, height: 1.8),
               ),
@@ -1081,7 +1118,13 @@ class _PostCard extends StatefulWidget {
   })
   onComment;
   final ValueChanged<PostComment> onDeleteComment;
-  final ValueChanged<String> onViewImage;
+  final void Function(
+    List<String> paths,
+    int index,
+    Object Function(int index) tagOf,
+    int cacheWidth,
+  )
+  onViewImage;
   final VoidCallback? onReportPost;
   final ValueChanged<PostComment>? onReportComment;
   final ValueChanged<String>? onBlockUser;
@@ -1729,17 +1772,26 @@ class _PostCardState extends State<_PostCard> {
   Widget _images(BuildContext context) {
     final imgs = widget.post.imgs.take(3).toList();
     if (imgs.length == 1) {
+      final tag = CitroHero.tagOf('post', '${widget.post.id}:0');
       return GestureDetector(
-        onTap: () => widget.onViewImage(imgs.first),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: AspectRatio(
-            aspectRatio: 1.45,
-            child: Image.network(
-              Api.imageUrl(imgs.first),
-              fit: BoxFit.cover,
-              cacheWidth: 900,
-              errorBuilder: (_, __, ___) => Container(color: context.c.noteP),
+        onTap: () => widget.onViewImage(
+          widget.post.imgs,
+          0,
+          (k) => CitroHero.tagOf('post', '${widget.post.id}:$k'),
+          900,
+        ),
+        child: CitroHero(
+          tag: tag,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: AspectRatio(
+              aspectRatio: 1.45,
+              child: Image.network(
+                Api.imageUrl(imgs.first),
+                fit: BoxFit.cover,
+                cacheWidth: 900,
+                errorBuilder: (_, __, ___) => Container(color: context.c.noteP),
+              ),
             ),
           ),
         ),
@@ -1750,21 +1802,34 @@ class _PostCardState extends State<_PostCard> {
         for (var i = 0; i < imgs.length; i++) ...[
           if (i > 0) const SizedBox(width: 5),
           Expanded(
-            child: GestureDetector(
-              onTap: () => widget.onViewImage(imgs[i]),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Image.network(
-                    Api.imageUrl(imgs[i]),
-                    fit: BoxFit.cover,
-                    cacheWidth: 720,
-                    errorBuilder: (_, __, ___) =>
-                        Container(color: context.c.noteP),
+            child: Builder(
+              builder: (context) {
+                final tag = CitroHero.tagOf('post', '${widget.post.id}:$i');
+                return GestureDetector(
+                  onTap: () => widget.onViewImage(
+                    widget.post.imgs,
+                    i,
+                    (k) => CitroHero.tagOf('post', '${widget.post.id}:$k'),
+                    900,
                   ),
-                ),
-              ),
+                  child: CitroHero(
+                    tag: tag,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          Api.imageUrl(imgs[i]),
+                          fit: BoxFit.cover,
+                          cacheWidth: 720,
+                          errorBuilder: (_, __, ___) =>
+                              Container(color: context.c.noteP),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -1782,6 +1847,9 @@ class _PostCardState extends State<_PostCard> {
     final c = context.c;
     final layout = CitroLayoutScope.maybeOf(context);
     final tablet = (layout?.tabletNav ?? false) || (layout?.duo ?? false);
+    // 点赞后换成实心小红心，和「已喜欢」的语义保持一致。
+    final liked = active && icon == AppIcons.heart;
+    final fg = liked ? c.stamp : (active ? c.accentInk : c.inkSoft);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -1793,26 +1861,25 @@ class _PostCardState extends State<_PostCard> {
         ),
         decoration: active
             ? BoxDecoration(
-                color: c.hl,
+                color: liked ? c.stamp.withAlpha(24) : c.hl,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: c.accent.withAlpha(100)),
+                border: Border.all(
+                  color: (liked ? c.stamp : c.accent).withAlpha(100),
+                ),
               )
             : null,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppIcon(
-              strokeSvg(icon, width: 2),
+              liked ? fillSvg(AppIcons.heartFilled) : strokeSvg(icon, width: 2),
               size: tablet ? 19 : 15,
-              color: active ? c.accentInk : c.inkSoft,
+              color: fg,
             ),
             SizedBox(width: tablet ? 6 : 4),
             Text(
               label,
-              style: context.body(
-                size: tablet ? 13 : 11.5,
-                color: active ? c.accentInk : c.inkSoft,
-              ),
+              style: context.body(size: tablet ? 13 : 11.5, color: fg),
             ),
           ],
         ),
@@ -1872,7 +1939,7 @@ class _PostCardState extends State<_PostCard> {
         widget.onBlockUser != null &&
         AppState.instance.canBlock(nick) &&
         !AppState.instance.isBlocked(nick);
-    final action = await showModalBottomSheet<String>(
+    final action = await showCitroSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
@@ -2052,18 +2119,31 @@ class _PostCardState extends State<_PostCard> {
                   if (cm.imgs.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
-                      child: GestureDetector(
-                        onTap: () => widget.onViewImage(cm.imgs.first),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(5),
-                          child: Image.network(
-                            Api.imageUrl(cm.imgs.first),
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            cacheWidth: 216,
-                          ),
-                        ),
+                      child: Builder(
+                        builder: (context) {
+                          final tag = CitroHero.tagOf('comment', '${cm.id}:0');
+                          return GestureDetector(
+                            onTap: () => widget.onViewImage(
+                              cm.imgs,
+                              0,
+                              (k) => CitroHero.tagOf('comment', '${cm.id}:$k'),
+                              720,
+                            ),
+                            child: CitroHero(
+                              tag: tag,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(5),
+                                child: Image.network(
+                                  Api.imageUrl(cm.imgs.first),
+                                  width: 72,
+                                  height: 72,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 216,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   if (cm.voice != null)
@@ -2306,21 +2386,37 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
     }
   }
 
-  void _viewImage(String path) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black,
-      builder: (ctx) => GestureDetector(
-        onTap: () => Navigator.pop(ctx),
-        child: InteractiveViewer(
-          child: Center(
-            child: Image.network(
-              Api.imageUrl(path),
-              fit: BoxFit.contain,
-              cacheWidth: 1280,
-            ),
-          ),
+  /// 全屏查看同一条内容里的多张图：翻页、缩放、Hero 都交给 CitroImageViewer，
+  /// 列表与评论只提供图片数组和起始索引。
+  void _viewImages(
+    List<String> paths,
+    int index,
+    Object Function(int index) tagOf,
+    int cacheWidth,
+  ) {
+    if (paths.isEmpty) return;
+    // 用透明 PageRoute 而不是 DialogRoute：Hero 只在 PageRoute 之间才会飞。
+    Navigator.of(context, rootNavigator: true).push<void>(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black,
+        barrierDismissible: true,
+        transitionDuration: CitroMotion.modal,
+        reverseTransitionDuration: CitroMotion.modalReverse,
+        pageBuilder: (ctx, animation, secondary) => CitroImageViewer(
+          urls: paths.map(Api.imageUrl).toList(),
+          initialIndex: index.clamp(0, paths.length - 1),
+          tagOf: tagOf,
+          cacheWidth: cacheWidth,
         ),
+        transitionsBuilder: (ctx, animation, secondary, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: CitroMotion.easeOut,
+            reverseCurve: CitroMotion.exit,
+          );
+          return FadeTransition(opacity: curved, child: child);
+        },
       ),
     );
   }
@@ -2486,7 +2582,7 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                                     voiceDur: voiceDur,
                                   ),
                               onDeleteComment: (cm) => _deleteComment(p, cm),
-                              onViewImage: _viewImage,
+                              onViewImage: _viewImages,
                               onReportPost: () => _reportPost(context, p),
                               onReportComment: (cm) =>
                                   _reportComment(context, p, cm),

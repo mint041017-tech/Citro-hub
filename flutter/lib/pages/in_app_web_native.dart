@@ -82,49 +82,75 @@ class _InAppWebPageState extends State<InAppWebPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-              child: Row(
-                children: [
-                  _PageButton(
-                    icon: AppIcons.arrowLeft,
-                    label: '返回',
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final compactButtons = box.maxWidth < 520;
+                  final centerInset = compactButtons ? 92.0 : 118.0;
+                  return SizedBox(
+                    height: 46,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Text(
-                          widget.title?.trim().isNotEmpty == true
-                              ? widget.title!.trim()
-                              : host,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.heading(size: 16, color: c.ink),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: centerInset,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.title?.trim().isNotEmpty == true
+                                    ? widget.title!.trim()
+                                    : host,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: context.heading(size: 16, color: c.ink),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                widget.url,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: context.body(
+                                  size: 10.5,
+                                  color: c.inkSoft.withAlpha(190),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          widget.url,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.body(
-                            size: 10.5,
-                            color: c.inkSoft.withAlpha(190),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _PageButton(
+                                icon: AppIcons.arrowLeft,
+                                label: '返回',
+                                showLabel: !compactButtons,
+                                onTap: () => Navigator.of(context).pop(),
+                              ),
+                              const SizedBox(width: 6),
+                              _PageButton(
+                                icon: AppIcons.refresh,
+                                label: '刷新',
+                                showLabel: !compactButtons,
+                                circle: true,
+                                onTap: () {
+                                  setState(() => _error = null);
+                                  _controller?.reload();
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  _PageButton(
-                    icon: AppIcons.refresh,
-                    label: '刷新',
-                    onTap: () {
-                      setState(() => _error = null);
-                      _controller?.reload();
-                    },
-                  ),
-                ],
+                  );
+                },
               ),
             ),
             SizedBox(
@@ -333,15 +359,24 @@ class _PageButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
+  /// 窄屏时只留图标，避免顶栏按钮挤掉居中的标题。
+  final bool showLabel;
+
+  /// 只显示图标的圆形按钮。
+  final bool circle;
+
   const _PageButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.showLabel = true,
+    this.circle = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final glyph = AppIcon(strokeSvg(icon, width: 2.2), size: 15, color: c.ink2);
     return Semantics(
       button: true,
       label: label,
@@ -349,28 +384,36 @@ class _PageButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          width: circle ? 34 : null,
+          padding: circle
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(999),
+            shape: circle ? BoxShape.circle : BoxShape.rectangle,
+            borderRadius: circle ? null : BorderRadius.circular(999),
             border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.paper(c),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon(strokeSvg(icon, width: 2.2), size: 15, color: c.ink2),
-              const SizedBox(width: 3),
-              Text(
-                label,
-                style: context.body(
-                  size: 11.5,
-                  weight: FontWeight.w600,
-                  color: c.ink2,
+          child: circle
+              ? Center(child: glyph)
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    glyph,
+                    if (showLabel) ...[
+                      const SizedBox(width: 3),
+                      Text(
+                        label,
+                        style: context.body(
+                          size: 11.5,
+                          weight: FontWeight.w600,
+                          color: c.ink2,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

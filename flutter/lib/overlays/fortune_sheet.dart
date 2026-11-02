@@ -9,6 +9,7 @@ import '../data/cards.dart';
 import '../data/fortunes.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../utils/lunar.dart';
 import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
@@ -21,7 +22,7 @@ Future<void> showFortuneOverlay(BuildContext context) async {
     barrierDismissible: true,
     barrierLabel: '关闭',
     barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 320),
+    transitionDuration: CitroMotion.sheet,
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, __) => Stack(
       children: [
@@ -35,12 +36,16 @@ Future<void> showFortuneOverlay(BuildContext context) async {
           ),
         ),
         FadeTransition(
-          opacity: anim,
+          opacity: CurvedAnimation(
+            parent: anim,
+            curve: CitroMotion.easeOut,
+            reverseCurve: CitroMotion.exit,
+          ),
           child: ScaleTransition(
             scale: Tween(
-              begin: .9,
+              begin: .92,
               end: 1.0,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+            ).animate(CurvedAnimation(parent: anim, curve: CitroMotion.settle)),
             child: const Material(
               type: MaterialType.transparency,
               child: _FortuneDialog(),

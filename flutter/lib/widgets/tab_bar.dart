@@ -3,8 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/platform.dart' as platform;
-import '../theme/app_theme.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
+import '../theme/motion.dart';
+import '../theme/native.dart';
+import '../theme/tokens.dart';
+import 'motion_widgets.dart';
 import 'paper.dart';
 
 class CitroTabBar extends StatelessWidget {
@@ -19,75 +23,99 @@ class CitroTabBar extends StatelessWidget {
     final unread = context.app.unread;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final barWidth = platform.isWindows ? 560.0 : 520.0;
-    final side = math.max(0.0, (MediaQuery.sizeOf(context).width - barWidth) / 2);
+    final side = math.max(
+      0.0,
+      (MediaQuery.sizeOf(context).width - barWidth) / 2,
+    );
+    final tabs = <_TabSpec>[
+      const _TabSpec('首页', AppIcons.home),
+      const _TabSpec('游戏', AppIcons.games),
+      _TabSpec('社区', AppIcons.community, badge: unread),
+      if (platform.isWindows) const _TabSpec('资源', AppIcons.library),
+      // 「我的」固定在最后一个，手机端也是右侧最后一格。
+      const _TabSpec('我的', AppIcons.user),
+    ];
+    final count = tabs.length;
+    final reduce = CitroMotion.reduced(context);
     return Positioned(
-      left: 10 + side,
-      right: 10 + side,
-      bottom: bottom + 10,
+      left: AppSpacing.x1 + side,
+      right: AppSpacing.x1 + side,
+      bottom: bottom + AppSpacing.x1,
       child: RepaintBoundary(
         child: SizedBox(
-          height: 66,
+          height: AppSpacing.navBar,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                height: 66,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: c.dark
-                        ? [const Color(0xFF24242C), const Color(0xFF1C1C23)]
-                        : [const Color(0xFFFFFDF6), const Color(0xFFFBF5E9)],
-                  ),
-                  border: Border.all(
-                    color: c.dark ? c.line : c.line.withAlpha(242),
-                    width: 1,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: c.dark
-                          ? const Color(0x99000000)
-                          : const Color(0x6B5A4A2C),
-                      blurRadius: 22,
-                      spreadRadius: -12,
-                      offset: const Offset(0, -6),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                child: Row(
+              // iOS / iPadOS 上是真实背景模糊，Android 是 tonal 表面，
+              // Windows / Web 是半透明纸面——同一块导航，各端用各自的原生材质。
+              CitroGlass(
+                height: AppSpacing.navBar,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                shadow: CitroColors.shadows.chrome(c),
+                padding: const EdgeInsets.all(AppSpacing.x1),
+                // 竖屏底部栏使用实色纸面，不透出背后的内容。
+                blur: false,
+                highlight: false,
+                tint: c.surface,
+                borderColor: c.line,
+                child: Stack(
                   children: [
-                    _TabBtn(
-                      label: '首页',
-                      icon: AppIcons.home,
-                      active: index == 0,
-                      onTap: () => onChanged(0),
-                    ),
-                    _TabBtn(
-                      label: '游戏',
-                      icon: AppIcons.games,
-                      active: index == 1,
-                      onTap: () => onChanged(1),
-                    ),
-                    _TabBtn(
-                      label: '社区',
-                      icon: AppIcons.users,
-                      active: index == 2,
-                      badge: unread,
-                      onTap: () => onChanged(2),
-                    ),
-                    if (platform.isWindows)
-                      _TabBtn(
-                        label: '资源',
-                        icon: AppIcons.library,
-                        active: index == 3,
-                        onTap: () => onChanged(3),
+                    // 共享高亮：一颗胶囊在 Tab 之间滑过去，
+                    // 比每个 Tab 各自渐变更连贯，也不会出现两个高亮同时存在。
+                    // 位置按 Row 的等分宽度直接算（Align 的 alignment 是在
+                    // 「剩余空间」里插值，会和 Tab 中心越走越偏）。
+                    Positioned.fill(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final itemWidth = constraints.maxWidth / count;
+                          // 图标模式：高亮收成一枚圆形胶囊，只包住当前图标。
+                          final pill = math.min(itemWidth - 8, 54.0);
+                          return Stack(
+                            children: [
+                              AnimatedPositioned(
+                                duration: reduce
+                                    ? Duration.zero
+                                    : CitroMotion.indicatorLength,
+                                curve: CitroMotion.emphasized,
+                                left: itemWidth * index + (itemWidth - pill) / 2,
+                                width: pill,
+                                top: 3,
+                                bottom: 3,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: c.dark
+                                        ? c.hl
+                                        : const Color(0x57FECE66),
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
+                    ),
+                    Row(
+                      children: [
+                        for (var i = 0; i < count; i++)
+                          Expanded(
+                            child: Pressable(
+                              onTap: () => onChanged(i),
+                              hoverLift: 0,
+                              hoverShadow: false,
+                              child: Center(
+                                child: _TabBtn(
+                                  label: tabs[i].label,
+                                  icon: tabs[i].icon,
+                                  active: index == i,
+                                  badge: tabs[i].badge,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -129,132 +157,101 @@ class CitroTabBar extends StatelessWidget {
   }
 }
 
+class _TabSpec {
+  final String label;
+  final String icon;
+  final int badge;
+
+  const _TabSpec(this.label, this.icon, {this.badge = 0});
+}
+
 class _TabBtn extends StatelessWidget {
   final String label;
   final String icon;
   final bool active;
   final int badge;
-  final VoidCallback onTap;
 
   const _TabBtn({
     required this.label,
     required this.icon,
     required this.active,
-    required this.onTap,
     this.badge = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    Widget inner = Container(
-      width: double.infinity,
-      height: active ? 54 : 46,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: active
-            ? (c.dark ? c.hl : const Color(0x57FECE66))
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
+    final reduce = CitroMotion.reduced(context);
+    final activeColor = c.accentInk;
+    final idleColor = c.ink2.withAlpha(200);
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      child: SizedBox(
+        height: AppSpacing.touch,
+        child: Center(
+          child: Stack(
             clipBehavior: Clip.none,
             children: [
-              AppIcon(
-                strokeSvg(icon, width: 2),
-                size: 20,
-                color: active ? c.accentInk : c.inkSoft.withAlpha(184),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: active ? 1 : 0),
+                duration: reduce ? Duration.zero : CitroMotion.press,
+                curve: CitroMotion.easeOut,
+                builder: (context, t, _) {
+                  return Transform.scale(
+                    scale: 1 + .1 * t,
+                    child: AppIcon(
+                      strokeSvg(icon, width: 2),
+                      size: 26,
+                      color: Color.lerp(idleColor, activeColor, t)!,
+                    ),
+                  );
+                },
               ),
               if (badge > 0)
                 Positioned(
                   right: -8,
                   top: -4,
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: c.accent,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$badge',
-                        style: context.body(
-                          size: 8,
-                          weight: FontWeight.w800,
-                          color: const Color(0xFF2E2C22),
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: CitroPop(child: _Badge(count: badge)),
                 ),
             ],
           ),
-          const SizedBox(height: 1),
-          Text(
-            label,
-            style: active
-                ? context.display(
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: c.accentInk,
-                    height: 1.1,
-                  )
-                : context.body(
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: c.inkSoft,
-                    height: 1.1,
-                  ),
-          ),
-          if (active)
-            Container(
-              width: 15,
-              height: 3,
-              margin: const EdgeInsets.only(top: 1),
-              decoration: BoxDecoration(
-                color: c.accent,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            )
-          else
-            const SizedBox(height: 4),
-        ],
-      ),
-    );
-    if (active) {
-      inner = ClipPath(
-        clipper: _ActiveClipper(),
-        child: Transform.rotate(angle: -1.2 * math.pi / 180, child: inner),
-      );
-    }
-    return Expanded(
-      child: Pressable(
-        onTap: onTap,
-        child: Center(child: inner),
+        ),
       ),
     );
   }
 }
 
-class _ActiveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(size.width * .04, size.height * .12)
-    ..lineTo(size.width * .96, 0)
-    ..lineTo(size.width, size.height * .86)
-    ..lineTo(size.width * .06, size.height)
-    ..close();
+class _Badge extends StatelessWidget {
+  final int count;
+
+  const _Badge({required this.count});
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: c.accent,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+      ),
+      child: Center(
+        child: Text(
+          '$count',
+          style: context.ui(
+            size: 9,
+            weight: FontWeight.w600,
+            color: const Color(0xFF2E2C22),
+            height: 1,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TapeClipper extends CustomClipper<Path> {

@@ -12,6 +12,8 @@ import '../services/haptics.dart';
 import '../services/pomodoro.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/desktop_shell.dart';
+import '../widgets/modal.dart';
 import 'tingyu_controller.dart';
 import 'tingyu_models.dart';
 
@@ -34,11 +36,17 @@ class TingyuPage extends StatefulWidget {
 
 class _TingyuPageState extends State<TingyuPage> {
   late final NookController _c = NookController.instance;
+  final GlobalKey<_NookHomeState> _homeKey = GlobalKey<_NookHomeState>();
 
   @override
   void initState() {
     super.initState();
-    if (!_c.ready) unawaited(_c.initialize());
+    // 走卡片转场时，TingyuPage 会在首页仍在构建的同一帧里挂载；
+    // 初始化若立即 notifyListeners 会触发「setState during build」，
+    // 因此推迟到当前帧结束再启动控制器。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_c.ready) unawaited(_c.initialize());
+    });
   }
 
   @override
@@ -50,71 +58,78 @@ class _TingyuPageState extends State<TingyuPage> {
         final theme = NookApp(controller: _c).theme(dark);
         final size = MediaQuery.sizeOf(context);
         final portrait = size.height >= size.width;
-        final p = Palette(dark);
-        return Theme(
-          data: theme,
-          child: Scaffold(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            appBar: !portrait
-                ? null
-                : AppBar(
-                    backgroundColor: theme.scaffoldBackgroundColor,
-                    surfaceTintColor: Colors.transparent,
-                    elevation: 0,
-                    scrolledUnderElevation: 0,
-                    shape: Border(
-                      bottom: BorderSide(color: theme.dividerColor),
-                    ),
-                    leading: IconButton(
-                      tooltip: '返回',
-                      color: theme.colorScheme.onSurface,
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
+        final media = MediaQuery.of(context);
+        final topInset = CitroDesktopShell.enabled ? 14.0 : 0.0;
+        return MediaQuery(
+          data: media.copyWith(
+            padding: media.padding.copyWith(top: media.padding.top + topInset),
+          ),
+          child: Theme(
+            data: theme,
+            child: Scaffold(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              appBar: !portrait
+                  ? null
+                  : AppBar(
+                      backgroundColor: theme.scaffoldBackgroundColor,
+                      surfaceTintColor: Colors.transparent,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      shadowColor: Colors.transparent,
+                      leading: IconButton(
+                        tooltip: '返回',
+                        color: theme.colorScheme.onSurface,
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 20,
+                        ),
+                        onPressed: () => _closeTingyu(context),
                       ),
-                      onPressed: () => _closeTingyu(context),
-                    ),
-                    titleSpacing: 0,
-                    title: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: p.accent,
-                            borderRadius: BorderRadius.circular(8),
+                      titleSpacing: 0,
+                      title: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '听隅',
+                            style: TextStyle(
+                              fontFamily: AppFonts.zcool,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.spa_outlined,
-                            size: 16,
-                            color: p.onAccent,
+                        ],
+                      ),
+                      actions: [
+                        TingyuPomoTicker(
+                          compact: true,
+                          onOpen: () => _homeKey.currentState?.openPage(1),
+                        ),
+                        IconButton(
+                          tooltip: '呼吸练习',
+                          onPressed: () => _homeKey.currentState?.openBreathe(),
+                          icon: const Icon(
+                            Icons.self_improvement_outlined,
+                            size: 21,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '听隅',
-                          style: TextStyle(
-                            fontFamily: AppFonts.zcool,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: 12 + CitroDesktopShell.windowControlsWidth,
                           ),
+                          child: TingyuTopClock(compact: size.width < 380),
                         ),
                       ],
                     ),
-                    actions: [
-                      const TingyuPomodoroButton(),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: TingyuTopClock(compact: size.width < 380),
-                      ),
-                    ],
-                  ),
-            body: MediaQuery.removePadding(
-              context: context,
-              removeTop: portrait,
-              child: NookHome(controller: _c, landscapeHeader: !portrait),
+              body: MediaQuery.removePadding(
+                context: context,
+                removeTop: portrait,
+                child: NookHome(
+                  key: _homeKey,
+                  controller: _c,
+                  landscapeHeader: !portrait,
+                ),
+              ),
             ),
           ),
         );
@@ -127,13 +142,140 @@ CitroColors _tingyuPomodoroColors(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   final base = dark ? CitroColors.darkColors : CitroColors.light;
   return base.copyWith(
+    bg: dark ? const Color(0xFF191F1C) : const Color(0xFFF5F3EE),
+    bg2: dark ? const Color(0xFF141A17) : const Color(0xFFEFECE4),
+    surface: dark ? const Color(0xFF242D27) : const Color(0xFFFFFFFF),
+    surface2: dark ? const Color(0xFF2C362E) : const Color(0xFFF7F5EF),
+    paperLine: dark ? const Color(0xFF37433A) : const Color(0xFFEFEDE6),
+    ink: dark ? const Color(0xFFE5EBDE) : const Color(0xFF2C2C2C),
+    ink2: dark ? const Color(0xFFCFD8C9) : const Color(0xFF4A4A4A),
+    inkSoft: dark ? const Color(0xFFA8B5A6) : const Color(0xFF8A8A8A),
+    line: dark ? const Color(0xFF37433A) : const Color(0xFFE8E6E1),
+    line2: dark ? const Color(0xFF465248) : const Color(0xFFD9DFD6),
     accent: dark ? const Color(0xFFAAC4A2) : const Color(0xFF4F6957),
     accent2: dark ? const Color(0xFF8FAF86) : const Color(0xFF3E5747),
     accentInk: dark ? const Color(0xFFC8DCC0) : const Color(0xFF3E5747),
     accentLt: dark ? const Color(0xFFC8DCC0) : const Color(0xFF7C9B79),
+    mintSoft: dark ? const Color(0x33354B39) : const Color(0xFFE8EDE3),
+    mintLine: dark ? const Color(0x38C9D3B2) : const Color(0xFFD7DED2),
     hl: dark ? const Color(0x33AAC4A2) : const Color(0x8FE4EADD),
     hlInk: dark ? const Color(0x57AAC4A2) : const Color(0x9E4F6957),
   );
+}
+
+/// 只做按压缩放的视觉反馈，不接管点击，避免和外层 InkWell 重复触发。
+class _NookPressScale extends StatefulWidget {
+  const _NookPressScale({required this.child, this.scale = .96});
+
+  final Widget child;
+  final double scale;
+
+  @override
+  State<_NookPressScale> createState() => _NookPressScaleState();
+}
+
+class _NookPressScaleState extends State<_NookPressScale> {
+  bool _down = false;
+
+  void _set(bool value) {
+    if (_down == value) return;
+    setState(() => _down = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return Listener(
+      onPointerDown: (_) => _set(true),
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
+      child: AnimatedScale(
+        scale: _down && !reduce ? widget.scale : 1,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// 顶栏的专注倒计时胶囊：只在计时进行/暂停后出现，点击回到「专注」页。
+class TingyuPomoTicker extends StatelessWidget {
+  const TingyuPomoTicker({
+    super.key,
+    required this.onOpen,
+    this.compact = false,
+  });
+
+  final VoidCallback onOpen;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return ListenableBuilder(
+      listenable: PomodoroState.instance,
+      builder: (context, _) {
+        final state = PomodoroState.instance;
+        final active = state.active;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: .92, end: 1).animate(animation),
+              child: child,
+            ),
+          ),
+          child: !active
+              ? const SizedBox.shrink(key: ValueKey('pomo-idle'))
+              : Tooltip(
+                  key: const ValueKey('pomo-ticker'),
+                  message: '打开番茄钟',
+                  child: Material(
+                    color: p.soft,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: onOpen,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 10 : 13,
+                          vertical: 7,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              state.running
+                                  ? Icons.timer_rounded
+                                  : Icons.timer_outlined,
+                              size: 15,
+                              color: p.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              state.timeText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: p.accent,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        );
+      },
+    );
+  }
 }
 
 class TingyuPomodoroButton extends StatefulWidget {
@@ -563,16 +705,38 @@ class _NookHomeState extends State<NookHome> {
   String category = '全部';
   String query = '';
   final search = TextEditingController();
-  static const nav = ['此刻', '声音', '收藏', '设置'];
+  static const nav = ['此刻', '专注', '声音', '收藏', '设置'];
   static const navIcons = [
     Icons.grid_view_outlined,
+    Icons.timer_outlined,
     Icons.graphic_eq_outlined,
     Icons.bookmark_border_rounded,
     Icons.tune_rounded,
   ];
 
   @override
+  void initState() {
+    super.initState();
+    PomodoroState.instance.ensureInit();
+    PomodoroState.instance.audioHook = (play) async {
+      if (play) {
+        if (!c.playing && c.tracks.isNotEmpty) await c.send('play');
+      } else if (c.playing) {
+        await c.send('pause');
+      }
+    };
+  }
+
+  void openPage(int index) {
+    if (page == index) return;
+    setState(() => page = index);
+  }
+
+  void openBreathe() => breathe();
+
+  @override
   void dispose() {
+    PomodoroState.instance.audioHook = null;
     search.dispose();
     super.dispose();
   }
@@ -640,7 +804,7 @@ class _NookHomeState extends State<NookHome> {
   }
 
   void openLibrary() => setState(() {
-    page = 1;
+    page = 2;
     category = '全部';
   });
 
@@ -649,8 +813,8 @@ class _NookHomeState extends State<NookHome> {
     String body, {
     String accept = '确认',
   }) async =>
-      await showDialog<bool>(
-        context: context,
+      await showCitroDialog<bool>(
+        context,
         builder: (ctx) => AlertDialog(
           title: Text(title, style: const TextStyle(fontSize: 20)),
           content: Text(body, style: const TextStyle(height: 1.7)),
@@ -670,8 +834,8 @@ class _NookHomeState extends State<NookHome> {
 
   Future<bool> guardSwitch() async {
     if (!c.dirty) return true;
-    final choice = await showDialog<String>(
-      context: context,
+    final choice = await showCitroDialog<String>(
+      context,
       builder: (ctx) => AlertDialog(
         title: const Text('保存这份声音配方？', style: TextStyle(fontSize: 21)),
         content: const Text('当前混音有未保存的调整。保存后，下次就能直接回来。'),
@@ -772,7 +936,7 @@ class _NookHomeState extends State<NookHome> {
     var withTimer = false;
     var update = c.favoriteId != null;
     String? validation;
-    final result = await showModalBottomSheet<bool>(
+    final result = await showCitroSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -927,7 +1091,7 @@ class _NookHomeState extends State<NookHome> {
     final hourInput = TextEditingController(text: '$hours');
     final minuteInput = TextEditingController(text: '$minutes');
     String? validation;
-    await showModalBottomSheet<void>(
+    await showCitroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -1135,11 +1299,12 @@ class _NookHomeState extends State<NookHome> {
     BuildContext ctx,
     String text,
     bool selected,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool enabled = true,
+  }) {
     final p = Palette.of(ctx);
     return OutlinedButton(
-      onPressed: onTap,
+      onPressed: enabled ? onTap : null,
       style: OutlinedButton.styleFrom(
         backgroundColor: selected ? p.soft : p.surface,
         side: BorderSide(color: selected ? p.accent : p.border),
@@ -1150,11 +1315,50 @@ class _NookHomeState extends State<NookHome> {
     );
   }
 
-  void breathe() => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => BreathingPage(reducedMotion: c.reducedMotion),
-    ),
-  );
+  Future<void> breathe() {
+    final p = Palette.of(context);
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '关闭呼吸',
+      barrierColor: p.bg.withValues(alpha: .92),
+      transitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (dialogContext, _, __) => Padding(
+        padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+          builder: (context, box) => Center(
+            child: SizedBox(
+              width: math.min(600, box.maxWidth),
+              height: math.min(680, box.maxHeight),
+              child: Material(
+                color: p.surface,
+                borderRadius: BorderRadius.circular(28),
+                clipBehavior: Clip.antiAlias,
+                child: MediaQuery.removePadding(
+                  context: dialogContext,
+                  removeTop: true,
+                  removeBottom: true,
+                  child: const BreathingPage(
+                    reducedMotion: false,
+                    compact: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (context, animation, _, child) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: .96, end: 1).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 
   Future<void> importAudio() async {
     unawaited(c.loadFullFont());
@@ -1163,7 +1367,7 @@ class _NookHomeState extends State<NookHome> {
     if (!mounted) return;
     if (ok && c.locals.length > before) {
       setState(() {
-        page = 1;
+        page = 2;
         category = '本地';
       });
       toast(kIsWeb ? '声音已保存在此浏览器，可以加入混音了。' : '声音已保存在此设备，可以加入混音了。');
@@ -1179,6 +1383,7 @@ class _NookHomeState extends State<NookHome> {
         final wide = constraints.maxWidth >= 1200;
         return Scaffold(
           body: SafeArea(
+            top: !desktop,
             bottom: false,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1191,21 +1396,24 @@ class _NookHomeState extends State<NookHome> {
                         _landscapeHeader(context, desktop),
                       Expanded(
                         child: AnimatedSwitcher(
-                          duration: c.reducedMotion || CitroMotion.reduced(context)
+                          duration: CitroMotion.reduced(context)
                               ? Duration.zero
-                              : const Duration(milliseconds: 240),
+                              : const Duration(milliseconds: 280),
                           switchInCurve: CitroMotion.easeOut,
                           switchOutCurve: Curves.easeInCubic,
                           transitionBuilder: (child, animation) {
                             final slide = Tween<Offset>(
-                              begin: const Offset(0, .025),
+                              begin: const Offset(.06, 0),
                               end: Offset.zero,
                             ).animate(animation);
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: slide,
-                                child: child,
+                            // 旧页与新页各自独立图层，过渡时只合成不重绘整页。
+                            return RepaintBoundary(
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: slide,
+                                  child: child,
+                                ),
                               ),
                             );
                           },
@@ -1216,15 +1424,13 @@ class _NookHomeState extends State<NookHome> {
                                 )
                               : KeyedSubtree(
                                   key: ValueKey('nook-page-$page'),
-                                  child: page == 2
+                                  child: page == 3
                                       ? favoritesTab(context, desktop)
                                       : SingleChildScrollView(
                                           key: PageStorageKey('page-$page'),
                                           padding: EdgeInsets.fromLTRB(
                                             desktop ? 34 : 20,
-                                            widget.landscapeHeader
-                                                ? (desktop ? 10 : 6)
-                                                : (desktop ? 32 : 14),
+                                            desktop ? 32 : 14,
                                             desktop ? 34 : 20,
                                             34,
                                           ),
@@ -1233,8 +1439,9 @@ class _NookHomeState extends State<NookHome> {
                                               maxWidth: 1050,
                                             ),
                                             child: switch (page) {
-                                              1 => libraryPage(context),
-                                              3 => settingsPage(context),
+                                              1 => pomodoroPage(context, wide),
+                                              2 => libraryPage(context),
+                                              4 => settingsPage(context),
                                               _ => homePage(context, wide),
                                             },
                                           ),
@@ -1278,37 +1485,90 @@ class _NookHomeState extends State<NookHome> {
                           height: 64,
                           child: Row(
                             children: List.generate(
-                              4,
+                              nav.length,
                               (i) => Expanded(
-                                child: Semantics(
-                                  selected: page == i,
-                                  child: InkWell(
-                                    onTap: () => setState(() => page = i),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          navIcons[i],
-                                          size: 22,
-                                          color: page == i ? p.accent : p.muted,
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          nav[i],
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: page == i
-                                                ? FontWeight.w600
-                                                : FontWeight.w400,
-                                            color: page == i
-                                                ? p.accent
-                                                : p.muted,
+                                child: ListenableBuilder(
+                                  listenable: PomodoroState.instance,
+                                  builder: (context, _) {
+                                    final pomo = PomodoroState.instance;
+                                    final ticking = i == 1 && pomo.active;
+                                    return Semantics(
+                                      selected: page == i,
+                                      label: ticking
+                                          ? '专注 ${pomo.timeText}'
+                                          : nav[i],
+                                      child: _NookPressScale(
+                                        scale: .94,
+                                        child: InkWell(
+                                          onTap: () => setState(() => page = i),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Stack(
+                                                clipBehavior: Clip.none,
+                                                children: [
+                                                  AnimatedScale(
+                                                    scale: page == i ? 1.05 : 1,
+                                                    duration: const Duration(
+                                                      milliseconds: 220,
+                                                    ),
+                                                    curve: Curves.easeOutCubic,
+                                                    child: Icon(
+                                                      navIcons[i],
+                                                      size: 22,
+                                                      color: page == i
+                                                          ? p.accent
+                                                          : p.muted,
+                                                    ),
+                                                  ),
+                                                  if (ticking)
+                                                    Positioned(
+                                                      right: -6,
+                                                      top: -2,
+                                                      child: Container(
+                                                        width: 6,
+                                                        height: 6,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                              color:
+                                                                  pomo.running
+                                                                  ? p.accent
+                                                                  : p.muted,
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 5),
+                                              AnimatedDefaultTextStyle(
+                                                duration: const Duration(
+                                                  milliseconds: 220,
+                                                ),
+                                                style: TextStyle(
+                                                  fontFamily: AppFonts.noto,
+                                                  fontSize: 12,
+                                                  fontWeight: page == i
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w400,
+                                                  color: page == i
+                                                      ? p.accent
+                                                      : p.muted,
+                                                ),
+                                                child: Text(
+                                                  ticking && pomo.running
+                                                      ? pomo.timeText
+                                                      : nav[i],
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -1326,7 +1586,7 @@ class _NookHomeState extends State<NookHome> {
   Widget _landscapeHeader(BuildContext context, bool desktop) {
     final p = Palette.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(desktop ? 34 : 20, 10, desktop ? 34 : 20, 0),
+      padding: EdgeInsets.fromLTRB(desktop ? 34 : 20, 14, desktop ? 34 : 20, 0),
       child: Row(
         children: [
           IconButton(
@@ -1345,8 +1605,25 @@ class _NookHomeState extends State<NookHome> {
           const SizedBox(width: 6),
           if (!desktop) brand(context, compact: true),
           const Spacer(),
-          const TingyuPomodoroButton(),
-          const TingyuTopClock(),
+          TingyuPomoTicker(onOpen: () => openPage(1)),
+          IconButton(
+            tooltip: '呼吸练习',
+            onPressed: breathe,
+            style: IconButton.styleFrom(
+              foregroundColor: p.text,
+              minimumSize: const Size(38, 38),
+              padding: EdgeInsets.zero,
+              shape: const CircleBorder(),
+            ),
+            icon: const Icon(Icons.self_improvement_outlined, size: 20),
+          ),
+          const SizedBox(width: 4),
+          Padding(
+            padding: EdgeInsets.only(
+              right: CitroDesktopShell.windowControlsWidth,
+            ),
+            child: const TingyuTopClock(),
+          ),
         ],
       ),
     );
@@ -1373,40 +1650,38 @@ class _NookHomeState extends State<NookHome> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: compact ? 36 : 40,
-          height: compact ? 36 : 40,
-          decoration: BoxDecoration(
-            color: p.accent,
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Icon(Icons.spa_outlined, color: p.onAccent, size: 25),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '听隅',
-              style: TextStyle(
-                fontFamily: AppFonts.zcool,
-                fontSize: compact ? 22 : 25,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 3,
-                color: p.text,
-              ),
-            ),
-            if (!compact)
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                'QUIET NOOK',
+                '听隅',
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 1.8,
-                  color: p.muted,
+                  fontFamily: AppFonts.zcool,
+                  fontSize: compact ? 22 : 25,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 3,
+                  color: p.text,
                 ),
               ),
-          ],
+              if (!compact)
+                Text(
+                  'QUIET NOOK',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1.8,
+                    color: p.muted,
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -1426,49 +1701,81 @@ class _NookHomeState extends State<NookHome> {
         children: [
           brand(context),
           const SizedBox(height: 54),
-          ...List.generate(
-            4,
-            (i) => Padding(
+          for (var i = 0; i < nav.length; i++) ...[
+            if (i == 4)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: sidebarBreathe(context),
+              ),
+            Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Semantics(
-                selected: page == i,
-                child: Material(
-                  color: page == i ? p.soft : Colors.transparent,
-                  borderRadius: BorderRadius.circular(13),
-                  child: InkWell(
+              child: _NookPressScale(
+                scale: .98,
+                child: Semantics(
+                  selected: page == i,
+                  child: Material(
+                    color: page == i ? p.soft : Colors.transparent,
                     borderRadius: BorderRadius.circular(13),
-                    onTap: () => setState(() => page = i),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 16,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            navIcons[i],
-                            color: page == i ? p.accent : p.muted,
-                            size: 21,
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            nav[i],
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: page == i
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(13),
+                      onTap: () => setState(() => page = i),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              navIcons[i],
                               color: page == i ? p.accent : p.muted,
+                              size: 21,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                nav[i],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: page == i
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: page == i ? p.accent : p.muted,
+                                ),
+                              ),
+                            ),
+                            if (i == 1)
+                              ListenableBuilder(
+                                listenable: PomodoroState.instance,
+                                builder: (context, _) {
+                                  final pomo = PomodoroState.instance;
+                                  if (!pomo.active) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Text(
+                                    pomo.timeText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.accent,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
+          const Spacer(),
+          pomoSideCard(context),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1491,6 +1798,139 @@ class _NookHomeState extends State<NookHome> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget sidebarBreathe(BuildContext context) {
+    final p = Palette.of(context);
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: '呼吸练习，1 分钟',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(13),
+          hoverColor: p.accent.withValues(alpha: .06),
+          onTap: breathe,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            child: Row(
+              children: [
+                Icon(Icons.self_improvement_outlined, color: p.muted, size: 21),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Text(
+                    '呼吸',
+                    style: TextStyle(fontSize: 16, color: p.muted),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: p.soft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '1 分钟',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: p.accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget pomoSideCard(BuildContext context) {
+    final p = Palette.of(context);
+    return ListenableBuilder(
+      listenable: PomodoroState.instance,
+      builder: (context, _) {
+        final state = PomodoroState.instance;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SizeTransition(
+              sizeFactor: animation,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+          child: !state.active
+              ? const SizedBox.shrink(key: ValueKey('pomo-side-idle'))
+              : Padding(
+                  key: const ValueKey('pomo-side'),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Material(
+                    color: p.soft,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => openPage(1),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              state.running
+                                  ? Icons.timer_rounded
+                                  : Icons.timer_outlined,
+                              size: 19,
+                              color: p.accent,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    state.modeLabel,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: p.muted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    state.timeText,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.accent,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
+                              color: p.accent,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        );
+      },
     );
   }
 
@@ -1580,6 +2020,701 @@ class _NookHomeState extends State<NookHome> {
       return '正在渐弱 · $end 结束';
     }
     return '剩余 ${clockText(c.remaining)} · $end 结束 · $fadeText';
+  }
+
+  Widget pomodoroPage(BuildContext context, bool wide) {
+    final p = Palette.of(context);
+    return ListenableBuilder(
+      listenable: PomodoroState.instance,
+      builder: (context, _) {
+        final state = PomodoroState.instance;
+        final timerCard = PomodoroCard(
+          colors: _tingyuPomodoroColors(context),
+          showHeader: false,
+          showClose: false,
+          showLongSlider: false,
+          minHeight: 580,
+        );
+        final settingsCard = _pomoSettingsCard(context, state);
+        final statsCard = _pomoStatsCard(context, state);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            pageHeading(
+              context,
+              '专注',
+              '一段一段地做，把注意力放回此刻。',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: p.soft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.spa_outlined, size: 14, color: p.accent),
+                    const SizedBox(width: 6),
+                    Text(
+                      '今日 ${state.todayMinutes} 分钟',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: p.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            LayoutBuilder(
+              builder: (context, box) {
+                if (box.maxWidth >= 680) {
+                  return Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: timerCard),
+                          const SizedBox(width: 20),
+                          Expanded(flex: 5, child: settingsCard),
+                        ],
+                      ),
+                      statsCard,
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    timerCard,
+                    const SizedBox(height: 18),
+                    settingsCard,
+                    statsCard,
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '提示：计时在切换到其他页面或后台后仍会继续；系统仍可能因省电策略暂停音频，请勿将计时用作系统闹钟。',
+              style: TextStyle(fontSize: 12, color: p.muted, height: 1.7),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _pomoSettingsCard(BuildContext context, PomodoroState state) {
+    final p = Palette.of(context);
+    final summary =
+        '${state.focusMinutes} 分钟专注 · ${state.shortMinutes} 分钟短休 · 每 ${state.longEvery} 轮长休';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      constraints: const BoxConstraints(minHeight: 580),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border.all(color: p.border),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '节奏',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      summary,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: p.muted,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: '调节时长与间隔',
+                onPressed: () => _openDurationSettings(context),
+                icon: const Icon(Icons.tune_rounded, size: 21),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Divider(height: 28, color: p.border),
+          _pomoSwitch(
+            context,
+            icon: Icons.autorenew_rounded,
+            title: '自动开始下一阶段',
+            subtitle: '专注和休息自动衔接，适合不想被打断的节奏。',
+            value: state.autoStart,
+            onChanged: state.setAutoStart,
+          ),
+          _pomoSwitch(
+            context,
+            icon: Icons.headphones_outlined,
+            title: '专注时播放当前混音',
+            subtitle: c.tracks.isEmpty
+                ? '当前还没有混音。'
+                : '${c.tracks.length} 种声音，开始专注时自动播放。',
+            value: state.playWithFocus,
+            onChanged: state.setPlayWithFocus,
+          ),
+          _pomoSwitch(
+            context,
+            icon: Icons.pause_circle_outline_rounded,
+            title: '休息时暂停混音',
+            subtitle: '让耳朵也一起休息。',
+            value: state.pauseOnBreak,
+            onChanged: state.setPauseOnBreak,
+          ),
+          Divider(height: 30, color: p.border),
+          _pomoSwitch(
+            context,
+            icon: Icons.notifications_active_outlined,
+            title: '结束提示音',
+            subtitle: '一声轻轻的提示，不改变正在播放的声音。',
+            value: state.chime,
+            onChanged: state.setChime,
+          ),
+          if (state.chime) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                selectButton(
+                  context,
+                  '清铃',
+                  !state.chimeKindWood,
+                  () => state.setChimeKind('bell'),
+                ),
+                selectButton(
+                  context,
+                  '木鱼',
+                  state.chimeKindWood,
+                  () => state.setChimeKind('wood'),
+                ),
+                IconButton(
+                  tooltip: '试听提示音',
+                  onPressed: state.chimePreview,
+                  icon: const Icon(Icons.volume_up_outlined, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.volume_down_outlined, size: 19, color: p.muted),
+                Expanded(
+                  child: Slider(
+                    value: state.chimeVolume.toDouble(),
+                    max: 100,
+                    divisions: 20,
+                    label: '${state.chimeVolume}%',
+                    onChanged: (v) => state.setChimeVolume(v.round()),
+                    onChangeEnd: (_) => state.chimePreview(),
+                  ),
+                ),
+                SizedBox(
+                  width: 38,
+                  child: Text(
+                    '${state.chimeVolume}%',
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: p.muted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          _pomoSwitch(
+            context,
+            icon: Icons.notifications_outlined,
+            title: '番茄钟通知',
+            subtitle: _notificationHint(state),
+            value: state.notify,
+            onChanged: state.setNotify,
+          ),
+          if (state.notificationPermission == 'denied')
+            Padding(
+              padding: const EdgeInsets.only(left: 34, top: 2),
+              child: Text(
+                '系统通知被拒绝；可在系统设置中重新允许。',
+                style: TextStyle(fontSize: 12, color: p.muted),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _notificationHint(PomodoroState state) =>
+      switch (state.notificationPermission) {
+        'granted' => state.notify ? '番茄钟结束会发送系统通知。' : '番茄钟通知已关闭；结束时会显示页内提醒。',
+        'denied' => '系统已拒绝通知；结束时会显示页内提醒。',
+        _ => '开始番茄钟时会请求系统通知权限。',
+      };
+
+  Widget _pomoSwitch(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final p = Palette.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        secondary: Icon(icon, size: 21, color: p.muted),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 13, color: p.muted, height: 1.5),
+        ),
+        value: value,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _pomoStatsCard(BuildContext context, PomodoroState state) {
+    final p = Palette.of(context);
+    final color = p.accent;
+    return settingSection(context, '专注记录', [
+      Row(
+        children: [
+          Expanded(child: _pomoStat(context, '${state.todayMinutes}', '今天分钟')),
+          Container(width: 1, height: 38, color: p.border),
+          Expanded(child: _pomoStat(context, '${state.todayCount}', '完成次数')),
+          Container(width: 1, height: 38, color: p.border),
+          Expanded(child: _pomoStat(context, '${state.streakDays}', '连续天数')),
+        ],
+      ),
+      const SizedBox(height: 22),
+      Row(
+        children: [
+          Text(
+            '最近 7 天',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: p.muted,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '本周 ${state.weekMinutes.fold<int>(0, (a, b) => a + b)} 分钟',
+            style: TextStyle(fontSize: 12, color: p.muted),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      _pomoWeekChart(context, color, state.weekMinutes),
+      if (state.sessions.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(
+            '完成一次专注后，这里会留下记录。',
+            style: TextStyle(fontSize: 12, color: p.muted),
+          ),
+        ),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: state.sessions.isEmpty ? null : state.clearHistory,
+          icon: const Icon(Icons.delete_sweep_outlined, size: 17),
+          label: const Text('清空记录'),
+          style: TextButton.styleFrom(foregroundColor: p.muted),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _pomoStat(BuildContext context, String value, String label) {
+    final p = Palette.of(context);
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
+            color: p.text,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(label, style: TextStyle(fontSize: 12, color: p.muted)),
+      ],
+    );
+  }
+
+  Widget _pomoWeekChart(BuildContext context, Color color, List<int> values) {
+    final p = Palette.of(context);
+    final max = math.max(1, values.fold<int>(0, (a, b) => a > b ? a : b));
+    final now = DateTime.now();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: List.generate(7, (i) {
+        final day = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: 6 - i));
+        final minutes = values[i];
+        final height = 6 + (minutes / max) * 54;
+        return Expanded(
+          child: Semantics(
+            label: '${day.month} 月 ${day.day} 日，专注 $minutes 分钟',
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 64,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                      width: 15,
+                      height: height,
+                      decoration: BoxDecoration(
+                        color: minutes == 0
+                            ? p.border
+                            : i == 6
+                            ? color
+                            : color.withValues(alpha: .45),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  i == 6 ? '今' : '${day.day}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: i == 6 ? p.accent : p.muted,
+                    fontWeight: i == 6 ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Future<void> _openDurationSettings(BuildContext context) {
+    final p = Palette.of(context);
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '关闭时长设置',
+      barrierColor: p.bg.withValues(alpha: .92),
+      transitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (dialogContext, _, __) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, box) => Center(
+            child: SizedBox(
+              width: math.min(560, box.maxWidth),
+              height: math.min(560, box.maxHeight),
+              child: Material(
+                color: p.surface,
+                borderRadius: BorderRadius.circular(28),
+                clipBehavior: Clip.antiAlias,
+                child: SafeArea(
+                  child: ListenableBuilder(
+                    listenable: PomodoroState.instance,
+                    builder: (context, _) => Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '时长与间隔',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '只调整专注、休息和长休节奏。',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: p.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: '关闭',
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                            child: _pomoDurationSettingsBody(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (context, animation, _, child) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: .96, end: 1).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _pomoDurationSettingsBody(BuildContext context) {
+    final p = Palette.of(context);
+    final state = PomodoroState.instance;
+    final locked = state.running;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _pomoDurationRow(
+          context,
+          '专注时长',
+          'focus',
+          const [15, 25, 45, 60],
+          state.focusMinutes,
+          locked,
+        ),
+        const SizedBox(height: 18),
+        _pomoDurationRow(
+          context,
+          '短休息',
+          'short',
+          const [5, 10, 15],
+          state.shortMinutes,
+          locked,
+        ),
+        const SizedBox(height: 18),
+        _pomoDurationRow(
+          context,
+          '长休息',
+          'long',
+          const [15, 20, 30],
+          state.longMinutes,
+          locked,
+        ),
+        if (locked)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              '暂停或结束后可以调整时长。',
+              style: TextStyle(fontSize: 12, color: p.muted),
+            ),
+          ),
+        const SizedBox(height: 6),
+        Divider(height: 30, color: p.border),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '长休息间隔',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '每完成 ${state.longEvery} 轮专注，进入一次长休息。',
+                    style: TextStyle(fontSize: 13, color: p.muted, height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: p.subtle,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: '减少轮数',
+                    onPressed: state.longEvery <= 2
+                        ? null
+                        : () => state.setLongEvery(state.longEvery - 1),
+                    icon: const Icon(Icons.remove_rounded, size: 18),
+                  ),
+                  Text(
+                    '${state.longEvery}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '增加轮数',
+                    onPressed: state.longEvery >= 8
+                        ? null
+                        : () => state.setLongEvery(state.longEvery + 1),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _pomoDurationRow(
+    BuildContext context,
+    String label,
+    String target,
+    List<int> presets,
+    int current,
+    bool locked,
+  ) {
+    final custom = !presets.contains(current);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final minutes in presets)
+              selectButton(
+                context,
+                '$minutes 分钟',
+                current == minutes,
+                () => PomodoroState.instance.setDuration(target, minutes),
+                enabled: !locked,
+              ),
+            selectButton(
+              context,
+              custom ? '$current 分钟' : '自定义',
+              custom,
+              () => _editPomodoroDuration(context, target, current),
+              enabled: !locked,
+            ),
+          ],
+        ),
+        if (custom)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              '当前为自定义时长',
+              style: TextStyle(fontSize: 12, color: Palette.of(context).muted),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _editPomodoroDuration(
+    BuildContext context,
+    String target,
+    int current,
+  ) async {
+    final controller = TextEditingController(text: '$current');
+    final name = switch (target) {
+      'short' => '短休息',
+      'long' => '长休息',
+      _ => '专注',
+    };
+    final result = await showCitroDialog<int>(
+      context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$name 时长'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(suffixText: '分钟'),
+          onSubmitted: (v) {
+            final value = int.tryParse(v.trim());
+            if (value != null) Navigator.of(ctx).pop(value);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(ctx).pop(int.tryParse(controller.text.trim())),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return;
+    final minutes = switch (target) {
+      'short' => result.clamp(1, 60),
+      'long' => result.clamp(5, 120),
+      _ => result.clamp(5, 180),
+    };
+    PomodoroState.instance.setDuration(target, minutes);
   }
 
   Widget homePage(BuildContext context, bool wide) {
@@ -1739,48 +2874,6 @@ class _NookHomeState extends State<NookHome> {
           },
         ),
         const SizedBox(height: 24),
-        Material(
-          color: p.soft,
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            onTap: breathe,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.self_improvement_outlined,
-                    size: 32,
-                    color: p.accent,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '跟着呼吸一分钟',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          '不用做得很好，舒服就好。',
-                          style: TextStyle(fontSize: 14, color: p.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_rounded, size: 20, color: p.accent),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 26),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2231,7 +3324,7 @@ class _NookHomeState extends State<NookHome> {
   Future<void> trackVolumeSheet(SoundSpec sound, double initial) async {
     var current = initial.round().clamp(0, 100);
     final input = TextEditingController(text: '$current');
-    await showModalBottomSheet<void>(
+    await showCitroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -2712,7 +3805,7 @@ class _NookHomeState extends State<NookHome> {
     );
   }
 
-  Future<void> soundDetailSheet(SoundSpec sound) => showModalBottomSheet<void>(
+  Future<void> soundDetailSheet(SoundSpec sound) => showCitroSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -2896,19 +3989,13 @@ class _NookHomeState extends State<NookHome> {
     );
   }
 
-  Widget favoritesHeader(BuildContext context) => pageHeading(
-    context,
-    '收藏',
-    '你的声音配方，都在这里。',
-    trailing: sortButton(context),
-  );
+  Widget favoritesHeader(BuildContext context) =>
+      pageHeading(context, '收藏', '你的声音配方，都在这里。', trailing: sortButton(context));
 
   /// 收藏页：标题与排序固定在顶部，只有配方列表滚动。
   Widget favoritesTab(BuildContext context, bool desktop) {
     final horizontal = desktop ? 34.0 : 20.0;
-    final top = widget.landscapeHeader
-        ? (desktop ? 10.0 : 6.0)
-        : (desktop ? 32.0 : 14.0);
+    final top = desktop ? 32.0 : 14.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -3147,8 +4234,8 @@ class _NookHomeState extends State<NookHome> {
     unawaited(c.loadFullFont());
     final input = TextEditingController(text: favorite['name'] as String);
     String? validation;
-    final name = await showDialog<String>(
-      context: context,
+    final name = await showCitroDialog<String>(
+      context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
           title: const Text('重命名', style: TextStyle(fontSize: 21)),
@@ -3196,23 +4283,6 @@ class _NookHomeState extends State<NookHome> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         pageHeading(context, '设置', '一些简单的设置，让这里更像你。'),
-        settingSection(context, '体验', [
-          Text(
-            '外观跟随 Citro 的明暗设置。',
-            style: TextStyle(fontSize: 14, color: p.muted, height: 1.5),
-          ),
-          const SizedBox(height: 4),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('减少动态效果', style: TextStyle(fontSize: 16)),
-            subtitle: Text(
-              '呼吸引导保留文字提示，减少画面缩放。',
-              style: TextStyle(fontSize: 14, color: p.muted),
-            ),
-            value: c.reducedMotion,
-            onChanged: c.setReducedMotion,
-          ),
-        ]),
         settingSection(context, '播放', [
           const Text(
             '默认渐弱',
@@ -3450,7 +4520,12 @@ class _NookHomeState extends State<NookHome> {
 
 class BreathingPage extends StatefulWidget {
   final bool reducedMotion;
-  const BreathingPage({super.key, required this.reducedMotion});
+  final bool compact;
+  const BreathingPage({
+    super.key,
+    required this.reducedMotion,
+    this.compact = false,
+  });
   @override
   State<BreathingPage> createState() => _BreathingPageState();
 }
@@ -3463,7 +4538,35 @@ class _BreathingPageState extends State<BreathingPage>
   int minutes = 1;
   bool running = true;
   bool done = false;
-  int _phase = 0;
+  bool _lastInhaling = true;
+
+  int get totalSeconds => minutes * 60;
+  int get elapsedSeconds => stopwatch.elapsed.inSeconds.clamp(0, totalSeconds);
+  double get sessionProgress =>
+      totalSeconds == 0 ? 0 : (elapsedSeconds / totalSeconds).clamp(0.0, 1.0);
+  bool get inhaling => animation.value < .4;
+  double get phaseProgress => inhaling
+      ? (animation.value / .4).clamp(0.0, 1.0)
+      : ((animation.value - .4) / .6).clamp(0.0, 1.0);
+  int get phaseSecondsLeft {
+    final total = inhaling ? 4 : 6;
+    return (total * (1 - phaseProgress)).ceil().clamp(1, total);
+  }
+
+  String get phaseTitle => done
+      ? '这一轮结束了'
+      : !running
+      ? (elapsedSeconds == 0 ? '准备好了吗' : '已暂停')
+      : inhaling
+      ? '吸气'
+      : '呼气';
+  String get phaseHint => done
+      ? '舒服就好，想再来一次随时开始。'
+      : !running
+      ? (elapsedSeconds == 0 ? '按下开始，跟着光球慢慢呼吸。' : '按自己的节奏，准备好了再继续。')
+      : inhaling
+      ? '慢慢吸气，让肩膀松下来。'
+      : '轻轻呼气，不用刻意用力。';
 
   @override
   void initState() {
@@ -3473,11 +4576,12 @@ class _BreathingPageState extends State<BreathingPage>
       vsync: this,
       duration: const Duration(seconds: 10),
     )..repeat();
+    _lastInhaling = inhaling;
     animation.addListener(_onPhaseTick);
     stopwatch.start();
     ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      if (!done && stopwatch.elapsed.inSeconds >= minutes * 60) {
+      if (!done && stopwatch.elapsed.inSeconds >= totalSeconds) {
         stopwatch.stop();
         animation.stop();
         running = false;
@@ -3490,11 +4594,11 @@ class _BreathingPageState extends State<BreathingPage>
   }
 
   void _onPhaseTick() {
-    final next = animation.value < .4 ? 0 : 1;
-    if (next == _phase) return;
-    _phase = next;
+    final nowInhaling = inhaling;
+    if (nowInhaling == _lastInhaling) return;
+    _lastInhaling = nowInhaling;
     if (!running || done) return;
-    unawaited(Chime.breath(inhale: next == 0));
+    unawaited(Chime.breath(inhale: nowInhaling));
     unawaited(Haptics.breath());
   }
 
@@ -3507,12 +4611,13 @@ class _BreathingPageState extends State<BreathingPage>
     setState(() {
       if (done) {
         done = false;
+        _lastInhaling = true;
         stopwatch.reset();
         animation.value = 0;
       }
       running = !running;
       if (running) {
-        _phase = animation.value < .4 ? 0 : 1;
+        _lastInhaling = inhaling;
         stopwatch.start();
         animation.repeat();
       } else {
@@ -3522,11 +4627,44 @@ class _BreathingPageState extends State<BreathingPage>
     });
   }
 
+  void resetCycle() {
+    setState(() {
+      done = false;
+      _lastInhaling = true;
+      stopwatch.reset();
+      animation.value = 0;
+      if (running) {
+        stopwatch.start();
+        animation.repeat();
+      } else {
+        animation.stop();
+      }
+    });
+  }
+
+  void chooseMinutes(int value) {
+    setState(() {
+      minutes = value;
+      done = false;
+      _lastInhaling = true;
+      stopwatch
+        ..stop()
+        ..reset();
+      animation
+        ..stop()
+        ..value = 0;
+      running = true;
+      stopwatch.start();
+      animation.repeat();
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     ticker?.cancel();
     stopwatch.stop();
+    animation.removeListener(_onPhaseTick);
     animation.dispose();
     super.dispose();
   }
@@ -3536,199 +4674,612 @@ class _BreathingPageState extends State<BreathingPage>
     final p = Palette.of(context);
     final reduce =
         widget.reducedMotion || MediaQuery.disableAnimationsOf(context);
+    final accent = p.accent;
+    final compact = widget.compact;
+    final orbSize = math
+        .min(
+          MediaQuery.sizeOf(context).width - (compact ? 56 : 64),
+          MediaQuery.sizeOf(context).height * (compact ? .34 : .42),
+        )
+        .clamp(compact ? 230.0 : 230.0, compact ? 320.0 : 348.0)
+        .toDouble();
+    final remainText = clockText(math.max(0, totalSeconds - elapsedSeconds));
+
     return Scaffold(
       backgroundColor: p.bg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IconButton(
-                        tooltip: '返回',
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 22),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 8),
-                              child: Text(
-                                '呼吸',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '吸气 4 秒，呼气 6 秒。不必屏息。',
-                              style: TextStyle(fontSize: 14, color: p.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (reduce)
+            CustomPaint(
+              painter: _BreathBackdropPainter(
+                breath: .55,
+                accent: accent,
+                background: p.bg,
+                soft: p.soft,
+                dark: p.dark,
+              ),
+            )
+          else
+            AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final breath = inhaling
+                    ? Curves.easeInOutSine.transform(phaseProgress)
+                    : 1 - Curves.easeInOutSine.transform(phaseProgress);
+                return CustomPaint(
+                  painter: _BreathBackdropPainter(
+                    breath: breath,
+                    accent: accent,
+                    background: p.bg,
+                    soft: p.soft,
+                    dark: p.dark,
                   ),
-                  const SizedBox(height: 26),
-                  SizedBox(
-                    height: 250,
-                    child: Center(
-                      child: AnimatedBuilder(
-                        animation: animation,
-                        builder: (ctx, _) {
-                          final value = animation.value;
-                          final phase = value < .4
-                              ? value / .4
-                              : 1 - (value - .4) / .6;
-                          return Transform.scale(
-                            scale: reduce
-                                ? 1
-                                : .78 +
-                                      Curves.easeInOut.transform(
-                                            phase.clamp(0, 1),
-                                          ) *
-                                          .22,
-                            child: Container(
-                              width: 220,
-                              height: 220,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: p.soft,
-                                border: Border.all(
-                                  color: p.accent.withValues(alpha: .18),
-                                  width: 15,
-                                ),
-                              ),
+                );
+              },
+            ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    22,
+                    compact ? 8 : 10,
+                    22,
+                    compact ? 16 : 26,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 620),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            _BreathGlassButton(
+                              icon: Icons.arrow_back_rounded,
+                              tooltip: '返回',
+                              color: p.text,
+                              surface: p.surface,
+                              border: p.border,
+                              onTap: () => Navigator.pop(context),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    done
-                                        ? '很好，就这样'
-                                        : !running
-                                        ? '按自己的节奏'
-                                        : value < .4
-                                        ? '慢慢吸气'
-                                        : '轻轻呼气',
+                                    '呼吸',
                                     style: TextStyle(
-                                      fontSize: 24,
-                                      color: p.accent,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1,
+                                      color: p.text,
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 3),
                                   Text(
-                                    clockText(
-                                      math.max(
-                                        0,
-                                        minutes * 60 -
-                                            stopwatch.elapsed.inSeconds,
-                                      ),
-                                    ),
+                                    '4 秒吸气 · 6 秒呼气 · 不必屏息',
                                     style: TextStyle(
+                                      fontSize: 12,
                                       color: p.muted,
-                                      fontSize: 15,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
+                                      letterSpacing: .2,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [1, 3, 5]
-                        .map(
-                          (m) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            child: ChoiceChip(
-                              label: Text('$m 分钟'),
-                              selected: minutes == m,
-                              showCheckmark: false,
-                              selectedColor: p.soft,
-                              backgroundColor: p.surface,
-                              side: BorderSide(
-                                color: minutes == m ? p.accent : p.border,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
                               ),
-                              shape: const StadiumBorder(),
-                              labelStyle: TextStyle(
-                                fontSize: 14,
-                                color: minutes == m ? p.accent : p.muted,
+                              decoration: BoxDecoration(
+                                color: p.surface.withValues(alpha: .72),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: p.border),
                               ),
-                              onSelected: (_) {
-                                setState(() {
-                                  minutes = m;
-                                  stopwatch.reset();
-                                  stopwatch.start();
-                                  done = false;
-                                  running = true;
-                                  _phase = 0;
-                                  animation.value = 0;
-                                  animation.repeat();
-                                });
-                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.timer_outlined,
+                                    size: 14,
+                                    color: p.accent,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$minutes 分钟',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: compact ? 12 : 26),
+                        Center(
+                          child: AnimatedBuilder(
+                            animation: animation,
+                            builder: (context, _) {
+                              final breath = inhaling
+                                  ? Curves.easeInOutSine.transform(
+                                      phaseProgress,
+                                    )
+                                  : 1 -
+                                        Curves.easeInOutSine.transform(
+                                          phaseProgress,
+                                        );
+                              final scale = reduce ? 1.0 : .78 + .22 * breath;
+                              return SizedBox.square(
+                                dimension: orbSize,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    TweenAnimationBuilder<double>(
+                                      tween: Tween<double>(
+                                        begin: 0,
+                                        end: sessionProgress,
+                                      ),
+                                      duration: const Duration(seconds: 1),
+                                      curve: Curves.linear,
+                                      builder: (context, progress, _) =>
+                                          CustomPaint(
+                                            size: Size.square(orbSize),
+                                            painter: _BreathSessionRingPainter(
+                                              progress: done ? 1 : progress,
+                                              color: accent,
+                                              track: p.border.withValues(
+                                                alpha: .65,
+                                              ),
+                                              tick: p.muted.withValues(
+                                                alpha: .28,
+                                              ),
+                                            ),
+                                          ),
+                                    ),
+                                    CustomPaint(
+                                      size: Size.square(orbSize),
+                                      painter: _BreathAuraPainter(
+                                        breath: reduce ? .55 : breath,
+                                        color: accent,
+                                      ),
+                                    ),
+                                    Transform.scale(
+                                      scale: scale,
+                                      child: SizedBox.square(
+                                        dimension: orbSize * .72,
+                                        child: CustomPaint(
+                                          painter: _BreathCorePainter(
+                                            breath: reduce ? .55 : breath,
+                                            phase: phaseProgress,
+                                            color: accent,
+                                            surface: p.surface,
+                                            soft: p.soft,
+                                            border: p.border,
+                                            dark: p.dark,
+                                            active: running && !done,
+                                          ),
+                                          child: Center(
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: orbSize * .11,
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                      milliseconds: 420,
+                                                    ),
+                                                    switchInCurve:
+                                                        Curves.easeOutCubic,
+                                                    switchOutCurve:
+                                                        Curves.easeInCubic,
+                                                    transitionBuilder:
+                                                        (
+                                                          child,
+                                                          anim,
+                                                        ) => FadeTransition(
+                                                          opacity: anim,
+                                                          child: SlideTransition(
+                                                            position:
+                                                                Tween<Offset>(
+                                                                  begin:
+                                                                      const Offset(
+                                                                        0,
+                                                                        .12,
+                                                                      ),
+                                                                  end: Offset
+                                                                      .zero,
+                                                                ).animate(anim),
+                                                            child: child,
+                                                          ),
+                                                        ),
+                                                    child: Text(
+                                                      phaseTitle,
+                                                      key: ValueKey(phaseTitle),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        fontSize: 28,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        letterSpacing: 4,
+                                                        color: accent,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 9),
+                                                  Text(
+                                                    done
+                                                        ? '舒服就好'
+                                                        : !running
+                                                        ? remainText
+                                                        : '$phaseSecondsLeft 秒',
+                                                    style: TextStyle(
+                                                      fontSize: 17,
+                                                      color: p.muted,
+                                                      letterSpacing: 1,
+                                                      fontFeatures: const [
+                                                        FontFeature.tabularFigures(),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 14),
+                                                  Text(
+                                                    phaseHint,
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      height: 1.65,
+                                                      color: p.muted,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (!running && !done)
+                                      Positioned(
+                                        bottom: orbSize * .035,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: p.surface.withValues(
+                                              alpha: .8,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                            border: Border.all(color: p.border),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.touch_app_outlined,
+                                                size: 13,
+                                                color: p.accent,
+                                              ),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                elapsedSeconds == 0
+                                                    ? '准备好后，按下开始'
+                                                    : '继续时从当前节奏开始',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: p.muted,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(height: compact ? 10 : 22),
+                        Center(
+                          child: Text(
+                            done
+                                ? '这一轮呼吸已完成'
+                                : '本次 $minutes 分钟 · 还剩 $remainText',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: p.muted,
+                              letterSpacing: .3,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 22),
-                  Center(
-                    child: FilledButton.icon(
-                      onPressed: toggle,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: p.accent,
-                        foregroundColor: p.onAccent,
-                        minimumSize: const Size(0, 46),
-                        padding: const EdgeInsets.symmetric(horizontal: 30),
-                        shape: const StadiumBorder(),
-                        elevation: 0,
-                      ),
-                      icon: Icon(
-                        done
-                            ? Icons.refresh_rounded
-                            : running
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        size: 19,
-                      ),
-                      label: Text(
-                        done
-                            ? '再呼吸一会儿'
-                            : running
-                            ? '暂停引导'
-                            : '继续引导',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
+                        SizedBox(height: compact ? 10 : 22),
+                        Container(
+                          padding: EdgeInsets.fromLTRB(
+                            compact ? 12 : 18,
+                            compact ? 12 : 18,
+                            compact ? 12 : 18,
+                            compact ? 12 : 18,
+                          ),
+                          decoration: BoxDecoration(
+                            color: p.surface.withValues(alpha: .82),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: p.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: p.dark
+                                    ? Colors.black.withValues(alpha: .18)
+                                    : p.accent.withValues(alpha: .05),
+                                blurRadius: 28,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '留一点时间',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.text,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '选择这一轮的长度',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: p.muted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  for (var i = 0; i < 3; i++) ...[
+                                    if (i > 0) const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _BreathDurationButton(
+                                        label: '${[1, 3, 5][i]} 分钟',
+                                        selected: minutes == [1, 3, 5][i],
+                                        color: p.accent,
+                                        surface: p.surface,
+                                        border: p.border,
+                                        soft: p.soft,
+                                        textColor: p.muted,
+                                        onTap: () =>
+                                            chooseMinutes([1, 3, 5][i]),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  _BreathGlassButton(
+                                    icon: Icons.replay_rounded,
+                                    tooltip: '重新开始本轮',
+                                    color: p.muted,
+                                    surface: p.surface,
+                                    border: p.border,
+                                    onTap: resetCycle,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: compact ? 46 : 54,
+                                      child: FilledButton.icon(
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: p.accent,
+                                          foregroundColor: p.onAccent,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed: toggle,
+                                        icon: Icon(
+                                          done
+                                              ? Icons.refresh_rounded
+                                              : running
+                                              ? Icons.pause_rounded
+                                              : Icons.play_arrow_rounded,
+                                          size: 21,
+                                        ),
+                                        label: Text(
+                                          done
+                                              ? '再呼吸一会儿'
+                                              : running
+                                              ? '暂停引导'
+                                              : elapsedSeconds == 0
+                                              ? '开始呼吸'
+                                              : '继续引导',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                '引导结束不会关闭混音。感到不适时，请停止。',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  height: 1.6,
+                                  color: p.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '引导结束不会关闭混音。感到不适时，请停止。',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: p.muted, fontSize: 12, height: 1.6),
-                  ),
-                ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 只做按压缩放的视觉反馈，不接管点击，避免和外层 InkWell 重复触发。
+class _BreathPressScale extends StatefulWidget {
+  final Widget child;
+  final double scale;
+
+  const _BreathPressScale({required this.child, this.scale = .95});
+
+  @override
+  State<_BreathPressScale> createState() => _BreathPressScaleState();
+}
+
+class _BreathPressScaleState extends State<_BreathPressScale> {
+  bool _down = false;
+
+  void _set(bool value) {
+    if (_down == value) return;
+    setState(() => _down = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return Listener(
+      onPointerDown: (_) => _set(true),
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
+      child: AnimatedScale(
+        scale: _down && !reduce ? widget.scale : 1,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _BreathGlassButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final Color surface;
+  final Color border;
+  final VoidCallback onTap;
+
+  const _BreathGlassButton({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.surface,
+    required this.border,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BreathPressScale(
+      scale: .92,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: surface.withValues(alpha: .72),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: BorderSide(color: border),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(15),
+            onTap: onTap,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(icon, size: 21, color: color),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BreathDurationButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final Color surface;
+  final Color border;
+  final Color soft;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _BreathDurationButton({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.surface,
+    required this.border,
+    required this.soft,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BreathPressScale(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? soft : surface.withValues(alpha: .6),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: selected ? color : border),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(13),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected ? color : textColor,
+                ),
               ),
             ),
           ),
@@ -3736,4 +5287,283 @@ class _BreathingPageState extends State<BreathingPage>
       ),
     );
   }
+}
+
+class _BreathBackdropPainter extends CustomPainter {
+  final double breath;
+  final Color accent;
+  final Color background;
+  final Color soft;
+  final bool dark;
+
+  const _BreathBackdropPainter({
+    required this.breath,
+    required this.accent,
+    required this.background,
+    required this.soft,
+    required this.dark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            background,
+            Color.lerp(background, soft, dark ? .45 : .65)!,
+            background,
+          ],
+          stops: const [0, .55, 1],
+        ).createShader(rect),
+    );
+    final glow = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 80)
+      ..color = accent.withValues(alpha: dark ? .075 : .10);
+    canvas.drawCircle(
+      Offset(size.width * .24, size.height * (.25 - breath * .02)),
+      size.width * .45,
+      glow,
+    );
+    canvas.drawCircle(
+      Offset(size.width * .82, size.height * (.34 + breath * .03)),
+      size.width * .34,
+      glow..color = accent.withValues(alpha: dark ? .055 : .075),
+    );
+    final dot = Paint()..color = accent.withValues(alpha: dark ? .14 : .11);
+    for (var i = 0; i < 30; i++) {
+      final x =
+          (i * 47.0) % size.width + math.sin(breath * math.pi * 2 + i) * 9;
+      final y =
+          (i * 83.0) % size.height +
+          math.cos(breath * math.pi * 2 + i * .7) * 13;
+      canvas.drawCircle(
+        Offset(x, y),
+        i % 7 == 0 ? 1.8 : 1.1,
+        dot..color = accent.withValues(alpha: dark ? .14 : .09),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathBackdropPainter oldDelegate) =>
+      oldDelegate.breath != breath ||
+      oldDelegate.accent != accent ||
+      oldDelegate.background != background ||
+      oldDelegate.soft != soft ||
+      oldDelegate.dark != dark;
+}
+
+class _BreathSessionRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color track;
+  final Color tick;
+
+  const _BreathSessionRingPainter({
+    required this.progress,
+    required this.color,
+    required this.track,
+    required this.tick,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 5;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = track,
+    );
+    for (var i = 0; i < 72; i++) {
+      final angle = i * math.pi / 36 - math.pi / 2;
+      final start = radius - 6;
+      final end = start - (i % 6 == 0 ? 4 : 2);
+      canvas.drawLine(
+        center + Offset(math.cos(angle) * start, math.sin(angle) * start),
+        center + Offset(math.cos(angle) * end, math.sin(angle) * end),
+        Paint()
+          ..strokeWidth = 1
+          ..strokeCap = StrokeCap.round
+          ..color = tick,
+      );
+    }
+    if (progress <= .0005) return;
+    final sweep = math.pi * 2 * progress.clamp(0.0, 1.0);
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.4
+      ..shader = SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: math.pi * 3 / 2,
+        colors: [color.withValues(alpha: .35), color],
+      ).createShader(rect);
+    canvas.drawArc(rect, -math.pi / 2, sweep, false, arc);
+    final angle = -math.pi / 2 + sweep;
+    canvas.drawCircle(
+      center + Offset(math.cos(angle) * radius, math.sin(angle) * radius),
+      3.2,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathSessionRingPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.track != track ||
+      oldDelegate.tick != tick;
+}
+
+class _BreathAuraPainter extends CustomPainter {
+  final double breath;
+  final Color color;
+
+  const _BreathAuraPainter({required this.breath, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final base = size.width * .355;
+    for (var i = 0; i < 3; i++) {
+      final radius = base * (1 + i * .105 + breath * .012);
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = color.withValues(alpha: .12 - i * .022),
+      );
+    }
+    canvas.drawCircle(
+      center,
+      base * .98,
+      Paint()
+        ..color = color.withValues(alpha: .055)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathAuraPainter oldDelegate) =>
+      oldDelegate.breath != breath || oldDelegate.color != color;
+}
+
+class _BreathCorePainter extends CustomPainter {
+  final double breath;
+  final double phase;
+  final Color color;
+  final Color surface;
+  final Color soft;
+  final Color border;
+  final bool dark;
+  final bool active;
+
+  const _BreathCorePainter({
+    required this.breath,
+    required this.phase,
+    required this.color,
+    required this.surface,
+    required this.soft,
+    required this.border,
+    required this.dark,
+    required this.active,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 2;
+    canvas.drawCircle(
+      center,
+      radius * .92,
+      Paint()
+        ..color = color.withValues(alpha: .10 + breath * .05)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26),
+    );
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-.28, -.34),
+          radius: 1.15,
+          colors: [
+            Color.lerp(surface, Colors.white, dark ? .02 : .55)!,
+            Color.lerp(soft, color, dark ? .18 : .10)!,
+            Color.lerp(surface, color, dark ? .08 : .04)!,
+          ],
+          stops: const [0, .58, 1],
+        ).createShader(rect),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = border.withValues(alpha: .8),
+    );
+    for (var i = 1; i <= 2; i++) {
+      canvas.drawCircle(
+        center,
+        radius * (1 - i * .11),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .8
+          ..color = color.withValues(alpha: .08),
+      );
+    }
+    if (active) {
+      final sweep = math.pi * 2 * phase.clamp(0.0, 1.0);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius * .84),
+        -math.pi / 2,
+        sweep,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 2
+          ..color = color.withValues(alpha: .5),
+      );
+    }
+    // 安静的叶子水印，呼应品牌标识。
+    canvas.save();
+    canvas.translate(center.dx, center.dy + radius * .34);
+    canvas.scale(radius / 1024);
+    canvas.translate(-512, -512);
+    final leaf = Path()
+      ..moveTo(512, 184)
+      ..cubicTo(666, 280, 732, 424, 688, 574)
+      ..cubicTo(658, 678, 576, 752, 512, 792)
+      ..cubicTo(448, 752, 366, 678, 336, 574)
+      ..cubicTo(292, 424, 358, 280, 512, 184)
+      ..close();
+    canvas.drawPath(
+      leaf,
+      Paint()..color = color.withValues(alpha: dark ? .045 : .035),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathCorePainter oldDelegate) =>
+      oldDelegate.breath != breath ||
+      oldDelegate.phase != phase ||
+      oldDelegate.color != color ||
+      oldDelegate.active != active ||
+      oldDelegate.dark != dark;
 }

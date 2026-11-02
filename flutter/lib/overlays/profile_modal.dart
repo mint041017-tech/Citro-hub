@@ -276,7 +276,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
         ? List<int>.generate(12, (i) => i + 1)
         : List<int>.generate(31, (i) => i + 1);
     var selected = (isMonth ? month : day).clamp(1, items.length);
-    final picked = await showModalBottomSheet<int>(
+    final picked = await showCitroSheet<int>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {

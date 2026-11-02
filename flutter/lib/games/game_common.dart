@@ -519,7 +519,7 @@ Future<void> showGameLeaderboard(
   String initial = '',
   bool aiSplit = false,
 }) async {
-  await showModalBottomSheet(
+  await showCitroSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

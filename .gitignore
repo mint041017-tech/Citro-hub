@@ -69,6 +69,7 @@ capacitor/android/app/build/
 APK/Citro-v1.9.0-release.apk
 APK/Citro-v1.9.1-release.apk
 APK/Citro-v1.9.*.apk
+APK/Citro-v2.*.apk
 
 # ---------- Windows 桌面端产物（上传 OBS，不入库） ----------
 WIN/
@@ -122,3 +123,4 @@ flutter/android/.kotlin/
 flutter/android/**/build/
 flutter/.flutter-plugins
 flutter/.flutter-plugins-dependencies
+devtools/.fontcache/

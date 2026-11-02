@@ -14,7 +14,7 @@ Future<List<String>?> showIngredientLibrary(
   bool multi = true,
   List<String> selected = const [],
 }) {
-  return showModalBottomSheet<List<String>>(
+  return showCitroSheet<List<String>>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

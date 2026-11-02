@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import '../data/cards.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
+import '../widgets/shared_element.dart';
 import 'card_draw.dart';
 
 Future<void> showCardCollection(BuildContext context) {
@@ -17,13 +19,13 @@ Future<void> showCardCollection(BuildContext context) {
     barrierDismissible: true,
     barrierLabel: '关闭卡面收藏',
     barrierColor: const Color(0xCC1B1712),
-    transitionDuration: const Duration(milliseconds: 260),
+    transitionDuration: CitroMotion.modal,
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, __) {
       final curved = CurvedAnimation(
         parent: anim,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        curve: CitroMotion.easeOut,
+        reverseCurve: CitroMotion.exit,
       );
       return FadeTransition(
         opacity: curved,
@@ -135,7 +137,10 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('卡面收藏', style: context.heading(size: wide ? 26 : 21)),
+                      Text(
+                        '卡面收藏',
+                        style: context.heading(size: wide ? 26 : 21),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         '已收集 $unlocked / $total · 抽到才会点亮',
@@ -151,9 +156,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       height: 36,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [c.accent, c.accent2],
-                        ),
+                        gradient: LinearGradient(colors: [c.accent, c.accent2]),
                         borderRadius: BorderRadius.circular(999),
                         boxShadow: CitroColors.shadows.note(c),
                       ),
@@ -235,14 +238,11 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                 crossAxisSpacing: wide ? 14 : 9,
                 childAspectRatio: .63,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final card = category.cards[index];
-                  final has = owned.contains(card.id);
-                  return _CardTile(card: card, unlocked: has);
-                },
-                childCount: category.cards.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final card = category.cards[index];
+                final has = owned.contains(card.id);
+                return _CardTile(card: card, unlocked: has);
+              }, childCount: category.cards.length),
             ),
           ),
         ],
@@ -271,88 +271,109 @@ class _CardTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return GestureDetector(
-      onTap: () => unlocked
-          ? _open(context)
-          : AppToast.show(context, '抽到这张后才会点亮'),
+      onTap: () =>
+          unlocked ? _open(context) : AppToast.show(context, '抽到这张后才会点亮'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: unlocked ? c.accent.withAlpha(120) : c.line2,
+            child: CitroHero(
+              tag: CitroHero.tagOf('card', card.id),
+              enabled: unlocked,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: unlocked ? c.accent.withAlpha(120) : c.line2,
+                  ),
+                  boxShadow: unlocked ? CitroColors.shadows.note(c) : null,
                 ),
-                boxShadow: unlocked ? CitroColors.shadows.note(c) : null,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (unlocked)
-                      CardFaceImage(
-                        card: card,
-                        cacheWidth: 320,
-                        borderRadius: BorderRadius.zero,
-                      )
-                    else ...[
-                      ColorFiltered(
-                        colorFilter: const ColorFilter.matrix(<double>[
-                          .2126, .7152, .0722, 0, 0,
-                          .2126, .7152, .0722, 0, 0,
-                          .2126, .7152, .0722, 0, 0,
-                          0, 0, 0, 1, 0,
-                        ]),
-                        child: Opacity(
-                          opacity: .34,
-                          child: CardFaceImage(
-                            card: card,
-                            cacheWidth: 240,
-                            borderRadius: BorderRadius.zero,
-                          ),
-                        ),
-                      ),
-                      Container(color: const Color(0x661B1712)),
-                      Center(
-                        child: Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withAlpha(90),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withAlpha(60)),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.lock_outline_rounded,
-                              size: 16,
-                              color: Colors.white70,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (unlocked)
+                        CardFaceImage(
+                          card: card,
+                          cacheWidth: 320,
+                          borderRadius: BorderRadius.zero,
+                        )
+                      else ...[
+                        ColorFiltered(
+                          colorFilter: const ColorFilter.matrix(<double>[
+                            .2126,
+                            .7152,
+                            .0722,
+                            0,
+                            0,
+                            .2126,
+                            .7152,
+                            .0722,
+                            0,
+                            0,
+                            .2126,
+                            .7152,
+                            .0722,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            1,
+                            0,
+                          ]),
+                          child: Opacity(
+                            opacity: .34,
+                            child: CardFaceImage(
+                              card: card,
+                              cacheWidth: 240,
+                              borderRadius: BorderRadius.zero,
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                    if (unlocked)
-                      Positioned(
-                        right: 6,
-                        top: 6,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Color(0xCCF2C46B),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            size: 12,
-                            color: Color(0xFF2E2C22),
+                        Container(color: const Color(0x661B1712)),
+                        Center(
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(90),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withAlpha(60),
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.lock_outline_rounded,
+                                size: 16,
+                                color: Colors.white70,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                      ],
+                      if (unlocked)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: const BoxDecoration(
+                              color: Color(0xCCF2C46B),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              size: 12,
+                              color: Color(0xFF2E2C22),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -375,26 +396,30 @@ class _CardTile extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '关闭卡面',
-      barrierColor: const Color(0xF21B1712),
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (_, __, ___) => SizedBox.shrink(),
-      transitionBuilder: (ctx, anim, _, __) {
-        final curved = CurvedAnimation(
-          parent: anim,
-          curve: Curves.easeOutCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween(begin: .92, end: 1.0).animate(curved),
-            child: _CardZoom(card: card),
-          ),
-        );
-      },
+    // 透明 PageRoute：Hero 只在 PageRoute 之间飞行，Dialog 路由不会。
+    Navigator.of(context, rootNavigator: true).push<void>(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: const Color(0xF21B1712),
+        barrierDismissible: true,
+        transitionDuration: CitroMotion.modal,
+        reverseTransitionDuration: CitroMotion.modalReverse,
+        pageBuilder: (_, __, ___) => _CardZoom(card: card),
+        transitionsBuilder: (ctx, animation, secondary, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: CitroMotion.easeOut,
+            reverseCurve: CitroMotion.exit,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: .965, end: 1).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -408,7 +433,10 @@ class _CardZoom extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final width = math.min(size.width - 28, 620.0);
-    final height = math.min(size.height - 110, width / card.aspect.clamp(.6, .85));
+    final height = math.min(
+      size.height - 110,
+      width / card.aspect.clamp(.6, .85),
+    );
     return Material(
       type: MaterialType.transparency,
       child: Stack(
@@ -426,12 +454,15 @@ class _CardZoom extends StatelessWidget {
               child: InteractiveViewer(
                 minScale: .9,
                 maxScale: 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: CardFaceImage(
-                    card: card,
-                    cacheWidth: 1200,
-                    borderRadius: BorderRadius.zero,
+                child: CitroHero(
+                  tag: CitroHero.tagOf('card', card.id),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: CardFaceImage(
+                      card: card,
+                      cacheWidth: 1200,
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
                 ),
               ),
@@ -499,7 +530,12 @@ class CardCollectionEntry extends StatelessWidget {
     return Pressable(
       onTap: () => showCardCollection(context),
       child: Container(
-        padding: EdgeInsets.fromLTRB(16, compact ? 13 : 16, 12, compact ? 13 : 16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          compact ? 13 : 16,
+          12,
+          compact ? 13 : 16,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
@@ -536,12 +572,16 @@ class CardCollectionEntry extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        '卡面收藏',
-                        style: context.display(
-                          size: compact ? 16 : 18,
-                          weight: FontWeight.w700,
-                          color: c.ink,
+                      Flexible(
+                        child: Text(
+                          '卡面收藏',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.display(
+                            size: compact ? 16 : 18,
+                            weight: FontWeight.w700,
+                            color: c.ink,
+                          ),
                         ),
                       ),
                       if (state.cardCredits > 0) ...[
@@ -557,6 +597,7 @@ class CardCollectionEntry extends StatelessWidget {
                           ),
                           child: Text(
                             '可抽 ${state.cardCredits}',
+                            maxLines: 1,
                             style: context.body(
                               size: 8.5,
                               weight: FontWeight.w800,
@@ -595,10 +636,7 @@ class CardCollectionEntry extends StatelessWidget {
                           height: compact ? 51 : 60,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: c.surface,
-                              width: 1.4,
-                            ),
+                            border: Border.all(color: c.surface, width: 1.4),
                             boxShadow: CitroColors.shadows.paper(c),
                           ),
                           child: ClipRRect(

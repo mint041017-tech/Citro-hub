@@ -188,7 +188,6 @@ class PaperCard extends StatelessWidget {
   final Color? borderColor;
   final double radius;
   final PaperShadow shadow;
-  final double rotate;
   final Color? tapeColor;
   final double? tapeWidth;
   final double? tapeHeight;
@@ -209,7 +208,6 @@ class PaperCard extends StatelessWidget {
     this.borderColor,
     this.radius = 14,
     this.shadow = PaperShadow.paper,
-    this.rotate = 0,
     this.tapeColor,
     this.tapeWidth,
     this.tapeHeight,
@@ -267,9 +265,6 @@ class PaperCard extends StatelessWidget {
           ),
         ],
       );
-    }
-    if (rotate != 0) {
-      box = Transform.rotate(angle: rotate * math.pi / 180, child: box);
     }
     if (tapeColor != null) {
       box = Stack(
@@ -564,6 +559,10 @@ String strokeSvg(String body, {double width = 2, String color = '#000000'}) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="$color" stroke-width="$width" '
     'stroke-linecap="round" stroke-linejoin="round">$body</svg>';
 
+/// 实心图标（点赞后的小红心等），颜色由 [AppIcon] 的 color 统一着色。
+String fillSvg(String body, {String color = '#000000'}) =>
+    '<svg viewBox="0 0 24 24" fill="$color" stroke="none">$body</svg>';
+
 /// 常用路径（来源 index.html）。
 class AppIcons {
   static const home =
@@ -629,6 +628,11 @@ class AppIcons {
       '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/>';
   static const heart =
       '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z"/>';
+  static const heartFilled =
+      '<path d="M12 21.1 4.2 13.6a5.6 5.6 0 0 1 0-7.9 5.6 5.6 0 0 1 7.8 0 5.6 5.6 0 0 1 7.8 0 5.6 5.6 0 0 1 0 7.9z"/>';
+  /// 社区：带一颗小爱心的对话框，比并排小人更贴合「社区」语义。
+  static const community =
+      '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4.1-.9L3 20l1-4.3A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z"/><path d="M12 14.2s-2.8-1.6-2.8-3.3a1.7 1.7 0 0 1 2.8-1.4 1.7 1.7 0 0 1 2.8 1.4c0 1.7-2.8 3.3-2.8 3.3z"/>';
   static const hug =
       '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 11l-2 2-2-2"/>';
   static const comment =
@@ -675,11 +679,11 @@ class Pressable extends StatefulWidget {
     required this.child,
     this.onTap,
     this.onLongPress,
-    this.scale = .97,
+    this.scale = .96,
     this.borderRadius,
     this.hoverColor,
     this.hoverOverlayColor,
-    this.hoverLift = 2.5,
+    this.hoverLift = 2,
     this.hoverShadow,
   });
 
@@ -700,12 +704,14 @@ class _PressableState extends State<Pressable> {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
     // Windows 上鼠标悬停会连续触发大半径阴影重绘，是掉帧的主要来源之一。
+    // 这里不再直接取消阴影（结构突变会让悬停看起来"闪一下"），
+    // 而是保留同一条阴影、只缩小半径，四端都有稳定的悬停层次。
     final cheapHover = !kIsWeb && platform.isWindows;
-    final hoverShadow = (widget.hoverShadow ?? !kIsWeb) && !cheapHover;
+    final hoverShadow = widget.hoverShadow ?? true;
     final lift = _hover && !_down && !reduce ? -widget.hoverLift : 0.0;
     final scale = _down && !reduce
         ? widget.scale
-        : (_hover && !reduce ? 1.016 : (_focused && !reduce ? 1.016 : 1.0));
+        : (_hover && !reduce ? 1.02 : (_focused && !reduce ? 1.02 : 1.0));
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) {
@@ -752,7 +758,9 @@ class _PressableState extends State<Pressable> {
                                   ? const Color(0x66000000)
                                   : const Color(0x385A4A2C))
                             : Colors.transparent,
-                        blurRadius: _hover && !_down ? 22 : 0,
+                        blurRadius: _hover && !_down
+                            ? (cheapHover ? 12 : 22)
+                            : 0,
                         spreadRadius: _hover && !_down ? -12 : 0,
                         offset: const Offset(0, 9),
                       ),

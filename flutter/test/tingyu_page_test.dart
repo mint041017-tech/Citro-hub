@@ -23,7 +23,7 @@ void main() {
     for (final font in const [
       ('Kalam', ['assets/fonts/kalam-400-app.ttf', 'assets/fonts/kalam-700-app.ttf']),
       ('ZCOOL', ['assets/fonts/zcool-app.ttf']),
-      ('NotoSC', ['assets/fonts/noto-sc-400-app.otf', 'assets/fonts/noto-sc-700-app.otf']),
+      ('NotoSC', ['assets/fonts/noto-sc-400-app.ttf', 'assets/fonts/noto-sc-700-app.ttf']),
     ]) {
       final l = FontLoader(font.$1);
       for (final path in font.$2) {

@@ -8,8 +8,12 @@ import '../services/orientation.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../theme/motion.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
+import 'motion_widgets.dart';
 import 'paper.dart';
+import 'shared_element.dart';
 
 class CitroLayoutScope extends InheritedWidget {
   final double contentWidth;
@@ -54,17 +58,21 @@ class CitroTabletSidebar extends StatelessWidget {
     final c = context.c;
     final app = context.app;
     final avatarUrl = Api.imageUrl(app.user?.av);
-    // 仅 iPad 放大导航字号；Windows 保持原尺寸。
-    final padWide = CitroOrientation.padSize(MediaQuery.sizeOf(context));
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(right: BorderSide(color: c.line)),
+        // iPad / Windows 的侧栏用 1 物理像素的发丝分隔，和系统分栏一致。
+        border: Border(
+          right: BorderSide(
+            color: c.glassBorder,
+            width: CitroNative.hairline(context),
+          ),
+        ),
       ),
       child: PaperBackground(
         child: SafeArea(
           right: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+            padding: const EdgeInsets.all(AppSpacing.x2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -123,40 +131,51 @@ class CitroTabletSidebar extends StatelessWidget {
                       children: [
                         Text(
                           '逛一逛',
-                          style: context.body(
-                            size: padWide ? 11.5 : 10.5,
-                            weight: FontWeight.w700,
+                          // 分栏标题用系统字体 + 负字距，像 macOS/iPadOS 的 section header。
+                          style: context.ui(
+                            size: 11,
+                            weight: FontWeight.w600,
                             color: c.inkSoft,
-                            letterSpacing: 1.4,
+                            letterSpacing: .8,
                           ),
                         ),
-                        const SizedBox(height: 7),
-                        _SidebarItem(
-                          label: '首页',
-                          icon: AppIcons.home,
-                          active: index == 0,
-                          onTap: () => onChanged(0),
+                        const SizedBox(height: AppSpacing.x1),
+                        _SidebarNav(
+                          index: index,
+                          showResources: showResources,
+                          items: [
+                            _SidebarItem(
+                              label: '首页',
+                              icon: AppIcons.home,
+                              active: index == 0,
+                              showHighlight: false,
+                              onTap: () => onChanged(0),
+                            ),
+                            _SidebarItem(
+                              label: '游戏',
+                              icon: AppIcons.games,
+                              active: index == 1,
+                              showHighlight: false,
+                              onTap: () => onChanged(1),
+                            ),
+                            _SidebarItem(
+                              label: '社区',
+                              icon: AppIcons.community,
+                              active: index == 2,
+                              showHighlight: false,
+                              badge: app.unread,
+                              onTap: () => onChanged(2),
+                            ),
+                            if (showResources)
+                              _SidebarItem(
+                                label: '资源库',
+                                icon: AppIcons.library,
+                                active: index == 3,
+                                showHighlight: false,
+                                onTap: () => onChanged(3),
+                              ),
+                          ],
                         ),
-                        _SidebarItem(
-                          label: '游戏',
-                          icon: AppIcons.games,
-                          active: index == 1,
-                          onTap: () => onChanged(1),
-                        ),
-                        _SidebarItem(
-                          label: '社区',
-                          icon: AppIcons.users,
-                          active: index == 2,
-                          badge: app.unread,
-                          onTap: () => onChanged(2),
-                        ),
-                        if (showResources)
-                          _SidebarItem(
-                            label: '资源库',
-                            icon: AppIcons.library,
-                            active: index == 3,
-                            onTap: () => onChanged(3),
-                          ),
                         _SidebarItem(
                           label: '全站搜索',
                           icon: AppIcons.search,
@@ -167,14 +186,14 @@ class CitroTabletSidebar extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           '我的 Citro',
-                          style: context.body(
-                            size: padWide ? 11.5 : 10.5,
-                            weight: FontWeight.w700,
+                          style: context.ui(
+                            size: 11,
+                            weight: FontWeight.w600,
                             color: c.inkSoft,
-                            letterSpacing: 1.4,
+                            letterSpacing: .8,
                           ),
                         ),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: AppSpacing.x1),
                         _SidebarItem(
                           label: '食谱日记',
                           icon: AppIcons.fork,
@@ -195,60 +214,65 @@ class CitroTabletSidebar extends StatelessWidget {
                 Pressable(
                   onTap: () => openMePage(context),
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+                    padding: const EdgeInsets.all(AppSpacing.x1 + 4),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.card,
+                      ),
                       border: Border.all(color: c.line),
                       boxShadow: CitroColors.shadows.paper(c),
                     ),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(11),
-                          child: SizedBox(
-                            width: 38,
-                            height: 38,
-                            child: avatarUrl.isEmpty
-                                ? ColoredBox(
-                                    color: app.loggedIn ? c.hl : c.surface,
-                                    child: Center(
-                                      child: app.loggedIn
-                                          ? Text(
-                                              app.user!.name.isEmpty
-                                                  ? '友'
-                                                  : app.user!.name[0],
-                                              style: context.display(
-                                                size: 16,
-                                                weight: FontWeight.w700,
-                                                color: c.accentInk,
-                                              ),
-                                            )
-                                          : AppIcon(
-                                              strokeSvg(
-                                                AppIcons.user,
-                                                width: 2,
-                                              ),
-                                              size: 18,
-                                              color: c.ink2,
-                                            ),
-                                    ),
-                                  )
-                                : Image.network(
-                                    avatarUrl,
-                                    fit: BoxFit.cover,
-                                    cacheWidth: 114,
-                                    errorBuilder: (_, _, _) => ColoredBox(
-                                      color: c.surface,
+                        CitroHero(
+                          tag: CitroHero.tagOf('profile', 'me'),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: SizedBox(
+                              width: 38,
+                              height: 38,
+                              child: avatarUrl.isEmpty
+                                  ? ColoredBox(
+                                      color: app.loggedIn ? c.hl : c.surface,
                                       child: Center(
-                                        child: AppIcon(
-                                          strokeSvg(AppIcons.user, width: 2),
-                                          size: 18,
-                                          color: c.ink2,
+                                        child: app.loggedIn
+                                            ? Text(
+                                                app.user!.name.isEmpty
+                                                    ? '友'
+                                                    : app.user!.name[0],
+                                                style: context.display(
+                                                  size: 16,
+                                                  weight: FontWeight.w700,
+                                                  color: c.accentInk,
+                                                ),
+                                              )
+                                            : AppIcon(
+                                                strokeSvg(
+                                                  AppIcons.user,
+                                                  width: 2,
+                                                ),
+                                                size: 18,
+                                                color: c.ink2,
+                                              ),
+                                      ),
+                                    )
+                                  : Image.network(
+                                      avatarUrl,
+                                      fit: BoxFit.cover,
+                                      cacheWidth: 114,
+                                      errorBuilder: (_, _, _) => ColoredBox(
+                                        color: c.surface,
+                                        child: Center(
+                                          child: AppIcon(
+                                            strokeSvg(AppIcons.user, width: 2),
+                                            size: 18,
+                                            color: c.ink2,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 9),
@@ -344,7 +368,7 @@ class CitroDuoRightRail extends StatelessWidget {
                       ),
                       CitroDuoRailItem(
                         label: '社区',
-                        icon: AppIcons.users,
+                        icon: AppIcons.community,
                         active: index == 2,
                         badge: app.unread,
                         onTap: () => onChanged(2),
@@ -369,54 +393,57 @@ class CitroDuoRightRail extends StatelessWidget {
               const SizedBox(height: 8),
               Pressable(
                 onTap: () => Navigator.of(context).pushNamed('/me'),
-                child: Container(
-                  key: const Key('duo-rail-avatar'),
-                  width: 44,
-                  height: 44,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: app.loggedIn ? c.hl : c.surface2,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: c.line),
-                  ),
-                  child: avatarUrl.isEmpty
-                      ? Center(
-                          child: app.loggedIn
-                              ? Text(
-                                  app.user!.name.isNotEmpty
-                                      ? app.user!.name[0]
-                                      : '友',
-                                  style: context.display(
-                                    size: 18,
-                                    weight: FontWeight.w700,
-                                    color: c.accentInk,
+                child: CitroHero(
+                  tag: CitroHero.tagOf('profile', 'me'),
+                  child: Container(
+                    key: const Key('duo-rail-avatar'),
+                    width: 44,
+                    height: 44,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: app.loggedIn ? c.hl : c.surface2,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: c.line),
+                    ),
+                    child: avatarUrl.isEmpty
+                        ? Center(
+                            child: app.loggedIn
+                                ? Text(
+                                    app.user!.name.isNotEmpty
+                                        ? app.user!.name[0]
+                                        : '友',
+                                    style: context.display(
+                                      size: 18,
+                                      weight: FontWeight.w700,
+                                      color: c.accentInk,
+                                    ),
+                                  )
+                                : AppIcon(
+                                    strokeSvg(AppIcons.user, width: 2),
+                                    size: 20,
+                                    color: c.ink2,
                                   ),
-                                )
-                              : AppIcon(
-                                  strokeSvg(AppIcons.user, width: 2),
-                                  size: 20,
-                                  color: c.ink2,
+                          )
+                        : Image.network(
+                            avatarUrl,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            cacheWidth: 132,
+                            errorBuilder: (_, _, _) => Center(
+                              child: Text(
+                                app.loggedIn && app.user!.name.isNotEmpty
+                                    ? app.user!.name[0]
+                                    : '友',
+                                style: context.display(
+                                  size: 18,
+                                  weight: FontWeight.w700,
+                                  color: c.accentInk,
                                 ),
-                        )
-                      : Image.network(
-                          avatarUrl,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          cacheWidth: 132,
-                          errorBuilder: (_, _, _) => Center(
-                            child: Text(
-                              app.loggedIn && app.user!.name.isNotEmpty
-                                  ? app.user!.name[0]
-                                  : '友',
-                              style: context.display(
-                                size: 18,
-                                weight: FontWeight.w700,
-                                color: c.accentInk,
                               ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ],
@@ -602,10 +629,12 @@ class CitroDuoRailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final reduce = CitroMotion.reduced(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Pressable(
         onTap: onTap,
+        hoverLift: 0,
         child: SizedBox(
           height: 58,
           child: Column(
@@ -615,7 +644,10 @@ class CitroDuoRailItem extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
+                    duration: reduce
+                        ? Duration.zero
+                        : CitroMotion.indicatorLength,
+                    curve: CitroMotion.emphasized,
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
@@ -628,10 +660,15 @@ class CitroDuoRailItem extends StatelessWidget {
                       ),
                     ),
                     child: Center(
-                      child: AppIcon(
-                        strokeSvg(icon, width: 2),
-                        size: 22,
-                        color: active ? c.accentInk : c.ink2,
+                      child: AnimatedScale(
+                        scale: active ? 1.06 : 1,
+                        duration: reduce ? Duration.zero : CitroMotion.press,
+                        curve: CitroMotion.easeOut,
+                        child: AppIcon(
+                          strokeSvg(icon, width: 2),
+                          size: 22,
+                          color: active ? c.accentInk : c.ink2,
+                        ),
                       ),
                     ),
                   ),
@@ -639,24 +676,26 @@ class CitroDuoRailItem extends StatelessWidget {
                     Positioned(
                       right: -9,
                       top: -5,
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          color: c.accent,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Center(
-                          child: Text(
-                            badge > 99 ? '99+' : '$badge',
-                            style: context.body(
-                              size: 8,
-                              weight: FontWeight.w800,
-                              color: const Color(0xFF2E2C22),
-                              height: 1,
+                      child: CitroPop(
+                        child: Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 14,
+                            minHeight: 14,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: c.accent,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Center(
+                            child: Text(
+                              badge > 99 ? '99+' : '$badge',
+                              style: context.body(
+                                size: 8,
+                                weight: FontWeight.w800,
+                                color: const Color(0xFF2E2C22),
+                                height: 1,
+                              ),
                             ),
                           ),
                         ),
@@ -665,15 +704,18 @@ class CitroDuoRailItem extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(
-                  size: 10.5,
-                  weight: FontWeight.w700,
+              AnimatedDefaultTextStyle(
+                duration: reduce ? Duration.zero : CitroMotion.hover,
+                curve: CitroMotion.easeColor,
+                style: context.hand(
+                  size: 11.5,
                   color: active ? c.accentInk : c.ink2,
                   height: 1.1,
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -684,12 +726,59 @@ class CitroDuoRailItem extends StatelessWidget {
   }
 }
 
+class _SidebarNav extends StatelessWidget {
+  final int index;
+  final bool showResources;
+  final List<Widget> items;
+
+  /// 与 `_SidebarItem` 的高度一致：48 + 8 间距（8pt 栅格）。
+  static const double _itemExtent = AppSpacing.x6 + AppSpacing.x1;
+
+  const _SidebarNav({
+    required this.index,
+    required this.showResources,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final count = showResources ? 4 : 3;
+    final active = index.clamp(0, count - 1);
+    final reduce = CitroMotion.reduced(context);
+    return Stack(
+      children: [
+        // 共享高亮：整块纸片在导航项之间滑动，取代逐项背景渐变。
+        AnimatedPositioned(
+          left: 0,
+          right: 0,
+          top: active * _itemExtent,
+          height: AppSpacing.x6,
+          duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
+          curve: CitroMotion.emphasized,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.hl,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.accent.withAlpha(110)),
+              ),
+            ),
+          ),
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: items),
+      ],
+    );
+  }
+}
+
 class _SidebarItem extends StatelessWidget {
   final String label;
   final String icon;
   final bool active;
   final int badge;
   final VoidCallback onTap;
+  final bool showHighlight;
 
   const _SidebarItem({
     required this.label,
@@ -697,86 +786,114 @@ class _SidebarItem extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.badge = 0,
+    this.showHighlight = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final large = CitroOrientation.padSize(MediaQuery.sizeOf(context));
+    final reduce = CitroMotion.reduced(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: AppSpacing.x1),
       child: Pressable(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: active ? c.hl : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: active ? c.accent.withAlpha(110) : Colors.transparent,
-            ),
-          ),
+          duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
+          curve: CitroMotion.emphasized,
+          height: AppSpacing.x6,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x1 + 4),
+          decoration: showHighlight
+              ? BoxDecoration(
+                  color: active ? c.hl : Colors.transparent,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                  border: Border.all(
+                    color: active
+                        ? c.accent.withAlpha(110)
+                        : Colors.transparent,
+                  ),
+                )
+              : null,
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: reduce ? Duration.zero : CitroMotion.hover,
+                curve: CitroMotion.easeColor,
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
                   color: active ? c.accent : c.surface2,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(AppSpacing.x1),
                   border: Border.all(
                     color: active ? c.accent : c.line.withAlpha(180),
                   ),
                 ),
                 child: Center(
-                  child: AppIcon(
-                    strokeSvg(icon, width: 2),
-                    size: 17,
-                    color: active ? const Color(0xFF2E2C22) : c.ink2,
+                  child: AnimatedScale(
+                    scale: active ? 1.06 : 1,
+                    duration: reduce ? Duration.zero : CitroMotion.press,
+                    curve: CitroMotion.easeOut,
+                    child: AppIcon(
+                      strokeSvg(icon, width: 2),
+                      size: 17,
+                      color: active ? const Color(0xFF2E2C22) : c.ink2,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.x1 + 4),
               Expanded(
-                child: Text(
-                  label,
-                  style: context.body(
-                    size: large ? 15 : 13.5,
-                    weight: FontWeight.w700,
+                child: AnimatedDefaultTextStyle(
+                  duration: reduce ? Duration.zero : CitroMotion.hover,
+                  curve: CitroMotion.easeColor,
+                  style: context.hand(
+                    size: large ? 17 : 16,
                     color: active ? c.accentInk : c.ink,
                   ),
+                  child: Text(label),
                 ),
               ),
               if (badge > 0)
-                Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 20,
-                    minHeight: 20,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    badge > 99 ? '99+' : '$badge',
-                    style: context.body(
-                      size: 9,
-                      weight: FontWeight.w800,
-                      color: const Color(0xFF2E2C22),
+                CitroPop(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: c.accent,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      badge > 99 ? '99+' : '$badge',
+                      style: context.ui(
+                        size: 10,
+                        weight: FontWeight.w600,
+                        color: const Color(0xFF2E2C22),
+                        letterSpacing: 0,
+                      ),
                     ),
                   ),
                 )
-              else if (active)
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    shape: BoxShape.circle,
+              else
+                AnimatedScale(
+                  scale: active ? 1 : .55,
+                  duration: reduce ? Duration.zero : CitroMotion.press,
+                  curve: CitroMotion.settle,
+                  child: AnimatedOpacity(
+                    opacity: active ? 1 : 0,
+                    duration: reduce ? Duration.zero : CitroMotion.press,
+                    curve: CitroMotion.easeColor,
+                    child: Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: c.accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
                 ),
             ],

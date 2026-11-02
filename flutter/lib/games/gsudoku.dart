@@ -169,8 +169,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         (mode.isOverlap ? mode.overlapCount * 120 : 0);
   }
 
-  String get _scoreKey =>
-      'sudoku:${_mode!.rankKey(_difficulty)}';
+  String get _scoreKey => 'sudoku:${_mode!.rankKey(_difficulty)}';
 
   String get _modeLabel =>
       _mode!.variant == SudokuVariant.classic ? '经典九宫' : _mode!.title;
@@ -261,11 +260,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         final seed = widget.initialSeed != null
             ? widget.initialSeed! + attempt
             : math.Random().nextInt(1 << 31);
-        puzzle = await SudokuEngine.generateAsync(
-          mode,
-          difficulty,
-          seed: seed,
-        );
+        puzzle = await SudokuEngine.generateAsync(mode, difficulty, seed: seed);
         if (!mounted || _mode != mode || _difficulty != difficulty) return;
         if (puzzle.difficultyMet) break;
       }
@@ -277,10 +272,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         _puzzle = generated;
         _board = List<int>.from(generated.givens);
         _given = [for (final v in generated.givens) v != 0];
-        _notes = List<Set<int>>.generate(
-          generated.cellCount,
-          (_) => <int>{},
-        );
+        _notes = List<Set<int>>.generate(generated.cellCount, (_) => <int>{});
         _conflicts = SudokuEngine.conflicts(generated, _board);
         _history.clear();
         _selected = _keyboardEnabled ? _firstEmptyCell() : -1;
@@ -292,7 +284,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         _over = false;
         _win = false;
         _roundCounted = false;
-          _loading = false;
+        _loading = false;
         _error = null;
         _layer = 0;
         _focusGrid = generated.variant == SudokuVariant.overlap ? 0 : -1;
@@ -615,9 +607,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
 
   void _changeCubeFaceTo(SudokuCubeFace face) {
     final puzzle = _puzzle;
-    if (puzzle == null ||
-        puzzle.cubeFaces.isEmpty ||
-        face == _cubeFace) {
+    if (puzzle == null || puzzle.cubeFaces.isEmpty || face == _cubeFace) {
       return;
     }
     final refs = puzzle.cubeRefsOf(_selected);
@@ -971,8 +961,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       }
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.pageDown ||
-        key == LogicalKeyboardKey.tab) {
+    if (key == LogicalKeyboardKey.pageDown || key == LogicalKeyboardKey.tab) {
       if (_puzzle!.isCube3d && _puzzle!.cubeFaces.isNotEmpty) {
         _changeCubeFace(1);
       } else if (_puzzle!.isCube3d) {
@@ -1031,13 +1020,24 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   @override
   Widget build(BuildContext context) {
     final mode = _mode;
-    if (mode == null) return _buildModeSelect(context);
-    if (_puzzle == null) return _buildLoadingShell(context);
-    return Focus(
-      focusNode: _keyFocus,
-      autofocus: _keyboardEnabled,
-      onKeyEvent: _onKey,
-      child: _buildGameShell(context),
+    final content = mode == null
+        ? _buildModeSelect(context)
+        : (_puzzle == null
+              ? _buildLoadingShell(context)
+              : Focus(
+                  focusNode: _keyFocus,
+                  autofocus: _keyboardEnabled,
+                  onKeyEvent: _onKey,
+                  child: _buildGameShell(context),
+                ));
+    // 游戏进行中，系统返回先回到模式选择；只有模式页才退出数独。
+    return PopScope(
+      canPop: mode == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        unawaited(_backToModes());
+      },
+      child: content,
     );
   }
 
@@ -1079,9 +1079,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     final mode = _mode!;
     final puzzle = _puzzle!;
     final bestScore = context.app.localBest(_scoreKey);
-    final bestSeconds = bestScore > 0
-        ? math.max(1, _baseScore - bestScore)
-        : 0;
+    final bestSeconds = bestScore > 0 ? math.max(1, _baseScore - bestScore) : 0;
     final above = <Widget>[
       _ModeBar(
         mode: mode,
@@ -1100,8 +1098,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           flat: _cubeFlat,
           onChanged: (value) => setState(() => _cubeFlat = value),
         ),
-      ]
-      else if (puzzle.isCube3d) ...[
+      ] else if (puzzle.isCube3d) ...[
         _LayerTabs(
           layer: _layer,
           layers: puzzle.layers,
@@ -1197,8 +1194,13 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         final boardMax = duoShort
             ? math.max(240.0, media.height - 386)
             : tablet
-            ? (puzzle.variant == SudokuVariant.overlap ? 600.0 : (kIsWeb ? 500.0 : 520.0))
-            : math.min(screenW * 0.92, puzzle.variant == SudokuVariant.overlap ? 520.0 : 470.0);
+            ? (puzzle.variant == SudokuVariant.overlap
+                  ? 600.0
+                  : (kIsWeb ? 500.0 : 520.0))
+            : math.min(
+                screenW * 0.92,
+                puzzle.variant == SudokuVariant.overlap ? 520.0 : 470.0,
+              );
         final boardW = math.min(contentW, boardMax);
         final boardH = boardW * puzzle.rows / puzzle.cols;
         final stage = SizedBox(
@@ -1253,11 +1255,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  stage,
-                  const SizedBox(width: 20),
-                  pad,
-                ],
+                children: [stage, const SizedBox(width: 20), pad],
               ),
               const SizedBox(height: 8),
               legend,
@@ -1302,9 +1300,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       contentW,
       tablet ? 500.0 : math.min(screenW * .94, 470.0),
     );
-    final boardH = _cubeFlat
-        ? side
-        : SudokuCubeView.heightForWidth(side);
+    final boardH = _cubeFlat ? side : SudokuCubeView.heightForWidth(side);
     final stage = SizedBox(
       width: side,
       height: boardH,
@@ -1467,22 +1463,14 @@ class _ModeBar extends StatelessWidget {
                 gameIcon(GameIcons.arrowLeft, size: 11, color: c.inkSoft),
                 Text(
                   '换',
-                  style: context.body(
-                    size: 10,
-                    color: c.inkSoft,
-                    height: 1.2,
-                  ),
+                  style: context.body(size: 10, color: c.inkSoft, height: 1.2),
                 ),
               ],
             ),
           ),
         ),
         if (mode.difficulties.length > 1)
-          _DiffTabs(
-            mode: mode,
-            value: difficulty,
-            onChanged: onDifficulty,
-          )
+          _DiffTabs(mode: mode, value: difficulty, onChanged: onDifficulty)
         else
           Container(
             height: 36,
@@ -1670,11 +1658,7 @@ class _CubeFaceTabs extends StatelessWidget {
     );
   }
 
-  Widget _cubeChip(
-    BuildContext context,
-    CitroColors c,
-    SudokuCubeFace item,
-  ) {
+  Widget _cubeChip(BuildContext context, CitroColors c, SudokuCubeFace item) {
     final on = item == face;
     final label = switch (item) {
       SudokuCubeFace.top => '顶面',
@@ -1812,9 +1796,7 @@ class _LayerChip extends StatelessWidget {
           color: selected ? c.accent : c.surface2,
           borderRadius: BorderRadius.circular(9),
           border: Border.all(
-            color: bad
-                ? c.stamp
-                : (selected ? c.accent : c.line2),
+            color: bad ? c.stamp : (selected ? c.accent : c.line2),
             width: bad ? 1.6 : 1,
           ),
         ),
@@ -2101,10 +2083,7 @@ class _DifficultyNotice extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
-        color: Color.alphaBlend(
-          c.stamp.withValues(alpha: .08),
-          c.surface2,
-        ),
+        color: Color.alphaBlend(c.stamp.withValues(alpha: .08), c.surface2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: c.stamp.withValues(alpha: .38)),
       ),
@@ -2115,11 +2094,7 @@ class _DifficultyNotice extends StatelessWidget {
           Expanded(
             child: Text(
               '本局实际评级低于标称档（已自动重试 3 次）。点「新游戏」可再换一局。',
-              style: context.body(
-                size: 10.5,
-                color: c.ink2,
-                height: 1.5,
-              ),
+              style: context.body(size: 10.5, color: c.ink2, height: 1.5),
             ),
           ),
         ],
@@ -2151,11 +2126,7 @@ class _LargeBoardNotice extends StatelessWidget {
           Expanded(
             child: Text(
               '手机屏幕较小，建议使用 iPad / 桌面端 / 网页端游玩；可双指放大。',
-              style: context.body(
-                size: 10.5,
-                color: c.accentInk,
-                height: 1.5,
-              ),
+              style: context.body(size: 10.5, color: c.accentInk, height: 1.5),
             ),
           ),
           GestureDetector(
@@ -2435,18 +2406,19 @@ class _Legend extends StatelessWidget {
       SudokuVariant.classic => '每行、每列、每个 3×3 宫都填 1–9，且不重复。',
       SudokuVariant.jigsaw => '每局宫形不同；每行、每列、每个异形宫都填 1–9。',
       SudokuVariant.snowflake => '雪花形异形宫；每行、每列、每个宫都填 1–9。',
-      SudokuVariant.overlap => mode.key == 'windmill'
-          ? '五盘风车式错位，中心盘与每盘共享 3×6 同数；点盘号切换配色，双指可放大。'
-          : '共享格同数；每一盘仍是完整九宫。点盘号切换配色，双指可放大。',
-      SudokuVariant.evenOdd => parityComplete
-          ? '圆形格必须填奇数，方形格必须填偶数。'
-          : '圆形=奇数，方形=偶数；未标记格不限奇偶。',
+      SudokuVariant.overlap =>
+        mode.key == 'windmill'
+            ? '五盘风车式错位，中心盘与每盘共享 3×6 同数；点盘号切换配色，双指可放大。'
+            : '共享格同数；每一盘仍是完整九宫。点盘号切换配色，双指可放大。',
+      SudokuVariant.evenOdd =>
+        parityComplete ? '圆形格必须填奇数，方形格必须填偶数。' : '圆形=奇数，方形=偶数；未标记格不限奇偶。',
       SudokuVariant.diagonal => '两条主对角线也必须是 1–9，且不重复。',
       SudokuVariant.inequality => '箭头由小数指向大数，相邻格必须满足大小关系。',
       SudokuVariant.killer => '浅色笼内数字不重复，和见左上角。',
-      SudokuVariant.cube3d => puzzle.cubeFaces.isNotEmpty
-          ? '顶面、左面、右面各为九宫；共享边同数。立体视图可拖动旋转，右上角复位。'
-          : '每层是九宫数独；同一行/列的纵向 9 格也必须是 1–9。',
+      SudokuVariant.cube3d =>
+        puzzle.cubeFaces.isNotEmpty
+            ? '顶面、左面、右面各为九宫；共享边同数。立体视图可拖动旋转，右上角复位。'
+            : '每层是九宫数独；同一行/列的纵向 9 格也必须是 1–9。',
     };
     return Container(
       width: double.infinity,
@@ -2464,11 +2436,7 @@ class _Legend extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: context.body(
-                size: 10.5,
-                color: c.inkSoft,
-                height: 1.55,
-              ),
+              style: context.body(size: 10.5, color: c.inkSoft, height: 1.55),
             ),
           ),
         ],
@@ -2520,48 +2488,48 @@ class _BoardOverlay extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: c.line),
           ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AppFonts.zcool,
+                  fontFamilyFallback: AppFonts.bodyFallback,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w400,
+                  height: 1.3,
+                  letterSpacing: 1.4,
+                  color: fail ? c.stamp : c.mintInk,
+                ),
+              ),
+              if (description.isNotEmpty) ...[
+                const SizedBox(height: 7),
                 Text(
-                  title,
+                  description,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: AppFonts.zcool,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
-                    letterSpacing: 1.4,
-                    color: fail ? c.stamp : c.mintInk,
+                    fontFamily: AppFonts.noto,
+                    fontSize: 12,
+                    color: c.ink2,
+                    height: 1.6,
                   ),
-                ),
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 7),
-                  Text(
-                    description,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontSize: 12,
-                      color: c.ink2,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                _ToolBtn(
-                  label: action,
-                  icon: GameIcons.reset,
-                  primary: true,
-                  onTap: onAction,
                 ),
               ],
-            ),
+              const SizedBox(height: 12),
+              _ToolBtn(
+                label: action,
+                icon: GameIcons.reset,
+                primary: true,
+                onTap: onAction,
+              ),
+            ],
           ),
         ),
+      ),
     );
     if (!solid) return card;
     return Container(
@@ -2602,10 +2570,7 @@ class _LoadingPanel extends StatelessWidget {
             SizedBox(
               width: 34,
               height: 34,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: c.accent,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 3, color: c.accent),
             ),
             const SizedBox(height: 14),
             Text(

@@ -14,7 +14,7 @@ class Haptics {
   static Future<void> breath() =>
       _trigger('breath', HapticFeedback.lightImpact);
 
-  static Future<void> done() => _trigger('done', HapticFeedback.vibrate);
+  static Future<void> done() => _trigger('done', HapticFeedback.mediumImpact);
 
   static Future<void> _trigger(
     String kind,

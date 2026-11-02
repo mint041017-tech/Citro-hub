@@ -4,6 +4,9 @@ import 'package:flutter/widgets.dart';
 class CitroDesktopShell {
   static bool get enabled => false;
 
+  /// 非桌面端没有悬浮窗控。
+  static const double windowControlsWidth = 0;
+
   static Future<void> init() async {}
 
   static Widget wrap(BuildContext context, Widget child) => child;

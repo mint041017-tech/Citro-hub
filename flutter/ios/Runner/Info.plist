@@ -79,6 +79,8 @@
 	<string>用于拍摄头像、帖子配图与食谱照片。</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>用于录制社区语音消息和语音输入。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>用于把你说的话转成文字，填入与 CiCi 的对话。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于选择头像、帖子配图与食谱照片。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

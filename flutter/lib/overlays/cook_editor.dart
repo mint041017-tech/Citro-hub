@@ -5,9 +5,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
+import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/image_store.dart';
 import '../services/media.dart';
+import '../services/recipe_ai.dart';
 import '../services/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -19,7 +21,7 @@ import '../widgets/paper.dart';
 import 'ingredient_library.dart';
 
 Future<Recipe?> showCookEditor(BuildContext context, Recipe? initial) async {
-  return showModalBottomSheet<Recipe>(
+  return showCitroSheet<Recipe>(
     context: context,
     isScrollControlled: true,
     isDismissible: false,
@@ -276,6 +278,7 @@ class _CookEditorState extends State<_CookEditor> {
   List<_StepRow> steps = [];
   int step = 1;
   bool saving = false;
+  bool _aiCreating = false;
   String? error;
   Uint8List? coverPreview;
   final ScrollController _scroll = ScrollController();
@@ -368,9 +371,9 @@ class _CookEditorState extends State<_CookEditor> {
         quality: 92,
       );
       if (bytes == null || !mounted) return;
-      final cropped = await showDialog<Uint8List>(
-        context: context,
-        barrierDismissible: false,
+      final cropped = await showCitroDialog<Uint8List>(
+        context,
+        dismissible: false,
         builder: (_) => _CoverCropDialog(bytes: bytes),
       );
       if (cropped == null || !mounted) return;
@@ -420,7 +423,7 @@ class _CookEditorState extends State<_CookEditor> {
   Future<int?> _pickMinutes(String title, int initial, {int max = 300}) async {
     var current = initial.clamp(0, max).toInt();
     final controller = FixedExtentScrollController(initialItem: current);
-    final result = await showModalBottomSheet<int>(
+    final result = await showCitroSheet<int>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -609,15 +612,11 @@ class _CookEditorState extends State<_CookEditor> {
     try {
       final saved = await Api.saveRecipe(r);
       if (!mounted) return;
-      final cardReward =
-          widget.initial == null && r.visibility == 'public'
+      final cardReward = widget.initial == null && r.visibility == 'public'
           ? await context.app.grantRecipeCardDraw()
           : false;
       if (!mounted) return;
-      AppToast.show(
-        context,
-        cardReward ? '食谱已保存 · 获得一次卡面抽卡机会' : '食谱已保存',
-      );
+      AppToast.show(context, cardReward ? '食谱已保存 · 获得一次卡面抽卡机会' : '食谱已保存');
       Navigator.of(context).pop(saved);
     } on Exception catch (e) {
       if (mounted)
@@ -938,6 +937,132 @@ class _CookEditorState extends State<_CookEditor> {
     );
   }
 
+  Widget _aiQuickCard(CitroColors c) {
+    return Material(
+      color: c.accent.withAlpha(c.dark ? 34 : 22),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _aiCreating ? null : _openAiQuick,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: c.accent.withAlpha(c.dark ? 64 : 40),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: _aiCreating
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.8,
+                            color: c.accentInk,
+                          ),
+                        )
+                      : Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 19,
+                          color: c.accentInk,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _aiCreating ? 'CiCi 正在起草…' : '让 CiCi 帮我写',
+                      style: context.body(
+                        size: 13.5,
+                        weight: FontWeight.w600,
+                        color: c.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '说说冰箱里有什么，AI 自动起草菜名、食材和做法',
+                      style: context.body(
+                        size: 10.5,
+                        color: c.inkSoft,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: c.accentInk),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openAiQuick() async {
+    if (_aiCreating) return;
+    final request = await showCitroDialog<String>(
+      context,
+      builder: (ctx) => const _AiRecipePromptDialog(),
+    );
+    if (request == null || request.trim().isEmpty || !mounted) return;
+    setState(() => _aiCreating = true);
+    try {
+      final draft = await RecipeAi.generate(request);
+      if (!mounted) return;
+      _applyDraft(draft);
+      AppToast.show(context, 'AI 已起草，选好封面就能保存');
+    } on AiException catch (e) {
+      if (mounted) AppToast.show(context, e.message);
+    } catch (_) {
+      if (mounted) AppToast.show(context, 'AI 暂时不可用，先手动写吧');
+    } finally {
+      if (mounted) setState(() => _aiCreating = false);
+    }
+  }
+
+  void _applyDraft(RecipeDraft draft) {
+    name.text = draft.name;
+    emoji = draft.emoji;
+    cuisine = draft.cuisine;
+    dishType = draft.dishType;
+    prepMin = draft.prepMin;
+    cookMin = draft.cookMin;
+    servingsValue = draft.servings;
+    calories.text = draft.calories > 0 ? draft.calories.toString() : '';
+    note.text = draft.note;
+    final extras = draft.tags.where(
+      (tag) => tag.isNotEmpty && tag != draft.cuisine && tag != draft.dishType,
+    );
+    tags.text = extras.join('，');
+    for (final row in ingredients) {
+      row.dispose();
+    }
+    ingredients = draft.ingredients
+        .map((item) => _IngRow.fromAmount(item.group, item.name, item.amount))
+        .toList();
+    for (final group in ['main', 'season']) {
+      if (!ingredients.any((row) => row.group == group)) {
+        ingredients.add(_IngRow(group: group));
+      }
+    }
+    for (final row in steps) {
+      row.dispose();
+    }
+    steps = draft.steps
+        .map((item) => _StepRow(t: item.text, tm: item.timer))
+        .toList();
+    if (steps.isEmpty) steps.add(_StepRow());
+    setState(() {});
+    _goStep(1);
+  }
+
   Widget _panel(CitroColors c) {
     if (step == 1) return _stepInfo(c);
     if (step == 2) return _stepIngredients(c);
@@ -964,6 +1089,10 @@ class _CookEditorState extends State<_CookEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.initial == null) ...[
+          _aiQuickCard(c),
+          const SizedBox(height: 14),
+        ],
         _panelHead(c, '这道菜是什么？', '封面、菜名、菜系、类型和分量是它的身份证；带 * 的必须填。'),
         _label(c, '封面', required: true),
         Center(child: _coverPicker(c)),
@@ -1137,7 +1266,7 @@ class _CookEditorState extends State<_CookEditor> {
   }
 
   Future<void> _pickServings() async {
-    final picked = await showModalBottomSheet<int>(
+    final picked = await showCitroSheet<int>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -1504,7 +1633,7 @@ class _CookEditorState extends State<_CookEditor> {
   Future<void> _pickUnit(_IngRow row) async {
     FocusScope.of(context).unfocus();
     final options = [..._cookUnits, ''];
-    final picked = await showModalBottomSheet<String>(
+    final picked = await showCitroSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -2036,6 +2165,116 @@ class _CookEditorState extends State<_CookEditor> {
             color: c.stamp,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AiRecipePromptDialog extends StatefulWidget {
+  const _AiRecipePromptDialog();
+
+  @override
+  State<_AiRecipePromptDialog> createState() => _AiRecipePromptDialogState();
+}
+
+class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
+  final TextEditingController _text = TextEditingController();
+  static const _examples = [
+    '冰箱里只有鸡蛋、番茄和面条',
+    '想做一道快手的两人晚餐',
+    '低卡高蛋白便当',
+    '只用空气炸锅能做的小吃',
+  ];
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _text.text.trim();
+    if (value.isEmpty) return;
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return PaperDialog(
+      showClose: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 20, color: c.accentInk),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('AI 快速创建食谱', style: context.heading(size: 19)),
+              ),
+              IconButton(
+                tooltip: '关闭',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          Text(
+            '说说现有的食材、口味或想要的做法，CiCi 会先写一版草稿，你再改。',
+            style: context.body(size: 11.5, color: c.inkSoft, height: 1.6),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _text,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 4,
+            textInputAction: TextInputAction.newline,
+            style: context.body(size: 13, height: 1.5),
+            decoration: InputDecoration(
+              hintText: '例如：冰箱里有鸡蛋、番茄和半颗洋葱，想做两人份的晚饭',
+              hintStyle: context.body(size: 12, color: c.inkSoft),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final example in _examples)
+                ActionChip(
+                  label: Text(
+                    example,
+                    style: context.body(size: 11, color: c.inkSoft),
+                  ),
+                  backgroundColor: c.surface2,
+                  side: BorderSide(color: c.line2),
+                  onPressed: () => setState(() => _text.text = example),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AccentButton(
+                  text: '取消',
+                  outlined: true,
+                  height: 44,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: AccentButton(text: '生成草稿', height: 44, onTap: _submit),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -2726,7 +2965,7 @@ Widget _dateBox(
 }
 
 Future<Recipe?> showFoodSheet(BuildContext context, List<Recipe> mine) async {
-  return showModalBottomSheet<Recipe>(
+  return showCitroSheet<Recipe>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

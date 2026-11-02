@@ -5,6 +5,7 @@ import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
+import 'package:citro/widgets/paper.dart';
 import 'package:citro/widgets/tablet_shell.dart';
 import 'package:citro/widgets/tab_bar.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +51,7 @@ void main() {
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 3);
     expect(find.text('首页'), findsOneWidget);
-    expect(find.textContaining('Windows 桌面版'), findsNothing);
+    expect(find.textContaining('Windows 桌面'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -133,9 +134,20 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 300));
-    for (final label in ['首页', '游戏', '社区', '资源']) {
-      expect(find.text(label), findsOneWidget, reason: label);
+    // 图标 Tab：界面上不显示文字，靠 Semantics 暴露目的地。
+    final semantics = tester.ensureSemantics();
+    for (final label in ['首页', '游戏', '社区', '资源', '我的']) {
+      expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
+    expect(find.text('首页'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(CitroTabBar),
+        matching: find.byType(AppIcon),
+      ),
+      findsNWidgets(5),
+    );
+    semantics.dispose();
     expect(tester.takeException(), isNull);
   });
 }

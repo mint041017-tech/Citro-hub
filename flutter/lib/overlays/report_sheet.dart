@@ -16,7 +16,7 @@ Future<void> showReportSheet(
   String? targetNick,
   String? preview,
 }) {
-  return showModalBottomSheet<void>(
+  return showCitroSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

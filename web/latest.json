@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "1.9.9",
-  "build_number": "1909",
-  "build_id": "7df59215daad791d9eb273ccba602aed",
-  "file": "Citro-web-1.9.9.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-1.9.9.zip",
-  "size": 27122049,
-  "sha256": "bd4aa4e623790fffd657bdf2fdf79e4ad0f4c8d10822ce1d91bd828026b73c3d",
-  "published_at": "2026-10-29T17:42:11Z",
-  "notes": "1.9.9：卡面收藏、今日卡与抽卡次数改为账号级跨端同步；首次登录合并本机进度，切换账号不串数据；旧版后端自动回退本机逻辑"
+  "version": "2.0.0",
+  "build_number": "2000",
+  "build_id": "a3297a7537ba89dae2765d38ff1786eb",
+  "file": "Citro-web-2.0.0.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.0.zip",
+  "size": 31581222,
+  "sha256": "19c68cfcf225819ea3f8563389097e03fdb5cae372e29b4c547c3b5b0056a953",
+  "published_at": "2026-11-02T11:26:31Z",
+  "notes": "2.0.0：CiCi 自定义性格、好事同步社区动态、星象与日历更多尺寸、减弱动态效果、动效流畅度优化与数独返回修复"
 }

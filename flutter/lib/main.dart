@@ -176,6 +176,7 @@ class CitroApp extends StatefulWidget {
 class _CitroAppState extends State<CitroApp> {
   final AppState _state = AppState.instance;
   late ThemeMode _themeMode = _state.themeMode;
+  late bool _reduceMotion = _state.reduceMotion;
 
   @override
   void initState() {
@@ -187,7 +188,13 @@ class _CitroAppState extends State<CitroApp> {
 
   void _syncTheme() {
     final mode = _state.themeMode;
-    if (mode != _themeMode) setState(() => _themeMode = mode);
+    final reduce = _state.reduceMotion;
+    if (mode != _themeMode || reduce != _reduceMotion) {
+      setState(() {
+        _themeMode = mode;
+        _reduceMotion = reduce;
+      });
+    }
   }
 
   @override
@@ -210,7 +217,9 @@ class _CitroAppState extends State<CitroApp> {
           theme: buildCitroTheme(CitroColors.light),
           darkTheme: buildCitroTheme(CitroColors.darkColors),
           themeAnimationCurve: CitroMotion.easeOut,
-          themeAnimationDuration: CitroMotion.modal,
+          themeAnimationDuration: _reduceMotion
+              ? Duration.zero
+              : CitroMotion.modal,
           scrollBehavior: const CitroScrollBehavior(),
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
@@ -245,7 +254,21 @@ class _CitroAppState extends State<CitroApp> {
                   )
                 : theme.bottomSheetTheme;
             final content = Theme(
-              data: theme.copyWith(bottomSheetTheme: sheetTheme),
+              data: theme.copyWith(
+                bottomSheetTheme: sheetTheme,
+                pageTransitionsTheme: _reduceMotion
+                    ? const PageTransitionsTheme(
+                        builders: {
+                          TargetPlatform.android: _NoPageTransitions(),
+                          TargetPlatform.iOS: _NoPageTransitions(),
+                          TargetPlatform.windows: _NoPageTransitions(),
+                          TargetPlatform.macOS: _NoPageTransitions(),
+                          TargetPlatform.linux: _NoPageTransitions(),
+                          TargetPlatform.fuchsia: _NoPageTransitions(),
+                        },
+                      )
+                    : theme.pageTransitionsTheme,
+              ),
               child: AnnotatedRegion<SystemUiOverlayStyle>(
                 value: SystemUiOverlayStyle(
                   statusBarColor: Colors.transparent,
@@ -255,21 +278,31 @@ class _CitroAppState extends State<CitroApp> {
                   statusBarBrightness: isDark
                       ? Brightness.dark
                       : Brightness.light,
+                  // 系统不再给状态栏/导航栏加对比蒙层，纸感背景能一直铺到屏幕边缘。
+                  systemStatusBarContrastEnforced: false,
                   systemNavigationBarColor: Colors.transparent,
                   systemNavigationBarIconBrightness: isDark
                       ? Brightness.light
                       : Brightness.dark,
                   systemNavigationBarDividerColor: Colors.transparent,
+                  systemNavigationBarContrastEnforced: false,
                 ),
-                child: MediaQuery.withClampedTextScaling(
-                  minScaleFactor: 0.9,
-                  maxScaleFactor: 1.15,
-                  child: Stack(
-                    children: [
-                      child ?? const SizedBox.shrink(),
-                      const TimerCapsuleOverlay(),
-                      const PomodoroDoneWatcher(),
-                    ],
+                child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    disableAnimations:
+                        MediaQuery.of(context).disableAnimations ||
+                        _reduceMotion,
+                  ),
+                  child: MediaQuery.withClampedTextScaling(
+                    minScaleFactor: 0.9,
+                    maxScaleFactor: 1.15,
+                    child: Stack(
+                      children: [
+                        child ?? const SizedBox.shrink(),
+                        const TimerCapsuleOverlay(),
+                        const PomodoroDoneWatcher(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -292,6 +325,19 @@ class _CitroAppState extends State<CitroApp> {
       ),
     );
   }
+}
+
+class _NoPageTransitions extends PageTransitionsBuilder {
+  const _NoPageTransitions();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => child;
 }
 
 class SplashGate extends StatefulWidget {

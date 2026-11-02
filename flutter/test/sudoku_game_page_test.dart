@@ -59,4 +59,40 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+
+  testWidgets('system back returns to mode select instead of leaving sudoku', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppScope(
+        state: AppState.instance,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildCitroTheme(CitroColors.light),
+          home: const GameSudokuPage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('简单'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(find.text('新游戏'), findsOneWidget);
+
+    // 系统返回：应回到模式选择，而不是退出整个数独页面。
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(find.text('选一种数独'), findsOneWidget);
+    expect(find.text('新游戏'), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 }

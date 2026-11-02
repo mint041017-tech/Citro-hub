@@ -95,7 +95,10 @@ class PrefKeys {
   static const weatherLon = 'citro_weather_lon';
   static const weatherCity = 'citro_weather_city';
   static const notificationsEnabled = 'citro_notifications_enabled';
+  static const reduceMotion = 'citro_reduce_motion';
+  static const ciciPersona = 'citro_cici_persona';
   static const blockedUsers = 'citro_blocked_users';
   static const updateLastCheck = 'citro_update_last_check';
   static const updateSkippedVersion = 'citro_update_skipped_version';
+  static const homeLayout = 'citro_home_layout_v1';
 }

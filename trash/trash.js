@@ -2567,6 +2567,39 @@ const server = http.createServer(async function (req, res) {
   }
 
   /* ===== 卡面收藏：账号级同步 / 抽卡 / 今日卡 ===== */
+  /* ===== 首页布局：按账号同步 ===== */
+  if (url === '/api/home/layout') {
+    if (needAuth(res, me)) return;
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    if (req.method === 'GET') {
+      return json(res, 200, { layout: bu.homeLayout || null });
+    }
+    if (req.method === 'POST') {
+      if (limited(ip, 'home-layout', 60, 60000)) {
+        return json(res, 429, { err: '操作太频繁' });
+      }
+      const b = (await body()) || {};
+      const layout = b.layout;
+      if (!layout || typeof layout !== 'object') {
+        return json(res, 400, { err: '布局数据无效' });
+      }
+      let serialized = '';
+      try {
+        serialized = JSON.stringify(layout);
+      } catch (e) {
+        return json(res, 400, { err: '布局数据无效' });
+      }
+      if (serialized.length > 24000) {
+        return json(res, 400, { err: '布局数据过大' });
+      }
+      bu.homeLayout = layout;
+      bu.homeLayoutAt = Date.now();
+      saveUsers();
+      return json(res, 200, { ok: true });
+    }
+  }
+
   if (req.method === 'POST' && url === '/api/cards/sync') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });

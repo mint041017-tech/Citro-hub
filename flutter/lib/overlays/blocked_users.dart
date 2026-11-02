@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
 Future<void> showBlockedUsersSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showCitroSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

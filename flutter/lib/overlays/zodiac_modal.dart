@@ -28,7 +28,13 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
     super.initState();
     final state = AppState.instance;
     selectedSign = state.zodiacSign;
-    if (selectedSign != null) unawaited(state.refreshZodiacFortune());
+    if (selectedSign != null) {
+      // 弹层可能是在首页重建的同一帧里挂载的；立即刷新会触发
+      // AppState 通知，导致 AppScope 在 build 期间被标记重建。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(state.refreshZodiacFortune());
+      });
+    }
   }
 
   @override

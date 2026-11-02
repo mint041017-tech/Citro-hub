@@ -101,6 +101,8 @@ ThemeData buildCitroTheme(CitroColors colors) {
         ),
     highlightColor: Colors.transparent,
     splashColor: Colors.transparent,
+    // Apple 的控件没有 Android 水波纹：按下只做缩放与颜色变化。
+    splashFactory: NoSplash.splashFactory,
   );
   return base.copyWith(
     pageTransitionsTheme: PageTransitionsTheme(
@@ -133,8 +135,20 @@ ThemeData buildCitroTheme(CitroColors colors) {
     extensions: [CitroSkin(colors)],
     dividerColor: colors.line,
     iconTheme: IconThemeData(color: colors.ink2),
-    bottomSheetTheme: const BottomSheetThemeData(
-      constraints: BoxConstraints(maxWidth: 760),
+    bottomSheetTheme: BottomSheetThemeData(
+      constraints: const BoxConstraints(maxWidth: 760),
+      backgroundColor: colors.surface,
+      modalBackgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      modalElevation: 0,
+      // Apple 原生 sheet：顶部 20pt 圆角 + 发丝分隔 + 拖拽条。
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      dragHandleColor: colors.line2,
+      showDragHandle: false,
     ),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colors.accentInk,
@@ -144,10 +158,44 @@ ThemeData buildCitroTheme(CitroColors colors) {
   );
 }
 
+/// 四端共用的页面转场骨架。
+///
+/// - 进场：强 ease-out，横向轻推 + 淡入，第一帧就有方向感；
+/// - 旧页不额外位移/压暗：新页从透明渐入，旧页在下面继续可见，
+///   形成真正的交叉过渡，而不是"上一页瞬间消失"；
+///   （弹层只盖住局部，若让旧页常驻压暗会在浮层打开期间一直变灰。）
+/// - 退场时长由路由的 reverseDuration 控制，比进场短，收得利落；
+/// - 减少动态时只保留透明度过渡，去掉所有位移。
+Widget _citroPageTransition<T>({
+  required BuildContext context,
+  required Animation<double> animation,
+  required Widget child,
+  required Offset enterFrom,
+}) {
+  final enter = CurvedAnimation(
+    parent: animation,
+    curve: CitroMotion.easeOut,
+    reverseCurve: CitroMotion.exit,
+  );
+  final reduce = CitroMotion.reduced(context);
+  // 从 0 开始淡入会让旧页整段透出来，看起来像"闪一下"；
+  // 起始就有 90% 不透明度，位移负责方向感，透明度只做收尾。
+  final page = FadeTransition(
+    opacity: Tween<double>(begin: .82, end: 1).animate(enter),
+    child: child,
+  );
+  if (reduce) return page;
+  return SlideTransition(
+    position: Tween<Offset>(begin: enterFrom, end: Offset.zero).animate(enter),
+    child: ScaleTransition(
+      scale: Tween<double>(begin: .994, end: 1).animate(enter),
+      child: page,
+    ),
+  );
+}
 
-
-/// Windows 专用：保留轻微的横向推入手感，但去掉 Cupertino 的整页横推与边缘阴影。
-/// 页面转场统一用短时长，减少每帧的大面积栅格化。
+/// Windows / Android：轻微的横向推入手感，去掉 Cupertino 的整页横推与边缘阴影。
+/// 位移比例小，避免每帧大面积栅格化。
 class CitroFastSlidePageTransitionsBuilder extends PageTransitionsBuilder {
   const CitroFastSlidePageTransitionsBuilder();
 
@@ -159,26 +207,16 @@ class CitroFastSlidePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: CitroMotion.easeOut,
-    );
-    if (CitroMotion.reduced(context)) {
-      return FadeTransition(opacity: curved, child: child);
-    }
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(.04, 0),
-        end: Offset.zero,
-      ).animate(curved),
-      child: FadeTransition(
-        opacity: Tween<double>(begin: .88, end: 1).animate(curved),
-        child: child,
-      ),
+    return _citroPageTransition(
+      context: context,
+      animation: animation,
+      child: child,
+      enterFrom: const Offset(.045, 0),
     );
   }
 }
-/// 网页端使用短促的淡入 + 轻微右移，避免 300ms 以上的整页滑动掉帧。
+
+/// Web：更短的位移（.028），在保持方向感的同时避免整页重绘。
 class CitroFastPageTransitionsBuilder extends PageTransitionsBuilder {
   const CitroFastPageTransitionsBuilder();
 
@@ -190,22 +228,11 @@ class CitroFastPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: CitroMotion.easeOut,
-    );
-    if (CitroMotion.reduced(context)) {
-      return FadeTransition(opacity: curved, child: child);
-    }
-    return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(.012, 0),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
-      ),
+    return _citroPageTransition(
+      context: context,
+      animation: animation,
+      child: child,
+      enterFrom: const Offset(.028, 0),
     );
   }
 }

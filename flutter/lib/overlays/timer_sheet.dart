@@ -14,7 +14,7 @@ Future<int?> showTimerMinutesSheet(
 }) async {
   var minutes = initial.clamp(1, 180);
   final controller = FixedExtentScrollController(initialItem: minutes - 1);
-  return showModalBottomSheet<int>(
+  return showCitroSheet<int>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (ctx) {
@@ -98,7 +98,7 @@ Future<int?> showTimerMinutesSheet(
 
 Future<void> showTimerManageSheet(BuildContext context) async {
   final timer = CookTimer.instance;
-  await showModalBottomSheet<void>(
+  await showCitroSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (ctx) {

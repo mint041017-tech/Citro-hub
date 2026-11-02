@@ -11,12 +11,13 @@ import '../services/voice.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/voice_bubble.dart';
 
 Future<Post?> showComposerSheet(BuildContext context) async {
   Post? created;
-  await showModalBottomSheet<void>(
+  await showCitroSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

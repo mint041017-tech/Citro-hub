@@ -8,6 +8,7 @@ import '../app_keys.dart';
 import '../data/cards.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
@@ -175,10 +176,14 @@ Future<void> showCardDrawOverlay(
     barrierDismissible: false,
     barrierLabel: '收下卡面',
     barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 260),
+    transitionDuration: CitroMotion.modal,
     pageBuilder: (_, __, ___) => SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, __) => FadeTransition(
-      opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+      opacity: CurvedAnimation(
+        parent: anim,
+        curve: CitroMotion.easeOut,
+        reverseCurve: CitroMotion.exit,
+      ),
       child: _CardDrawDialog(card: card!, wasOwned: wasOwned),
     ),
   );

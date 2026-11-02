@@ -60,8 +60,8 @@ void main() {
     await _loadFont('ZCOOL', ['assets/fonts/zcool-app.ttf']);
     await _loadFont('Caveat', ['assets/fonts/caveat-app.ttf']);
     await _loadFont('NotoSC', [
-      'assets/fonts/noto-sc-400-app.otf',
-      'assets/fonts/noto-sc-700-app.otf',
+      'assets/fonts/noto-sc-400-app.ttf',
+      'assets/fonts/noto-sc-700-app.ttf',
     ]);
   });
 

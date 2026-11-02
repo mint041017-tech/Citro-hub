@@ -22,6 +22,12 @@ class Chime {
   static bool get _supported => !platform.isTest && _available;
 
   static Future<void> breath({required bool inhale}) async {
+    final played = await _playAsset(
+      inhale ? 'breath_in' : 'breath_out',
+      volume: .24,
+      maxMs: inhale ? 950 : 1100,
+    );
+    if (played) return;
     await _play(
       inhale ? 'breath-in' : 'breath-out',
       freq: inhale ? 392 : 329.63,
@@ -31,10 +37,62 @@ class Chime {
     );
   }
 
-  static Future<void> done() async {
-    await _play('done-a', freq: 659.25, dur: .8, vol: .34);
+  static Future<void> done({bool wood = false, int volume = 55}) async {
+    final level = (volume / 100).clamp(0.0, 1.0);
+    final played = await _playAsset(
+      wood ? 'chime_wood' : 'chime_bell',
+      volume: level,
+      maxMs: wood ? 1100 : 2800,
+    );
+    if (played) return;
+    final gain = (volume / 55).clamp(0.0, 1.6);
+    if (wood) {
+      await _play(
+        'done-wood-a',
+        freq: 392,
+        dur: .5,
+        vol: .30 * gain,
+        wood: true,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 210));
+      await _play(
+        'done-wood-b',
+        freq: 587.33,
+        dur: .9,
+        vol: .26 * gain,
+        wood: true,
+      );
+      return;
+    }
+    await _play('done-a', freq: 659.25, dur: .8, vol: .34 * gain);
     await Future<void>.delayed(const Duration(milliseconds: 190));
-    await _play('done-b', freq: 987.77, dur: 1.25, vol: .3);
+    await _play('done-b', freq: 987.77, dur: 1.25, vol: .3 * gain);
+  }
+
+  /// 原版听隅的音频素材优先；素材不可用时再退回合成音。
+  static Future<bool> _playAsset(
+    String name, {
+    required double volume,
+    required int maxMs,
+  }) async {
+    if (!_supported) return false;
+    try {
+      final player = _player ??= AudioPlayer();
+      if (!kIsWeb) {
+        await player.setAudioContext(_mixContext);
+      }
+      await player.stop();
+      await player.play(
+        AssetSource('tingyu/audio/$name.wav'),
+        volume: volume,
+      );
+      Timer(Duration(milliseconds: maxMs), () {
+        unawaited(player.stop());
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<void> _play(
@@ -43,10 +101,13 @@ class Chime {
     required double dur,
     required double vol,
     bool soft = false,
+    bool wood = false,
   }) async {
     if (!_supported) return;
     try {
-      final bytes = _cache[key] ??= soft
+      final bytes = _cache[key] ??= wood
+          ? _wood(freq: freq, dur: dur, vol: vol)
+          : soft
           ? _soft(freq: freq, dur: dur, vol: vol)
           : _bell(freq: freq, dur: dur, vol: vol);
       final player = _player ??= AudioPlayer();
@@ -92,6 +153,24 @@ class Chime {
       final value =
           math.sin(2 * math.pi * freq * t) +
           .08 * math.sin(2 * math.pi * freq * 2 * t);
+      return value * attack * decay * vol;
+    },
+  );
+
+  /// 木鱼：短促、闷一点的木质敲击。
+  static Uint8List _wood({
+    required double freq,
+    required double dur,
+    required double vol,
+  }) => _render(
+    dur: dur,
+    sample: (t) {
+      final attack = math.min(1.0, t / .004);
+      final decay = math.exp(-9 * t / dur);
+      final value =
+          math.sin(2 * math.pi * freq * t) +
+          .22 * math.sin(2 * math.pi * freq * 1.87 * t) +
+          .06 * math.sin(2 * math.pi * freq * 3.3 * t);
       return value * attack * decay * vol;
     },
   );

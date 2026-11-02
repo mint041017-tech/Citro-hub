@@ -7,6 +7,8 @@ import '../games/game_registry.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/home_entries.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/global_search.dart';
 import '../widgets/paper.dart';
 import 'home_page.dart';
@@ -32,64 +34,61 @@ class WebHomePage extends StatelessWidget {
           final zodiacTop = (rowHeight - 44) / 2 + 9;
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
-            child: SizedBox(
-              height: height,
-              child: WebDesktopGrid(
-                rows: 9,
-                children: [
-                  ...header.cells(context),
-                  const WebGridCell(
-                    1,
-                    2,
-                    3,
-                    1,
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: GlobalSearch(hint: '搜索功能 / 游戏 / 页面，回车必应'),
+            child: CitroReveal(
+              rise: 6,
+              child: SizedBox(
+                height: height,
+                child: WebDesktopGrid(
+                  rows: 9,
+                  children: [
+                    ...header.cells(context),
+                    const WebGridCell(
+                      1,
+                      2,
+                      3,
+                      1,
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GlobalSearch(hint: '搜索功能 / 游戏 / 页面，回车必应'),
+                      ),
                     ),
-                  ),
-                  const WebGridCell(1, 3, 3, 2, WeatherCard()),
-                  const WebGridCell(1, 5, 3, 4, CalendarCard()),
-                  WebGridCell(
-                    4,
-                    2,
-                    3,
-                    4,
-                    Padding(
-                      padding: EdgeInsets.only(top: zodiacTop),
-                      child: const ZodiacCard(),
+                    const WebGridCell(1, 3, 3, 2, WeatherCard()),
+                    const WebGridCell(1, 5, 3, 4, CalendarCard()),
+                    WebGridCell(
+                      4,
+                      2,
+                      3,
+                      4,
+                      Padding(
+                        padding: EdgeInsets.only(top: zodiacTop),
+                        child: const ZodiacCard(),
+                      ),
                     ),
-                  ),
-                  WebGridCell(
-                    4,
-                    6,
-                    3,
-                    1,
-                    _WebCommunityTicket(
-                      unread: context.app.unread,
-                      onTap: () => onSwitchTab(2),
+                    WebGridCell(
+                      4,
+                      6,
+                      3,
+                      1,
+                      _WebCommunityTicket(
+                        unread: context.app.unread,
+                        onTap: () => onSwitchTab(2),
+                      ),
                     ),
-                  ),
-                  WebGridCell(
-                    4,
-                    7,
-                    3,
-                    1,
-                    _WebRecipeTicket(
-                      onTap: () => Navigator.of(context).pushNamed('/cook'),
+                    WebGridCell(
+                      4,
+                      7,
+                      3,
+                      1,
+                      _WebRecipeTicket(
+                        onTap: () => Navigator.of(context).pushNamed('/cook'),
+                      ),
                     ),
-                  ),
-                  const WebGridCell(4, 8, 3, 1, FishCard()),
-                  const WebGridCell(7, 2, 6, 7, _WebGames()),
-                  const WebGridCell(
-                    1,
-                    9,
-                    2,
-                    1,
-                    Align(alignment: Alignment.centerLeft, child: AccountCap()),
-                  ),
-                  const WebGridCell(3, 9, 10, 1, _WebQuoteStrip()),
-                ],
+                    const WebGridCell(4, 8, 3, 1, FishCard()),
+                    const WebGridCell(7, 2, 6, 7, _WebGames()),
+                    const WebGridCell(1, 9, 3, 1, CheckinCard(compact: true)),
+                    const WebGridCell(4, 9, 9, 1, _WebQuoteStrip()),
+                  ],
+                ),
               ),
             ),
           );
@@ -144,8 +143,7 @@ class _WebGames extends StatelessWidget {
               itemCount: kGameCards.length,
               itemBuilder: (context, index) => _WebGameCard(
                 entry: kGameCards[index],
-                angle: const [-1.2, 0.8, -0.4, 0.5][index % 4],
-              ),
+                              ),
             ),
           ),
         ),
@@ -214,8 +212,7 @@ class WebGameToolsRow extends StatelessWidget {
       _WebGameTool(
         title: 'MsLab',
         desc: '毫秒灵敏度调试',
-        icon:
-            '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
+        icon: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
         background: c.noteG,
         foreground: c.mintInk,
         onTap: () =>
@@ -324,11 +321,7 @@ class _WebGameToolCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: context.body(
-                size: 9.5,
-                color: c.inkSoft,
-                height: 1.15,
-              ),
+              style: context.body(size: 9.5, color: c.inkSoft, height: 1.15),
             ),
           ],
         ),
@@ -474,9 +467,7 @@ class _WebDownloadCard extends StatelessWidget {
 
 class _WebGameCard extends StatelessWidget {
   final GameCardData entry;
-  final double angle;
-
-  const _WebGameCard({required this.entry, this.angle = 0});
+  const _WebGameCard({required this.entry});
 
   @override
   Widget build(BuildContext context) {
@@ -486,7 +477,7 @@ class _WebGameCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       hoverOverlayColor: c.hl.withAlpha(24),
       child: Transform.rotate(
-        angle: angle * math.pi / 180,
+        angle: 0,
         child: Container(
           padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
           decoration: BoxDecoration(
@@ -545,17 +536,12 @@ class _WebCommunityTicket extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Transform.rotate(
-      angle: -.5 * math.pi / 180,
+      angle: 0,
       child: PaperCard(
         color: c.noteB,
         borderColor: c.line,
         fold: true,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(2),
-          topRight: Radius.circular(2),
-          bottomLeft: Radius.circular(2),
-          bottomRight: Radius.circular(14),
-        ),
+        borderRadius: BorderRadius.circular(14),
         padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
         tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
         tapeWidth: 54,
@@ -603,17 +589,12 @@ class _WebRecipeTicket extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Transform.rotate(
-      angle: .5 * math.pi / 180,
+      angle: 0,
       child: PaperCard(
         color: c.noteY,
         borderColor: c.line,
         fold: true,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(2),
-          topRight: Radius.circular(2),
-          bottomLeft: Radius.circular(2),
-          bottomRight: Radius.circular(14),
-        ),
+        borderRadius: BorderRadius.circular(14),
         padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
         tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
         tapeWidth: 54,
@@ -777,7 +758,7 @@ class _WebQuoteStrip extends StatelessWidget {
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     final quote = kQuotes[dayOfYear % kQuotes.length];
     return Transform.rotate(
-      angle: .35 * math.pi / 180,
+      angle: 0,
       child: PaperCard(
         color: c.dark ? const Color(0xFF201E19) : const Color(0xFFFBF3E1),
         borderColor: c.accent.withAlpha(70),
@@ -831,12 +812,12 @@ class _WebQuoteStrip extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: context.heading(size: 19, color: c.ink),
+                          style: context.heading(size: 21.5, color: c.ink),
                         ),
                       ),
                       Container(
                         width: 1,
-                        height: 18,
+                        height: 20,
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         color: c.line2,
                       ),
@@ -848,7 +829,7 @@ class _WebQuoteStrip extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: context.hand(
-                            size: 18,
+                            size: 19.5,
                             color: c.inkSoft,
                             style: FontStyle.italic,
                           ),

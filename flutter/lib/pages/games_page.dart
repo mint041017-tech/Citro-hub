@@ -3,11 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../games/game_loader.dart';
 import '../games/game_registry.dart';
 import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/card_flight.dart';
+import '../widgets/card_morph.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
+import '../widgets/shared_element.dart';
 import '../widgets/tablet_shell.dart';
 import 'in_app_web.dart';
 import 'web_scrapbook.dart';
@@ -75,8 +80,7 @@ class GamesPage extends StatelessWidget {
         _GameToolLink(
           title: 'MsLab',
           desc: '毫秒灵敏度调试',
-          icon:
-              '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
+          icon: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
           background: c.noteG,
           foreground: c.mintInk,
           onTap: () =>
@@ -103,9 +107,14 @@ class GamesPage extends StatelessWidget {
         bottom: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(side, 8, side, wideDesktop ? 32 : 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          padding: EdgeInsets.fromLTRB(
+            side,
+            AppSpacing.pageTop(width),
+            side,
+            wideDesktop ? 32 : 100,
+          ),
+          child: CitroStagger(
+            step: const Duration(milliseconds: 28),
             children: [
               Stack(
                 clipBehavior: Clip.none,
@@ -328,7 +337,6 @@ class _GameToolSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return PaperCard(
-      rotate: .35,
       tapeColor: c.tape2,
       tapeAngle: 2.2,
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
@@ -564,7 +572,22 @@ class _GameCard extends StatelessWidget {
     final desktopWeb = kIsWeb && CitroLayoutScope.widthOf(context) >= 1025;
     final large = (tablet || desktopWeb) && !compact;
     return Pressable(
-      onTap: () => Navigator.of(context).pushNamed('/${entry.key}'),
+      onTap: () {
+        // 卡片纸面从它在网格里的位置长成整页；拿不到 rect 时退回普通路由。
+        final box = context.findRenderObject();
+        if (box is! RenderBox || !box.hasSize) {
+          Navigator.of(context).pushNamed('/${entry.key}');
+          return;
+        }
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        CitroCardMorph.pushPage(
+          context,
+          source: rect,
+          snapshot: CitroCardFlight.snapshotOf(context, rect),
+          settings: RouteSettings(name: '/${entry.key}'),
+          builder: (_) => buildGamePage(entry.key),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: c.surface2,
@@ -608,14 +631,17 @@ class _GameCard extends StatelessWidget {
                 border: Border(top: BorderSide(color: c.line)),
               ),
               alignment: Alignment.centerLeft,
-              child: Text(
-                entry.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.heading(
-                  size: large ? 19 : 15.5,
-                  color: c.ink,
-                  letterSpacing: .27,
+              child: CitroHero(
+                tag: CitroHero.tagOf('game-title', entry.key),
+                child: Text(
+                  entry.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(
+                    size: large ? 19 : 15.5,
+                    color: c.ink,
+                    letterSpacing: .27,
+                  ),
                 ),
               ),
             ),

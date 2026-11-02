@@ -71,11 +71,11 @@ def make_wizard():
     im.paste(logo, (108, 38), logo)
 
     centered(d, (W / 2, 154), 'Citro', font('kalam-700-app.ttf', 66), INK)
-    centered(d, (W / 2, 232), '今天也要开心', font('noto-sc-400-app.otf', 24), INK_SOFT)
+    centered(d, (W / 2, 232), '今天也要开心', font('noto-sc-400-app.ttf', 24), INK_SOFT)
 
     # Windows 桌面版徽章
     badge = 'Windows 版'
-    f_badge = font('noto-sc-700-app.otf', 15)
+    f_badge = font('noto-sc-700-app.ttf', 15)
     bbox = d.textbbox((0, 0), badge, font=f_badge)
     tw = bbox[2] - bbox[0]
     bx0, bx1 = W / 2 - tw / 2 - 18, W / 2 + tw / 2 + 18
@@ -102,19 +102,19 @@ def make_wizard():
     centered(d, ((x0 + x1) / 2, y0 + 8), 'Citro', font('kalam-700-app.ttf', 20), INK)
     # 左侧天气卡
     round_rect(d, (x0 + 12, y0 + 42, x0 + 120, y0 + 136), 12, (255, 250, 240), LINE, 1)
-    centered(d, (x0 + 66, y0 + 51), '今天', font('noto-sc-400-app.otf', 12), INK_SOFT)
+    centered(d, (x0 + 66, y0 + 51), '今天', font('noto-sc-400-app.ttf', 12), INK_SOFT)
     d.ellipse((x0 + 54, y0 + 70, x0 + 78, y0 + 94), fill=ACCENT)
     centered(d, (x0 + 66, y0 + 99), '21°', font('kalam-700-app.ttf', 26), INK)
     # 右侧便签卡
     round_rect(d, (x0 + 132, y0 + 42, x1 - 12, y0 + 136), 12, (251, 241, 196), LINE, 1)
-    centered(d, ((x0 + 132 + x1 - 12) / 2, y0 + 53), '今日心情', font('noto-sc-700-app.otf', 11), ACCENT_INK)
+    centered(d, ((x0 + 132 + x1 - 12) / 2, y0 + 53), '今日心情', font('noto-sc-700-app.ttf', 11), ACCENT_INK)
     for i in range(3):
         yy = y0 + 78 + i * 13
         d.line((x0 + 145, yy, x1 - 26, yy), fill=(166, 144, 92), width=2)
 
     # 底部信息
     line = 'Mod · 小工具 · 驱动  /  小游戏  /  应用内更新'
-    f_line = font('noto-sc-400-app.otf', 12)
+    f_line = font('noto-sc-400-app.ttf', 12)
     centered(d, (W / 2, 552), line, f_line, INK_SOFT)
     centered(d, (W / 2, 590), 'chimu-claw.xyz', font('caveat-app.ttf', 24), ACCENT_INK)
 

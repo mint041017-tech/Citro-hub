@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../app_version.dart';
 import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
@@ -22,63 +21,69 @@ import '../services/updater.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/shared_element.dart';
 import 'legal_page.dart';
 
 Future<void> showMeWindow(BuildContext context) {
-  return showGeneralDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: '关闭我的',
-    barrierColor: const Color(0x8A23211C),
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (ctx, _, __) {
-      final media = MediaQuery.of(ctx);
-      final width = math.min(720.0, media.size.width - 48);
-      final height = math.min(760.0, media.size.height - 48);
-      return Center(
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 30,
-                  offset: Offset(0, 16),
+  // 透明 PageRoute：Hero 只在 PageRoute 之间飞行，Dialog 路由不会。
+  return Navigator.of(context, rootNavigator: true).push<void>(
+    PageRouteBuilder<void>(
+      opaque: false,
+      barrierColor: const Color(0x8A23211C),
+      barrierDismissible: true,
+      barrierLabel: '关闭我的',
+      transitionDuration: CitroMotion.modal,
+      reverseTransitionDuration: CitroMotion.modalReverse,
+      pageBuilder: (ctx, _, __) {
+        final media = MediaQuery.of(ctx);
+        final width = math.min(720.0, media.size.width - 48);
+        final height = math.min(760.0, media.size.height - 48);
+        return Center(
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x66000000),
+                    blurRadius: 30,
+                    offset: Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: MediaQuery(
+                  data: media.copyWith(size: Size(width, height)),
+                  child: const MePage(floating: true),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: MediaQuery(
-                data: media.copyWith(size: Size(width, height)),
-                child: const MePage(floating: true),
               ),
             ),
           ),
-        ),
-      );
-    },
-    transitionBuilder: (ctx, animation, _, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: .96, end: 1).animate(curved),
-          child: child,
-        ),
-      );
-    },
+        );
+      },
+      transitionsBuilder: (ctx, animation, secondary, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: CitroMotion.easeOut,
+          reverseCurve: CitroMotion.exit,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: .96, end: 1).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    ),
   );
 }
 
@@ -98,7 +103,10 @@ void openMePage(BuildContext context) {
 class MePage extends StatelessWidget {
   final bool floating;
 
-  const MePage({super.key, this.floating = false});
+  /// 作为 RootShell 的 Tab 页嵌入时不再显示返回按钮，并为底部导航留出空间。
+  final bool embedded;
+
+  const MePage({super.key, this.floating = false, this.embedded = false});
 
   static void _downloadApp() {
     launchUrl(
@@ -110,276 +118,351 @@ class MePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.app;
-    final c = context.c;
     final user = state.user;
-    final duo =
-        !platform.isWindows && CitroForm.duoDevice(MediaQuery.sizeOf(context));
-    final width = MediaQuery.sizeOf(context).width;
-    final web = kIsWeb && !floating;
-    final side = math.max(8.0, (width - (web ? 760 : 640)) / 2);
+    final size = MediaQuery.sizeOf(context);
+    final width = size.width;
+    final duo = !platform.isWindows && CitroForm.duoDevice(size);
+    final web = kIsWeb && !floating && !embedded;
+    final twoColumn = width >= 700;
+    final maxWidth = web ? 1040.0 : (duo ? 980.0 : 760.0);
+    final side = math.max(10.0, (width - maxWidth) / 2);
     return Scaffold(
       body: PaperBackground(
+        grid: false,
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(side, web ? 22 : 8, side, 36),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -34,
-                  bottom: -24,
-                  child: IgnorePointer(
-                    child: Transform.rotate(
-                      angle: -8 * math.pi / 180,
-                      child: Opacity(
-                        opacity: .10,
-                        child: Image.asset(
-                          'assets/images/logo.webp',
-                          width: 210,
-                          cacheWidth: 420,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Column(
+            padding: EdgeInsets.fromLTRB(
+              side,
+              AppSpacing.pageTop(width),
+              side,
+              embedded ? 100 : 32,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        if (!duo && !floating) ...[
-                          Pressable(
-                            onTap: () => popOrHome(context),
-                            child: Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: c.surface2,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: c.line),
-                                boxShadow: CitroColors.shadows.paper(c),
-                              ),
-                              child: Row(
-                                children: [
-                                  AppIcon(
-                                    strokeSvg(AppIcons.arrowLeft, width: 2.2),
-                                    size: 15,
-                                    color: c.ink2,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    '返回',
-                                    style: context.body(
-                                      size: 11.5,
-                                      weight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                    _pageHeader(context, web: web, duo: duo),
+                    SizedBox(height: web ? 20 : 12),
+                    if (twoColumn)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: web ? 320 : 288,
+                            child: _profileColumn(context, state, user),
                           ),
-                          const SizedBox(width: 10),
-                        ],
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: c.accent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text('我的', style: context.heading(size: web ? 30 : 20)),
-                        if (web) ...[
-                          const SizedBox(width: 12),
-                          Text(
-                            'ACCOUNT & PREFERENCES',
-                            style: context.body(
-                              size: 9.5,
-                              weight: FontWeight.w700,
-                              color: c.inkSoft,
-                              letterSpacing: 1.7,
+                          const SizedBox(width: 22),
+                          Expanded(
+                            child: _settingsColumn(
+                              context,
+                              state,
+                              user,
+                              web: web,
                             ),
                           ),
                         ],
-                        if (floating) ...[
-                          const Spacer(),
-                          Pressable(
-                            onTap: () => Navigator.of(context).maybePop(),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: c.surface2,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: c.line),
-                                boxShadow: CitroColors.shadows.paper(c),
-                              ),
-                              child: Center(
-                                child: AppIcon(
-                                  strokeSvg(AppIcons.close, width: 2.2),
-                                  size: 15,
-                                  color: c.ink2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    SizedBox(height: web ? 22 : 16),
-                    _profileHero(
-                      context,
-                      state,
-                      user,
-                      web: web,
-                      floating: floating,
-                    ),
-                    const SizedBox(height: 12),
-                    CardCollectionEntry(compact: !web && !floating),
-                    if (kIsWeb) ...[
-                      SizedBox(height: web ? 28 : 18),
-                      _section(c, '应用'),
-                      const SizedBox(height: 8),
-                      _rows(c, [
-                        _MeRow(
-                          icon: AppIcons.download,
-                          label: '下载 App 客户端',
-                          trailing: Text(
-                            "Android · ${kCitroVersion == 'dev' ? '最新版' : 'v$kCitroVersion'}",
-                            style: context.body(size: 10.5, color: c.inkSoft),
-                          ),
-                          onTap: _downloadApp,
-                        ),
-                      ]),
-                    ],
-                    SizedBox(height: web ? 28 : 18),
-                    _section(c, '账号'),
-                    const SizedBox(height: 8),
-                    _rows(c, [
-                      _MeRow(
-                        icon: AppIcons.note,
-                        label: '我的笔记',
-                        onTap: () => showNotesModal(context),
+                      )
+                    else ...[
+                      _profileHero(
+                        context,
+                        state,
+                        user,
+                        web: false,
+                        floating: floating,
                       ),
-                      _MeRow(
-                        icon: AppIcons.user,
-                        label: '更改信息',
-                        onTap: () {
-                          if (user == null) {
-                            showAuthModal(context);
-                          } else {
-                            showProfileModal(context);
-                          }
-                        },
-                      ),
-                      if (user != null)
-                        _MeRow(
-                          icon: AppIcons.logout,
-                          label: '退出登录',
-                          danger: true,
-                          onTap: () => _confirmLogout(context),
-                        ),
-                      if (user != null)
-                        _MeRow(
-                          icon: AppIcons.trash,
-                          label: '注销账号（永久删除）',
-                          danger: true,
-                          onTap: () => _deleteAccount(context),
-                        ),
-                    ]),
-                    SizedBox(height: web ? 28 : 18),
-                    _section(c, '隐私与协议'),
-                    const SizedBox(height: 8),
-                    _rows(c, [
-                      _MeRow(
-                        icon: AppIcons.lock,
-                        label: '隐私政策',
-                        onTap: () => showLegalPage(context, LegalDoc.privacy),
-                      ),
-                      _MeRow(
-                        icon: AppIcons.book,
-                        label: '用户协议',
-                        onTap: () => showLegalPage(context, LegalDoc.terms),
-                      ),
-                      _MeRow(
-                        icon: AppIcons.users,
-                        label: state.blockedUsers.isEmpty
-                            ? '黑名单'
-                            : '黑名单（${state.blockedUsers.length}）',
-                        onTap: () => showBlockedUsersSheet(context),
-                      ),
-                      if (kIsWeb)
-                        _MeRow(
-                          icon: AppIcons.book,
-                          label: '账号注销说明',
-                          onTap: () => launchUrl(
-                            Uri.parse('/account-deletion.html'),
-                            mode: LaunchMode.externalApplication,
-                          ),
-                        ),
-                    ]),
-                    SizedBox(height: web ? 28 : 18),
-                    _section(c, '通知'),
-                    const SizedBox(height: 8),
-                    _rows(c, [
-                      _MeToggleRow(
-                        icon: AppIcons.bell,
-                        label: '通知提醒',
-                        hint: platform.isWindows ? '桌面端以应用内提醒呈现' : '社区消息与烹饪计时',
-                        value: state.notificationsEnabled,
-                        onChanged: (v) => _setNotifications(context, v),
-                      ),
-                    ]),
-                    SizedBox(height: web ? 28 : 18),
-                    _section(c, '外观'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _themeChip(context, '浅色', ThemeMode.light),
-                        _themeChip(context, '深色', ThemeMode.dark),
-                        _themeChip(context, '跟随系统', ThemeMode.system),
-                      ],
-                    ),
-                    if (platform.isAndroid || platform.isWindows) ...[
+                      const SizedBox(height: 12),
+                      CardCollectionEntry(compact: true),
                       const SizedBox(height: 18),
-                      _section(c, '关于'),
-                      const SizedBox(height: 8),
-                      _rows(c, [
-                        _MeRow(
-                          icon: AppIcons.refresh,
-                          label: '检查更新',
-                          trailing: const _VersionLabel(),
-                          onTap: () => checkForUpdates(context, manual: true),
-                        ),
-                      ]),
+                      _quickGrid(context, state, web: web),
+                      const SizedBox(height: 18),
+                      _accountGroup(context, user),
+                      const SizedBox(height: 18),
+                      _settingsColumn(context, state, user, web: web),
                     ],
-                    SizedBox(height: web ? 28 : 18),
-                    _section(c, '联系我们'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _contactChip(context, 'KOOK 25343821', '25343821'),
-                        _contactChip(
-                          context,
-                          '微信 Tangerine-1017',
-                          'Tangerine-1017',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 48),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _pageHeader(
+    BuildContext context, {
+    required bool web,
+    required bool duo,
+  }) {
+    final p = context.c;
+    return Row(
+      children: [
+        if (!duo && !floating && !embedded) ...[
+          Pressable(
+            onTap: () => popOrHome(context),
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: p.surface2,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: p.line),
+                boxShadow: CitroColors.shadows.paper(p),
+              ),
+              child: Row(
+                children: [
+                  AppIcon(
+                    strokeSvg(AppIcons.arrowLeft, width: 2.2),
+                    size: 15,
+                    color: p.ink2,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '返回',
+                    style: context.body(size: 11.5, weight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: p.accent, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 7),
+        Text('我的', style: context.heading(size: web ? 28 : 22)),
+        if (web) ...[
+          const SizedBox(width: 12),
+          Text(
+            'ACCOUNT & PREFERENCES',
+            style: context.body(
+              size: 9.5,
+              weight: FontWeight.w700,
+              color: p.inkSoft,
+              letterSpacing: 1.7,
+            ),
+          ),
+        ],
+        const Spacer(),
+        if (floating)
+          Pressable(
+            onTap: () => Navigator.of(context).maybePop(),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: p.surface2,
+                shape: BoxShape.circle,
+                border: Border.all(color: p.line),
+                boxShadow: CitroColors.shadows.paper(p),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(AppIcons.close, width: 2.2),
+                  size: 15,
+                  color: p.ink2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _accountGroup(BuildContext context, User? user) {
+    if (user == null) return const SizedBox.shrink();
+    final c = context.c;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _section(c, '账号'),
+        const SizedBox(height: 8),
+        _rows(c, [
+          _MeRow(
+            icon: AppIcons.logout,
+            label: '退出登录',
+            danger: true,
+            onTap: () => _confirmLogout(context),
+          ),
+          _MeRow(
+            icon: AppIcons.trash,
+            label: '注销账号（永久删除）',
+            danger: true,
+            onTap: () => _deleteAccount(context),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _profileColumn(BuildContext context, AppState state, User? user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _profileHero(context, state, user, web: false, floating: floating),
+        const SizedBox(height: 12),
+        CardCollectionEntry(compact: true),
+        const SizedBox(height: 14),
+        _quickGrid(context, state, web: false),
+        const SizedBox(height: 14),
+        _accountGroup(context, user),
+      ],
+    );
+  }
+
+  Widget _settingsColumn(
+    BuildContext context,
+    AppState state,
+    User? user, {
+    required bool web,
+  }) {
+    final c = context.c;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _section(c, '通知与外观'),
+        const SizedBox(height: 8),
+        _rows(c, [
+          _MeToggleRow(
+            icon: AppIcons.bell,
+            label: '通知提醒',
+            hint: platform.isWindows ? '桌面端以应用内提醒呈现' : '社区消息与烹饪计时',
+            value: state.notificationsEnabled,
+            onChanged: (v) => _setNotifications(context, v),
+          ),
+          _MeToggleRow(
+            icon: AppIcons.sparkle,
+            label: '减弱动态效果',
+            hint: '关闭页面滑动、缩放与呼吸动画',
+            value: state.reduceMotion,
+            onChanged: (v) => state.setReduceMotion(v),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _themeChip(context, '浅色', ThemeMode.light),
+                _themeChip(context, '深色', ThemeMode.dark),
+                _themeChip(context, '跟随系统', ThemeMode.system),
+              ],
+            ),
+          ),
+        ]),
+        const SizedBox(height: 18),
+        _section(c, '隐私与协议'),
+        const SizedBox(height: 8),
+        _rows(c, [
+          _MeRow(
+            icon: AppIcons.lock,
+            label: '隐私政策',
+            onTap: () => showLegalPage(context, LegalDoc.privacy),
+          ),
+          _MeRow(
+            icon: AppIcons.book,
+            label: '用户协议',
+            onTap: () => showLegalPage(context, LegalDoc.terms),
+          ),
+          if (web)
+            _MeRow(
+              icon: AppIcons.book,
+              label: '账号注销说明',
+              onTap: () => launchUrl(
+                Uri.parse('/account-deletion.html'),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+        ]),
+        const SizedBox(height: 18),
+        _section(c, '关于'),
+        const SizedBox(height: 8),
+        _rows(c, [
+          _MeRow(
+            icon: AppIcons.book,
+            label: '当前版本',
+            trailing: const _VersionLabel(),
+          ),
+        ]),
+        const SizedBox(height: 18),
+        _section(c, '联系我们'),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: c.surface2,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.line),
+            boxShadow: CitroColors.shadows.paper(c),
+          ),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _contactChip(context, 'KOOK 25343821', '25343821'),
+              _contactChip(context, '微信 Tangerine-1017', 'Tangerine-1017'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _quickGrid(BuildContext context, AppState state, {required bool web}) {
+    final items = <Widget>[
+      _QuickTile(
+        icon: AppIcons.user,
+        label: '编辑资料',
+        onTap: () {
+          if (state.user == null) {
+            showAuthModal(context);
+          } else {
+            showProfileModal(context);
+          }
+        },
+      ),
+      _QuickTile(
+        icon: AppIcons.note,
+        label: '我的笔记',
+        onTap: () => showNotesModal(context),
+      ),
+      _QuickTile(
+        icon: AppIcons.users,
+        label: '黑名单',
+        onTap: () => showBlockedUsersSheet(context),
+      ),
+      if (web)
+        _QuickTile(
+          icon: AppIcons.download,
+          label: '下载 App',
+          onTap: _downloadApp,
+        )
+      else if (platform.isAndroid || platform.isWindows)
+        _QuickTile(
+          icon: AppIcons.refresh,
+          label: '检查更新',
+          onTap: () => checkForUpdates(context, manual: true),
+        ),
+    ];
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth >= 320 ? 4 : 2;
+        const spacing = 8.0;
+        final itemWidth = (box.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final item in items) SizedBox(width: itemWidth, child: item),
+          ],
+        );
+      },
     );
   }
 
@@ -461,38 +544,41 @@ class MePage extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: avatarSize,
-                        height: avatarSize,
-                        decoration: BoxDecoration(
-                          color: user == null ? c.accent : c.hl,
-                          borderRadius: BorderRadius.circular(web ? 16 : 14),
-                          border: Border.all(color: c.surface, width: 2),
-                          boxShadow: CitroColors.shadows.note(c),
-                          image: user?.av != null
-                              ? DecorationImage(
-                                  image: ResizeImage(
-                                    NetworkImage(Api.imageUrl(user!.av)),
-                                    width: 160,
-                                  ),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: user?.av != null
-                            ? null
-                            : Center(
-                                child: Text(
-                                  user?.name.isNotEmpty == true
-                                      ? user!.name[0]
-                                      : '友',
-                                  style: context.display(
-                                    size: avatarSize * .42,
-                                    weight: FontWeight.w700,
-                                    color: const Color(0xFF2E2C22),
+                      CitroHero(
+                        tag: CitroHero.tagOf('profile', 'me'),
+                        child: Container(
+                          width: avatarSize,
+                          height: avatarSize,
+                          decoration: BoxDecoration(
+                            color: user == null ? c.accent : c.hl,
+                            borderRadius: BorderRadius.circular(web ? 16 : 14),
+                            border: Border.all(color: c.surface, width: 2),
+                            boxShadow: CitroColors.shadows.note(c),
+                            image: user?.av != null
+                                ? DecorationImage(
+                                    image: ResizeImage(
+                                      NetworkImage(Api.imageUrl(user!.av)),
+                                      width: 160,
+                                    ),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: user?.av != null
+                              ? null
+                              : Center(
+                                  child: Text(
+                                    user?.name.isNotEmpty == true
+                                        ? user!.name[0]
+                                        : '友',
+                                    style: context.display(
+                                      size: avatarSize * .42,
+                                      weight: FontWeight.w700,
+                                      color: const Color(0xFF2E2C22),
+                                    ),
                                   ),
                                 ),
-                              ),
+                        ),
                       ),
                       const SizedBox(width: 13),
                       Expanded(
@@ -957,16 +1043,73 @@ class _MeRowState extends State<_MeRow> {
                       Flexible(child: widget.trailing!),
                       const SizedBox(width: 6),
                     ],
-                    AppIcon(
-                      strokeSvg(AppIcons.chevronRight, width: 2),
-                      size: 15,
-                      color: c.inkSoft.withAlpha(140),
-                    ),
+                    if (widget.onTap != null)
+                      AppIcon(
+                        strokeSvg(AppIcons.chevronRight, width: 2),
+                        size: 15,
+                        color: c.inkSoft.withAlpha(140),
+                      ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({required this.icon, required this.label, this.onTap});
+
+  final String icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.paper(c),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: c.accent.withAlpha(c.dark ? 44 : 24),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(icon, width: 2),
+                  size: 18,
+                  color: c.accentInk,
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: 10.5,
+                weight: FontWeight.w600,
+                color: c.ink2,
+              ),
+            ),
+          ],
         ),
       ),
     );

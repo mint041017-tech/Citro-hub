@@ -212,12 +212,37 @@ class CitroColors {
   static const shadows = AppShadows();
 }
 
+/// 圆角统一走 8pt / Apple 组件规范：
+/// 按钮 12、卡片 16、弹层 20、小元素 8。
 class AppRadii {
   const AppRadii();
-  double get page => 16;
-  double get card => 14;
-  double get inner => 10;
+  double get page => 24;
+  double get card => 16;
+  double get inner => 12;
+  double get field => 12;
+  double get button => 12;
+  double get modal => 20;
   double get chip => 999;
+}
+
+/// 8pt 栅格标尺。所有新增间距从这里取，避免出现 10/14/18 这类半格值。
+class AppSpacing {
+  const AppSpacing._();
+  static const double x1 = 8;
+  static const double x2 = 16;
+  static const double x3 = 24;
+  static const double x4 = 32;
+  static const double x5 = 40;
+  static const double x6 = 48;
+
+  /// iOS 最小可点击高度。
+  static const double touch = 44;
+
+  /// 全屏页面顶部留白：桌面 48，手机等窄屏取一半。
+  static double pageTop(double width) => width >= 700 ? x6 : x3;
+
+  /// 浮动 Tab 栏高度。
+  static const double navBar = 64;
 }
 
 class AppShadows {

@@ -27,8 +27,8 @@ Future<void> _loadFonts() async {
   await load('ZCOOL', ['assets/fonts/zcool-app.ttf']);
   await load('Caveat', ['assets/fonts/caveat-app.ttf']);
   await load('NotoSC', [
-    'assets/fonts/noto-sc-400-app.otf',
-    'assets/fonts/noto-sc-700-app.otf',
+    'assets/fonts/noto-sc-400-app.ttf',
+    'assets/fonts/noto-sc-700-app.ttf',
   ]);
 }
 

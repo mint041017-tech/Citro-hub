@@ -39,6 +39,10 @@ class AppState extends ChangeNotifier {
   bool _locationAsked = false;
   int unread = 0;
   bool notificationsEnabled = true;
+  bool reduceMotion = false;
+
+  /// CiCi 的自定义性格；空字符串表示使用内置的默认性格。
+  String ciciPersona = '';
   int _cloudStreak = 0;
   bool _cloudCheckedToday = false;
 
@@ -73,6 +77,8 @@ class AppState extends ChangeNotifier {
     unawaited(CardCatalog.ensureLoaded());
     notificationsEnabled = Prefs.getBool(PrefKeys.notificationsEnabled, true);
     Notifications.enabled = notificationsEnabled;
+    reduceMotion = Prefs.getBool(PrefKeys.reduceMotion, false);
+    ciciPersona = Prefs.getString(PrefKeys.ciciPersona) ?? '';
     final mode = Prefs.getString(PrefKeys.theme);
     themeMode = switch (mode) {
       'light' => ThemeMode.light,
@@ -364,6 +370,22 @@ class AppState extends ChangeNotifier {
     notificationsEnabled = value;
     Notifications.enabled = value;
     await Prefs.setBool(PrefKeys.notificationsEnabled, value);
+    notifyListeners();
+  }
+
+  Future<void> setReduceMotion(bool value) async {
+    if (reduceMotion == value) return;
+    reduceMotion = value;
+    await Prefs.setBool(PrefKeys.reduceMotion, value);
+    notifyListeners();
+  }
+
+  /// 保存 CiCi 的自定义性格，空字符串即恢复默认。
+  Future<void> setCiciPersona(String value) async {
+    final next = value.trim();
+    if (ciciPersona == next) return;
+    ciciPersona = next;
+    await Prefs.setString(PrefKeys.ciciPersona, next);
     notifyListeners();
   }
 
@@ -672,7 +694,9 @@ class AppState extends ChangeNotifier {
     return id.isEmpty ? null : id;
   }
 
-  List<String> _cardCandidates() => [for (final card in CardCatalog.all) card.id];
+  List<String> _cardCandidates() => [
+    for (final card in CardCatalog.all) card.id,
+  ];
 
   Map<String, dynamic> _localCardPayload({required bool migrate}) {
     final day = _cardDayKey(DateTime.now());
@@ -1005,8 +1029,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool get fortuneTransferUsed =>
-      Prefs.getString(PrefKeys.checkinTransferUsed) ==
-      _dayKey(DateTime.now());
+      Prefs.getString(PrefKeys.checkinTransferUsed) == _dayKey(DateTime.now());
 
   /// 跟 CiCi 分享好事后到账的转运机会（当天有效，用一次）。
   bool get fortuneTransferReady {

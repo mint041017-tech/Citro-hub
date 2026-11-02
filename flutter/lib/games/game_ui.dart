@@ -24,6 +24,7 @@ import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import '../widgets/shared_element.dart';
 import 'game_common.dart'
     show GameTabletRankRail, sameLiveList, showGameAccount, showGameLeaderboard;
 
@@ -281,17 +282,20 @@ class _GameScaffoldState extends State<GameScaffold> {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.sizeOf(context).width * 0.36,
               ),
-              child: Text(
-                widget.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: widget.titleSize ?? 18,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 0.6,
-                  color: c.ink,
+              child: CitroHero(
+                tag: CitroHero.tagOf('game-title', widget.gameKey),
+                child: Text(
+                  widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppFonts.zcool,
+                    fontFamilyFallback: AppFonts.fallback,
+                    fontSize: widget.titleSize ?? 18,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.6,
+                    color: c.ink,
+                  ),
                 ),
               ),
             ),

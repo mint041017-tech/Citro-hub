@@ -6,6 +6,7 @@ import 'services/platform.dart' as platform;
 import 'pages/cook_page.dart';
 import 'pages/me_page.dart';
 import 'pages/play_page.dart';
+import 'pages/res_page.dart';
 import 'pages/root_shell.dart';
 import 'pages/search_page.dart';
 import 'pages/sens_page.dart';
@@ -70,6 +71,9 @@ class CitroRoutes {
     final route = normalize(raw);
     if (route == cook) return const CookPage();
     if (route == me) return const MePage();
+    // 资源库只在 Windows 的 Tab 里占位；其他端（含移动端深链）直接开独立页，
+    // 避免 /res 被解析成「我的」那一格。
+    if (route == resources && !platform.isWindows) return const ResPage();
     if (route == play) return const PlayPage();
     if (route == sens) return const SensPage();
     if (route == search) return const SearchPage();

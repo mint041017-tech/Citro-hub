@@ -17,9 +17,11 @@ import '../services/prefs.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/app_image.dart';
+import '../widgets/cover_flight.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -119,6 +121,7 @@ class _CookPageState extends State<CookPage> {
     searchDebounce?.cancel();
     shoppingInput.dispose();
     findInput.dispose();
+    _detailCoverHidden.dispose();
     super.dispose();
   }
 
@@ -212,16 +215,195 @@ class _CookPageState extends State<CookPage> {
     }
   }
 
-  Future<void> _openDetail(Recipe r, String source) async {
+  // —— 食谱封面共享元素：列表卡封面 ⇄ 详情封面 ——
+  // Hero 只在 PageRoute 之间飞行，列表 → 详情是本页内的状态切换，
+  // 所以用同一份封面内容 + Overlay 替身飞出"从卡里来、回卡里去"的连贯感。
+  final GlobalKey _detailCoverKey = GlobalKey();
+
+  /// 每张列表卡封面上一次布局的矩形，打开/返回时当作飞行的起点或终点。
+  final Map<String, Rect> _coverRects = <String, Rect>{};
+
+  /// 同一食谱可能同时出现在"我的食谱"和"广场"，落点必须按来源分开记。
+  String _coverKeyOf(String id, bool square) => '$id|${square ? 1 : 0}';
+
+  /// 详情封面是否被替身接管：用 Notifier 而不是 setState，
+  /// 正在淡出的旧详情页也能立刻隐藏封面，不留残影。
+  final ValueNotifier<bool> _detailCoverHidden = ValueNotifier<bool>(false);
+
+  /// 回程飞行期间被藏起来的列表卡封面（新列表页第一帧就生效）。
+  String? _hiddenRecipeId;
+
+  /// 飞行期间页面内容只淡入、不位移，避免"卡片在飞、页面也在滑"的双重运动。
+  bool _coverFlighting = false;
+
+  Rect? _rectOfContext(BuildContext ctx) {
+    final box = ctx.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    return rect.isEmpty ? null : rect;
+  }
+
+  Rect? _rectOfKey(GlobalKey key) {
+    final ctx = key.currentContext;
+    return ctx == null ? null : _rectOfContext(ctx);
+  }
+
+  /// 卡片封面的几何：卡片内缩 7 的边，封面是宽高相等的正方形。
+  Rect? _coverRectOf(BuildContext cardCtx) {
+    final card = _rectOfContext(cardCtx);
+    if (card == null) return null;
+    final side = card.width - 14;
+    if (side <= 0) return null;
+    return Rect.fromLTWH(card.left + 7, card.top + 7, side, side);
+  }
+
+  void _registerCover(String id, bool square, BuildContext cardCtx) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final rect = _coverRectOf(cardCtx);
+      if (rect != null) _coverRects[_coverKeyOf(id, square)] = rect;
+    });
+  }
+
+  /// 列表封面、详情封面和飞行替身共用这一份画法，接缝才看不出来。
+  Widget _coverArt(Recipe r, {double radius = 8}) {
+    final c = context.c;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.dark ? const Color(0xFF24231D) : const Color(0xFFFCF7E8),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (r.cover.isEmpty)
+            Center(
+              child: Text(
+                r.emoji.isEmpty ? '🍳' : r.emoji,
+                style: const TextStyle(fontSize: 48),
+              ),
+            )
+          else
+            AppImage(
+              Api.imageUrl(r.cover),
+              fit: BoxFit.cover,
+              cacheWidth: 720,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openDetail(Recipe r, String source, {Rect? from}) async {
     Recipe target = r;
     if (source == 'square' && r.mine) {
       final hit = mine.where((e) => e.id == r.id);
       if (hit.isNotEmpty) target = hit.first;
     }
+    // 新开一页详情：封面必须可见，先清掉上一次飞行可能残留的隐藏状态。
+    _detailCoverHidden.value = false;
+    // 只有从列表卡上点进来才飞行；搜索结果、食物抽屉等入口保持原生淡入。
+    final start = from;
+    // 打开时这里是实测位置：列表可能刚滚过、缓存里的矩形已经过期，
+    // 用它覆盖缓存，退出时的落点才是这张卡现在的位置。
+    if (start != null) {
+      _coverRects[_coverKeyOf(target.id, source == 'square')] = start;
+    }
+    if (start == null || CitroMotion.reduced(context)) {
+      setState(() {
+        detail = target;
+        detailSource = source;
+        detailLoading = false;
+      });
+      return;
+    }
     setState(() {
       detail = target;
       detailSource = source;
       detailLoading = false;
+      _coverFlighting = true;
+      // 详情页第一帧就藏起封面，替身落地时再接上，中间不出现"闪现又消失"。
+      _detailCoverHidden.value = true;
+    });
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || detail == null) return;
+    final to = _rectOfKey(_detailCoverKey);
+    if (to == null) {
+      setState(() {
+        _detailCoverHidden.value = false;
+        _coverFlighting = false;
+      });
+      return;
+    }
+    if (!context.mounted) return;
+    await CitroCoverFlight.fly(
+      context,
+      from: start,
+      to: to,
+      child: _coverArt(target),
+      duration: const Duration(milliseconds: 420),
+    );
+    if (!mounted) return;
+    setState(() {
+      _detailCoverHidden.value = false;
+      _coverFlighting = false;
+      _hiddenRecipeId = null;
+    });
+  }
+
+  /// 关闭详情：封面按相反方向飞回列表里那张卡。
+  Future<void> _closeDetail() async {
+    final d = detail;
+    if (d == null) return;
+    final coverKey = _coverKeyOf(d.id, detailSource == 'square');
+    final to = _coverRects[coverKey];
+    final raw = _rectOfKey(_detailCoverKey);
+    final view = Offset.zero & MediaQuery.sizeOf(context);
+    // 详情页可能已经滚走了：封面不在视口内就从最近的屏幕边缘接管，
+    // 仍然沿"详情页 → 卡片"的方向飞回，而不是直接瞬切。
+    Rect? from = (raw != null && raw.width >= 8) ? raw : null;
+    if (from != null && !view.overlaps(from)) {
+      final edge = from.center.dy < view.center.dy
+          ? view.top + 2
+          : view.bottom - 16;
+      from = Rect.fromLTWH(from.left, edge, from.width, 14);
+    }
+    if (to == null || from == null || CitroMotion.reduced(context)) {
+      _detailCoverHidden.value = false;
+      setState(() {
+        detail = null;
+        _coverFlighting = false;
+      });
+      return;
+    }
+    // 先让详情页收起封面，再切页：淡出中的旧页不会留下封面残影。
+    _detailCoverHidden.value = true;
+    // 新列表页第一帧就把这张卡的封面藏起来，替身正好盖在原处。
+    setState(() {
+      detail = null;
+      _hiddenRecipeId = d.id;
+      _coverFlighting = true;
+    });
+    // 关键：不等下一帧。替身必须和列表页在同一帧就位，
+    // 否则列表先画出来、封面空一格，再飞回来就会闪一下。
+    if (!context.mounted) return;
+    await CitroCoverFlight.fly(
+      context,
+      from: from,
+      to: to,
+      child: _coverArt(d),
+      duration: const Duration(milliseconds: 340),
+      curve: Curves.easeInOutCubic,
+      // 列表页刚重建（顺序、滚动都可能变了）：起飞前用它的实时矩形定落点。
+      resolveTo: () => _coverRects[coverKey],
+    );
+    if (!mounted) return;
+    setState(() {
+      _hiddenRecipeId = null;
+      _detailCoverHidden.value = false;
+      _coverFlighting = false;
     });
   }
 
@@ -235,6 +417,9 @@ class _CookPageState extends State<CookPage> {
       detail = null;
       cat = '';
       search = '';
+      _hiddenRecipeId = null;
+      _detailCoverHidden.value = false;
+      _coverFlighting = false;
     });
     if (t == 'square') _ensureSquare();
   }
@@ -331,6 +516,10 @@ class _CookPageState extends State<CookPage> {
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
             transitionBuilder: (child, anim) {
+              // 共享元素飞行时页面只淡入，位移交给封面替身。
+              if (_coverFlighting) {
+                return FadeTransition(opacity: anim, child: child);
+              }
               final isNew = child.key == ValueKey(bodyKey);
               final d = isNew ? _bodyDir : -_bodyDir;
               return FadeTransition(
@@ -350,6 +539,14 @@ class _CookPageState extends State<CookPage> {
                 ),
               );
             },
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.center,
+              children: [
+                // 旧页照常淡出：封面已由替身接管，不会出现残影。
+                ...previous,
+                if (current != null) current,
+              ],
+            ),
             child: KeyedSubtree(
               key: ValueKey('${tab}-${detail?.id ?? 'list'}-$findView'),
               child: !app.loggedIn
@@ -377,7 +574,7 @@ class _CookPageState extends State<CookPage> {
       return PopScope(
         canPop: detail == null,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && detail != null) setState(() => detail = null);
+          if (!didPop && detail != null) _closeDetail();
         },
         child: Scaffold(
           body: PaperBackground(
@@ -408,7 +605,7 @@ class _CookPageState extends State<CookPage> {
                       onSelect: _switchTab,
                       onBack: () {
                         if (detail != null) {
-                          setState(() => detail = null);
+                          _closeDetail();
                         } else {
                           popOrHome(context);
                         }
@@ -427,7 +624,7 @@ class _CookPageState extends State<CookPage> {
     return PopScope(
       canPop: detail == null,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && detail != null) setState(() => detail = null);
+        if (!didPop && detail != null) _closeDetail();
       },
       child: Scaffold(
         body: PaperBackground(
@@ -633,14 +830,14 @@ class _CookPageState extends State<CookPage> {
             _ => 'NOMBOOK · RECIPE DIARY',
           };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 12, 2),
+      padding: EdgeInsets.fromLTRB(10, AppSpacing.pageTop(media.width), 12, 2),
       child: Row(
         children: [
           if (!duo && (!webSide || isDetail)) ...[
             Pressable(
               onTap: () {
                 if (isDetail) {
-                  setState(() => detail = null);
+                  _closeDetail();
                 } else {
                   popOrHome(context);
                 }
@@ -1025,13 +1222,12 @@ class _CookPageState extends State<CookPage> {
                     mainAxisExtent: cardWidth + 70,
                   ),
                   itemCount: list.length,
-                  itemBuilder: (_, i) =>
-                      _recipeCard(
-                        context,
-                        list[i],
-                        tab == 'square',
-                        cardWidth: cardWidth,
-                      ),
+                  itemBuilder: (_, i) => _recipeCard(
+                    context,
+                    list[i],
+                    tab == 'square',
+                    cardWidth: cardWidth,
+                  ),
                 );
               },
             ),
@@ -1061,142 +1257,157 @@ class _CookPageState extends State<CookPage> {
     final authorMaxWidth = cardWidth > 0
         ? math.max(56.0, math.min(96.0, cardWidth - 70))
         : 96.0;
-    return Pressable(
-      onTap: () => _openDetail(r, square ? 'square' : 'mine'),
-      onLongPress: !square && r.mine
-          ? () {
-              HapticFeedback.mediumImpact();
-              _deleteRecipe(r);
-            }
-          : null,
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(7, 7, 7, 0),
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: c.dark
-                      ? const Color(0xFF24231D)
-                      : const Color(0xFFFCF7E8),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: c.line.withAlpha(160)),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(painter: _GridPainter(c.grid)),
-                    ),
-                    if (r.cover.isEmpty)
-                      Center(
-                        child: Text(
-                          r.emoji.isEmpty ? '🍳' : r.emoji,
-                          style: const TextStyle(fontSize: 48),
-                        ),
+    return Builder(
+      builder: (cardCtx) {
+        _registerCover(r.id, square, cardCtx);
+        return Pressable(
+          onTap: () => _openDetail(
+            r,
+            square ? 'square' : 'mine',
+            from: _coverRectOf(cardCtx),
+          ),
+          onLongPress: !square && r.mine
+              ? () {
+                  HapticFeedback.mediumImpact();
+                  _deleteRecipe(r);
+                }
+              : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.line),
+              boxShadow: CitroColors.shadows.paper(c),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Opacity(
+                  // 回程时替身独占画面，卡片封面落地后再显形。
+                  opacity: _hiddenRecipeId == r.id ? 0 : 1,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(7, 7, 7, 0),
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: c.dark
+                            ? const Color(0xFF24231D)
+                            : const Color(0xFFFCF7E8),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: c.line.withAlpha(160)),
                       ),
-                    if (r.cover.isNotEmpty)
-                      Positioned.fill(
-                        child: AppImage(
-                          Api.imageUrl(r.cover),
-                          fit: BoxFit.cover,
-                          cacheWidth: 540,
-                          errorBuilder: (_, __, ___) =>
-                              const SizedBox.shrink(),
-                        ),
-                      ),
-                    if (!square && r.fromOwner.isNotEmpty)
-                      Positioned(
-                        left: 6,
-                        top: 6,
-                        child: _ownerPill(
-                          context,
-                          r,
-                          maxWidth: authorMaxWidth,
-                        ),
-                      ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: square
-                          ? _ownerPill(context, r)
-                          : Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    (r.visibility == 'public'
-                                            ? c.hl
-                                            : c.surface2)
-                                        .withAlpha(240),
-                                borderRadius: BorderRadius.circular(99),
-                                border: Border.all(color: c.line),
-                              ),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(painter: _GridPainter(c.grid)),
+                          ),
+                          if (r.cover.isEmpty)
+                            Center(
                               child: Text(
-                                r.visibility == 'public' ? '🌐 公开' : '🔒 私密',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.body(
-                                  size: 8.5,
-                                  color: r.visibility == 'public'
-                                      ? c.accentInk
-                                      : c.inkSoft,
-                                ),
+                                r.emoji.isEmpty ? '🍳' : r.emoji,
+                                style: const TextStyle(fontSize: 48),
                               ),
                             ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${pinned ? '📌 ' : ''}${r.name}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: 15, color: c.ink),
-                  ),
-                  const SizedBox(height: 3),
-                  if (r.cuisine.isNotEmpty || r.dishType.isNotEmpty)
-                    Text(
-                      [
-                        r.cuisine,
-                        r.dishType,
-                      ].where((e) => e.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.body(size: 9.5, color: c.inkSoft),
-                    ),
-                  if (r.calories > 0)
-                    Text(
-                      '${r.calories} 千卡/100g',
-                      style: context.body(
-                        size: 9.5,
-                        weight: FontWeight.w600,
-                        color: c.accentInk,
+                          if (r.cover.isNotEmpty)
+                            Positioned.fill(
+                              child: AppImage(
+                                Api.imageUrl(r.cover),
+                                fit: BoxFit.cover,
+                                cacheWidth: 540,
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox.shrink(),
+                              ),
+                            ),
+                          if (!square && r.fromOwner.isNotEmpty)
+                            Positioned(
+                              left: 6,
+                              top: 6,
+                              child: _ownerPill(
+                                context,
+                                r,
+                                maxWidth: authorMaxWidth,
+                              ),
+                            ),
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: square
+                                ? _ownerPill(context, r)
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (r.visibility == 'public'
+                                                  ? c.hl
+                                                  : c.surface2)
+                                              .withAlpha(240),
+                                      borderRadius: BorderRadius.circular(99),
+                                      border: Border.all(color: c.line),
+                                    ),
+                                    child: Text(
+                                      r.visibility == 'public'
+                                          ? '🌐 公开'
+                                          : '🔒 私密',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: context.body(
+                                        size: 8.5,
+                                        color: r.visibility == 'public'
+                                            ? c.accentInk
+                                            : c.inkSoft,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${pinned ? '📌 ' : ''}${r.name}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.heading(size: 15, color: c.ink),
+                      ),
+                      const SizedBox(height: 3),
+                      if (r.cuisine.isNotEmpty || r.dishType.isNotEmpty)
+                        Text(
+                          [
+                            r.cuisine,
+                            r.dishType,
+                          ].where((e) => e.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.body(size: 9.5, color: c.inkSoft),
+                        ),
+                      if (r.calories > 0)
+                        Text(
+                          '${r.calories} 千卡/100g',
+                          style: context.body(
+                            size: 9.5,
+                            weight: FontWeight.w600,
+                            color: c.accentInk,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1323,274 +1534,333 @@ class _CookPageState extends State<CookPage> {
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.paper(c),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(r.name, style: context.heading(size: 24, color: c.ink)),
-            const SizedBox(height: 6),
-            Container(width: 150, height: 8, color: c.hl),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                if (r.cuisine.isNotEmpty) _pill(context, r.cuisine),
-                if (r.dishType.isNotEmpty) _pill(context, r.dishType),
-                if (r.calories > 0)
-                  _pill(context, '${r.calories} 千卡/100g', color: c.hl),
-                if (r.prepMin + r.cookMin > 0)
-                  _pill(context, '⏱ ${r.prepMin + r.cookMin} 分钟', color: c.hl),
-                if (r.servings > 0) _pill(context, '份量 ${r.servings} 人'),
-                for (final t in r.tags)
-                  if (t != r.cuisine && t != r.dishType) _pill(context, t),
-                _pill(context, '做过 ${r.diary.length} 次'),
-              ],
-            ),
-            if (r.source.isNotEmpty) ...[
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // 横屏/宽屏：封面在左、内容在右并排，避免窄栏里一长条。
+            final wide = constraints.maxWidth >= 620;
+            final cover = Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _detailCoverHidden,
+                  builder: (_, hidden, _) => Opacity(
+                    opacity: hidden ? 0 : 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        // 共享元素的落点：列表卡封面从那张卡的位置长到这里。
+                        key: _detailCoverKey,
+                        aspectRatio: 1,
+                        child: _coverArt(r, radius: 12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            final header = <Widget>[
+              Text(r.name, style: context.heading(size: 24, color: c.ink)),
               const SizedBox(height: 6),
-              Text(
-                '来源：${r.source}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(size: 10, color: c.accentInk),
-              ),
-            ],
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'by ${r.owner ?? _app?.user?.name ?? ''}',
-                        style: context.body(size: 10.5, color: c.accentInk),
-                      ),
-                      Text(
-                        _date(r.updatedAt),
-                        style: context.body(size: 10, color: c.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-                if (r.mine) ...[
-                  _detailAction(
-                    context,
-                    '编辑',
-                    onTap: () async {
-                      final saved = await showCookEditor(context, r);
-                      if (saved != null && mounted) {
-                        saved.mine = true;
-                        saved.owner = r.owner;
-                        saved.fromOwner = r.fromOwner;
-                        setState(() {
-                          mine.removeWhere((e) => e.id == saved.id);
-                          mine.insert(0, saved);
-                          detail = saved;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 6),
-                  _detailAction(
-                    context,
-                    '删除',
-                    danger: true,
-                    onTap: () => _deleteRecipe(r),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            DashedLine(color: c.line2),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _sectionTitle(context, '食材'),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => _addIngredientsToShopping(r),
-                  child: Container(
-                    height: 30,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
+              Container(width: 150, height: 8, color: c.hl),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (r.cuisine.isNotEmpty) _pill(context, r.cuisine),
+                  if (r.dishType.isNotEmpty) _pill(context, r.dishType),
+                  if (r.calories > 0)
+                    _pill(context, '${r.calories} 千卡/100g', color: c.hl),
+                  if (r.prepMin + r.cookMin > 0)
+                    _pill(
+                      context,
+                      '⏱ ${r.prepMin + r.cookMin} 分钟',
                       color: c.hl,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.accent.withAlpha(110)),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppIcon(
-                          strokeSvg(AppIcons.cart, width: 2),
-                          size: 13,
-                          color: c.accentInk,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '加入购物清单',
-                          style: context.body(
-                            size: 10.5,
-                            weight: FontWeight.w700,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _ingredients(context, r),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _sectionTitle(context, '步骤'),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _customTimer,
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 11),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.line2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppIcon(
-                          strokeSvg(
-                            '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-                            width: 2,
-                          ),
-                          size: 13,
-                          color: c.accentInk,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '自定义计时',
-                          style: context.body(
-                            size: 10.5,
-                            weight: FontWeight.w600,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (r.steps.isEmpty)
-              Text('还没有写步骤', style: context.body(size: 11.5, color: c.inkSoft))
-            else
-              for (var i = 0; i < r.steps.length; i++) _step(context, r, i),
-            if (r.note.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _sectionTitle(context, '小记'),
-              const SizedBox(height: 5),
-              Text(
-                r.note,
-                style: context.body(size: 14.5, color: c.ink2, height: 1.75),
+                  if (r.servings > 0) _pill(context, '份量 ${r.servings} 人'),
+                  for (final t in r.tags)
+                    if (t != r.cuisine && t != r.dishType) _pill(context, t),
+                  _pill(context, '做过 ${r.diary.length} 次'),
+                ],
               ),
-            ],
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _sectionTitle(context, '下厨日记'),
-                const SizedBox(width: 6),
+              if (r.source.isNotEmpty) ...[
+                const SizedBox(height: 6),
                 Text(
-                  '${r.diary.length} 次',
-                  style: context.body(size: 10, color: c.inkSoft),
+                  '来源：${r.source}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(size: 10, color: c.accentInk),
                 ),
-                const Spacer(),
-                if (r.mine)
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'by ${r.owner ?? _app?.user?.name ?? ''}',
+                          style: context.body(size: 10.5, color: c.accentInk),
+                        ),
+                        Text(
+                          _date(r.updatedAt),
+                          style: context.body(size: 10, color: c.inkSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (r.mine) ...[
+                    _detailAction(
+                      context,
+                      '编辑',
+                      onTap: () async {
+                        final saved = await showCookEditor(context, r);
+                        if (saved != null && mounted) {
+                          saved.mine = true;
+                          saved.owner = r.owner;
+                          saved.fromOwner = r.fromOwner;
+                          setState(() {
+                            mine.removeWhere((e) => e.id == saved.id);
+                            mine.insert(0, saved);
+                            detail = saved;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _detailAction(
+                      context,
+                      '删除',
+                      danger: true,
+                      onTap: () => _deleteRecipe(r),
+                    ),
+                  ],
+                ],
+              ),
+            ];
+            // 虚线以下（食材、步骤、小记、日记、底部按钮）保持纵向原样。
+            final body = <Widget>[
+              const SizedBox(height: 16),
+              DashedLine(color: c.line2),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _sectionTitle(context, '食材'),
+                  const Spacer(),
                   GestureDetector(
-                    onTap: () async {
-                      final updated = await showDiaryDialog(context, r);
-                      if (updated != null && mounted) {
-                        updated.mine = true;
-                        updated.owner = r.owner;
-                        updated.fromOwner = r.fromOwner;
-                        setState(() {
-                          final idx = mine.indexWhere(
-                            (e) => e.id == updated.id,
-                          );
-                          if (idx >= 0) mine[idx] = updated;
-                          detail = updated;
-                        });
-                      }
-                    },
+                    onTap: () => _addIngredientsToShopping(r),
                     child: Container(
-                      height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: c.hl,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: c.accent.withAlpha(110)),
                       ),
-                      child: Center(
-                        child: Text(
-                          '＋ 记一笔',
-                          style: context.body(
-                            size: 11.5,
-                            weight: FontWeight.w700,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppIcon(
+                            strokeSvg(AppIcons.cart, width: 2),
+                            size: 13,
                             color: c.accentInk,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '加入购物清单',
+                            style: context.body(
+                              size: 10.5,
+                              weight: FontWeight.w700,
+                              color: c.accentInk,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            if (r.diary.isEmpty)
-              Text(
-                '还没有下厨记录，做一次就记一笔吧',
-                style: context.body(size: 11, color: c.inkSoft),
-              )
-            else
-              for (final d in r.diary.reversed.take(5)) _diaryTile(context, d),
-            const SizedBox(height: 14),
-            if (detailSource == 'square' && !r.mine)
-              Row(
-                children: [
-                  Expanded(
-                    child: AccentButton(
-                      text: '＋ 收藏到我的食谱库',
-                      height: 42,
-                      onTap: () => _collect(r),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AccentButton(
-                      text: '复制文本',
-                      height: 42,
-                      outlined: true,
-                      onTap: () => _copyRecipe(r),
-                    ),
-                  ),
-                ],
-              )
-            else if (r.mine)
-              Row(
-                children: [
-                  Expanded(
-                    child: AccentButton(
-                      text: '复制文本',
-                      height: 42,
-                      outlined: true,
-                      onTap: () => _copyRecipe(r),
                     ),
                   ),
                 ],
               ),
-          ],
+              const SizedBox(height: 8),
+              _ingredients(context, r),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _sectionTitle(context, '步骤'),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: _customTimer,
+                    child: Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: c.line2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppIcon(
+                            strokeSvg(
+                              '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+                              width: 2,
+                            ),
+                            size: 13,
+                            color: c.accentInk,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '自定义计时',
+                            style: context.body(
+                              size: 10.5,
+                              weight: FontWeight.w600,
+                              color: c.accentInk,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (r.steps.isEmpty)
+                Text(
+                  '还没有写步骤',
+                  style: context.body(size: 11.5, color: c.inkSoft),
+                )
+              else
+                for (var i = 0; i < r.steps.length; i++) _step(context, r, i),
+              if (r.note.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _sectionTitle(context, '小记'),
+                const SizedBox(height: 5),
+                Text(
+                  r.note,
+                  style: context.body(size: 14.5, color: c.ink2, height: 1.75),
+                ),
+              ],
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _sectionTitle(context, '下厨日记'),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${r.diary.length} 次',
+                    style: context.body(size: 10, color: c.inkSoft),
+                  ),
+                  const Spacer(),
+                  if (r.mine)
+                    GestureDetector(
+                      onTap: () async {
+                        final updated = await showDiaryDialog(context, r);
+                        if (updated != null && mounted) {
+                          updated.mine = true;
+                          updated.owner = r.owner;
+                          updated.fromOwner = r.fromOwner;
+                          setState(() {
+                            final idx = mine.indexWhere(
+                              (e) => e.id == updated.id,
+                            );
+                            if (idx >= 0) mine[idx] = updated;
+                            detail = updated;
+                          });
+                        }
+                      },
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: c.hl,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: c.accent.withAlpha(110)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '＋ 记一笔',
+                            style: context.body(
+                              size: 11.5,
+                              weight: FontWeight.w700,
+                              color: c.accentInk,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (r.diary.isEmpty)
+                Text(
+                  '还没有下厨记录，做一次就记一笔吧',
+                  style: context.body(size: 11, color: c.inkSoft),
+                )
+              else
+                for (final d in r.diary.reversed.take(5))
+                  _diaryTile(context, d),
+              const SizedBox(height: 14),
+              if (detailSource == 'square' && !r.mine)
+                Row(
+                  children: [
+                    Expanded(
+                      child: AccentButton(
+                        text: '＋ 收藏到我的食谱库',
+                        height: 42,
+                        onTap: () => _collect(r),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AccentButton(
+                        text: '复制文本',
+                        height: 42,
+                        outlined: true,
+                        onTap: () => _copyRecipe(r),
+                      ),
+                    ),
+                  ],
+                )
+              else if (r.mine)
+                Row(
+                  children: [
+                    Expanded(
+                      child: AccentButton(
+                        text: '复制文本',
+                        height: 42,
+                        outlined: true,
+                        onTap: () => _copyRecipe(r),
+                      ),
+                    ),
+                  ],
+                ),
+            ];
+            final info = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: header,
+            );
+            if (wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      cover,
+                      const SizedBox(width: 20),
+                      Expanded(child: info),
+                    ],
+                  ),
+                  ...body,
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [cover, const SizedBox(height: 12), info, ...body],
+            );
+          },
         ),
       ),
     );

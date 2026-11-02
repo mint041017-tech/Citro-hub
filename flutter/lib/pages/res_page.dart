@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/modal.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import 'in_app_web.dart';
@@ -74,9 +75,14 @@ class _ResPageState extends State<ResPage> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(8, 8, 8, tabBar ? 110 : 30),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                padding: EdgeInsets.fromLTRB(
+                  8,
+                  AppSpacing.pageTop(contentWidth),
+                  8,
+                  tabBar ? 110 : 30,
+                ),
+                child: CitroStagger(
+                  step: const Duration(milliseconds: 28),
                   children: [
                     Row(
                       children: [
@@ -222,7 +228,6 @@ class _ResPageState extends State<ResPage> {
                     if (mods.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       PaperCard(
-                        rotate: -.4,
                         tapeColor: c.tape,
                         tapeAngle: -3,
                         padding: const EdgeInsets.all(12),
@@ -263,7 +268,6 @@ class _ResPageState extends State<ResPage> {
                     if (tools.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       PaperCard(
-                        rotate: .5,
                         tapeColor: c.tape2,
                         tapeAngle: 2.5,
                         padding: const EdgeInsets.all(12),
@@ -296,7 +300,6 @@ class _ResPageState extends State<ResPage> {
                     if (drivers.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       PaperCard(
-                        rotate: -.4,
                         tapeColor: c.tape3,
                         tapeAngle: -2.5,
                         padding: const EdgeInsets.all(12),
@@ -402,7 +405,7 @@ class _ResPageState extends State<ResPage> {
       child: Container(
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.paper(c),
         ),
@@ -413,7 +416,7 @@ class _ResPageState extends State<ResPage> {
             AspectRatio(
               aspectRatio: 16 / 8,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(9),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [

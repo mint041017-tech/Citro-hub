@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import 'paper.dart';
 
-/// 无边框窗口的自绘标题栏：左侧手账品牌，中间可拖拽，右侧窗口三键。
-class CitroWindowTitleBar extends StatefulWidget {
-  final double height;
-
-  const CitroWindowTitleBar({super.key, this.height = 38});
+/// 无边框窗口的悬浮窗控：不再占用标题栏高度，直接浮在内容右上角。
+///
+/// 默认半透明、鼠标移入后完全显形，避免遮住页面内容。
+class CitroWindowControls extends StatefulWidget {
+  const CitroWindowControls({super.key});
 
   @override
-  State<CitroWindowTitleBar> createState() => _CitroWindowTitleBarState();
+  State<CitroWindowControls> createState() => _CitroWindowControlsState();
 }
 
-class _CitroWindowTitleBarState extends State<CitroWindowTitleBar>
+class _CitroWindowControlsState extends State<CitroWindowControls>
     with WindowListener {
   bool _maximized = false;
   bool _fullScreen = false;
+  bool _hovered = false;
   Brightness? _nativeBrightness;
   Color? _nativeBackground;
 
@@ -98,58 +100,16 @@ class _CitroWindowTitleBarState extends State<CitroWindowTitleBar>
     final brightness = Theme.of(context).brightness;
     _syncNativeTheme(brightness, c.surface);
     if (_fullScreen) return const SizedBox.shrink();
-    return SizedBox(
-      height: widget.height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: c.surface,
-          border: Border(bottom: BorderSide(color: c.line)),
-        ),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedOpacity(
+        opacity: _hovered ? 1 : .55,
+        duration: CitroMotion.hover,
+        curve: CitroMotion.easeColor,
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: DragToMoveArea(
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 16,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: Text(
-                          'Citro',
-                          style: context.display(
-                            size: 15,
-                            color: c.ink2,
-                            letterSpacing: .3,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (var i = 0; i < 3; i++) ...[
-                            if (i > 0) const SizedBox(width: 4),
-                            Container(
-                              width: 3,
-                              height: 3,
-                              decoration: BoxDecoration(
-                                color: c.inkSoft.withAlpha(90),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
             _WindowControl(
               label: '最小化',
               icon: AppIcons.minus,
@@ -166,7 +126,6 @@ class _CitroWindowTitleBarState extends State<CitroWindowTitleBar>
               destructive: true,
               onTap: () => windowManager.close(),
             ),
-            const SizedBox(width: 10),
           ],
         ),
       ),
@@ -193,18 +152,18 @@ class _WindowControl extends StatefulWidget {
 
 class _WindowControlState extends State<_WindowControl> {
   bool _hover = false;
+  bool _down = false;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final close = widget.destructive;
-    final restColor = close ? c.stamp.withAlpha(c.dark ? 30 : 14) : c.surface2;
+    final restColor = close
+        ? c.stamp.withAlpha(c.dark ? 92 : 30)
+        : c.surface.withAlpha(c.dark ? 190 : 220);
     final restBorder = close ? c.stamp.withAlpha(60) : c.line;
     final hoverColor = close ? c.stamp : c.hl.withAlpha(c.dark ? 42 : 145);
     final hoverBorder = close ? c.stamp : c.accent.withAlpha(110);
-    final iconColor = _hover
-        ? (close ? Colors.white : c.accentInk)
-        : (close ? c.stamp : c.ink2);
     return Semantics(
       button: true,
       label: widget.label,
@@ -215,29 +174,54 @@ class _WindowControlState extends State<_WindowControl> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 130),
-            curve: Curves.easeOut,
-            width: 28,
-            height: 28,
-            margin: const EdgeInsets.only(left: 6, top: 5, bottom: 5),
-            decoration: BoxDecoration(
-              color: _hover ? hoverColor : restColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: _hover ? hoverBorder : restBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: c.ink.withAlpha(c.dark ? 34 : 12),
-                  blurRadius: 5,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
+          onTapDown: (_) => setState(() => _down = true),
+          onTapCancel: () => setState(() => _down = false),
+          onTapUp: (_) => setState(() => _down = false),
+          // Windows 标题栏按钮的原生高度是 32pt：视觉 28pt，命中区 32pt。
+          child: SizedBox(
+            width: 32,
+            height: 32,
             child: Center(
-              child: AppIcon(
-                strokeSvg(widget.icon, width: 2),
-                size: 13,
-                color: iconColor,
+              child: AnimatedScale(
+                scale: _down && !CitroMotion.reduced(context) ? .94 : 1,
+                duration: CitroMotion.press,
+                curve: CitroMotion.easeOut,
+                child: AnimatedContainer(
+                  duration: CitroMotion.hover,
+                  curve: CitroMotion.easeColor,
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: _hover ? hoverColor : restColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _hover ? hoverBorder : restBorder,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: c.ink.withAlpha(c.dark ? 40 : 18),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: _hover ? 1 : 0),
+                      duration: CitroMotion.press,
+                      curve: CitroMotion.easeOut,
+                      builder: (context, t, _) => AppIcon(
+                        strokeSvg(widget.icon, width: 2),
+                        size: 13,
+                        color: Color.lerp(
+                          close ? c.stamp : c.ink2,
+                          close ? Colors.white : c.accentInk,
+                          t,
+                        )!,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

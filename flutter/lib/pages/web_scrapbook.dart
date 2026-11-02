@@ -15,6 +15,7 @@ import '../tingyu/tingyu_controller.dart';
 import '../tingyu/tingyu_play_chip.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import 'me_page.dart';
 
 /// The desktop page is a 12-column sheet on a warm desk, matching index.html.
 class WebDesktopPaper extends StatelessWidget {
@@ -192,6 +193,8 @@ class WebDesktopHeader extends StatelessWidget {
                     ),
                   ),
                   const WebThemeMenu(),
+                  const SizedBox(width: 8),
+                  const _HeaderAvatar(),
                 ],
               );
             },
@@ -200,6 +203,57 @@ class WebDesktopHeader extends StatelessWidget {
       ),
     ),
   ];
+}
+
+/// Web 桌面的账号入口：首页网格里的打卡已经改成卡片，
+/// 头像收进顶栏，点一下仍然打开「我的」。
+class _HeaderAvatar extends StatelessWidget {
+  const _HeaderAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.app;
+    final c = context.c;
+    final user = app.user;
+    return Semantics(
+      button: true,
+      label: '我的',
+      child: Pressable(
+        onTap: () => openMePage(context),
+        scale: .94,
+        hoverLift: 0,
+        hoverShadow: false,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: c.surface2,
+            shape: BoxShape.circle,
+            border: Border.all(color: c.line),
+            boxShadow: CitroColors.shadows.paper(c),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Center(
+            child: user == null || user.name.isEmpty
+                ? AppIcon(
+                    strokeSvg(AppIcons.user, width: 2),
+                    size: 17,
+                    color: c.ink2,
+                  )
+                : Text(
+                    user.name[0],
+                    style: context.display(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: c.ink,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Brand extends StatelessWidget {

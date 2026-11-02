@@ -7,11 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/ai.dart';
+import '../services/api.dart';
+import '../services/cici_persona.dart';
 import '../services/media.dart';
+import '../services/speech.dart';
 import '../state/app_state.dart';
 import '../services/models.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
 class _ChatMessage {
@@ -35,7 +39,7 @@ Future<void> showAiChat(
   bool goodDeed = false,
   VoidCallback? onGoodDeed,
 }) async {
-  await showModalBottomSheet<void>(
+  await showCitroSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -68,6 +72,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
   String? _pendingImage;
   bool _picking = false;
   bool _chatRewarded = false;
+  bool _listening = false;
+  String _voiceBase = '';
 
   // 转运对话单独一份记录，不把「好事」混进日常 CiCi 历史。
   List<_ChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
@@ -88,6 +94,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    SpeechInput.cancel();
     _input.dispose();
     _scroll.dispose();
     _focus.dispose();
@@ -120,6 +127,47 @@ class _AiChatSheetState extends State<_AiChatSheet>
   }
 
   static const _deedDoneText = '好事收到，转运机会已经到账 ✅\n回到签卡，点「再抽一签」看看新运气。';
+
+  Future<void> _toggleVoice() async {
+    if (_sending || _picking) return;
+    if (_listening) {
+      setState(() => _listening = false);
+      await SpeechInput.stop();
+      return;
+    }
+    final ready = await SpeechInput.ensureReady();
+    if (!mounted) return;
+    if (!ready) {
+      AppToast.show(context, '当前设备暂不支持语音输入，可以先打字。');
+      return;
+    }
+    _voiceBase = _input.text;
+    setState(() => _listening = true);
+    final started = await SpeechInput.start(
+      onResult: (text, isFinal) {
+        if (!mounted) return;
+        final heard = text.trim();
+        setState(() {
+          _input.text = heard.isEmpty ? _voiceBase : '$_voiceBase$heard';
+          _input.selection = TextSelection.collapsed(
+            offset: _input.text.length,
+          );
+          if (isFinal) _listening = false;
+        });
+        _jumpToEnd();
+      },
+      onError: (message) {
+        if (!mounted) return;
+        setState(() => _listening = false);
+        AppToast.show(context, '没有听清，再说一次试试。');
+      },
+      onDone: () {
+        if (!mounted) return;
+        setState(() => _listening = false);
+      },
+    );
+    if (!started && mounted) setState(() => _listening = false);
+  }
 
   Future<void> _send([String? preset]) async {
     if (_sending) return;
@@ -181,12 +229,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
         assistant.text = result.reply;
         _messages.add(done);
       });
-      unawaited(
-        _recordDeed(
-          user.text.isEmpty ? '分享了公益捐赠截图' : user.text,
-          done,
-        ),
-      );
+      unawaited(_recordDeed(user.text, done, image: user.image));
     } on AiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -222,6 +265,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
       await for (final chunk in AiService.streamChat(
         messages,
         extraSystem: _systemContext(),
+        persona: AppState.instance.ciciPersona,
       )) {
         if (!mounted) return;
         setState(() {
@@ -300,16 +344,41 @@ class _AiChatSheetState extends State<_AiChatSheet>
     });
   }
 
-  Future<void> _recordDeed(String text, _ChatMessage message) async {
+  /// 转运分享的好事同步成一条社区动态（图片一并带上），不再写进笔记。
+  Future<void> _recordDeed(
+    String text,
+    _ChatMessage message, {
+    String? image,
+  }) async {
     final state = AppState.instance;
-    if (!state.loggedIn) return;
-    final saved = await state.recordGoodDeed(text);
-    if (!mounted) return;
-    setState(() {
-      message.text = saved
-          ? '${message.text}\n已自动收录到「好事记录」笔记 📝'
-          : '${message.text}\n笔记暂时没存上，稍后再试。';
-    });
+    if (!state.loggedIn) {
+      if (!mounted) return;
+      setState(() {
+        message.text = '${message.text}\n登录后才能把这条好事同步到社区。';
+      });
+      return;
+    }
+    final content = text.trim().isEmpty ? '分享了公益捐赠截图' : text.trim();
+    try {
+      await Api.createPost(
+        text: '今日好事：$content',
+        imgs: [if (image != null && image.isNotEmpty) image],
+      );
+      if (!mounted) return;
+      setState(() {
+        message.text = '${message.text}\n已同步到社区动态 🌱';
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        message.text = '${message.text}\n同步社区失败：${e.message}';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        message.text = '${message.text}\n社区暂时没同步成功，稍后可以再试。';
+      });
+    }
   }
 
   String? _systemContext() {
@@ -355,6 +424,22 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (r.note.isNotEmpty) buffer.write('小记：${r.note}；');
     buffer.write('请围绕这道菜回答，给具体可操作的建议；不确定就直说，不要编造。');
     return buffer.toString();
+  }
+
+  /// 标题下的副标题：场景优先，没有场景时显示当前性格。
+  String get _subtitle {
+    final recipe = widget.recipe;
+    if (recipe != null) return '食谱助手 · ${recipe.name}';
+    if (widget.goodDeed) return '分享好事 · 转运一次';
+    final persona = AppState.instance.ciciPersona;
+    return persona.isEmpty
+        ? '嘴硬心软 · 极速回答'
+        : '性格 · ${CiciPersona.labelFor(persona)}';
+  }
+
+  Future<void> _editPersona() async {
+    await showCiciPersonaSheet(context);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -420,11 +505,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 style: context.heading(size: 20, color: c.ink),
                               ),
                               Text(
-                                widget.recipe == null
-                                    ? (widget.goodDeed
-                                          ? '分享好事 · 转运一次'
-                                          : '嘴硬心软 · 极速回答')
-                                    : '食谱助手 · ${widget.recipe!.name}',
+                                _subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.body(
@@ -435,6 +516,38 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             ],
                           ),
                         ),
+                        GestureDetector(
+                          onTap: _editPersona,
+                          child: Container(
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: c.surface2,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: c.line2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppIcon(
+                                  strokeSvg(AppIcons.sparkle, width: 2),
+                                  size: 13,
+                                  color: c.accentInk,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '性格',
+                                  style: context.body(
+                                    size: 12.5,
+                                    weight: FontWeight.w600,
+                                    color: c.ink2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         GestureDetector(
                           onTap: _clear,
                           child: Container(
@@ -674,7 +787,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
               child: Text(
                 context.app.loggedIn
-                    ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会收进「好事记录」笔记。'
+                    ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会以「今日好事：…」同步到社区动态（含图片，公开可见）。'
                     : '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后才能获得转运机会。',
                 style: context.body(size: 11.5, color: c.mintInk, height: 1.6),
               ),
@@ -903,6 +1016,29 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 ],
               ),
             ),
+          if (_listening)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7, left: 2),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.6,
+                      color: c.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '正在聆听…说完点一下麦克风停止',
+                      style: context.body(size: 11, color: c.accentInk),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -935,6 +1071,37 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   ),
                 ),
               ),
+              GestureDetector(
+                onTap: _sending || _picking ? null : _toggleVoice,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 38,
+                  height: 38,
+                  margin: const EdgeInsets.only(right: 7, bottom: 1),
+                  decoration: BoxDecoration(
+                    color: _listening ? c.accent.withAlpha(36) : c.surface2,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _listening ? c.accent : c.line2),
+                  ),
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: Icon(
+                        _listening
+                            ? Icons.stop_rounded
+                            : Icons.mic_none_rounded,
+                        key: ValueKey(_listening),
+                        size: 19,
+                        color: _listening ? c.accent : c.accentInk,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
                 child: Container(
                   constraints: const BoxConstraints(
@@ -955,64 +1122,264 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     maxLines: 4,
                     textAlignVertical: TextAlignVertical.center,
                     textInputAction: TextInputAction.send,
-                onTap: () {
-                  _focus.requestFocus();
-                  SystemChannels.textInput.invokeMethod<void>('TextInput.show');
-                  _jumpToEnd();
-                  Future<void>.delayed(
-                    const Duration(milliseconds: 260),
-                    _jumpToEnd,
-                  );
-                },
-                onSubmitted: (_) => _send(),
-                onTapOutside: (_) => _focus.unfocus(),
+                    onTap: () {
+                      _focus.requestFocus();
+                      SystemChannels.textInput.invokeMethod<void>(
+                        'TextInput.show',
+                      );
+                      _jumpToEnd();
+                      Future<void>.delayed(
+                        const Duration(milliseconds: 260),
+                        _jumpToEnd,
+                      );
+                    },
+                    onSubmitted: (_) => _send(),
+                    onTapOutside: (_) => _focus.unfocus(),
                     style: context.body(size: 13, height: 1.5),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       hintText: '和 CiCi 聊聊…',
-                      hintStyle: context.body(
-                        size: 12.5,
-                        color: c.inkSoft,
-                      ),
+                      hintStyle: context.body(size: 12.5, color: c.inkSoft),
                     ),
                   ),
                 ),
               ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _sending ? null : _send,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: _sending ? c.accent.withAlpha(100) : c.accent,
-                shape: BoxShape.circle,
-                border: Border.all(color: c.line2),
-                boxShadow: _sending ? null : CitroColors.shadows.note(c),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sending ? null : _send,
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _sending ? c.accent.withAlpha(100) : c.accent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.line2),
+                    boxShadow: _sending ? null : CitroColors.shadows.note(c),
+                  ),
+                  child: Center(
+                    child: _sending
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.ink,
+                            ),
+                          )
+                        : AppIcon(
+                            strokeSvg(AppIcons.send, width: 2),
+                            size: 18,
+                            color: const Color(0xFF2E2C22),
+                          ),
+                  ),
+                ),
               ),
-              child: Center(
-                child: _sending
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: c.ink,
-                        ),
-                      )
-                    : AppIcon(
-                        strokeSvg(AppIcons.send, width: 2),
-                        size: 18,
-                        color: const Color(0xFF2E2C22),
-                      ),
-              ),
-            ),
-          ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// CiCi 的性格设置弹层，保存后从下一次回复开始生效。
+Future<void> showCiciPersonaSheet(BuildContext context) async {
+  await showCitroSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: const Color(0x8A23211C),
+    builder: (_) => const _PersonaSheet(),
+  );
+}
+
+class _PersonaSheet extends StatefulWidget {
+  const _PersonaSheet();
+
+  @override
+  State<_PersonaSheet> createState() => _PersonaSheetState();
+}
+
+class _PersonaSheetState extends State<_PersonaSheet> {
+  final TextEditingController _text = TextEditingController(
+    text: AppState.instance.ciciPersona,
+  );
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _pick(String text) {
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    setState(() {});
+  }
+
+  Future<void> _save() async {
+    await AppState.instance.setCiciPersona(_text.text);
+    if (!mounted) return;
+    AppToast.show(context, 'CiCi 的性格已更新');
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    final current = _text.text.trim();
+    return Padding(
+      padding: EdgeInsets.only(bottom: inset),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: c.line2,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Text(
+                      'CiCi 的性格',
+                      style: context.heading(size: 21, color: c.ink),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: c.surface2,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: c.line2),
+                        ),
+                        child: Center(
+                          child: AppIcon(
+                            strokeSvg(AppIcons.close, width: 2.2),
+                            size: 18,
+                            color: c.inkSoft,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '选一个喜欢的说话方式，或者在下面写你想要的性格。保存后从下一句话开始生效，留空就是默认的嘴硬心软。',
+                  style: context.body(size: 12, color: c.inkSoft, height: 1.6),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final preset in CiciPersona.presets)
+                      _presetChip(context, preset, current),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _text,
+                  minLines: 3,
+                  maxLines: 5,
+                  maxLength: CiciPersona.maxLength,
+                  onChanged: (_) => setState(() {}),
+                  style: context.body(size: 13.5, color: c.ink, height: 1.6),
+                  cursorColor: c.accent,
+                  decoration: InputDecoration(
+                    hintText: '例如：说话像邻居姐姐，爱用「呀」「啦」结尾，会主动关心我今天吃了什么。',
+                    hintStyle: context.body(
+                      size: 12.5,
+                      color: c.inkSoft,
+                      height: 1.6,
+                    ),
+                    filled: true,
+                    fillColor: c.surface2,
+                    counterStyle: context.body(size: 10.5, color: c.inkSoft),
+                    contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: c.line2),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: c.accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AccentButton(
+                        text: '恢复默认',
+                        outlined: true,
+                        onTap: current.isEmpty ? null : () => _pick(''),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: AccentButton(text: '保存', onTap: _save),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _presetChip(
+    BuildContext context,
+    ({String label, String text}) preset,
+    String current,
+  ) {
+    final c = context.c;
+    final selected = preset.text == current;
+    return GestureDetector(
+      onTap: () => _pick(preset.text),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? c.hl : c.surface2,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? c.accent : c.line2),
+        ),
+        child: Text(
+          preset.label,
+          style: context.body(
+            size: 12.5,
+            weight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? c.accentInk : c.ink2,
+          ),
+        ),
       ),
     );
   }

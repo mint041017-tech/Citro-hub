@@ -116,14 +116,18 @@ class _WeatherPainter extends CustomPainter {
 
 class ZodiacRing extends StatelessWidget {
   final int score;
-  const ZodiacRing({super.key, required this.score});
+
+  /// 外圈直径，随首页卡片尺寸缩放。
+  final double size;
+
+  const ZodiacRing({super.key, required this.score, this.size = 70});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     return SizedBox(
-      width: 70,
-      height: 70,
+      width: size,
+      height: size,
       child: CustomPaint(
         painter: _RingPainter(
           score.clamp(0, 100) / 100,
@@ -132,8 +136,8 @@ class ZodiacRing extends StatelessWidget {
         ),
         child: Center(
           child: Container(
-            width: 58,
-            height: 58,
+            width: size * .83,
+            height: size * .83,
             decoration: BoxDecoration(
               color: c.surface2,
               shape: BoxShape.circle,
@@ -145,11 +149,18 @@ class ZodiacRing extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: '$score',
-                      style: context.display(size: 23, color: c.ink, height: 1),
+                      style: context.display(
+                        size: math.max(14, size * .33),
+                        color: c.ink,
+                        height: 1,
+                      ),
                     ),
                     TextSpan(
                       text: '分',
-                      style: context.body(size: 8, color: c.inkSoft),
+                      style: context.body(
+                        size: math.max(7, size * .115),
+                        color: c.inkSoft,
+                      ),
                     ),
                   ],
                 ),

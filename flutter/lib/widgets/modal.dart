@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
 import 'paper.dart';
 
@@ -14,29 +17,117 @@ Future<T?> showCitroDialog<T>(
   bool dismissible = true,
   Color? barrier,
 }) {
-  return showGeneralDialog<T>(
-    context: context,
-    barrierDismissible: dismissible,
-    barrierLabel: '关闭',
-    barrierColor: barrier ?? const Color(0xB223211C),
-    transitionDuration: CitroMotion.modal,
-    pageBuilder: (ctx, anim, sec) => builder(ctx),
-    transitionBuilder: (ctx, anim, sec, child) {
-      final curved = CurvedAnimation(
-        parent: anim,
-        curve: CitroMotion.easeOut,
-        reverseCurve: Curves.easeInCubic,
-      );
-      final fade = FadeTransition(opacity: curved, child: child);
-      if (CitroMotion.reduced(ctx)) return fade;
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween(begin: .96, end: 1.0).animate(curved),
+  final reduce = CitroMotion.reduced(context);
+  return Navigator.of(context, rootNavigator: true).push<T>(
+    _CitroDialogRoute<T>(
+      page: builder,
+      dismissible: dismissible,
+      barrierColor: barrier ?? const Color(0xB223211C),
+      reduce: reduce,
+    ),
+  );
+}
+
+/// 四端统一的弹窗路由：进场慢一点、退场快一点，居中缩放而不是从触发器展开。
+class _CitroDialogRoute<T> extends PopupRoute<T> {
+  final WidgetBuilder page;
+  final bool dismissible;
+  final Color _barrier;
+  final bool reduce;
+
+  _CitroDialogRoute({
+    required this.page,
+    required this.dismissible,
+    required Color barrierColor,
+    required this.reduce,
+  }) : _barrier = barrierColor;
+
+  @override
+  Duration get transitionDuration => reduce ? Duration.zero : CitroMotion.modal;
+
+  @override
+  Duration get reverseTransitionDuration =>
+      reduce ? Duration.zero : CitroMotion.modalReverse;
+
+  @override
+  bool get barrierDismissible => dismissible;
+
+  @override
+  Color? get barrierColor => _barrier;
+
+  @override
+  String? get barrierLabel => '关闭';
+
+  @override
+  bool get opaque => false;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => page(context);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: CitroMotion.easeOut,
+      reverseCurve: CitroMotion.exit,
+    );
+    if (reduce) return FadeTransition(opacity: curved, child: child);
+    // 弹窗是居中的独立物件：保持 transform-origin 居中，只做轻微放大 + 上浮。
+    return FadeTransition(
+      opacity: curved,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: .965, end: 1).animate(curved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, .022),
+            end: Offset.zero,
+          ).animate(curved),
           child: child,
         ),
-      );
-    },
+      ),
+    );
+  }
+}
+
+/// 底部弹层统一入口：四端同一套抽屉曲线与非对称时长。
+///
+/// 直接调用 `showModalBottomSheet` 会落到 Flutter 默认的 250ms ease，
+/// 与本产品的节奏不一致；所有弹层走这里即可保持连贯。
+Future<T?> showCitroSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool isScrollControlled = false,
+  bool isDismissible = true,
+  bool enableDrag = true,
+  bool useSafeArea = false,
+  bool showDragHandle = false,
+  Color? backgroundColor,
+  Color? barrierColor,
+  BoxConstraints? constraints,
+  RouteSettings? routeSettings,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    builder: builder,
+    isScrollControlled: isScrollControlled,
+    isDismissible: isDismissible,
+    enableDrag: enableDrag,
+    useSafeArea: useSafeArea,
+    showDragHandle: showDragHandle,
+    backgroundColor: backgroundColor,
+    barrierColor: barrierColor,
+    constraints: constraints,
+    routeSettings: routeSettings,
+    sheetAnimationStyle: CitroMotion.sheetStyle(context),
   );
 }
 
@@ -53,7 +144,7 @@ class PaperDialog extends StatefulWidget {
   const PaperDialog({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(24, 42, 24, 24),
+    this.padding = const EdgeInsets.fromLTRB(24, 40, 24, 24),
     this.maxWidth = 376,
     this.tapeColor,
     this.showClose = true,
@@ -86,15 +177,14 @@ class _PaperDialogState extends State<PaperDialog> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final card = Container(
+    // 原生弹层：iOS 上是系统材质的玻璃，其他端退化成半透明纸面 + 发丝边，
+    // 但圆角、描边宽度、内高光四端一致。
+    final card = CitroGlass(
       width: double.infinity,
       padding: widget.padding,
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border.all(color: c.line),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: CitroColors.shadows.lg(c),
-      ),
+      borderRadius: BorderRadius.circular(CitroColors.radii.modal),
+      tint: c.glassTintStrong,
+      shadow: CitroColors.shadows.lg(c),
       child: widget.child,
     );
     final content = Stack(
@@ -130,23 +220,33 @@ class _PaperDialogState extends State<PaperDialog> {
         ),
         if (widget.showClose)
           Positioned(
-            top: 8,
-            right: 8,
+            top: AppSpacing.x1,
+            right: AppSpacing.x1,
             child: Pressable(
               onTap: widget.onClose ?? () => Navigator.of(context).maybePop(),
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: c.ink.withAlpha(8),
-                  border: Border.all(color: c.line.withAlpha(120)),
-                ),
+              // 视觉 32pt，命中区补到 iOS 标准的 44pt。
+              child: SizedBox(
+                width: AppSpacing.touch,
+                height: AppSpacing.touch,
                 child: Center(
-                  child: AppIcon(
-                    strokeSvg(AppIcons.close, width: 2),
-                    color: c.inkSoft,
-                    size: 15,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.ink.withAlpha(10),
+                      border: Border.all(
+                        color: c.glassBorder,
+                        width: CitroNative.hairline(context),
+                      ),
+                    ),
+                    child: Center(
+                      child: AppIcon(
+                        strokeSvg(AppIcons.close, width: 2),
+                        color: c.inkSoft,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -235,14 +335,13 @@ class CitroField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: context.body(
-            size: 11.5,
-            weight: FontWeight.w700,
+          style: context.ui(
+            size: 12,
+            weight: FontWeight.w600,
             color: c.inkSoft,
-            letterSpacing: .46,
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: AppSpacing.x1),
         TextField(
           controller: controller,
           obscureText: obscure,
@@ -252,33 +351,32 @@ class CitroField extends StatelessWidget {
           enabled: enabled,
           focusNode: focusNode,
           onChanged: onChanged,
-          style: context.body(size: 14, color: c.ink),
+          style: context.ui(size: 15, color: c.ink),
           cursorColor: c.accent,
           decoration: InputDecoration(
             counterText: '',
             hintText: hint,
-            hintStyle: context.body(
-              size: 13.5,
-              color: c.inkSoft.withAlpha(210),
-            ),
+            hintStyle: context.ui(size: 14, color: c.inkSoft),
             filled: true,
             fillColor: c.surface2,
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: maxLines > 1 ? 12 : 0,
+              horizontal: AppSpacing.x2,
+              vertical: maxLines > 1 ? AppSpacing.x1 + 4 : 0,
             ),
-            constraints: BoxConstraints(minHeight: maxLines > 1 ? 92 : 44),
+            constraints: BoxConstraints(
+              minHeight: maxLines > 1 ? 96 : AppSpacing.touch,
+            ),
             suffixIcon: suffix,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.field),
               borderSide: BorderSide(color: c.line2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.field),
               borderSide: BorderSide(color: c.accent, width: 1),
             ),
             disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.field),
               borderSide: BorderSide(color: c.line),
             ),
           ),
@@ -302,7 +400,7 @@ class AccentButton extends StatelessWidget {
     required this.text,
     this.onTap,
     this.loading = false,
-    this.height = 46,
+    this.height = 48,
     this.width,
     this.outlined = false,
     this.danger = false,
@@ -316,15 +414,22 @@ class AccentButton extends StatelessWidget {
         ? (danger ? c.stamp : c.ink2)
         : (danger ? Colors.white : const Color(0xFF2E2C22));
     return Pressable(
-      onTap: loading ? null : onTap,
+      onTap: (loading || onTap == null)
+          ? null
+          : () {
+              // 主操作给一次轻触感，四端一致；Web 没有震动硬件。
+              if (!kIsWeb) HapticFeedback.lightImpact();
+              onTap?.call();
+            },
       child: Container(
         width: width ?? double.infinity,
-        height: height,
+        // 任何传入高度都不得低于 44pt 的 iOS 可点击标准。
+        height: math.max(height, AppSpacing.touch),
         decoration: BoxDecoration(
           color: outlined
               ? Colors.transparent
               : (onTap == null ? fill.withAlpha(120) : fill),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: outlined
               ? Border.all(color: danger ? c.stamp : c.line2)
               : null,
@@ -339,9 +444,9 @@ class AccentButton extends StatelessWidget {
                 )
               : Text(
                   text,
-                  style: context.body(
+                  style: context.ui(
                     size: 15,
-                    weight: FontWeight.w700,
+                    weight: FontWeight.w600,
                     color: fg,
                   ),
                 ),

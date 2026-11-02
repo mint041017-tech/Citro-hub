@@ -10,6 +10,7 @@ import '../perf_probe.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
+import '../services/web_route.dart';
 import '../state/app_state.dart';
 import '../theme/breakpoints.dart';
 import '../theme/motion.dart';
@@ -19,6 +20,7 @@ import '../widgets/tablet_shell.dart';
 import 'home_page.dart';
 import 'games_page.dart';
 import 'community_page.dart';
+import 'me_page.dart';
 import 'res_page.dart';
 
 class RootShell extends StatefulWidget {
@@ -35,34 +37,28 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   int index = 0;
   // 首帧只构建当前页；其余页首次切到时才挂载，避免社区页在后台拉动态/起轮询。
   late final List<bool> _visited;
-  late final AnimationController _fade;
-  late final AnimationController _slide;
-  // 平移方向与距离：切 Tab 时旧页向反方向滑出、新页从行进方向滑入。
-  Tween<Offset> _slideTween = Tween<Offset>(
-    begin: Offset.zero,
-    end: Offset.zero,
-  );
-  bool _switching = false;
+  late final AnimationController _tabAnim;
+  double _dir = 1;
   Timer? _updateTimer;
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
+
+  /// Windows 多一个「资源」槽位，其余端（手机 / Web）是四格：
+  /// 首页、游戏、社区、我的。「我的」始终在最后一个。
+  static bool get _showResources => !kIsWeb && platform.isWindows;
+  static int get _tabCount => _showResources ? 5 : 4;
 
   @override
   void initState() {
     super.initState();
     instance = this;
-    index = widget.initialIndex.clamp(0, 3);
-    _visited = List<bool>.generate(4, (i) => i == index);
+    index = widget.initialIndex.clamp(0, _tabCount - 1);
+    _visited = List<bool>.generate(5, (i) => i == index);
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
-    _fade = AnimationController(
+    _tabAnim = AnimationController(
       vsync: this,
+      duration: CitroMotion.tab,
       value: 1,
-      duration: const Duration(milliseconds: 90),
-    );
-    _slide = AnimationController(
-      vsync: this,
-      value: 1,
-      duration: const Duration(milliseconds: 90),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _requestPermissions());
     WidgetsBinding.instance.addPostFrameCallback((_) => _warmAssets());
@@ -121,8 +117,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _updateTimer?.cancel();
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
-    _fade.dispose();
-    _slide.dispose();
+    _tabAnim.dispose();
     if (instance == this) instance = null;
     super.dispose();
   }
@@ -157,85 +152,108 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
 
   void switchTo(int i) => unawaited(_switchTab(i));
 
+  /// 壳内 Tab 切换：新旧两页同时在场，旧页反向让位、新页推入。
+  ///
+  /// 四端共一套节奏（仅时长/位移按端缩放），Web 也不再整页 push，
+  /// 导航栏和页面壳不会跟着重挂载，切换因此连贯不割裂。
   Future<void> _switchTab(int i) async {
-    if (i == index || _switching || i < 0 || i > 3) return;
+    if (i == index || i < 0 || i >= _tabCount) return;
     if (!kIsWeb && (platform.isAndroid || platform.isIOS)) {
       HapticFeedback.selectionClick();
     }
-    if (kIsWeb && i == 3) return;
-    if (kIsWeb) {
-      const routes = ['/home', '/games', '/trash', '/res'];
-      await Navigator.of(context).pushNamed(routes[i]);
-      return;
-    }
-    _switching = true;
-    final dir = i > index ? 1.0 : -1.0;
+    // 可中断：上一段还没走完就收尾，再从当前位置开始新的一段。
+    if (_tabAnim.isAnimating) _tabAnim.value = 1;
+    _dir = i > index ? 1.0 : -1.0;
     final reduce = CitroMotion.reduced(context);
-    // Windows 上整页位移会带来额外的栅格化开销，只保留淡入。
-    final smoothOnly = (!kIsWeb && platform.isWindows) || reduce;
     PerfProbe.beginFrameCollection();
-    // 单程动画：立即换页，新页用 90ms 滑入+轻微淡入，总耗时控制在 100ms 内。
     setState(() {
       _visited[i] = true;
       index = i;
-      _slideTween = Tween(
-        begin: smoothOnly ? Offset.zero : Offset(dir * 36, 0),
-        end: Offset.zero,
-      );
     });
+    if (kIsWeb) {
+      syncWebRoute(const ['/home', '/games', '/trash', '/me'][i]);
+    }
     if (reduce) {
-      _fade.value = 1;
-      _slide.value = 1;
+      _tabAnim.value = 1;
       PerfProbe.endFrameCollection('tab_$i');
-      if (mounted) _switching = false;
       return;
     }
-    _fade.value = .55;
-    await Future.wait([_fade.forward(), _slide.forward(from: 0)]);
+    _tabAnim.duration = CitroMotion.tabLength;
+    await _tabAnim.forward(from: 0);
+    if (!mounted) return;
     if (PerfProbe.enabled) {
       // FrameTiming 在帧结束后才批量回传，给采样回调留一帧时间。
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     PerfProbe.endFrameCollection('tab_$i');
-    if (mounted) _switching = false;
   }
 
   Widget _pageStack() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_fade, _slide]),
-      builder: (context, child) {
-        return Transform.translate(
-          offset: _slideTween.evaluate(_slide),
-          child: FadeTransition(
-            opacity: CurvedAnimation(parent: _fade, curve: CitroMotion.easeOut),
-            child: child,
-          ),
+      animation: _tabAnim,
+      builder: (context, _) {
+        final t = CitroMotion.easeOut.transform(_tabAnim.value);
+        return Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
+            for (var i = 0; i < 5; i++)
+              _visited[i] ? _pageLayer(i, t) : const SizedBox.shrink(),
+          ],
         );
       },
-      child: RepaintBoundary(
-        child: IndexedStack(
-          index: index,
-          children: [
-            TickerMode(
-              enabled: index == 0,
-              child: HomePage(onSwitchTab: switchTo),
+    );
+  }
+
+  Widget _pageLayer(int i, double t) {
+    final active = i == index;
+    // 旧页立即撤下：屏幕上永远只出现当前页，不会残留上一页的一条。
+    // 新页只做 10px 归位 + 轻微淡入——足够表达"切换发生了"，
+    // 又不会出现两页并存、残影或空白条。
+    final settling = active && t < 1;
+    final dx = settling ? _dir * 8 * (1 - t) : 0.0;
+    final dy = settling ? 6 * (1 - t) : 0.0;
+    final scale = settling ? .992 + .008 * t : 1.0;
+    final opacity = settling ? .82 + .18 * t : 1.0;
+    // 关键：隐藏页和显示页必须返回同一棵 widget 结构，否则 Flutter 会整页重建，
+    // 每次切 Tab 都重放入场动画并闪一下。
+    return Positioned.fill(
+      child: Offstage(
+        offstage: !active,
+        child: IgnorePointer(
+          ignoring: !active,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: scale,
+              child: Transform.translate(
+                offset: Offset(dx, dy),
+                child: RepaintBoundary(
+                  child: TickerMode(enabled: active, child: _pageAt(i)),
+                ),
+              ),
             ),
-            _visited[1]
-                ? TickerMode(enabled: index == 1, child: const GamesPage())
-                : const SizedBox.shrink(),
-            _visited[2]
-                ? TickerMode(enabled: index == 2, child: const CommunityPage())
-                : const SizedBox.shrink(),
-            _visited[3] && !kIsWeb
-                ? TickerMode(
-                    enabled: index == 3,
-                    child: const ResPage(embedded: true),
-                  )
-                : const SizedBox.shrink(),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _pageAt(int i) {
+    switch (i) {
+      case 1:
+        return const GamesPage();
+      case 2:
+        return const CommunityPage();
+      case 3:
+        return _showResources
+            ? const ResPage(embedded: true)
+            : const MePage(embedded: true);
+      case 4:
+        return const MePage(embedded: true);
+      default:
+        return HomePage(onSwitchTab: switchTo);
+    }
   }
 
   @override
@@ -326,9 +344,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     child: _withSwipe(_pageStack()),
                   ),
                 ),
-                if (!desktop &&
-                    !keyboardOpen &&
-                    (index != 3 || platform.isWindows))
+                if (!desktop && !keyboardOpen)
                   CitroTabBar(index: index, onChanged: switchTo),
               ],
             ),
