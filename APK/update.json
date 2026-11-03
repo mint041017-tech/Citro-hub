@@ -1,15 +1,13 @@
 {
-  "version": "2.0.1",
-  "versionCode": 2001,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.0.1-release.apk",
+  "version": "2.0.2",
+  "versionCode": 2002,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.0.2-release.apk",
   "size": 95058427,
   "notes": [
-    "版本更新至 2.0.1",
-    "社区图片接入本地磁盘缓存，二次打开不再重复下载",
-    "社区首屏图片预取，信息流滚动更顺滑",
-    "首页星象卡、我的页主题菜单、打卡页与听隅手机顶栏细节优化",
-    "恢复咕噜果冻网页版入口"
+    "版本更新至 2.0.2",
+    "听隅手机端顶栏时钟与呼吸按钮贴齐屏幕最右侧",
+    "小游戏的打开与关闭改用听隅同款纸页软转场，进出更连贯"
   ],
-  "publishedAt": "2026-11-02",
+  "publishedAt": "2026-11-03",
   "force": false
 }

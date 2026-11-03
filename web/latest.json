@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "2.0.1",
-  "build_number": "2001",
-  "build_id": "f080a28a950eae9989867602c4429c2b",
-  "file": "Citro-web-2.0.1.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.1.zip",
-  "size": 30915907,
-  "sha256": "f70884b98dbae5d33fb0d3c99ca6e83abdefda5f2abaf6f83b6b2bf79bb06804",
-  "published_at": "2026-11-02T19:01:36Z",
-  "notes": "2.0.1：社区图片本地磁盘缓存、首屏预取，信息流二次打开更快；星象卡、主题菜单、打卡页与听隅顶栏细节优化"
+  "version": "2.0.2",
+  "build_number": "2002",
+  "build_id": "13b7fd5576a239ba7a12c0390b316370",
+  "file": "Citro-web-2.0.2.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.2.zip",
+  "size": 30913483,
+  "sha256": "3e921254eb30437707097f4ce1bac6e6c6c858c39ff772b6103fbaec822d732d",
+  "published_at": "2026-11-03T05:42:51Z",
+  "notes": "2.0.2：听隅手机端顶栏时钟与呼吸按钮贴齐最右侧；小游戏打开/关闭改为听隅同款纸页软转场"
 }

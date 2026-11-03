@@ -7,6 +7,9 @@ class CitroDesktopShell {
   /// 非桌面端没有悬浮窗控。
   static const double windowControlsWidth = 0;
 
+  /// 顶栏内容无需避让。
+  static const double windowControlsInset = 0;
+
   static Future<void> init() async {}
 
   static Widget wrap(BuildContext context, Widget child) => child;

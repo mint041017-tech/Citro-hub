@@ -573,14 +573,14 @@ class _GameCard extends StatelessWidget {
     final large = (tablet || desktopWeb) && !compact;
     return Pressable(
       onTap: () {
-        // 卡片纸面从它在网格里的位置长成整页；拿不到 rect 时退回普通路由。
+        // 和听隅一致：纸页从第一帧轻沉淡入，卡片快照抬起，退出时反向收回。
         final box = context.findRenderObject();
         if (box is! RenderBox || !box.hasSize) {
           Navigator.of(context).pushNamed('/${entry.key}');
           return;
         }
         final rect = box.localToGlobal(Offset.zero) & box.size;
-        CitroCardMorph.pushPage(
+        CitroCardMorph.pushPageSoft(
           context,
           source: rect,
           snapshot: CitroCardFlight.snapshotOf(context, rect),

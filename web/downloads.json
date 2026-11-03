@@ -2,12 +2,12 @@
   "schema": 1,
   "app_name": "citro-downloads",
   "site": "dl.chimu-claw.xyz",
-  "version": "2.0.1",
-  "build_number": "2001",
-  "file": "Citro-downloads-2.0.1.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-2.0.1.zip",
-  "size": 1088354,
-  "sha256": "1f7e78d9bc3b6da1df23d2bfacf25be9f5ad28108cdc2c6134fe2d92216214bc",
-  "published_at": "2026-11-02T19:01:36Z",
-  "notes": "Citro downloads static site 2.0.1：Windows / Android 下载入口更新至 v2.0.1，更新说明同步"
+  "version": "2.0.2",
+  "build_number": "2002",
+  "file": "Citro-downloads-2.0.2.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-2.0.2.zip",
+  "size": 1088227,
+  "sha256": "4e890b3e4bc0cfa867e55ad3755dedbd667caac0a3034707f7be26c7b311c98a",
+  "published_at": "2026-11-03T05:42:51Z",
+  "notes": "Citro downloads static site 2.0.2：Windows / Android 下载入口更新至 v2.0.2，更新说明同步"
 }

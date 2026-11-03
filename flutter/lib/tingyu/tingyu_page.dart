@@ -111,7 +111,7 @@ class _TingyuPageState extends State<TingyuPage> {
                         ),
                         Padding(
                           padding: EdgeInsets.only(
-                            right: 8 + CitroDesktopShell.windowControlsWidth,
+                            right: 8 + CitroDesktopShell.windowControlsInset,
                           ),
                           child: TingyuTopClock(compact: size.width < 380),
                         ),
@@ -1616,7 +1616,7 @@ class _NookHomeState extends State<NookHome> {
           const SizedBox(width: 4),
           Padding(
             padding: EdgeInsets.only(
-              right: CitroDesktopShell.windowControlsWidth,
+              right: CitroDesktopShell.windowControlsInset,
             ),
             child: const TingyuTopClock(),
           ),

@@ -399,13 +399,14 @@ class HomeGameCard extends StatelessWidget {
       tapeAngle: -1.6,
       padding: EdgeInsets.zero,
       onTap: () {
+        // 和听隅入口一致：纸页轻沉淡入，进入与退出都复用同一套软转场。
         final box = context.findRenderObject();
         if (box is! RenderBox || !box.hasSize) {
           Navigator.of(context).pushNamed('/${entry.key}');
           return;
         }
         final rect = box.localToGlobal(Offset.zero) & box.size;
-        CitroCardMorph.pushPage(
+        CitroCardMorph.pushPageSoft(
           context,
           source: rect,
           snapshot: CitroCardFlight.snapshotOf(context, rect),
