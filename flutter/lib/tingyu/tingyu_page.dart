@@ -2740,6 +2740,9 @@ class _NookHomeState extends State<NookHome> {
                     'assets/tingyu/rain-nook.webp',
                     fit: BoxFit.cover,
                     alignment: const Alignment(0, .25),
+                    // 封面按卡片宽度解码：原图 2K 级别，整张解码在低端机会
+                    // 占到数十 MB；1200 已覆盖平板/桌面宽屏的清晰度。
+                    cacheWidth: 1200,
                     color: p.dark ? const Color(0xffc6ccbd) : null,
                     colorBlendMode: p.dark ? BlendMode.modulate : null,
                     semanticLabel: '雨落在窗外，窗边放着书和一杯茶的水彩画',

@@ -554,6 +554,56 @@ bool g2048IsAiRecord(String name, int score) {
   return score > kAiBoardScoreThreshold;
 }
 
+/// 排行榜分榜切换（手机弹窗）。
+///
+/// 重叠数独有 6 个分榜，单行放不下；这里用 [Wrap] 自动换行，
+/// 避免最右侧的档位被屏幕裁掉、又没有横向滑动的入口。
+class GameDiffTabs extends StatelessWidget {
+  const GameDiffTabs({
+    super.key,
+    required this.difficulties,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<(String, String)> difficulties;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Wrap(
+      spacing: 7,
+      runSpacing: 6,
+      children: [
+        for (final d in difficulties)
+          GestureDetector(
+            onTap: () => onSelect(d.$1),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected == d.$1 ? c.hl : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected == d.$1 ? c.accent : c.line2,
+                ),
+              ),
+              child: Text(
+                d.$2,
+                style: context.body(
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: selected == d.$1 ? c.accentInk : c.inkSoft,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _LeaderboardSheet extends StatefulWidget {
   final String game;
   final String title;
@@ -740,40 +790,14 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
             if (widget.difficulties.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    for (final d in widget.difficulties)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 7),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() => diff = d.$1);
-                            _load();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: diff == d.$1 ? c.hl : Colors.transparent,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: diff == d.$1 ? c.accent : c.line2,
-                              ),
-                            ),
-                            child: Text(
-                              d.$2,
-                              style: context.body(
-                                size: 12,
-                                weight: FontWeight.w600,
-                                color: diff == d.$1 ? c.accentInk : c.inkSoft,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                child: GameDiffTabs(
+                  difficulties: widget.difficulties,
+                  selected: diff,
+                  onSelect: (key) {
+                    if (key == diff) return;
+                    setState(() => diff = key);
+                    _load();
+                  },
                 ),
               ),
             const SizedBox(height: 6),
@@ -811,7 +835,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                         vertical: 4,
                       ),
                       itemCount: _shownRows.length,
-                      separatorBuilder: (_, __) => Padding(
+                      separatorBuilder: (_, _) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: DashedLine(color: c.line2.withAlpha(120)),
                       ),

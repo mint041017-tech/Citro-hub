@@ -247,51 +247,60 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                           ),
                         ),
                       )
-                    : ListView(
+                    : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-                        children: [
-                          for (final entry in groups.entries) ...[
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8, bottom: 7),
-                              child: Row(
+                        // 食材库按分类懒构建：全量 chips 一次建出来会在
+                        // 低端机打开弹层时明显掉帧（分类多、每类几十项）。
+                        itemCount: groups.length,
+                        itemBuilder: (context, index) {
+                          final entry = groups.entries.elementAt(index);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 8, bottom: 7),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: c.accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      entry.key,
+                                      style: context.heading(
+                                        size: 14,
+                                        color: c.accentInk,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      '${entry.value.length}',
+                                      style: context.body(
+                                        size: 9,
+                                        color: c.inkSoft,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
                                 children: [
-                                  Container(
-                                    width: 5,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: c.accent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    entry.key,
-                                    style: context.heading(
-                                      size: 14,
-                                      color: c.accentInk,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    '${entry.value.length}',
-                                    style: context.body(
-                                      size: 9,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
+                                  for (final name in entry.value)
+                                    _chip(c, name),
                                 ],
                               ),
-                            ),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                for (final name in entry.value) _chip(c, name),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-                        ],
+                              const SizedBox(height: 4),
+                            ],
+                          );
+                        },
                       ),
               ),
               if (widget.multi)

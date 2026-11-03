@@ -309,6 +309,7 @@ class _CoinDialogState extends State<_CoinDialog>
                       child: Image.asset(
                         'assets/images/logo.webp',
                         fit: BoxFit.contain,
+                        cacheWidth: 240,
                       ),
                     )
                   : Transform(

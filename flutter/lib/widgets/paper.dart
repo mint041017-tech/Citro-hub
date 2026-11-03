@@ -100,7 +100,11 @@ class _PaperPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PaperPainter old) =>
-      old.color != color || old.gridColor != gridColor || old.grid != grid;
+      old.color != color ||
+      old.gridColor != gridColor ||
+      old.grid != grid ||
+      old.highlight != highlight ||
+      old.wallpaper != wallpaper;
 }
 
 /// 纸胶带。默认 92x24，顶端居中，带撕边。

@@ -1,5 +1,6 @@
 import 'package:citro/games/game_ui.dart';
 import 'package:citro/games/gsudoku.dart';
+import 'package:citro/games/sudoku/sudoku_resume.dart';
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
@@ -91,6 +92,54 @@ void main() {
     expect(find.text('选一种数独'), findsOneWidget);
     expect(find.text('新游戏'), findsNothing);
     expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('paused game survives back navigation and resumes within 2h', (
+    tester,
+  ) async {
+    await SudokuResumeStore.clear();
+    // 竖屏手机底部 tab bar 会盖住 HUD 的暂停按钮，这里用平板尺寸验证流程。
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppScope(
+        state: AppState.instance,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildCitroTheme(CitroColors.light),
+          home: const GameSudokuPage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('简单'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(find.text('新游戏'), findsOneWidget);
+
+    // 暂停后系统返回：不弹“放弃进度”，回模式页并留下“继续上一局”。
+    await tester.tap(find.text('暂停'));
+    await tester.pump();
+    expect(find.text('继续游戏'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(find.text('选一种数独'), findsOneWidget);
+    expect(find.text('继续上一局'), findsOneWidget);
+    expect(find.text('新游戏'), findsNothing);
+
+    // 从存档恢复：题目与计时都回到暂停态，需要手动点“继续游戏”。
+    await tester.tap(find.text('继续'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(find.text('新游戏'), findsOneWidget);
+    expect(find.text('继续游戏'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

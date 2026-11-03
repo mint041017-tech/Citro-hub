@@ -807,15 +807,15 @@ class GameIdiomView extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: ListView(
+                child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  children: [
-                    for (final item in chain) ...[
-                      _chainRow(item),
-                      const SizedBox(height: 9),
-                    ],
-                  ],
+                  // 计时器每秒都会重建整页；懒构建避免整条成语链跟着重建。
+                  itemCount: chain.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 9),
+                    child: _chainRow(chain[index]),
+                  ),
                 ),
               ),
               if (fb.isNotEmpty)

@@ -261,6 +261,12 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** 系统整体内存不足时同样回收图片缓存，避免进程被直接杀掉。 */
+    override fun onLowMemory() {
+        super.onLowMemory()
+        memoryChannel?.invokeMethod("trim", ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+    }
+
     override fun onResume() {
         super.onResume()
         // 从后台回来时窗口偏好可能被系统重置，重新申请一次。

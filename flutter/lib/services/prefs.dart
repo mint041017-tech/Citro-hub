@@ -40,6 +40,8 @@ class Prefs {
       PrefKeys.checkinTransfer,
       PrefKeys.checkinTransferUsed,
       PrefKeys.gameBest,
+      PrefKeys.gameBestTime,
+      PrefKeys.sudokuResume,
       PrefKeys.playRecords,
       PrefKeys.playCooldown,
       PrefKeys.fishConfig,
@@ -80,6 +82,8 @@ class PrefKeys {
   static const checkinTransfer = 'citro_checkin_transfer';
   static const checkinTransferUsed = 'citro_checkin_transfer_used';
   static const gameBest = 'citro_game_best';
+  static const gameBestTime = 'citro_game_best_time';
+  static const sudokuResume = 'citro_sudoku_resume';
   static const gameMuted = 'citro_game_mute';
   static const cardsOwned = 'citro_cards_owned';
   static const cardsToday = 'citro_cards_today';

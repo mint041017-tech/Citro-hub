@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "app_name": "citro",
-  "version": "2.0.2",
-  "build_number": "2002",
-  "build_id": "13b7fd5576a239ba7a12c0390b316370",
-  "file": "Citro-web-2.0.2.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.2.zip",
-  "size": 30913483,
-  "sha256": "3e921254eb30437707097f4ce1bac6e6c6c858c39ff772b6103fbaec822d732d",
-  "published_at": "2026-11-03T05:42:51Z",
-  "notes": "2.0.2：听隅手机端顶栏时钟与呼吸按钮贴齐最右侧；小游戏打开/关闭改为听隅同款纸页软转场"
+  "version": "2.0.3",
+  "build_number": "2003",
+  "build_id": "4dff2b4f231d18dc7bba688f626252a4",
+  "file": "Citro-web-2.0.3.zip",
+  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.3.zip",
+  "size": 30922265,
+  "sha256": "f15b6b7da1ef1ec1b4f153c42a705c3917253aab38fafcd5a574e997ed8b9cac",
+  "published_at": "2026-11-03T08:28:14Z",
+  "notes": "2.0.3：全端性能优化（Web 首屏资源并行加载、列表懒构建、图片解码与缓存收敛）；数独新增计分明细、对局续玩与最佳用时"
 }

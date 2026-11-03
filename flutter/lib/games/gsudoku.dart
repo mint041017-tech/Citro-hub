@@ -20,6 +20,8 @@ import 'sudoku/sudoku_cube_face_view.dart';
 import 'sudoku/sudoku_cube_view.dart';
 import 'sudoku/sudoku_kernel.dart';
 import 'sudoku/sudoku_mode_select.dart';
+import 'sudoku/sudoku_resume.dart';
+import 'sudoku/sudoku_scoring.dart';
 
 /// 统一数独入口。
 ///
@@ -88,6 +90,9 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   bool _cubeFlatInit = false;
   int _revision = 0;
   int _lastScore = 0;
+  SudokuScore? _lastBreakdown;
+  int? _seed;
+  SudokuResume? _resume;
   Timer? _timer;
   final ValueNotifier<String> _progress = ValueNotifier<String>('数独 · 选择模式');
   final FocusNode _keyFocus = FocusNode(debugLabel: 'sudoku-keyboard');
@@ -98,6 +103,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   void initState() {
     super.initState();
     _progress.value = '数独 · 选择模式';
+    _resume = SudokuResumeStore.load();
     final key = widget.initialModeKey;
     if (key != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -118,6 +124,10 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
 
   @override
   void dispose() {
+    // 暂停状态下页面被销毁（退出/被杀）时兜底再存一次。
+    if (_paused && !_over && _puzzle != null && _mode != null) {
+      unawaited(_persistResume(notify: false));
+    }
     _timer?.cancel();
     _progress.dispose();
     _keyFocus.dispose();
@@ -140,33 +150,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     if (v == SudokuVariant.overlap || v == SudokuVariant.cube3d) return 8;
     if (v == SudokuVariant.killer || v == SudokuVariant.inequality) return 6;
     return 5;
-  }
-
-  int get _baseScore {
-    final mode = _mode!;
-    if (mode.variant == SudokuVariant.classic) {
-      return switch (_difficulty) {
-        SudokuDifficulty.easy => 3600,
-        SudokuDifficulty.medium => 5400,
-        SudokuDifficulty.hard => 7200,
-        SudokuDifficulty.expert => 9000,
-      };
-    }
-    final weight = switch (mode.variant) {
-      SudokuVariant.jigsaw => 1,
-      SudokuVariant.snowflake => 2,
-      SudokuVariant.overlap => 2 + mode.overlapCount ~/ 4,
-      SudokuVariant.evenOdd => 2,
-      SudokuVariant.diagonal => 1,
-      SudokuVariant.inequality => 3,
-      SudokuVariant.killer => 4,
-      SudokuVariant.cube3d => 5,
-      SudokuVariant.classic => 0,
-    };
-    return 2400 +
-        weight * 600 +
-        _difficulty.tier * 900 +
-        (mode.isOverlap ? mode.overlapCount * 120 : 0);
   }
 
   String get _scoreKey => 'sudoku:${_mode!.rankKey(_difficulty)}';
@@ -225,10 +208,14 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       _error = null;
       _layer = 0;
       _lastScore = 0;
+      _lastBreakdown = null;
+      _seed = null;
+      _resume = null;
       _focusGrid = 0;
       _cubeFace = SudokuCubeFace.top;
       _revision++;
     });
+    unawaited(SudokuResumeStore.clear());
     _progress.value = '${mode.title} · ${difficulty.label} · 正在生成唯一解…';
     await _loadPuzzle();
   }
@@ -256,12 +243,14 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     await Future<void>.delayed(const Duration(milliseconds: 16));
     try {
       SudokuPuzzle? puzzle;
+      var usedSeed = 0;
       for (var attempt = 0; attempt < 3; attempt++) {
         final seed = widget.initialSeed != null
             ? widget.initialSeed! + attempt
             : math.Random().nextInt(1 << 31);
         puzzle = await SudokuEngine.generateAsync(mode, difficulty, seed: seed);
         if (!mounted || _mode != mode || _difficulty != difficulty) return;
+        usedSeed = seed;
         if (puzzle.difficultyMet) break;
       }
       if (puzzle == null) {
@@ -290,6 +279,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         _focusGrid = generated.variant == SudokuVariant.overlap ? 0 : -1;
         _cubeFace = SudokuCubeFace.top;
         _lastScore = 0;
+        _lastBreakdown = null;
+        _seed = usedSeed;
         _revision++;
       });
       _syncProgress();
@@ -312,11 +303,13 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
 
   void _newGame() {
     if (_mode == null || _loading) return;
+    unawaited(SudokuResumeStore.clear());
     _loadPuzzle();
   }
 
   void _changeDifficulty(SudokuDifficulty difficulty) {
     if (_mode == null || _difficulty == difficulty || _loading) return;
+    unawaited(SudokuResumeStore.clear());
     setState(() => _difficulty = difficulty);
     _loadPuzzle();
   }
@@ -413,8 +406,17 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   }
 
   Future<void> _backToModes() async {
-    if (!await _confirmLeaveGame() || !mounted) return;
+    final keeping = _paused && !_over && _puzzle != null && _mode != null;
+    if (keeping) {
+      // 暂停中返回：直接存档并回模式页，不再弹“放弃进度”。
+      await _persistResume();
+    } else {
+      if (!await _confirmLeaveGame() || !mounted) return;
+      await SudokuResumeStore.clear();
+    }
+    if (!mounted) return;
     _timer?.cancel();
+    final resume = SudokuResumeStore.load();
     setState(() {
       _mode = null;
       _puzzle = null;
@@ -433,6 +435,10 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       _layer = 0;
       _focusGrid = 0;
       _cubeFace = SudokuCubeFace.top;
+      _lastScore = 0;
+      _lastBreakdown = null;
+      _seed = null;
+      _resume = resume;
       _revision++;
     });
     _progress.value = '数独 · 选择模式';
@@ -840,26 +846,27 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       return;
     }
     _timer?.cancel();
-    final score = _scoreForWin();
-    _lastScore = score;
+    final breakdown = _scoreForWin();
+    _lastBreakdown = breakdown;
+    _lastScore = breakdown.total;
     _win = true;
     _over = true;
     GameSfx.win();
     final app = context.app;
-    app.saveLocalBest(_scoreKey, score);
-    app.submitScore(_scoreKey, score, countRound: !_roundCounted);
+    app.saveLocalBest(_scoreKey, breakdown.total);
+    app.saveLocalBestTime(_scoreKey, _seconds);
+    app.submitScore(_scoreKey, breakdown.total, countRound: !_roundCounted);
+    unawaited(SudokuResumeStore.clear());
+    _resume = null;
     setState(() => _revision++);
   }
 
-  int _scoreForWin() {
-    if (_mode!.variant == SudokuVariant.classic) {
-      return math.max(1, _baseScore - _seconds);
-    }
-    return math.max(
-      1,
-      _baseScore - _seconds * 2 - _errors * 20 - (3 - _hints) * 15,
-    );
-  }
+  SudokuScore _scoreForWin() => sudokuScoreOf(
+    _puzzle!,
+    seconds: _seconds,
+    errors: _errors,
+    hintsUsed: 3 - _hints,
+  );
 
   void _fail() {
     if (_over) return;
@@ -867,16 +874,160 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     _over = true;
     _roundCounted = true;
     GameSfx.lose();
+    unawaited(SudokuResumeStore.clear());
+    _resume = null;
     unawaited(AppState.instance.noteGameRound());
     setState(() => _revision++);
   }
 
   void _togglePause() {
     if (_over || _loading) return;
+    final pausing = !_paused;
     setState(() {
-      _paused = !_paused;
+      _paused = pausing;
       _revision++;
     });
+    if (pausing) {
+      // 暂停即写档：此后即使直接退出/杀进程，2 小时内仍可继续。
+      unawaited(_persistResume());
+    } else {
+      unawaited(SudokuResumeStore.clear());
+      if (_resume != null) setState(() => _resume = null);
+    }
+  }
+
+  /// 把当前对局写入本地存档。[notify] 为 false 时用于 dispose 兜底。
+  Future<void> _persistResume({bool notify = true}) async {
+    final puzzle = _puzzle;
+    final mode = _mode;
+    if (puzzle == null || mode == null || _over) return;
+    final resume = SudokuResume(
+      modeKey: mode.key,
+      difficulty: _difficulty,
+      seed: _seed ?? 0,
+      fingerprint: puzzle.givens.join(','),
+      board: List<int>.from(_board),
+      notes: [for (final s in _notes) (s.toList()..sort()).join(',')],
+      given: List<bool>.from(_given),
+      errors: _errors,
+      hints: _hints,
+      seconds: _seconds,
+      layer: _layer,
+      focusGrid: _focusGrid < 0 ? 0 : _focusGrid,
+      selected: _selected,
+      noteMode: _noteMode,
+      cubeFace: _cubeFace,
+      savedAt: DateTime.now(),
+    );
+    await SudokuResumeStore.save(resume);
+    if (!notify || !mounted) return;
+    setState(() => _resume = resume);
+  }
+
+  /// 从模式选择页恢复存档；题目用同一 seed 重新生成并校验题面。
+  Future<void> _resumeGame(SudokuResume resume) async {
+    final mode = sudokuModeByKey(resume.modeKey);
+    _timer?.cancel();
+    setState(() {
+      _mode = mode;
+      _difficulty = resume.difficulty;
+      _puzzle = null;
+      _board = const [];
+      _given = const [];
+      _notes = const [];
+      _conflicts = const {};
+      _history.clear();
+      _selected = -1;
+      _loading = true;
+      _error = null;
+      _paused = false;
+      _over = false;
+      _win = false;
+      _roundCounted = false;
+      _lastScore = 0;
+      _lastBreakdown = null;
+      _resume = null;
+      _revision++;
+    });
+    _progress.value = '${mode.title} · ${resume.difficultyLabel} · 正在恢复对局…';
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    try {
+      final puzzle = await SudokuEngine.generateAsync(
+        mode,
+        resume.difficulty,
+        seed: resume.seed,
+      );
+      if (!mounted) return;
+      if (puzzle.givens.join(',') != resume.fingerprint ||
+          puzzle.cellCount != resume.board.length) {
+        // 生成器改动等原因导致题面不一致：存档作废，回模式页。
+        await SudokuResumeStore.clear();
+        if (!mounted) return;
+        setState(() {
+          _mode = null;
+          _puzzle = null;
+          _loading = false;
+          _resume = null;
+          _revision++;
+        });
+        _progress.value = '数独 · 选择模式';
+        AppToast.show(context, '存档已失效，请重新开始一局');
+        return;
+      }
+      _applyResume(puzzle, resume);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '恢复失败：$e';
+        _revision++;
+      });
+    }
+  }
+
+  static Set<int> _parseNotes(String raw) {
+    final out = <int>{};
+    for (final part in raw.split(',')) {
+      final value = int.tryParse(part.trim());
+      if (value != null && value >= 1 && value <= 9) out.add(value);
+    }
+    return out;
+  }
+
+  void _applyResume(SudokuPuzzle puzzle, SudokuResume resume) {
+    setState(() {
+      _puzzle = puzzle;
+      _board = List<int>.from(resume.board);
+      _given = List<bool>.from(resume.given);
+      _notes = [for (final raw in resume.notes) _parseNotes(raw)];
+      _conflicts = SudokuEngine.conflicts(puzzle, _board);
+      _selected = resume.selected >= 0 && resume.selected < _board.length
+          ? resume.selected
+          : _firstEmptyCell();
+      _errors = resume.errors;
+      _hints = resume.hints;
+      _seconds = resume.seconds;
+      _noteMode = resume.noteMode;
+      _paused = true;
+      _loading = false;
+      _error = null;
+      _layer = resume.layer.clamp(0, math.max(0, puzzle.layers - 1)).toInt();
+      _focusGrid = resume.focusGrid < puzzle.grids.length
+          ? resume.focusGrid
+          : 0;
+      _cubeFace = puzzle.isCube3d ? resume.cubeFace : SudokuCubeFace.top;
+      _seed = resume.seed;
+      _lastScore = 0;
+      _lastBreakdown = null;
+      _revision++;
+    });
+    _syncProgress();
+    _startTimer();
+    if (_keyboardEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _keyFocus.requestFocus();
+      });
+    }
   }
 
   void _syncProgress() {
@@ -1050,6 +1201,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       contentMaxWidth: 1180,
       onBack: () => popOrHome(context),
       board: SudokuModeSelect(
+        resume: _resume,
+        onResume: _resume == null ? null : () => _resumeGame(_resume!),
         onStart: (mode, difficulty) {
           _startMode(mode, difficulty);
         },
@@ -1078,8 +1231,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   Widget _buildGameShell(BuildContext context) {
     final mode = _mode!;
     final puzzle = _puzzle!;
-    final bestScore = context.app.localBest(_scoreKey);
-    final bestSeconds = bestScore > 0 ? math.max(1, _baseScore - bestScore) : 0;
+    final bestSeconds = context.app.localBestTime(_scoreKey);
     final above = <Widget>[
       _ModeBar(
         mode: mode,
@@ -1391,7 +1543,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           fail: !_win,
           description:
               '${_win ? '用时 ${gameFmtDuration(_seconds)} · 得分 $_lastScore' : '错误已达 $_maxErrors 次 · 用时 ${gameFmtDuration(_seconds)}'}'
-              '${puzzle.difficultyMet ? '' : ' · 难度未达标称档'}',
+              '${puzzle.difficultyMet ? '' : ' · 难度未达标称档'}'
+              '${_win && _lastBreakdown != null ? '\n${_lastBreakdown!.detailLabel}' : ''}',
           action: '再来一局',
           onAction: _newGame,
         ),

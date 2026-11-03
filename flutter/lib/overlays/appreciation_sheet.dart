@@ -35,6 +35,8 @@ class _AppreciationDialog extends StatelessWidget {
                 child: Image.asset(
                   'assets/images/appreciation.png',
                   fit: BoxFit.contain,
+                  // 二维码按弹层实际宽度解码，避免整张原图进内存。
+                  cacheWidth: 720,
                   filterQuality: FilterQuality.high,
                   errorBuilder: (context, _, _) => Center(
                     child: Padding(

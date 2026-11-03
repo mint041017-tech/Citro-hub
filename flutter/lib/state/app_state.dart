@@ -525,6 +525,33 @@ class AppState extends ChangeNotifier {
     await Prefs.setString(PrefKeys.gameBest, jsonEncode(m));
   }
 
+  /// 本地最佳用时（秒）；0 表示没有记录。分数不是线性可逆的，
+  /// 所以最佳用时单独存一份，不再从最佳分反推。
+  int localBestTime(String game) {
+    final raw = Prefs.getString(PrefKeys.gameBestTime);
+    if (raw == null) return 0;
+    try {
+      final m = jsonDecode(raw) as Map;
+      return _i(m[game]);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> saveLocalBestTime(String game, int seconds) async {
+    if (seconds <= 0) return;
+    final best = localBestTime(game);
+    if (best > 0 && seconds >= best) return;
+    Map<String, dynamic> m = {};
+    try {
+      m = jsonDecode(
+        Prefs.getString(PrefKeys.gameBestTime) ?? '{}',
+      ) as Map<String, dynamic>;
+    } catch (_) {}
+    m[game] = seconds;
+    await Prefs.setString(PrefKeys.gameBestTime, jsonEncode(m));
+  }
+
   Future<Map<String, dynamic>> submitScore(
     String game,
     int score, {

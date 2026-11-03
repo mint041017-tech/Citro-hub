@@ -15,6 +15,37 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
   <link rel="preload" href="main.dart.js" as="script">
+  <!-- 首屏关键路径并行化：在解析 HTML 时就把 CanvasKit 的 JS/WASM 加入
+       下载队列，而不是等 flutter_bootstrap.js 解析完再串行发起。
+       版本选择必须与 Flutter 引擎一致（Blink 系用 canvaskit/chromium，
+       其余用 canvaskit），否则会预取错版本、反而多下一次 7MB。
+       跨域承载（OBS）只建连，不预取内容。 -->
+  <script>
+    (function () {
+      // 与 flutter.js 的 canvaskitVariant 选择保持一致：
+      // Blink 且支持 ImageDecoder、v8BreakIterator 与 Segmenter 时才用
+      // canvaskit/chromium，其余浏览器用 canvaskit 完整版。
+      var blink = navigator.vendor === 'Google Inc.' ||
+        navigator.userAgent.indexOf('Edg/') >= 0;
+      var chromiumVariant = blink &&
+        typeof ImageDecoder !== 'undefined' &&
+        typeof Intl.v8BreakIterator !== 'undefined' &&
+        typeof Intl.Segmenter !== 'undefined';
+      var base = 'canvaskit/' + (chromiumVariant ? 'chromium/' : '');
+      var preload = function (href, as, crossorigin) {
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.href = href;
+        link.as = as;
+        if (crossorigin) link.crossOrigin = 'anonymous';
+        document.head.appendChild(link);
+      };
+      preload(base + 'canvaskit.js', 'script');
+      preload(base + 'canvaskit.wasm', 'fetch', true);
+    })();
+  </script>
+  <link rel="dns-prefetch" href="https://obs.chimu-claw.xyz">
+  <link rel="preconnect" href="https://obs.chimu-claw.xyz" crossorigin>
   <title>Citro</title>
   <style>
     html, body {
@@ -63,7 +94,9 @@
       if (loading) loading.remove();
     });
   </script>
-  <script src="tingyu-audio-engine.js"></script>
+  <!-- 听隅音频引擎与首屏无关：defer 让浏览器先发起 flutter_bootstrap.js
+       的下载，再执行这 41KB 的音效代码（仍在 DOMContentLoaded 前完成）。 -->
+  <script src="tingyu-audio-engine.js" defer></script>
   <script src="flutter_bootstrap.js" async onerror="document.getElementById('loading-text').textContent='启动资源加载失败，请重新加载。';document.getElementById('retry').hidden=false;"></script>
 </body>
 </html>

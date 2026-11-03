@@ -7,12 +7,22 @@ import '../../theme/tokens.dart';
 import '../../widgets/paper.dart';
 import '../game_ui.dart';
 import 'sudoku_modes.dart';
+import 'sudoku_resume.dart';
 
 /// 统一数独入口的模式选择：经典 / 异形 / 高级阶数。
 class SudokuModeSelect extends StatelessWidget {
-  const SudokuModeSelect({super.key, required this.onStart});
+  const SudokuModeSelect({
+    super.key,
+    required this.onStart,
+    this.resume,
+    this.onResume,
+  });
 
   final void Function(SudokuModeSpec mode, SudokuDifficulty difficulty) onStart;
+
+  /// 2 小时内暂停退出的对局；非空时在顶部显示“继续上一局”。
+  final SudokuResume? resume;
+  final VoidCallback? onResume;
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +38,13 @@ class SudokuModeSelect extends StatelessWidget {
     final hero = _Hero(
       glyph: _VariantGlyph(variant: SudokuVariant.classic, size: 86),
     );
+    final resumeCard = resume == null
+        ? null
+        : _ResumeCard(resume: resume!, onResume: onResume);
     final classicSection = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _GroupHeader(
-          index: '01',
-          title: '数独',
-          subtitle: '经典九宫 · 四档难度',
-        ),
+        const _GroupHeader(index: '01', title: '数独', subtitle: '经典九宫 · 四档难度'),
         const SizedBox(height: 9),
         _ModeCard(
           mode: classic,
@@ -173,11 +182,7 @@ class SudokuModeSelect extends StatelessWidget {
             child: Text(
               '每一局都复核唯一解；难度按逻辑技巧与搜索分支评级，'
               '标为“专家”的题目不能只靠最基础的裸单技巧推完。',
-              style: context.body(
-                size: 11.5,
-                color: c.inkSoft,
-                height: 1.65,
-              ),
+              style: context.body(size: 11.5, color: c.inkSoft, height: 1.65),
             ),
           ),
         ],
@@ -193,6 +198,10 @@ class SudokuModeSelect extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               hero,
+              if (resumeCard != null) ...[
+                const SizedBox(height: 12),
+                resumeCard,
+              ],
               const SizedBox(height: 18),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,11 +209,7 @@ class SudokuModeSelect extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        classicSection,
-                        jigsawSection,
-                        overlapSection,
-                      ],
+                      children: [classicSection, jigsawSection, overlapSection],
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -228,6 +233,7 @@ class SudokuModeSelect extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             hero,
+            if (resumeCard != null) ...[const SizedBox(height: 12), resumeCard],
             const SizedBox(height: 18),
             classicSection,
             jigsawSection,
@@ -242,7 +248,76 @@ class SudokuModeSelect extends StatelessWidget {
       },
     );
   }
+}
 
+class _ResumeCard extends StatelessWidget {
+  const _ResumeCard({required this.resume, required this.onResume});
+
+  final SudokuResume resume;
+  final VoidCallback? onResume;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final filled = resume.board.where((v) => v != 0).length;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: c.hl,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.accent.withValues(alpha: .5)),
+        boxShadow: CitroColors.shadows.paper(c),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.accent.withValues(alpha: .18),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: gameIcon(GameIcons.play, size: 14, color: c.accentInk),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '继续上一局',
+                  style: context.body(
+                    size: 13.5,
+                    weight: FontWeight.w700,
+                    color: c.ink,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${resume.modeLabel} · ${resume.difficultyLabel} · '
+                  '${resume.remainingLabel(DateTime.now())}',
+                  style: context.body(
+                    size: 10.5,
+                    color: c.accentInk,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '已填 $filled/${resume.board.length} · '
+                  '用时 ${gameFmtDuration(resume.seconds)}',
+                  style: context.body(size: 10, color: c.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          _StartChip(label: '继续', onTap: onResume ?? () {}),
+        ],
+      ),
+    );
+  }
 }
 
 class _Hero extends StatelessWidget {
