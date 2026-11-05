@@ -35,7 +35,7 @@ class SudokuModeSelect extends StatelessWidget {
         .toList();
     final advanced = sudokuModesInGroup(SudokuGroup.advanced);
 
-    final hero = _Hero(
+    final hero = const _Hero(
       glyph: _VariantGlyph(variant: SudokuVariant.classic, size: 86),
     );
     final resumeCard = resume == null
@@ -49,7 +49,7 @@ class SudokuModeSelect extends StatelessWidget {
         _ModeCard(
           mode: classic,
           onStart: onStart,
-          glyph: _VariantGlyph(variant: SudokuVariant.classic, size: 72),
+          glyph: const _VariantGlyph(variant: SudokuVariant.classic, size: 72),
         ),
       ],
     );
@@ -76,7 +76,7 @@ class SudokuModeSelect extends StatelessWidget {
                   child: _ModeCard(
                     mode: jigsaw,
                     onStart: onStart,
-                    glyph: _VariantGlyph(
+                    glyph: const _VariantGlyph(
                       variant: SudokuVariant.jigsaw,
                       size: 60,
                     ),
@@ -87,7 +87,7 @@ class SudokuModeSelect extends StatelessWidget {
                   child: _ModeCard(
                     mode: windmill,
                     onStart: onStart,
-                    glyph: _VariantGlyph(
+                    glyph: const _VariantGlyph(
                       variant: SudokuVariant.overlap,
                       overlapCount: 5,
                       windmill: true,
@@ -516,11 +516,11 @@ class _ModeCard extends StatelessWidget {
                     ),
                     if (mode.variant == SudokuVariant.jigsaw) ...[
                       const SizedBox(width: 6),
-                      _Tag(text: '每局不同'),
+                      const _Tag(text: '每局不同'),
                     ],
                     if (mode.key == 'windmill') ...[
                       const SizedBox(width: 6),
-                      _Tag(text: '5 盘'),
+                      const _Tag(text: '5 盘'),
                     ],
                   ],
                 ),

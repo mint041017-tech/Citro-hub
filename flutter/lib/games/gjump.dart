@@ -1124,7 +1124,7 @@ class _JumpOverlay extends StatelessWidget {
                 ],
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
               ),

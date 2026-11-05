@@ -1957,6 +1957,22 @@ class _KnockwaterPageState extends State<KnockwaterPage>
       byChapter.putIfAbsent(kLevels[i].chapter, () => <int>[]).add(i);
     }
     const gap = 8.0;
+    // 78 关一次性铺开会把所有格子都建出来；按 4 列切成行交给
+    // ListView.builder，只构建当前可见的几行。
+    final rows = <_LevelRow>[];
+    for (final entry in byChapter.entries) {
+      final done = entry.value.where(_progress.isCompleted).length;
+      rows.add(_LevelRow.chapter(entry.key, '$done/${entry.value.length}'));
+      for (var i = 0; i < entry.value.length; i += 4) {
+        final end = math.min(i + 4, entry.value.length);
+        rows.add(
+          _LevelRow.levels(
+            entry.value.sublist(i, end),
+            last: end == entry.value.length,
+          ),
+        );
+      }
+    }
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -2009,52 +2025,63 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                 ),
               ),
               Expanded(
-                child: ListView(
+                child: ListView.builder(
                   padding: EdgeInsets.fromLTRB(14 * s, 6 * s, 14 * s, 22 * s),
-                  children: <Widget>[
-                    for (final entry in byChapter.entries) ...<Widget>[
-                      Row(
-                        children: <Widget>[
-                          Flexible(
-                            child: Text(
-                              entry.key,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11 * s,
-                                letterSpacing: 2.2 * s,
-                                color: kGold.withValues(alpha: 0.72),
+                  itemCount: rows.length,
+                  itemBuilder: (context, index) {
+                    final row = rows[index];
+                    if (row.chapter != null) {
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 8 * s),
+                        child: Row(
+                          children: <Widget>[
+                            Flexible(
+                              child: Text(
+                                row.chapter!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11 * s,
+                                  letterSpacing: 2.2 * s,
+                                  color: kGold.withValues(alpha: 0.72),
+                                ),
                               ),
                             ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${entry.value.where(_progress.isCompleted).length}'
-                            '/${entry.value.length}',
-                            style: TextStyle(
-                              fontSize: 10 * s,
-                              color: _paper.withValues(alpha: 0.35),
+                            const Spacer(),
+                            Text(
+                              row.count!,
+                              style: TextStyle(
+                                fontSize: 10 * s,
+                                color: _paper.withValues(alpha: 0.35),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      );
+                    }
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: row.last ? 16 * s : gap,
                       ),
-                      SizedBox(height: 8 * s),
-                      LayoutBuilder(
+                      child: LayoutBuilder(
                         builder: (context, cons) {
                           final tileW = (cons.maxWidth - gap * 3) / 4;
-                          return Wrap(
-                            spacing: gap,
-                            runSpacing: gap,
+                          return Row(
                             children: <Widget>[
-                              for (final i in entry.value)
-                                SizedBox(width: tileW, child: _levelTile(i, s)),
+                              for (var i = 0; i < row.levels.length; i++) ...<Widget>[
+                                SizedBox(
+                                  width: tileW,
+                                  child: _levelTile(row.levels[i], s),
+                                ),
+                                if (i != row.levels.length - 1)
+                                  const SizedBox(width: gap),
+                              ],
                             ],
                           );
                         },
                       ),
-                      SizedBox(height: 16 * s),
-                    ],
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -2074,68 +2101,67 @@ class _KnockwaterPageState extends State<KnockwaterPage>
         : completed
         ? kGlow.withValues(alpha: 0.42)
         : _paper.withValues(alpha: 0.12);
+    final tile = Container(
+      height: 66 * s,
+      padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 6 * s),
+      decoration: BoxDecoration(
+        color: unlocked
+            ? const Color(0xCC0A1D1F)
+            : const Color(0x99071113),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            '${index + 1}',
+            style: TextStyle(
+              fontSize: 10 * s,
+              letterSpacing: 1 * s,
+              color: unlocked
+                  ? kGold.withValues(alpha: 0.82)
+                  : _paper.withValues(alpha: 0.4),
+            ),
+          ),
+          SizedBox(height: 2 * s),
+          Text(
+            kLevels[index].name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11 * s,
+              letterSpacing: 0.5 * s,
+              color: _paper.withValues(alpha: unlocked ? 0.82 : 0.45),
+            ),
+          ),
+          SizedBox(height: 2 * s),
+          if (!unlocked)
+            Icon(
+              Icons.lock_outline_rounded,
+              size: 11 * s,
+              color: _paper.withValues(alpha: 0.34),
+            )
+          else if (completed)
+            Text(
+              stars > 0 ? List<String>.filled(stars, '★').join() : '✓',
+              style: TextStyle(
+                fontSize: 9 * s,
+                letterSpacing: 1 * s,
+                color: kGold.withValues(alpha: 0.8),
+              ),
+            )
+          else
+            SizedBox(height: 9 * s),
+        ],
+      ),
+    );
     return IgnorePointer(
       ignoring: !unlocked,
       child: GestureDetector(
         key: ValueKey<String>('kw-level-${index + 1}'),
         onTap: unlocked ? () => _startLevel(index) : null,
-        child: Opacity(
-          opacity: unlocked ? 1 : 0.42,
-          child: Container(
-            height: 66 * s,
-            padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 6 * s),
-            decoration: BoxDecoration(
-              color: unlocked
-                  ? const Color(0xCC0A1D1F)
-                  : const Color(0x99071113),
-              border: Border.all(color: border),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    fontSize: 10 * s,
-                    letterSpacing: 1 * s,
-                    color: unlocked
-                        ? kGold.withValues(alpha: 0.82)
-                        : _paper.withValues(alpha: 0.4),
-                  ),
-                ),
-                SizedBox(height: 2 * s),
-                Text(
-                  kLevels[index].name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11 * s,
-                    letterSpacing: 0.5 * s,
-                    color: _paper.withValues(alpha: unlocked ? 0.82 : 0.45),
-                  ),
-                ),
-                SizedBox(height: 2 * s),
-                if (!unlocked)
-                  Icon(
-                    Icons.lock_outline_rounded,
-                    size: 11 * s,
-                    color: _paper.withValues(alpha: 0.34),
-                  )
-                else if (completed)
-                  Text(
-                    stars > 0 ? List<String>.filled(stars, '★').join() : '✓',
-                    style: TextStyle(
-                      fontSize: 9 * s,
-                      letterSpacing: 1 * s,
-                      color: kGold.withValues(alpha: 0.8),
-                    ),
-                  )
-                else
-                  SizedBox(height: 9 * s),
-              ],
-            ),
-          ),
-        ),
+        // 只有未解锁的关卡需要压暗；解锁后直接绘制，滚动时不再逐帧建离屏层。
+        child: unlocked ? tile : Opacity(opacity: 0.42, child: tile),
       ),
     );
   }
@@ -2484,4 +2510,20 @@ class _KnockRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _KnockRingPainter oldDelegate) =>
       oldDelegate.engine != engine;
+}
+
+/// 关卡列表的懒加载行：章节标题行，或一行最多 4 个关卡。
+class _LevelRow {
+  final String? chapter;
+  final String? count;
+  final List<int> levels;
+  final bool last;
+
+  const _LevelRow.chapter(this.chapter, this.count)
+    : levels = const <int>[],
+      last = false;
+
+  const _LevelRow.levels(this.levels, {required this.last})
+    : chapter = null,
+      count = null;
 }

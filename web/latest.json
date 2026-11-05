@@ -1,13 +1,13 @@
 {
-  "schema": 1,
-  "app_name": "citro",
-  "version": "2.0.3",
-  "build_number": "2003",
-  "build_id": "4dff2b4f231d18dc7bba688f626252a4",
-  "file": "Citro-web-2.0.3.zip",
-  "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.0.3.zip",
-  "size": 30922265,
-  "sha256": "f15b6b7da1ef1ec1b4f153c42a705c3917253aab38fafcd5a574e997ed8b9cac",
-  "published_at": "2026-11-03T08:28:14Z",
-  "notes": "2.0.3：全端性能优化（Web 首屏资源并行加载、列表懒构建、图片解码与缓存收敛）；数独新增计分明细、对局续玩与最佳用时"
+    "schema":  1,
+    "app_name":  "citro",
+    "version":  "2.0.15",
+    "build_number":  "2015",
+    "build_id":  "9a4cd5f87796c396999c061b2429cedb",
+    "file":  "Citro-web-2.0.15.zip",
+    "url":  "https://obs.chimu-claw.xyz/web/Citro-web-2.0.15.zip",
+    "size":  39109975,
+    "sha256":  "9a4cd5f87796c396999c061b2429cedb98f75639ed78c89a17b96de759dc49ef",
+    "published_at":  "2026-11-05T05:24:12Z",
+    "notes":  "2.0.15：移除编辑资料快捷卡片、主题胶囊缩短、修复 Windows 左下角头像显示"
 }

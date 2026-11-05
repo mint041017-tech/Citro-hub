@@ -818,7 +818,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('🏆', style: const TextStyle(fontSize: 40)),
+                          const Text('🏆', style: TextStyle(fontSize: 40)),
                           const SizedBox(height: 8),
                           Text(
                             widget.aiSplit && boardTab == 'ai'

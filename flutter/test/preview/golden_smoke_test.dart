@@ -35,14 +35,14 @@ void main() {
       MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: buildCitroTheme(CitroColors.light),
-        home: Scaffold(
+        home: const Scaffold(
           body: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '2048 游戏空间',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Kalam',
                     fontSize: 32,
                     color: Color(0xFF23211C),
@@ -50,7 +50,7 @@ void main() {
                 ),
                 Text(
                   '记忆卡牌 · 数独 · 数织',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'ZCOOL',
                     fontSize: 22,
                     color: Color(0xFF23211C),
@@ -58,7 +58,7 @@ void main() {
                 ),
                 Text(
                   '正在玩 · 还没有人在玩',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'NotoSC',
                     fontSize: 13,
                     color: Color(0xFF6E6858),

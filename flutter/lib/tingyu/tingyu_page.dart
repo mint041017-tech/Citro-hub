@@ -12,6 +12,7 @@ import '../services/haptics.dart';
 import '../services/pomodoro.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/active_listenable.dart';
 import '../widgets/desktop_shell.dart';
 import '../widgets/modal.dart';
 import 'tingyu_controller.dart';
@@ -51,8 +52,10 @@ class _TingyuPageState extends State<TingyuPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
+    // 播放计时 / Web 轮询会高频通知控制器。页面被其他路由或 Tab 遮挡时
+    // 不需要跟帧；ActiveListenableBuilder 会跳过这些重建，回前台再补齐。
+    return ActiveListenableBuilder(
+      listenable: _c,
       builder: (context, _) {
         final dark = Theme.of(context).brightness == Brightness.dark;
         final theme = NookApp(controller: _c).theme(dark);
@@ -557,7 +560,7 @@ class NookApp extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: TextStyle(
+          textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -573,7 +576,7 @@ class NookApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          textStyle: TextStyle(
+          textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -584,7 +587,7 @@ class NookApp extends StatelessWidget {
         style: TextButton.styleFrom(
           minimumSize: const Size(48, 48),
           foregroundColor: p.accent,
-          textStyle: TextStyle(
+          textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -1618,7 +1621,7 @@ class _NookHomeState extends State<NookHome> {
             padding: EdgeInsets.only(
               right: CitroDesktopShell.windowControlsInset,
             ),
-            child: const TingyuTopClock(),
+            child: TingyuTopClock(),
           ),
         ],
       ),

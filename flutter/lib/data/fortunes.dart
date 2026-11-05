@@ -112,7 +112,7 @@ const List<Fortune> kFortunes = [
 ];
 
 final Map<String, Fortune> kFestivalFortunes = {
-  'chunjie': Fortune(
+  'chunjie': const Fortune(
     lv: "上上签",
     name: "瑞启新元",
     desc: "新年气口全开，旧事翻篇、新局可启。适合定方向、许愿、迈出第一步。",
@@ -123,7 +123,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["爆竹声中一岁除", "春风送暖入屠苏"],
     festival: "春节",
   ),
-  'yuanxiao': Fortune(
+  'yuanxiao': const Fortune(
     lv: "上上签",
     name: "花灯照福",
     desc: "灯火人间，人缘与热闹运在线。适合约人、破冰、把话说开。",
@@ -134,7 +134,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["火树银花合星桥", "暗尘随马去人来"],
     festival: "元宵节",
   ),
-  'longtaitou': Fortune(
+  'longtaitou': const Fortune(
     lv: "上吉签",
     name: "龙跃春回",
     desc: "抬头见喜，行动力回升。剪去旧气、开新坑、抬头挺胸往前走都顺。",
@@ -145,7 +145,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["二月二日新雨晴", "草芽菜甲一时生"],
     festival: "龙抬头",
   ),
-  'qingming': Fortune(
+  'qingming': const Fortune(
     lv: "中吉签",
     name: "清明心净",
     desc: "思绪清明，适合整理内心与关系。把未尽的心意安放好，再轻装上路。",
@@ -156,7 +156,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["清明时节雨纷纷", "路上行人欲断魂"],
     festival: "清明节",
   ),
-  'duanwu': Fortune(
+  'duanwu': const Fortune(
     lv: "上上签",
     name: "粽安竞渡",
     desc: "阳气正盛，适合拼一把、争一争。稳住节奏，也能拔得头筹。",
@@ -167,7 +167,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["鼓声三下红旗开", "两龙跃出浮水来"],
     festival: "端午节",
   ),
-  'qixi': Fortune(
+  'qixi': const Fortune(
     lv: "上上签",
     name: "星河有信",
     desc: "心意容易被听见，关系运回暖。真诚表达比套路更管用。",
@@ -178,7 +178,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["金风玉露一相逢", "便胜却人间无数"],
     festival: "七夕节",
   ),
-  'zhongyuan': Fortune(
+  'zhongyuan': const Fortune(
     lv: "中平签",
     name: "秋思澄明",
     desc: "心绪偏静，适合安神、感恩、把杂念收一收。别自己吓自己。",
@@ -189,7 +189,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["纸灰飞作白蝴蝶", "泪血染成红杜鹃"],
     festival: "中元节",
   ),
-  'zhongqiu': Fortune(
+  'zhongqiu': const Fortune(
     lv: "上上签",
     name: "月满人圆",
     desc: "月圆人圆。适合团圆、和解、把好消息分享给在乎的人。",
@@ -200,7 +200,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["但愿人长久", "千里共婵娟"],
     festival: "中秋节",
   ),
-  'chongyang': Fortune(
+  'chongyang': const Fortune(
     lv: "上吉签",
     name: "登高望远",
     desc: "站得高一点，视野就开了。适合规划长远、拜访长辈、给自己充电。",
@@ -211,7 +211,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["遥知兄弟登高处", "遍插茱萸少一人"],
     festival: "重阳节",
   ),
-  'laba': Fortune(
+  'laba': const Fortune(
     lv: "中吉签",
     name: "粥暖年近",
     desc: "年味渐浓，温补蓄力的时候。把日子过暖，好运会顺着来。",
@@ -222,7 +222,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["腊日常年暖尚遥", "今年腊日冻全消"],
     festival: "腊八节",
   ),
-  'xiaonian': Fortune(
+  'xiaonian': const Fortune(
     lv: "上吉签",
     name: "灶暖迎春",
     desc: "扫尘辞旧、灶火迎祥。今天适合清理与收尾，为新年腾出好位置。",
@@ -233,7 +233,7 @@ final Map<String, Fortune> kFestivalFortunes = {
     poem: ["古传腊月二十四", "灶君朝天欲言事"],
     festival: "小年",
   ),
-  'chuxi': Fortune(
+  'chuxi': const Fortune(
     lv: "上上签",
     name: "守岁纳福",
     desc: "旧岁将尽，福气正聚。守在一起的人，就是今晚最好的签。",

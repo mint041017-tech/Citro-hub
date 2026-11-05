@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity() {
     private var pendingResult: MethodChannel.Result? = null
     private var memoryChannel: MethodChannel? = null
     private var highRefreshRequested = false
+    private var locationHandler: Handler? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -48,6 +49,23 @@ class MainActivity : FlutterActivity() {
             }
         }
         memoryChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/memory")
+        // HyperOS / MIUI 的省电策略会限制后台定位、计时与音频；提供入口让用户
+        // 直接进入本应用的系统设置页（应用信息 → 省电策略 → 无限制）。
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/device").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openAppSettings" -> {
+                    val ok = runCatching {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                        true
+                    }.getOrDefault(false)
+                    result.success(ok)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/display").setMethodCallHandler { call, result ->
             when (call.method) {
                 "setHighRefresh" -> {
@@ -56,6 +74,16 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "maxRefreshRate" -> result.success(maxRefreshRate())
+                "currentRefreshRate" -> result.success(
+                    mapOf<String, Any>(
+                        "refresh" to (display?.refreshRate ?: 0f),
+                        "mode" to (display?.mode?.refreshRate ?: 0f),
+                        "powerSave" to (
+                            getSystemService(android.os.PowerManager::class.java)
+                                ?.isPowerSaveMode ?: false
+                            ),
+                    )
+                )
                 else -> result.notImplemented()
             }
         }
@@ -267,50 +295,109 @@ class MainActivity : FlutterActivity() {
         memoryChannel?.invokeMethod("trim", ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
     }
 
+    override fun onDestroy() {
+        // 定位请求的 8 秒兜底回调会持有 Activity；页面销毁时必须摘掉，
+        // 否则 HyperOS 上频繁进出应用会累积旧的 MainActivity。
+        locationHandler?.removeCallbacksAndMessages(null)
+        locationHandler = null
+        pendingResult = null
+        memoryChannel = null
+        super.onDestroy()
+    }
+
     override fun onResume() {
         super.onResume()
         // 从后台回来时窗口偏好可能被系统重置，重新申请一次。
         if (highRefreshRequested) applyFrameRate()
     }
 
+    override fun onPostResume() {
+        super.onPostResume()
+        if (highRefreshRequested) applyFrameRate()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // HyperOS 在切前台、下拉通知栏回来、分屏切换后都可能把刷新率重置为 60Hz。
+        if (hasFocus && highRefreshRequested) applyFrameRate()
+    }
+
     /**
      * 游戏页期间请求窗口首选刷新率 = 屏幕最高刷新率（通常是 120Hz），
      * 退出游戏恢复「无偏好」，让系统回到默认刷新策略省电。
      *
-     * Window 本身没有 setFrameRate（那是 Surface 的 API），窗口级可用的
-     * 公开入口是 preferredRefreshRate；它在 API 21+ 生效，Android 15/16
-     * 的 LTPO 屏也会据此切换到高刷模式。
+     * HyperOS / MIUI 对 preferredRefreshRate 的支持并不总是可靠，
+     * 因此同时写 preferredDisplayModeId（同分辨率下的 120Hz 模式），
+     * 两个字段一起提交，避免系统只认其中一个。
      */
     @Suppress("DEPRECATION")
     private fun applyFrameRate() {
         val w = window ?: return
-        val rate = if (highRefreshRequested) maxRefreshRate() else 0f
         val attrs = w.attributes
-        if (attrs.preferredRefreshRate == rate) return
-        attrs.preferredRefreshRate = rate
+        if (highRefreshRequested) {
+            val same = bestSameResolutionMode()
+            if (same != null) {
+                attrs.preferredRefreshRate = same.refreshRate
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    attrs.preferredDisplayModeId = same.modeId
+                }
+            } else {
+                // 没有同分辨率高刷模式时只设刷新率，绝不切换分辨率。
+                attrs.preferredRefreshRate = bestRefreshRate()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    attrs.preferredDisplayModeId = 0
+                }
+            }
+        } else {
+            attrs.preferredRefreshRate = 0f
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                attrs.preferredDisplayModeId = 0
+            }
+        }
+        // 不比较旧值：系统可能在生命周期里把实际刷新率改回 60Hz，
+        // 但 attributes 还停留在 120，此时提前 return 会漏掉重新申请。
         w.attributes = attrs
     }
 
-    private fun maxRefreshRate(): Float {
+    /** 当前分辨率下刷新率最高的模式；找不到返回 null。 */
+    private fun bestSameResolutionMode(): android.view.Display.Mode? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return try {
+            val d = display ?: return null
+            val current = d.mode
+            var best: android.view.Display.Mode? = null
+            for (mode in d.supportedModes) {
+                if (mode.physicalWidth != current.physicalWidth ||
+                    mode.physicalHeight != current.physicalHeight
+                ) continue
+                if (mode.refreshRate <= 60.5f) continue
+                val currentBest = best
+                if (currentBest == null || mode.refreshRate > currentBest.refreshRate) {
+                    best = mode
+                }
+            }
+            best
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun bestRefreshRate(): Float {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return 0f
         return try {
             val d = display ?: return 0f
-            // 只在「当前分辨率」内挑最高刷新率，避免切到低分辨率高刷模式。
-            val current = d.mode
-            var max = current.refreshRate
+            var max = d.mode.refreshRate.coerceAtLeast(60f)
             for (mode in d.supportedModes) {
-                if (mode.physicalWidth == current.physicalWidth &&
-                    mode.physicalHeight == current.physicalHeight &&
-                    mode.refreshRate > max
-                ) {
-                    max = mode.refreshRate
-                }
+                if (mode.refreshRate > max) max = mode.refreshRate
             }
-            max
+            // 个别机型会上报异常高值，收敛一下。
+            max.coerceAtMost(165f)
         } catch (_: Throwable) {
             0f
         }
     }
+
+    private fun maxRefreshRate(): Float = bestRefreshRate()
 
     private fun hasLocationPermission(): Boolean =
         checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -367,7 +454,7 @@ class MainActivity : FlutterActivity() {
             }
 
             val finished = AtomicBoolean(false)
-            val handler = Handler(Looper.getMainLooper())
+            val handler = Handler(Looper.getMainLooper()).also { locationHandler = it }
             val provider = providers.first()
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {

@@ -3,11 +3,10 @@
 > 代码、工程文件、权限文案、图标、启动屏、隐私清单、通知/定位 Dart 适配已经完成。
 > 下面这些步骤依赖 macOS、Xcode、Apple 签名与真机，Windows 无法代替。
 >
-> 截至 2026-11-03：版本已升到 **2.0.2+2002**（pubspec 为唯一版本源，Runner/TimerWidget 均用
-> `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）；本次改动为听隅手机端顶栏右侧间距修正，
-> 以及小游戏打开/关闭改用与听隅一致的纸页软转场；iOS 侧沿用已有 ActivityKit Live Activity 组件，
-> 无需额外工程配置。Android release / Windows / Web 2.0.2 制品已在 Windows 构建，iOS 的 Xcode 编译、签名与真机运行仍需在 Mac 验证。
-> **iOS 的 Xcode 编译、签名和真机运行仍未在 Mac 上验证**，第一次 Mac 构建可能还需要处理 Xcode/CocoaPods 版本差异。
+> 截至 2026-11-05：当前版本为 **2.0.15+2015**（pubspec 为唯一版本源，Runner/TimerWidget 均用
+> `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）。版本状态、端侧改动历史与预打包核对项统一见
+> [`ios-预打包清单.md`](ios-预打包清单.md)；本文件只保留必须在 macOS 上完成的 Xcode 签名、
+> 构建与真机验证步骤。
 
 ## 0. 前置
 

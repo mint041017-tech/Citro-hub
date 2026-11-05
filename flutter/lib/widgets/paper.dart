@@ -284,23 +284,21 @@ class PaperCard extends StatelessWidget {
               alignment: Alignment.topCenter,
               child: Transform.rotate(
                 angle: tapeAngle * math.pi / 180,
-                child: Opacity(
-                  opacity: 1,
-                  child: ClipPath(
-                    clipper: _TapeClipper(),
-                    child: Container(
-                      width: tapeWidth ?? 92,
-                      height: tapeHeight ?? 24,
-                      decoration: BoxDecoration(
-                        color: tapeColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: c.tapeLine,
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
+                // 这里本来是全不透明的胶带，Opacity(1) 只是多一层合成节点。
+                child: ClipPath(
+                  clipper: _TapeClipper(),
+                  child: Container(
+                    width: tapeWidth ?? 92,
+                    height: tapeHeight ?? 24,
+                    decoration: BoxDecoration(
+                      color: tapeColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: c.tapeLine,
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -577,6 +575,12 @@ class AppIcons {
       '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>';
   static const user =
       '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
+  static const phone =
+      '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/>';
+  static const mail =
+      '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>';
+  static const info =
+      '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>';
   static const arrowLeft = '<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>';
   static const arrowRight = '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>';
   static const arrowUpRight = '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>';
@@ -634,6 +638,7 @@ class AppIcons {
       '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z"/>';
   static const heartFilled =
       '<path d="M12 21.1 4.2 13.6a5.6 5.6 0 0 1 0-7.9 5.6 5.6 0 0 1 7.8 0 5.6 5.6 0 0 1 7.8 0 5.6 5.6 0 0 1 0 7.9z"/>';
+
   /// 社区：带一颗小爱心的对话框，比并排小人更贴合「社区」语义。
   static const community =
       '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4.1-.9L3 20l1-4.3A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z"/><path d="M12 14.2s-2.8-1.6-2.8-3.3a1.7 1.7 0 0 1 2.8-1.4 1.7 1.7 0 0 1 2.8 1.4c0 1.7-2.8 3.3-2.8 3.3z"/>';
@@ -664,6 +669,11 @@ class AppIcons {
   static const chevronRight = '<path d="m9 18 6-6-6-6"/>';
   static const copy =
       '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+  static const qr =
+      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01"/>';
+  static const scan =
+      '<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="3"/>';
+  static const flash = '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/>';
 }
 
 /// 点击缩放包装。

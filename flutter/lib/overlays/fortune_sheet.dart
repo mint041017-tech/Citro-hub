@@ -466,9 +466,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     key: _cardKey,
                     width: double.infinity,
                     constraints: const BoxConstraints(maxWidth: 400),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       borderRadius: _cardRadius,
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
                           color: Color(0x246E5030),
                           blurRadius: 60,

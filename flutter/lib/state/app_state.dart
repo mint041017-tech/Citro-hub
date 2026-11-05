@@ -40,6 +40,9 @@ class AppState extends ChangeNotifier {
   int unread = 0;
   bool notificationsEnabled = true;
   bool reduceMotion = false;
+  // HyperOS / MIUI 在后台会限制网络与 CPU；退到后台后暂停未读/动态轮询，
+  // 回前台再补一次，避免每分钟醒来发请求。
+  bool _foreground = true;
 
   /// CiCi 的自定义性格；空字符串表示使用内置的默认性格。
   String ciciPersona = '';
@@ -197,8 +200,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String phone, String password) async {
-    final j = await Api.login(phone, password);
+  Future<void> login(String account, String password) async {
+    final j = await Api.login(account, password);
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
     await _persistAuth();
@@ -209,13 +212,30 @@ class AppState extends ChangeNotifier {
     unawaited(syncCardsFromCloud());
   }
 
-  Future<void> register(
-    String phone,
-    String name,
-    String password,
-    String invite,
-  ) async {
-    final j = await Api.register(phone, name, password, invite);
+  /// 扫码登录成功：桌面端轮询拿到 token 与用户信息后落到本地会话。
+  Future<void> applyQrLogin(String token, Map<String, dynamic> userJson) async {
+    Api.token = token;
+    user = User.fromJson(userJson);
+    await _persistAuth();
+    notifyListeners();
+    _startNotifyPolling();
+    unawaited(syncZodiac());
+    unawaited(_loadCheckin());
+    unawaited(syncCardsFromCloud());
+  }
+
+  Future<void> register({
+    String? phone,
+    String? email,
+    required String name,
+    required String password,
+  }) async {
+    final j = await Api.register(
+      phone: phone,
+      email: email,
+      name: name,
+      password: password,
+    );
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
     await _persistAuth();
@@ -288,6 +308,7 @@ class AppState extends ChangeNotifier {
     _lastPostTs = null;
     unawaited(_seedCommunityPosts());
     _notifyTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (!_foreground) return;
       _refreshUnread();
       unawaited(_refreshCommunityPosts());
     });
@@ -307,6 +328,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _refreshCommunityPosts() async {
+    if (!_foreground) return;
     if (!loggedIn || !_postSeeded) {
       if (!_postSeeded) await _seedCommunityPosts();
       return;
@@ -340,7 +362,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _refreshUnread() async {
-    if (!loggedIn) return;
+    if (!loggedIn || !_foreground) return;
     try {
       final j = await Api.notifications();
       final n = int.tryParse('${j['unread'] ?? 0}') ?? 0;
@@ -352,6 +374,17 @@ class AppState extends ChangeNotifier {
           unawaited(Notifications.show('Citro 社区', '你有 $n 条新消息'));
       }
     } catch (_) {}
+  }
+
+  /// App 前后台切换：后台暂停轮询，回前台立即补一次未读与动态。
+  void setForeground(bool value) {
+    if (_foreground == value) return;
+    _foreground = value;
+    if (!value) return;
+    if (loggedIn) {
+      unawaited(_refreshUnread());
+      unawaited(_refreshCommunityPosts());
+    }
   }
 
   void setUnread(int n) {

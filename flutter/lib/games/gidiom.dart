@@ -656,27 +656,27 @@ class GameIdiomView extends StatelessWidget {
     const ord = ['壹', '贰', '叁', '肆'];
     final texts = <List<InlineSpan>>[
       [
-        TextSpan(text: '你与 AI 轮流接龙，'),
+        const TextSpan(text: '你与 AI 轮流接龙，'),
         TextSpan(text: '只要尾字与首字同音', style: _emStyle),
-        TextSpan(text: '即可，不\n区分声调'),
+        const TextSpan(text: '即可，不\n区分声调'),
       ],
       [
-        TextSpan(text: '每回合 '),
+        const TextSpan(text: '每回合 '),
         TextSpan(text: '60 秒', style: _emStyle),
-        TextSpan(text: '，超时即结束本局'),
+        const TextSpan(text: '，超时即结束本局'),
       ],
       [
-        TextSpan(text: '接对一个基础 '),
+        const TextSpan(text: '接对一个基础 '),
         TextSpan(text: '+10 分', style: _emStyle),
-        TextSpan(text: '；本局答对 '),
+        const TextSpan(text: '；本局答对 '),
         TextSpan(text: '2 个后 ×2', style: _emStyle),
-        TextSpan(text: '、'),
+        const TextSpan(text: '、'),
         TextSpan(text: '4 ', style: _emStyle),
-        TextSpan(text: '\n'),
+        const TextSpan(text: '\n'),
         TextSpan(text: '个后 ×4', style: _emStyle),
-        TextSpan(text: '，之后每多 2 个倍率再加 2 倍'),
+        const TextSpan(text: '，之后每多 2 个倍率再加 2 倍'),
       ],
-      [TextSpan(text: '成语需真实存在，由 AI 判定；本局用过的不能重\n复')],
+      [const TextSpan(text: '成语需真实存在，由 AI 判定；本局用过的不能重\n复')],
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -947,7 +947,7 @@ class GameIdiomView extends StatelessWidget {
                         color: c.ink2,
                       ),
                       children: [
-                        TextSpan(text: '需接 '),
+                        const TextSpan(text: '需接 '),
                         TextSpan(
                           text: need.isEmpty ? '—' : need,
                           style: TextStyle(
@@ -972,7 +972,7 @@ class GameIdiomView extends StatelessWidget {
                       color: c.inkSoft,
                     ),
                     children: [
-                      TextSpan(text: '当前 '),
+                      const TextSpan(text: '当前 '),
                       TextSpan(
                         text: '×${math.max(1, (count ~/ 2) * 2)}',
                         style: TextStyle(
@@ -1257,7 +1257,7 @@ class GameIdiomView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: AppFonts.noto,
                     fontFamilyFallback: AppFonts.bodyFallback,
                     fontSize: 16,

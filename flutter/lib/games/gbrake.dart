@@ -584,9 +584,9 @@ class GameBrakeView extends StatelessWidget {
                   shadows: [Shadow(color: Color(0xCC0B0A0F), blurRadius: 10)],
                 ),
               ),
-              Text(
+              const Text(
                 'km/h',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppFonts.noto,
                   fontFamilyFallback: AppFonts.bodyFallback,
                   fontSize: 11,
@@ -930,7 +930,7 @@ class GameBrakeView extends StatelessWidget {
   }
 
   Widget _rulesCard() {
-    final base = TextStyle(
+    final base = const TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
       fontSize: 12.5,
@@ -994,13 +994,13 @@ class GameBrakeView extends StatelessWidget {
               TextSpan(
                 style: base,
                 children: [
-                  WidgetSpan(
+                  const WidgetSpan(
                     alignment: PlaceholderAlignment.middle,
                     child: SizedBox(
                       width: 16,
                       height: 20,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 1.2, top: 7.4),
+                        padding: EdgeInsets.only(left: 1.2, top: 7.4),
                         child: Align(
                           alignment: Alignment.topLeft,
                           child: _RuleDiamond(),
@@ -1509,7 +1509,7 @@ class _SpeedoPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(100 * _s, 110 * _s);
+    final center = const Offset(100 * _s, 110 * _s);
     final r = 80 * _s;
     final rect = Rect.fromCircle(center: center, radius: r);
 

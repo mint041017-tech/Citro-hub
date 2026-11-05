@@ -213,7 +213,7 @@ class Notifications {
             icon: 'ic_stat_chimu',
           ),
           // iOS 无法在通知里放实时倒计时；显示固定文案，到点由 schedule 提醒。
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: false,
             presentSound: false,
@@ -265,7 +265,7 @@ class Notifications {
             priority: Priority.high,
             icon: 'ic_stat_chimu',
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,

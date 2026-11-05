@@ -177,7 +177,7 @@ Future<void> showCardDrawOverlay(
     barrierLabel: '收下卡面',
     barrierColor: Colors.transparent,
     transitionDuration: CitroMotion.modal,
-    pageBuilder: (_, __, ___) => SizedBox.shrink(),
+    pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, __) => FadeTransition(
       opacity: CurvedAnimation(
         parent: anim,
@@ -280,9 +280,9 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
       type: MaterialType.transparency,
       child: Stack(
         children: [
-          Positioned.fill(
+          const Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment(0, -.12),
                   radius: 1.05,

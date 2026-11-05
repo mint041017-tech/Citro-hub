@@ -168,11 +168,10 @@ node trash/trash.js
 | --- | --- | --- |
 | `SHOWAPI_KEY` | 万维易源 appKey（星座运势接口） | 运势接口不可用，其它功能正常 |
 | `GLM_API_KEY` | 智谱 GLM Key，仅供 Web `/trashapi/api/ai` 服务端代理使用 | Web AI 返回“暂未配置”，其它功能正常 |
-| `INVITE_CODE` | 注册邀请码 | 注册不校验邀请码（开放注册） |
 
 ```bash
 # 环境变量方式
-SHOWAPI_KEY=xxx INVITE_CODE=xxx node trash/trash.js
+SHOWAPI_KEY=xxx node trash/trash.js
 
 # 或复制模板后填写
 cp trash/config.local.example.json trash/config.local.json

@@ -8,6 +8,11 @@ const PLATFORM_ICONS = {
       <rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect>
       <path d="M10.5 5.5h3M11 18.5h2"></path>
     </svg>`,
+  ios: `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6" y="2.5" width="12" height="19" rx="3.2"></rect>
+      <path d="M9.2 5.6h5.6M11.2 18.2h1.6"></path>
+    </svg>`,
 };
 
 const ICONS = {
@@ -24,14 +29,14 @@ const APPS = [
     badge: "桌面端",
     name: "Citro for Windows",
     desc: "iPad 同款界面，窗口缩放和宽屏自适应都安排好了。资源库、社区、小游戏与更新能力全部在桌面端。",
-    version: "v2.0.3",
-    sizeBytes: 23640063,
+    version: "v2.0.15",
+    sizeBytes: 23613100,
     system: "Windows 10 / 11",
     format: "EXE",
-    url: "https://obs.chimu-claw.xyz/exe/Citro-v2.0.3-win64-setup.exe",
-    sha256: "745c7bc4e006b18b7d377513bbad2ba2e2c518b6a8a4e4a0287a4ec128acd860",
+    url: "https://obs.chimu-claw.xyz/exe/Citro-v2.0.15-win64-setup.exe",
+    sha256: "e07f87c0f2533aab718ffdb4a34f04f848c29d4dc8235eced0ce9c3b246accff",
     warning: "安装包暂未代码签名，SmartScreen 可能提示“未知发布者”；安装到当前用户目录，无需管理员权限。",
-    file: "Citro-v2.0.3-win64-setup.exe",
+    file: "Citro-v2.0.15-win64-setup.exe",
     keywords: "windows win 桌面 电脑 客户端 安装包 更新 静默安装",
   },
   {
@@ -39,15 +44,30 @@ const APPS = [
     badge: "移动端",
     name: "Citro for Android",
     desc: "手机上的 Citro，原生界面、小游戏、社区、食谱和星象都在。装好后可以在 App 内直接检查下一版。",
-    version: "v2.0.3",
-    sizeBytes: 95238651,
+    version: "v2.0.15",
+    sizeBytes: 109845847,
     system: "Android 8.0+",
     format: "APK",
-    url: "https://obs.chimu-claw.xyz/APK/Citro-v2.0.3-release.apk",
-    sha256: "e2fd753a2dbe0f8f6cae9d365719cfc6f4714ce56e91b74665b902606efe8cbf",
+    url: "https://obs.chimu-claw.xyz/APK/Citro-v2.0.15-release.apk",
+    sha256: "ee221fd500f4721c39a0120022faa40e3a8d66a470d50d3128bb56585a3c9b58",
     warning: "通用 ABI 安装包，已使用 Citro 发布签名；安装未知来源应用时，请在系统设置中允许本次安装。",
-    file: "Citro-v2.0.3-release.apk",
+    file: "Citro-v2.0.15-release.apk",
     keywords: "android 安卓 手机 移动端 apk 安装包 更新",
+  },
+  {
+    platform: "ios",
+    badge: "iPad / iPhone",
+    name: "Citro for iOS",
+    desc: "在 TestFlight 参与公测，iPad 与 iPhone 都能装。安装与后续更新都通过 TestFlight 完成。",
+    version: "v2.0.15",
+    sizeBytes: 0,
+    system: "iOS 15.0+",
+    format: "TestFlight",
+    url: "https://testflight.apple.com/join/7FTGpfcy",
+    sha256: "",
+    warning: "公测名额由 TestFlight 管理；请先在 App Store 安装 TestFlight，再打开邀请链接加入。",
+    file: "TestFlight",
+    keywords: "ios iphone ipad testflight 公测 内测 苹果",
   },
 ];
 
@@ -588,8 +608,22 @@ DRIVERS.forEach((item) => {
 
 function renderApps() {
   const grid = document.getElementById("appGrid");
-  grid.innerHTML = APPS.map(
-    (app) => `
+  grid.innerHTML = APPS.map((app) => {
+    const isTestFlight = app.platform === "ios";
+    const sizeRow = isTestFlight
+      ? ""
+      : `<div><dt>大小</dt><dd>${formatBytes(app.sizeBytes)}</dd></div>`;
+    const hashRow = isTestFlight
+      ? ""
+      : `<div class="hash-row">
+          <span>SHA-256</span>
+          <code title="${escapeHtml(app.sha256)}">${escapeHtml(app.sha256)}</code>
+          <button class="hash-copy" type="button" data-copy-sha="${escapeHtml(app.sha256)}" data-copy-label="${escapeHtml(app.name)}" aria-label="复制 ${escapeHtml(app.name)} 安装包的 SHA-256">复制</button>
+        </div>`;
+    const actionLabel = isTestFlight
+      ? "加入 TestFlight"
+      : `下载${app.platform === "android" ? " APK" : "安装包"}`;
+    return `
       <article class="app-card" data-platform="${app.platform}" data-search="${escapeHtml(app.haystack)}">
         <span class="app-watermark" aria-hidden="true">${PLATFORM_ICONS[app.platform]}</span>
         <div class="app-top">
@@ -600,24 +634,20 @@ function renderApps() {
         <p class="app-desc">${escapeHtml(app.desc)}</p>
         <dl class="app-meta">
           <div><dt>版本</dt><dd>${escapeHtml(app.version)}</dd></div>
-          <div><dt>大小</dt><dd>${formatBytes(app.sizeBytes)}</dd></div>
+          ${sizeRow}
           <div><dt>系统</dt><dd>${escapeHtml(app.system)}</dd></div>
           <div><dt>格式</dt><dd>${escapeHtml(app.format)}</dd></div>
         </dl>
         <div class="app-actions">
           <a class="button button--download" href="${escapeHtml(app.url)}" target="_blank" rel="noopener" data-download="${escapeHtml(app.file)}">
             ${ICONS.download}
-            下载${app.platform === "android" ? " APK" : "安装包"}
+            ${actionLabel}
           </a>
         </div>
-        <div class="hash-row">
-          <span>SHA-256</span>
-          <code title="${escapeHtml(app.sha256)}">${escapeHtml(app.sha256)}</code>
-          <button class="hash-copy" type="button" data-copy-sha="${escapeHtml(app.sha256)}" data-copy-label="${escapeHtml(app.name)}" aria-label="复制 ${escapeHtml(app.name)} 安装包的 SHA-256">复制</button>
-        </div>
+        ${hashRow}
         <p class="app-warning">${ICONS.info}<span>${escapeHtml(app.warning)}</span></p>
-      </article>`
-  ).join("");
+      </article>`;
+  }).join("");
 }
 
 function renderMods() {

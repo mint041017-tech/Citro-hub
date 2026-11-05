@@ -93,7 +93,7 @@ const List<ToolItem> kTools = [
     hash: "#/sens",
     url: null,
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "玩法抽签",
@@ -103,7 +103,7 @@ const List<ToolItem> kTools = [
     hash: "#/play",
     url: null,
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "瞬投",
@@ -113,7 +113,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://shuntou.top/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "视野live",
@@ -124,7 +124,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://shijiao.xingpaste.com/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "MsLab",
@@ -135,7 +135,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://mslab.gg/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "瞄准专家",
@@ -145,7 +145,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://ishoutu.cn/aim",
     warn: "打瓦的时候不要挂在后台！！！",
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "万兴优转",
@@ -155,7 +155,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/%E4%B8%87%E5%85%B4%E4%BC%98%E8%BD%AC.zip",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "TreeSide",
@@ -165,7 +165,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/TreeSize.7z",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "Twinkle Tray",
@@ -175,7 +175,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/Twinkle%20Tray.exe",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "Office Tool",
@@ -185,7 +185,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/Office_Tool.zip",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "Direct X",
@@ -195,7 +195,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/DirectX_Repair.zip",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "Geek",
@@ -205,7 +205,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/geek.exe",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "Steam",
@@ -216,7 +216,7 @@ const List<ToolItem> kTools = [
     url:
         "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/SteamSetup.exe",
     warn: null,
-    versions: const [
+    versions: [
       ResourceVersion(
         "Steam（官方正版）",
         "Valve 官方客户端，正版游戏首选",
@@ -239,7 +239,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/Bandizip.exe",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "图吧工具箱",
@@ -249,7 +249,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://obs.chimu-claw.xyz/%E5%B0%8F%E5%B7%A5%E5%85%B7/%E5%9B%BE%E5%90%A7%E5%B7%A5%E5%85%B7%E7%AE%B1.exe",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "KOOK",
@@ -259,7 +259,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://www.kookapp.cn/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "NN语音",
@@ -269,7 +269,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://www.nn.com/home",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "UU远程",
@@ -279,7 +279,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://uuyc.163.com/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "屏幕分享",
@@ -289,7 +289,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://demo.piik.tv/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
   ToolItem(
     name: "青柠起始页",
@@ -299,7 +299,7 @@ const List<ToolItem> kTools = [
     hash: null,
     url: "https://www.limestart.cn/",
     warn: null,
-    versions: const [],
+    versions: [],
   ),
 ];
 

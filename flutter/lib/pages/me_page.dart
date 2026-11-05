@@ -11,8 +11,10 @@ import '../overlays/card_collection.dart';
 import '../overlays/delete_account.dart';
 import '../overlays/notes_modal.dart';
 import '../overlays/profile_modal.dart';
+import '../overlays/scan_modal.dart';
 import '../overlays/update_dialog.dart';
 import '../services/api.dart';
+import '../services/device_settings.dart';
 import '../services/models.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
@@ -131,6 +133,9 @@ class MePage extends StatelessWidget {
         grid: false,
         child: SafeArea(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             padding: EdgeInsets.fromLTRB(
               side,
               AppSpacing.pageTop(width),
@@ -165,17 +170,21 @@ class MePage extends StatelessWidget {
                         ],
                       )
                     else ...[
-                      _profileHero(
-                        context,
-                        state,
-                        user,
-                        web: false,
-                        floating: floating,
+                      RepaintBoundary(
+                        child: _profileHero(
+                          context,
+                          state,
+                          user,
+                          web: false,
+                          floating: floating,
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      CardCollectionEntry(compact: true),
+                      const CardCollectionEntry(compact: true),
                       const SizedBox(height: 18),
-                      _quickGrid(context, state, web: web),
+                      RepaintBoundary(
+                        child: _quickGrid(context, state, web: web),
+                      ),
                       const SizedBox(height: 18),
                       _accountGroup(context, user),
                       const SizedBox(height: 18),
@@ -306,7 +315,7 @@ class MePage extends StatelessWidget {
       children: [
         _profileHero(context, state, user, web: false, floating: floating),
         const SizedBox(height: 12),
-        CardCollectionEntry(compact: true),
+        const CardCollectionEntry(compact: true),
         const SizedBox(height: 14),
         _quickGrid(context, state, web: false),
         const SizedBox(height: 14),
@@ -343,6 +352,17 @@ class MePage extends StatelessWidget {
             onChanged: (v) => state.setReduceMotion(v),
           ),
           const _ThemeRow(),
+          if (!web && DeviceSettings.canOpenAppSettings)
+            _MeRow(
+              icon: AppIcons.refresh,
+              label: '后台运行设置',
+              trailing: Text(
+                'HyperOS',
+                textAlign: TextAlign.right,
+                style: context.body(size: 11, color: c.inkSoft),
+              ),
+              onTap: () => _openBackgroundSettings(context),
+            ),
         ]),
         const SizedBox(height: 18),
         _section(c, '隐私与协议'),
@@ -372,10 +392,10 @@ class MePage extends StatelessWidget {
         _section(c, '关于'),
         const SizedBox(height: 8),
         _rows(c, [
-          _MeRow(
+          const _MeRow(
             icon: AppIcons.book,
             label: '当前版本',
-            trailing: const _VersionLabel(),
+            trailing: _VersionLabel(),
           ),
         ]),
         const SizedBox(height: 18),
@@ -411,17 +431,6 @@ class MePage extends StatelessWidget {
   Widget _quickGrid(BuildContext context, AppState state, {required bool web}) {
     final items = <Widget>[
       _QuickTile(
-        icon: AppIcons.user,
-        label: '编辑资料',
-        onTap: () {
-          if (state.user == null) {
-            showAuthModal(context);
-          } else {
-            showProfileModal(context);
-          }
-        },
-      ),
-      _QuickTile(
         icon: AppIcons.note,
         label: '我的笔记',
         onTap: () => showNotesModal(context),
@@ -432,7 +441,7 @@ class MePage extends StatelessWidget {
         onTap: () => showBlockedUsersSheet(context),
       ),
       if (web)
-        _QuickTile(
+        const _QuickTile(
           icon: AppIcons.download,
           label: '下载 App',
           onTap: _downloadApp,
@@ -443,10 +452,18 @@ class MePage extends StatelessWidget {
           label: '检查更新',
           onTap: () => checkForUpdates(context, manual: true),
         ),
+      if (!kIsWeb && (platform.isAndroid || platform.isIOS))
+        _QuickTile(
+          icon: AppIcons.scan,
+          label: '扫一扫',
+          onTap: () => showScanLogin(context),
+        ),
     ];
     return LayoutBuilder(
       builder: (context, box) {
-        final columns = box.maxWidth >= 320 ? 4 : 2;
+        final columns = box.maxWidth >= 320
+            ? (items.length <= 4 ? items.length : 5)
+            : 2;
         const spacing = 8.0;
         final itemWidth = (box.maxWidth - spacing * (columns - 1)) / columns;
         return Wrap(
@@ -747,20 +764,22 @@ class MePage extends StatelessWidget {
 
   Widget _rows(CitroColors c, List<Widget> children) {
     if (kIsWeb) {
-      return Column(
-        children: [
-          for (final child in children)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
-                boxShadow: CitroColors.shadows.paper(c),
+      return RepaintBoundary(
+        child: Column(
+          children: [
+            for (final child in children)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: c.surface2,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.line),
+                  boxShadow: CitroColors.shadows.paper(c),
+                ),
+                child: child,
               ),
-              child: child,
-            ),
-        ],
+          ],
+        ),
       );
     }
     final list = <Widget>[];
@@ -775,15 +794,17 @@ class MePage extends StatelessWidget {
         );
       }
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+    return RepaintBoundary(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.paper(c),
+        ),
+        child: Column(children: list),
       ),
-      child: Column(children: list),
     );
   }
 
@@ -792,7 +813,7 @@ class MePage extends StatelessWidget {
     return Pressable(
       onTap: () => copyText(value, context: context, tip: '已复制 $value'),
       child: Container(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: kIsWeb ? 18 : 14,
           vertical: kIsWeb ? 10 : 7,
         ),
@@ -835,6 +856,53 @@ class MePage extends StatelessWidget {
     }
     await state.setNotificationsEnabled(true);
     if (context.mounted) AppToast.show(context, '通知提醒已开启');
+  }
+
+  Future<void> _openBackgroundSettings(BuildContext context) async {
+    final go = await showCitroDialog<bool>(
+      context,
+      builder: (ctx) => PaperDialog(
+        showClose: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('后台运行设置', style: context.heading(size: 21)),
+            const SizedBox(height: 10),
+            Text(
+              'HyperOS / MIUI 的省电策略可能限制后台计时、定位与音频。'
+              '若提醒不准时或听隅被暂停，请在本应用的「省电策略」中选择「无限制」。',
+              style: context.body(
+                size: 12,
+                color: context.c.inkSoft,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: AccentButton(
+                    text: '稍后',
+                    outlined: true,
+                    onTap: () => Navigator.pop(ctx, false),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AccentButton(
+                    text: '去设置',
+                    onTap: () => Navigator.pop(ctx, true),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (go != true) return;
+    final ok = await DeviceSettings.openAppSettings();
+    if (context.mounted && !ok) AppToast.show(context, '未能打开系统设置');
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
@@ -900,7 +968,7 @@ class _MeToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Padding(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: kIsWeb ? 14 : 0,
         vertical: kIsWeb ? 11 : 8,
       ),
@@ -939,7 +1007,7 @@ class _ThemeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Padding(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: kIsWeb ? 14 : 0,
         vertical: kIsWeb ? 11 : 8,
       ),
@@ -955,7 +1023,7 @@ class _ThemeRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('深浅色', style: context.body(size: 13.5, color: c.ink)),
+                Text('主题', style: context.body(size: 13.5, color: c.ink)),
                 Text(
                   '浅色、深色或跟随系统',
                   style: context.body(size: 9.5, color: c.inkSoft),
@@ -1059,7 +1127,7 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
   }
 
   Widget _menu(BuildContext context, CitroColors c, ThemeMode current) {
-    final width = kIsWeb ? 150.0 : 140.0;
+    final width = kIsWeb ? 152.0 : 144.0;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 180),
@@ -1074,11 +1142,11 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
       ),
       child: Material(
         color: c.surface2,
-        elevation: 12,
-        shadowColor: c.dark ? Colors.black : const Color(0x405A4A2C),
+        elevation: 16,
+        shadowColor: c.dark ? Colors.black : const Color(0x335A4A2C),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: c.line),
         ),
         clipBehavior: Clip.antiAlias,
@@ -1086,7 +1154,7 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
           key: const ValueKey('me-theme-menu'),
           width: width,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1106,13 +1174,24 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
     ThemeMode current,
   ) {
     final active = mode == current;
-    return InkWell(
-      onTap: () => _select(mode),
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        height: 42,
-        child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: InkWell(
+        onTap: () => _select(mode),
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: c.hl.withAlpha(c.dark ? 48 : 60),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: active
+                ? c.accent.withAlpha(c.dark ? 40 : 26)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: active ? Border.all(color: c.accent.withAlpha(90)) : null,
+          ),
           child: Row(
             children: [
               AppIcon(
@@ -1153,27 +1232,25 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
   Widget build(BuildContext context) {
     final c = context.c;
     final current = context.app.themeMode;
-    final width = kIsWeb ? 150.0 : 140.0;
+    final width = kIsWeb ? 118.0 : 110.0;
     return CompositedTransformTarget(
       link: _link,
       child: Semantics(
         button: true,
-        label: '深浅色，当前${_label(current)}',
+        label: '主题，当前${_label(current)}',
         child: Pressable(
           key: const ValueKey('me-theme-dropdown'),
           onTap: _toggle,
           child: Container(
             width: width,
-            height: kIsWeb ? 36 : 32,
+            height: kIsWeb ? 34 : 32,
             padding: const EdgeInsets.only(left: 10, right: 8),
             decoration: BoxDecoration(
-              color: c.surface,
+              color: c.surface2,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: c.line2.withAlpha(160)),
+              border: Border.all(color: c.line2.withAlpha(170)),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AppIcon(
                   strokeSvg(_icon(current), width: 2),
@@ -1181,15 +1258,19 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
                   color: c.accentInk,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  _label(current),
-                  style: context.body(
-                    size: 11.5,
-                    weight: FontWeight.w600,
-                    color: c.ink2,
+                Expanded(
+                  child: Text(
+                    _label(current),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 11.5,
+                      weight: FontWeight.w600,
+                      color: c.ink2,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 AppIcon(
                   strokeSvg(AppIcons.chevronDown, width: 2),
                   size: 12,
@@ -1253,20 +1334,20 @@ class _MeRowState extends State<_MeRow> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(14),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: kIsWeb ? 54 : 44),
+              constraints: const BoxConstraints(minHeight: kIsWeb ? 54 : 44),
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: kIsWeb ? 15 : 0,
-                  vertical: kIsWeb ? 10 : 12,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: kIsWeb ? 14 : 0,
+                  vertical: kIsWeb ? 11 : 8,
                 ),
                 child: Row(
                   children: [
                     AppIcon(
                       strokeSvg(widget.icon, width: 2),
-                      size: kIsWeb ? 21 : 20,
+                      size: 20,
                       color: widget.danger ? dangerColor : c.accentInk,
                     ),
-                    SizedBox(width: kIsWeb ? 12 : 10),
+                    const SizedBox(width: kIsWeb ? 12 : 10),
                     Expanded(
                       child: Text(
                         widget.label,
@@ -1278,8 +1359,13 @@ class _MeRowState extends State<_MeRow> {
                       ),
                     ),
                     if (widget.trailing != null) ...[
-                      Flexible(child: widget.trailing!),
-                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: widget.trailing!,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                     ],
                     if (widget.onTap != null)
                       AppIcon(

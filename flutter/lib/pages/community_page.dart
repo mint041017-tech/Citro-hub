@@ -125,7 +125,8 @@ class CommunityPage extends StatefulWidget {
   State<CommunityPage> createState() => _CommunityPageState();
 }
 
-class _CommunityPageState extends State<CommunityPage> {
+class _CommunityPageState extends State<CommunityPage>
+    with WidgetsBindingObserver {
   List<Post> posts = [];
   List<InboxItem> inbox = [];
   int unread = 0;
@@ -137,13 +138,24 @@ class _CommunityPageState extends State<CommunityPage> {
   final searchFocus = FocusNode();
   Timer? poll;
   bool _active = true;
+  bool _tickerActive = true;
+  bool _resumed = true;
   AppState? _app;
   String? _lastUser;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     searchFocus.addListener(_onSearchFocus);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final resumed = state == AppLifecycleState.resumed;
+    if (resumed == _resumed) return;
+    _resumed = resumed;
+    _syncActive();
   }
 
   // 搜索框失焦即整体收起并清空条件，避免留下看不见的过滤状态。
@@ -171,6 +183,7 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _tickerActive = TickerMode.valuesOf(context).enabled;
     _syncActive();
     final app = context.app;
     if (_app != app) {
@@ -183,7 +196,7 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   void _syncActive() {
-    final active = TickerMode.of(context);
+    final active = _tickerActive && _resumed;
     if (active == _active) return;
     _active = active;
     if (!_active) {
@@ -213,6 +226,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _app?.removeListener(_onApp);
     poll?.cancel();
     searchFocus.removeListener(_onSearchFocus);
@@ -1077,7 +1091,7 @@ class _CommunityPageState extends State<CommunityPage> {
       ),
       child: Column(
         children: [
-          Text('🍊', style: const TextStyle(fontSize: 36)),
+          const Text('🍊', style: TextStyle(fontSize: 36)),
           const SizedBox(height: 8),
           Text(
             '还没有动态，来发第一条吧',

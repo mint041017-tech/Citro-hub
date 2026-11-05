@@ -1139,7 +1139,7 @@ class _CookPageState extends State<CookPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('⚠️', style: const TextStyle(fontSize: 36)),
+          const Text('⚠️', style: TextStyle(fontSize: 36)),
           const SizedBox(height: 8),
           Text(
             error ?? '加载失败',
@@ -1177,7 +1177,7 @@ class _CookPageState extends State<CookPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const SizedBox(height: 60),
-                Center(child: Text('🍳', style: const TextStyle(fontSize: 40))),
+                const Center(child: Text('🍳', style: TextStyle(fontSize: 40))),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(

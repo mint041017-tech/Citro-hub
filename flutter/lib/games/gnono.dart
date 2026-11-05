@@ -596,7 +596,7 @@ class _NonoBoard extends StatelessWidget {
     double hintColW,
     double hintRowH,
   ) {
-    final gap = SizedBox(width: 2, height: 2);
+    final gap = const SizedBox(width: 2, height: 2);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -623,7 +623,7 @@ class _NonoBoard extends StatelessWidget {
         ),
         // 每行：行提示 + 格子
         for (var r = 0; r < size; r++) ...[
-          SizedBox(height: 2),
+          const SizedBox(height: 2),
           SizedBox(
             height: cell,
             child: Row(
@@ -898,8 +898,8 @@ class _NonoRetryButton extends StatelessWidget {
                 ),
                 border: Border.all(color: const Color(0x2E94530A)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 22),
                 // widthFactor:1 —— 没有它 Center 会撑满浮层宽度，
                 // 按钮被拉成整条棋盘宽（web 是 inline-flex 内容自适应）。
                 child: Center(

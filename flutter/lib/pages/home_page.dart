@@ -18,6 +18,7 @@ import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../tingyu/tingyu_controller.dart';
 import '../utils/lunar.dart';
+import '../widgets/active_listenable.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
 import '../widgets/home_bento.dart';
@@ -114,7 +115,7 @@ class _HomePageState extends State<HomePage> {
                 child: CitroStagger(
                   step: const Duration(milliseconds: 32),
                   children: [
-                    ListenableBuilder(
+                    ActiveListenableBuilder(
                       listenable: NookController.instance,
                       builder: (context, _) {
                         final now = DateTime.now();
@@ -1067,6 +1068,41 @@ class _CalCell extends StatelessWidget {
         }
       }
     }
+    final content = FittedBox(
+      fit: BoxFit.scaleDown,
+      // 日历格高度随卡片尺寸变化，用 scaleDown 兜底，避免字体
+      // 行高在不同平台相差半像素时出现 RenderFlex 溢出。
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$day',
+            style: context.display(
+              size: dense ? 15 : (fill ? 20 : 19),
+              color: today ? const Color(0xFF2E2C34) : c.ink,
+              height: 1.05,
+            ),
+          ),
+          if (label != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.body(
+                  size: dense ? 7.5 : (fill ? 9.5 : 10),
+                  color: today
+                      ? const Color(0xFF2E2C34)
+                      : (labelColor ?? c.inkSoft),
+                  height: 1.15,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
     return Container(
       height: fill ? null : 44,
       padding: EdgeInsets.only(top: fill ? 2 : 3, bottom: fill ? 2 : 2),
@@ -1076,44 +1112,8 @@ class _CalCell extends StatelessWidget {
               borderRadius: BorderRadius.circular(fill ? 10 : 8),
             )
           : null,
-      child: Opacity(
-        opacity: dim ? .55 : 1,
-        // 日历格高度随卡片尺寸变化，用 scaleDown 兜底，避免字体
-        // 行高在不同平台相差半像素时出现 RenderFlex 溢出。
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '$day',
-                style: context.display(
-                  size: dense ? 15 : (fill ? 20 : 19),
-                  color: today ? const Color(0xFF2E2C34) : c.ink,
-                  height: 1.05,
-                ),
-              ),
-              if (label != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: dense ? 7.5 : (fill ? 9.5 : 10),
-                      color: today
-                          ? const Color(0xFF2E2C34)
-                          : (labelColor ?? c.inkSoft),
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+      // 只有非本月日期需要压暗；正常日期直接绘制，滚动时少一层离屏合成。
+      child: dim ? Opacity(opacity: .55, child: content) : content,
     );
   }
 }

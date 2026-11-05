@@ -373,7 +373,7 @@ class _WebDownloadCard extends StatelessWidget {
                 child: AppIcon(
                   strokeSvg(AppIcons.download, width: 2),
                   size: 16,
-                  color: Color(0xFF2E2C22),
+                  color: const Color(0xFF2E2C22),
                 ),
               ),
             ),
@@ -550,14 +550,14 @@ class _WebCommunityTicket extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            _EntryIcon(icon: AppIcons.users),
+            const _EntryIcon(icon: AppIcons.users),
             const SizedBox(width: 9),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _EntryTitle(first: 'Citro ', second: '社区'),
+                  const _EntryTitle(first: 'Citro ', second: '社区'),
                   Text(
                     '在清爽的汽水里，与同频的灵魂相遇',
                     maxLines: 1,
@@ -603,14 +603,14 @@ class _WebRecipeTicket extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            _EntryIcon(icon: AppIcons.book),
+            const _EntryIcon(icon: AppIcons.book),
             const SizedBox(width: 9),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _EntryTitle(first: '食谱 ', second: '日记'),
+                  const _EntryTitle(first: '食谱 ', second: '日记'),
                   Text(
                     '记录每一道拿手菜，把喜欢的味道收好。',
                     maxLines: 1,

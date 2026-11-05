@@ -18,7 +18,7 @@
 ## 1. 上 Mac 前先确认的阻塞（非 Mac，但会卡审核）
 
 - [ ] 生产 `trash/trash.js` 已部署；`/api/auth/delete`、`/api/report`、`/api/cards/*`、`/api/ai` 可用
-- [ ] `GLM_API_KEY`、`SHOWAPI_KEY`、`INVITE_CODE` 已在服务端配置，未进 App/仓库
+- [ ] `GLM_API_KEY`、`SHOWAPI_KEY` 已在服务端配置，未进 App/仓库
 - [ ] 线上 `trash/data/` 已备份；没有用本地 data 覆盖线上
 - [ ] QA 测试数据已清理/恢复，社区/食谱/排行榜没有测试垃圾
 - [ ] `privacy.html`、`terms.html`、`account-deletion.html`、`support.html` 已部署并可公网访问

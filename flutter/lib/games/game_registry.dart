@@ -568,10 +568,10 @@ Widget _paperTile(BuildContext context, String char, double angle) =>
         alignment: Alignment.center,
         child: Text(
           char,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: AppFonts.zcool,
             fontSize: 12,
-            color: const Color(0xFF7A2D12),
+            color: Color(0xFF7A2D12),
           ),
         ),
       ),
@@ -594,17 +594,17 @@ Widget _petal(BuildContext context, double angle) => Transform.rotate(
   child: Container(
     width: 24,
     height: 24,
-    decoration: BoxDecoration(
-      borderRadius: const BorderRadius.only(
+    decoration: const BoxDecoration(
+      borderRadius: BorderRadius.only(
         topLeft: Radius.circular(12),
         bottomRight: Radius.circular(12),
         topRight: Radius.circular(12),
         bottomLeft: Radius.zero,
       ),
-      gradient: const LinearGradient(
+      gradient: LinearGradient(
         colors: [Color(0xFFE4F2F0), Color(0xFFB7DAD7)],
       ),
-      boxShadow: const [
+      boxShadow: [
         BoxShadow(
           color: Color(0x382E6B73),
           blurRadius: 8,
@@ -739,7 +739,7 @@ class _LiquidJarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final ink = c.ink;
-    final rect = Rect.fromLTWH(10, 6, 38, 38);
+    final rect = const Rect.fromLTWH(10, 6, 38, 38);
     final jar = RRect.fromRectAndRadius(rect, const Radius.circular(8));
     canvas.drawRRect(jar, Paint()..color = const Color(0xFFFFFAF0));
 

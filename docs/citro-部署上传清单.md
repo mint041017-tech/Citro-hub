@@ -49,14 +49,13 @@
 | 变量 / 字段 | 用途 | 不配置时 |
 | --- | --- | --- |
 | `SHOWAPI_KEY` | 万维易源 appKey（星座运势接口） | 运势接口不可用，其余功能正常 |
-| `INVITE_CODE` | 注册邀请码 | 注册不校验邀请码（开放注册） |
 
 两种配置方式任选：
 
 ```bash
 # 方式一：环境变量（PM2 示例）
 pm2 start trash/trash.js --name trash --env SHOWAPI_KEY=xxx
-# 或在 PM2 配置文件里写 env: { SHOWAPI_KEY: 'xxx', INVITE_CODE: 'xxx' }
+# 或在 PM2 配置文件里写 env: { SHOWAPI_KEY: 'xxx' }
 
 # 方式二：本地配置文件（复制模板后填写）
 cp trash/config.local.example.json trash/config.local.json

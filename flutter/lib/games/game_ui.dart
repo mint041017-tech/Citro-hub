@@ -681,12 +681,12 @@ class _GameScaffoldState extends State<GameScaffold> {
                 ? null
                 : Text(
                     name.isEmpty ? '游' : name.substring(name.length - 1),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: AppFonts.kalam,
                       fontFamilyFallback: AppFonts.fallback,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
+                      color: Color(0xFF2E2C22),
                     ),
                   ),
           ),
@@ -1434,8 +1434,8 @@ class GameLiveBar extends StatelessWidget {
           const SizedBox(width: 9),
           Expanded(
             child: list.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(
+                ? const Padding(
+                    padding: EdgeInsets.only(
                       top: 2,
                       right: 2,
                       bottom: 3,
@@ -1448,7 +1448,7 @@ class GameLiveBar extends StatelessWidget {
                         fontFamilyFallback: AppFonts.bodyFallback,
                         fontSize: 11.5,
                         height: 1.8,
-                        color: const Color(0xFF575446),
+                        color: Color(0xFF575446),
                       ),
                     ),
                   )

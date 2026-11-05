@@ -118,10 +118,7 @@ class Api {
   static Future<Map<String, dynamic>> cardsToday({
     required List<String> candidates,
     bool reroll = false,
-  }) => post('/api/cards/today', {
-    'candidates': candidates,
-    'reroll': reroll,
-  });
+  }) => post('/api/cards/today', {'candidates': candidates, 'reroll': reroll});
 
   static Future<Map<String, dynamic>> cardsDraw(List<String> candidates) =>
       post('/api/cards/draw', {'candidates': candidates});
@@ -137,19 +134,35 @@ class Api {
     Map<String, Object?> layout,
   ) => post('/api/home/layout', {'layout': layout});
 
-  static Future<Map<String, dynamic>> login(String phone, String password) =>
-      post('/api/auth/login', {'phone': phone, 'password': password}, false);
+  static Future<Map<String, dynamic>> login(String account, String password) =>
+      post('/api/auth/login', {
+        'account': account,
+        'password': password,
+      }, false);
 
-  static Future<Map<String, dynamic>> register(
-    String phone,
-    String name,
-    String password,
-    String invite,
-  ) => post('/api/auth/register', {
-    'phone': phone,
+  /// 扫码登录：桌面端创建一次性二维码会话。
+  static Future<Map<String, dynamic>> qrCreate() =>
+      post('/api/auth/qr/create', const <String, dynamic>{}, false);
+
+  /// 扫码登录：桌面端轮询二维码状态；确认后拿到一次性 token。
+  static Future<Map<String, dynamic>> qrPoll(String id) =>
+      post('/api/auth/qr/poll', {'id': id}, false);
+
+  /// 扫码登录：手机端（已登录）扫码后确认。
+  static Future<Map<String, dynamic>> qrConfirm(String id) =>
+      post('/api/auth/qr/confirm', {'id': id});
+
+  /// 注册支持手机号或邮箱二选一；邀请码限制已移除。
+  static Future<Map<String, dynamic>> register({
+    String? phone,
+    String? email,
+    required String name,
+    required String password,
+  }) => post('/api/auth/register', {
+    if (phone != null && phone.isNotEmpty) 'phone': phone,
+    if (email != null && email.isNotEmpty) 'email': email,
     'name': name,
     'password': password,
-    'invite': invite,
   }, false);
 
   static Future<Map<String, dynamic>> logout() => post('/api/auth/logout');
@@ -330,10 +343,8 @@ class Api {
   static Future<Map<String, dynamic>> drawReroll({String? deviceId}) =>
       post('/api/draw/reroll', {if (deviceId != null) 'deviceId': deviceId});
 
-  static Future<Map<String, dynamic>> playRecords({String? deviceId}) => get(
-    '/api/play',
-    query: {if (deviceId != null) 'deviceId': deviceId},
-  );
+  static Future<Map<String, dynamic>> playRecords({String? deviceId}) =>
+      get('/api/play', query: {if (deviceId != null) 'deviceId': deviceId});
   static Future<Map<String, dynamic>> playDraw({
     String? deviceId,
     String? name,

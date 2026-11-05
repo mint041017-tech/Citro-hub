@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -76,7 +76,7 @@
 		<string>en</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>用于拍摄头像、帖子配图与食谱照片。</string>
+	<string>用于拍摄头像、帖子配图、食谱照片，以及扫描登录二维码。</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>用于录制社区语音消息和语音输入。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

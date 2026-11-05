@@ -56,6 +56,30 @@ class GameSfx {
   static final List<AudioPlayer?> _pool = List<AudioPlayer?>.filled(6, null);
   static int _poolIdx = 0;
   static final Map<String, Uint8List> _cache = {};
+  // 音效是运行时合成的 WAV，参数组合有限但游戏多；HyperOS 低内存机型上
+  // 仍要防止缓存无限增长。
+  static const int _cacheBytesMax = 12 << 20;
+  static int _cacheBytes = 0;
+
+  static Uint8List _cached(String key, Uint8List Function() build) {
+    final hit = _cache[key];
+    if (hit != null) return hit;
+    final bytes = build();
+    _cache[key] = bytes;
+    _cacheBytes += bytes.lengthInBytes;
+    while (_cacheBytes > _cacheBytesMax && _cache.length > 1) {
+      final first = _cache.keys.first;
+      final removed = _cache.remove(first);
+      _cacheBytes -= removed?.lengthInBytes ?? 0;
+    }
+    return bytes;
+  }
+
+  /// 系统内存紧张时清掉合成音缓存，下次播放会按需重新生成。
+  static void clearCache() {
+    _cache.clear();
+    _cacheBytes = 0;
+  }
 
   static AudioPlayer? _nextPlayer() {
     final p = _pool[_poolIdx] ??= AudioPlayer();
@@ -83,13 +107,16 @@ class GameSfx {
     if (!_supported || _muted || !soundsEnabled) return;
     try {
       final key = 't$freq|$dur|$type|$vol|$slide|$punchy';
-      final bytes = _cache[key] ??= _synth(
-        freq: freq,
-        dur: dur,
-        type: type,
-        vol: vol,
-        slide: slide,
-        punchy: punchy,
+      final bytes = _cached(
+        key,
+        () => _synth(
+          freq: freq,
+          dur: dur,
+          type: type,
+          vol: vol,
+          slide: slide,
+          punchy: punchy,
+        ),
       );
       final p = _nextPlayer()!;
       await p.stop();
@@ -110,7 +137,10 @@ class GameSfx {
     if (!_supported || _muted || !soundsEnabled) return;
     try {
       final key = 'n$dur|$vol|$freq';
-      final bytes = _cache[key] ??= _noise(dur: dur, vol: vol, freq: freq);
+      final bytes = _cached(
+        key,
+        () => _noise(dur: dur, vol: vol, freq: freq),
+      );
       final p = _nextPlayer()!;
       await p.stop();
       await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
@@ -129,11 +159,14 @@ class GameSfx {
     if (!_supported || _muted || !soundsEnabled) return;
     try {
       final key = 's$dur|$vol|$from|$to';
-      final bytes = _cache[key] ??= _noiseSweep(
-        dur: dur,
-        vol: vol,
-        from: from,
-        to: to,
+      final bytes = _cached(
+        key,
+        () => _noiseSweep(
+          dur: dur,
+          vol: vol,
+          from: from,
+          to: to,
+        ),
       );
       final p = _nextPlayer()!;
       await p.stop();

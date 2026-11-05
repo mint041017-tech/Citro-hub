@@ -12,6 +12,7 @@ import '../theme/motion.dart';
 import '../theme/native.dart';
 import '../theme/tokens.dart';
 import 'motion_widgets.dart';
+import 'app_image.dart';
 import 'paper.dart';
 import 'shared_element.dart';
 
@@ -58,6 +59,25 @@ class CitroTabletSidebar extends StatelessWidget {
     final c = context.c;
     final app = context.app;
     final avatarUrl = Api.imageUrl(app.user?.av);
+    Widget avatarFallback({Color? background}) => ColoredBox(
+      color: background ?? (app.loggedIn ? c.hl : c.surface),
+      child: Center(
+        child: app.loggedIn
+            ? Text(
+                app.user!.name.isEmpty ? '友' : app.user!.name[0],
+                style: context.display(
+                  size: 16,
+                  weight: FontWeight.w700,
+                  color: c.accentInk,
+                ),
+              )
+            : AppIcon(
+                strokeSvg(AppIcons.user, width: 2),
+                size: 18,
+                color: c.ink2,
+              ),
+      ),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         // iPad / Windows 的侧栏用 1 物理像素的发丝分隔，和系统分栏一致。
@@ -233,44 +253,14 @@ class CitroTabletSidebar extends StatelessWidget {
                               width: 38,
                               height: 38,
                               child: avatarUrl.isEmpty
-                                  ? ColoredBox(
-                                      color: app.loggedIn ? c.hl : c.surface,
-                                      child: Center(
-                                        child: app.loggedIn
-                                            ? Text(
-                                                app.user!.name.isEmpty
-                                                    ? '友'
-                                                    : app.user!.name[0],
-                                                style: context.display(
-                                                  size: 16,
-                                                  weight: FontWeight.w700,
-                                                  color: c.accentInk,
-                                                ),
-                                              )
-                                            : AppIcon(
-                                                strokeSvg(
-                                                  AppIcons.user,
-                                                  width: 2,
-                                                ),
-                                                size: 18,
-                                                color: c.ink2,
-                                              ),
-                                      ),
-                                    )
-                                  : Image.network(
+                                  ? avatarFallback()
+                                  : AppImage(
                                       avatarUrl,
                                       fit: BoxFit.cover,
                                       cacheWidth: 114,
-                                      errorBuilder: (_, _, _) => ColoredBox(
-                                        color: c.surface,
-                                        child: Center(
-                                          child: AppIcon(
-                                            strokeSvg(AppIcons.user, width: 2),
-                                            size: 18,
-                                            color: c.ink2,
-                                          ),
-                                        ),
-                                      ),
+                                      placeholder: avatarFallback(),
+                                      errorBuilder: (_, _, _) =>
+                                          avatarFallback(background: c.surface),
                                     ),
                             ),
                           ),
@@ -330,6 +320,22 @@ class CitroDuoRightRail extends StatelessWidget {
     final c = context.c;
     final app = context.app;
     final avatarUrl = Api.imageUrl(app.user?.av);
+    Widget railFallback() => Center(
+      child: app.loggedIn
+          ? Text(
+              app.user!.name.isNotEmpty ? app.user!.name[0] : '友',
+              style: context.display(
+                size: 18,
+                weight: FontWeight.w700,
+                color: c.accentInk,
+              ),
+            )
+          : AppIcon(
+              strokeSvg(AppIcons.user, width: 2),
+              size: 20,
+              color: c.ink2,
+            ),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: c.line)),
@@ -406,42 +412,13 @@ class CitroDuoRightRail extends StatelessWidget {
                       border: Border.all(color: c.line),
                     ),
                     child: avatarUrl.isEmpty
-                        ? Center(
-                            child: app.loggedIn
-                                ? Text(
-                                    app.user!.name.isNotEmpty
-                                        ? app.user!.name[0]
-                                        : '友',
-                                    style: context.display(
-                                      size: 18,
-                                      weight: FontWeight.w700,
-                                      color: c.accentInk,
-                                    ),
-                                  )
-                                : AppIcon(
-                                    strokeSvg(AppIcons.user, width: 2),
-                                    size: 20,
-                                    color: c.ink2,
-                                  ),
-                          )
-                        : Image.network(
+                        ? railFallback()
+                        : AppImage(
                             avatarUrl,
-                            width: 44,
-                            height: 44,
                             fit: BoxFit.cover,
                             cacheWidth: 132,
-                            errorBuilder: (_, _, _) => Center(
-                              child: Text(
-                                app.loggedIn && app.user!.name.isNotEmpty
-                                    ? app.user!.name[0]
-                                    : '友',
-                                style: context.display(
-                                  size: 18,
-                                  weight: FontWeight.w700,
-                                  color: c.accentInk,
-                                ),
-                              ),
-                            ),
+                            placeholder: railFallback(),
+                            errorBuilder: (_, _, _) => railFallback(),
                           ),
                   ),
                 ),

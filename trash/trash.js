@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * 迟暮·Crew 站点 API（零依赖，仅 Node 内置模块）
  *   · 队友账号：注册 / 登录 / 登出 / 会话（scrypt + httpOnly Cookie）
  *   · 迟暮社区：发帖(实名/匿名) / 点赞 / 抱一抱 / 评论(支持回复) / 本人删除
@@ -14,7 +14,7 @@ const { execFile } = require('child_process');
 
 /* ---------------- 本地敏感配置 ----------------
  * 优先读环境变量，其次读同目录 config.local.json（已在 .gitignore 中排除，不会入库）。
- * 可配置项：SHOWAPI_KEY（万维易源 appKey）、INVITE_CODE（注册邀请码）。
+ * 可配置项：SHOWAPI_KEY（万维易源 appKey）、GLM_API_KEY（Web AI 代理）。
  */
 const LOCAL_CFG = (function () {
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.local.json'), 'utf8')) || {}; }
@@ -35,12 +35,11 @@ const VOICE_DIR = path.join(DATA_DIR, 'voices');  // 帖子语音
 const COOK_DIR = path.join(DATA_DIR, 'cookimgs'); // 食谱封面 / 步骤图
 [AV_DIR, IMG_DIR, VOICE_DIR, COOK_DIR].forEach(function (d) { try { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); } catch (e) {} });
 const SESSION_DAYS = 30;
+const QR_TTL = 5 * 60 * 1000;  // 扫码登录二维码有效期 5 分钟
 const FEED_MAX = 100;        // 每次拉取最新动态条数（数据永久保留）
 const MAX_COMMENTS = 100;    // 单帖最多评论
 const MAX_LEN = 200;         // 帖子/评论最大字数
 const MAX_IMGS = 3;          // 单帖最多配图数
-/* 注册邀请码：环境变量 INVITE_CODE 或 config.local.json 配置；留空表示不校验（开放注册） */
-const INVITE_CODE = envCfg('INVITE_CODE', '');
 /* Web AI 只通过本站代理访问 GLM，密钥不会下发到浏览器。 */
 const GLM_API_KEY = envCfg('GLM_API_KEY', '');
 const GLM_MODEL = 'glm-5.3-flash';
@@ -802,6 +801,8 @@ const usersFile = path.join(DATA_DIR, 'users.json');
 const sessFile = path.join(DATA_DIR, 'sessions.json');
 let users = readJson(usersFile, { users: [] }).users || [];
 let sessions = readJson(sessFile, { tokens: {} }).tokens || {};
+/* 扫码登录的一次性会话：id -> { exp, name }，服务重启自动失效。 */
+const qrLogins = {};
 function saveUsers() { writeAtomic(usersFile, { users: users }); }
 function saveSessions() { writeAtomic(sessFile, { tokens: sessions }); }
 function hashPw(pw, salt) { return crypto.scryptSync(pw, salt, 64).toString('hex'); }
@@ -809,6 +810,7 @@ function makeSalt() { return crypto.randomBytes(16).toString('hex'); }
 function makeToken() { return crypto.randomBytes(32).toString('hex'); }
 function findUser(name) { return users.find(function (u) { return u.name === name; }) || null; }
 function findUserByPhone(phone) { return users.find(function (u) { return u.phone === phone; }) || null; }
+function findUserByEmail(email) { return users.find(function (u) { return u.email === email; }) || null; }
 function currentUser(req) {
   /* 主：HttpOnly Cookie（持久 Max-Age=30d）；兜底：X-Trash-Token 头（前端 localStorage 回传） */
   let tok = null;
@@ -1119,6 +1121,7 @@ function serveVoice(req, res, file) {
 }
 const NAME_RE = /^[一-龥A-Za-z0-9_]{2,16}$/;
 const PHONE_RE = /^1[3-9]\d{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function needAuth(res, me) { if (me) return false; json(res, 401, { err: '请先登录后再操作' }); return true; }
 function cleanText(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, MAX_LEN); }
 function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -1470,6 +1473,56 @@ const server = http.createServer(async function (req, res) {
     }
   }
 
+  /* ===== 扫码登录：桌面端生成二维码（无需登录） ===== */
+  if (req.method === 'POST' && url === '/api/auth/qr/create') {
+    if (limited(ip, 'qr', 120, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
+    const now = Date.now();
+    Object.keys(qrLogins).forEach(function (k) {
+      if (!qrLogins[k] || qrLogins[k].exp < now) delete qrLogins[k];
+    });
+    const id = crypto.randomBytes(24).toString('hex');
+    qrLogins[id] = { exp: now + QR_TTL, name: null };
+    return json(res, 200, { id: id, expiresIn: Math.floor(QR_TTL / 1000) });
+  }
+
+  /* ===== 扫码登录：手机端扫码确认（需手机已登录） ===== */
+  if (req.method === 'POST' && url === '/api/auth/qr/confirm') {
+    if (needAuth(res, me)) return;
+    const b = await body();
+    const id = String(b && b.id || '');
+    const q = qrLogins[id];
+    if (!q || q.exp < Date.now()) {
+      if (q) delete qrLogins[id];
+      return json(res, 400, { err: '二维码已过期，请在电脑端刷新后重试' });
+    }
+    q.name = me.name;
+    return json(res, 200, { ok: true, name: me.name });
+  }
+
+  /* ===== 扫码登录：桌面端轮询结果（确认后一次性发放会话） ===== */
+  if (req.method === 'POST' && url === '/api/auth/qr/poll') {
+    if (limited(ip, 'qr-poll', 600, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
+    const b = await body();
+    const id = String(b && b.id || '');
+    const q = qrLogins[id];
+    if (!q || q.exp < Date.now()) {
+      if (q) delete qrLogins[id];
+      return json(res, 200, { status: 'expired' });
+    }
+    if (!q.name) return json(res, 200, { status: 'pending' });
+    const u = findUser(q.name);
+    delete qrLogins[id];
+    if (!u) return json(res, 400, { err: '账号不存在' });
+    const token = makeToken();
+    sessions[token] = { name: u.name, exp: Date.now() + SESSION_DAYS * 86400000 };
+    saveSessions(); setCookie(res, req, token);
+    return json(res, 200, {
+      status: 'confirmed',
+      token: token,
+      user: { name: u.name, av: avatarOf(u.name), bday: bdayOf(u), profileDone: u.profileDone !== false }
+    });
+  }
+
   /* ===== 账号：当前会话 ===== */
   if (req.method === 'GET' && url === '/api/auth/me') {
     const bu = me ? findUser(me.name) : null;
@@ -1486,24 +1539,30 @@ const server = http.createServer(async function (req, res) {
     });
   }
 
-  /* ===== 账号：注册（手机号 + 昵称 + 密码 + 邀请码） ===== */
+  /* ===== 账号：注册（手机号或邮箱 + 昵称 + 密码，邀请码限制已移除） ===== */
   if (req.method === 'POST' && url === '/api/auth/register') {
     if (limited(ip, 'auth', 8, 60000)) return json(res, 429, { err: '尝试太频繁，稍后再试' });
     const b = await body();
     const pw = String(b && b.password || '');
     const phone = String(b && b.phone || '').replace(/\D/g, '');
+    const email = String(b && b.email || '').trim().toLowerCase();
     const name = String(b && b.name || '').trim();
-    if (!PHONE_RE.test(phone)) return json(res, 400, { err: '请填写正确的 11 位手机号' });
+    if (!phone && !email) return json(res, 400, { err: '请填写手机号或邮箱' });
+    if (phone && !PHONE_RE.test(phone)) return json(res, 400, { err: '请填写正确的 11 位手机号' });
+    if (email && !EMAIL_RE.test(email)) return json(res, 400, { err: '请填写正确的邮箱地址' });
     if (!NAME_RE.test(name)) return json(res, 400, { err: '昵称需 2-16 位，中英文/数字/下划线' });
     if (name.startsWith('游客')) return json(res, 400, { err: '该昵称不可用，换一个吧' });
     if (pw.length < 6 || pw.length > 32) return json(res, 400, { err: '密码需 6-32 位' });
-    if (INVITE_CODE && String(b && b.invite || '').trim() !== INVITE_CODE) return json(res, 403, { err: '邀请码不正确，找站长大人要一个吧' });
-    if (findUserByPhone(phone)) return json(res, 409, { err: '这个手机号已经注册过啦，直接登录吧' });
+    if (phone && findUserByPhone(phone)) return json(res, 409, { err: '这个手机号已经注册过啦，直接登录吧' });
+    if (email && findUserByEmail(email)) return json(res, 409, { err: '这个邮箱已经注册过啦，直接登录吧' });
     if (findUser(name)) return json(res, 409, { err: '这个昵称已经被人占啦' });
     const salt = makeSalt();
     /* profileDone=false：新注册用户还没在「更改信息」弹窗里点过保存，
        前端据此强制弹一次资料确认弹窗（老用户没有该字段，一律视为已完成）。 */
-    users.push({ name: name, phone: phone, salt: salt, hash: hashPw(pw, salt), createdAt: Date.now(), profileDone: false });
+    const user = { name: name, salt: salt, hash: hashPw(pw, salt), createdAt: Date.now(), profileDone: false };
+    if (phone) user.phone = phone;
+    if (email) user.email = email;
+    users.push(user);
     saveUsers();
     const token = makeToken();
     sessions[token] = { name: name, exp: Date.now() + SESSION_DAYS * 86400000 };
@@ -1511,17 +1570,22 @@ const server = http.createServer(async function (req, res) {
     return json(res, 200, { token: token, user: { name: name, av: null, bday: null, profileDone: false } });
   }
 
-  /* ===== 账号：登录（手机号 + 密码） ===== */
+  /* ===== 账号：登录（手机号或邮箱 + 密码） ===== */
   if (req.method === 'POST' && url === '/api/auth/login') {
     if (limited(ip, 'auth', 8, 60000)) return json(res, 429, { err: '尝试太频繁，稍后再试' });
     const b = await body();
-    const phone = String(b && b.phone || '').replace(/\D/g, '');
+    const account = String(b && (b.account || b.phone || b.email) || '').trim();
     const pw = String(b && b.password || '');
-    if (!PHONE_RE.test(phone)) return json(res, 400, { err: '请填写正确的 11 位手机号' });
-    const u = findUserByPhone(phone);
+    let u = null;
+    if (EMAIL_RE.test(account)) {
+      u = findUserByEmail(account.toLowerCase());
+    } else {
+      const phone = account.replace(/\D/g, '');
+      if (PHONE_RE.test(phone)) u = findUserByPhone(phone);
+    }
     let ok = false;
     if (u) { try { ok = crypto.timingSafeEqual(Buffer.from(hashPw(pw, u.salt), 'hex'), Buffer.from(u.hash, 'hex')); } catch (e) {} }
-    if (!ok) return json(res, 401, { err: '手机号或密码不对' });
+    if (!ok) return json(res, 401, { err: '账号或密码不对' });
     const token = makeToken();
     sessions[token] = { name: u.name, exp: Date.now() + SESSION_DAYS * 86400000 };
     saveSessions(); setCookie(res, req, token);

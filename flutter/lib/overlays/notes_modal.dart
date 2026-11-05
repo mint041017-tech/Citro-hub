@@ -193,7 +193,7 @@ class _NotesDialogState extends State<_NotesDialog> {
             ),
             child: Column(
               children: [
-                Text('📝', style: TextStyle(fontSize: 30)),
+                const Text('📝', style: TextStyle(fontSize: 30)),
                 const SizedBox(height: 8),
                 Text(
                   '还没有笔记，点下面新建',

@@ -655,30 +655,30 @@ class GameFeihuaView extends StatelessWidget {
     const ord = ['壹', '贰', '叁', '肆'];
     final texts = <List<InlineSpan>>[
       [
-        TextSpan(text: '系统随机抽一个'),
+        const TextSpan(text: '系统随机抽一个'),
         TextSpan(text: '令字', style: _emStyle),
-        TextSpan(text: '，你与 AI 轮流说出含这个字\n的诗句'),
+        const TextSpan(text: '，你与 AI 轮流说出含这个字\n的诗句'),
       ],
       [
-        TextSpan(text: '每回合 '),
+        const TextSpan(text: '每回合 '),
         TextSpan(text: '120 秒', style: _emStyle),
-        TextSpan(text: '，超时即结束本局'),
+        const TextSpan(text: '，超时即结束本局'),
       ],
       [
-        TextSpan(text: '每句基础 '),
+        const TextSpan(text: '每句基础 '),
         TextSpan(text: '+10 分', style: _emStyle),
-        TextSpan(text: '；本局答对 '),
+        const TextSpan(text: '；本局答对 '),
         TextSpan(text: '2 句后 ×2', style: _emStyle),
-        TextSpan(text: '、'),
+        const TextSpan(text: '、'),
         TextSpan(text: '4 句后', style: _emStyle),
-        TextSpan(text: '\n'),
+        const TextSpan(text: '\n'),
         TextSpan(text: '×4', style: _emStyle),
-        TextSpan(text: '，之后每多 2 句倍率再加 2 倍'),
+        const TextSpan(text: '，之后每多 2 句倍率再加 2 倍'),
       ],
       [
-        TextSpan(text: '答满 2 句后即可'),
+        const TextSpan(text: '答满 2 句后即可'),
         TextSpan(text: '随时换个令字', style: _emStyle),
-        TextSpan(text: '，换字不影响已累计的倍数'),
+        const TextSpan(text: '，换字不影响已累计的倍数'),
       ],
     ];
     return Column(
@@ -939,7 +939,7 @@ class GameFeihuaView extends StatelessWidget {
                         color: c.ink2,
                       ),
                       children: [
-                        TextSpan(text: '令字 '),
+                        const TextSpan(text: '令字 '),
                         TextSpan(
                           text: ch.isEmpty ? '—' : ch,
                           style: TextStyle(
@@ -992,7 +992,7 @@ class GameFeihuaView extends StatelessWidget {
                       color: c.inkSoft,
                     ),
                     children: [
-                      TextSpan(text: '当前 '),
+                      const TextSpan(text: '当前 '),
                       TextSpan(
                         text: '×$mult',
                         style: TextStyle(
@@ -1299,7 +1299,7 @@ class GameFeihuaView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: AppFonts.noto,
                     fontFamilyFallback: AppFonts.bodyFallback,
                     fontSize: 16,

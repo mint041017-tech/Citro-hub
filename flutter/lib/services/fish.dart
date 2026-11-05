@@ -99,9 +99,9 @@ class FishState {
         );
       }
     }
-    if (_makeup.contains(ds)) return FishInfo('makeup');
-    if (cfg.rest.contains(now.weekday % 7)) return FishInfo('rest');
-    return FishInfo('work');
+    if (_makeup.contains(ds)) return const FishInfo('makeup');
+    if (cfg.rest.contains(now.weekday % 7)) return const FishInfo('rest');
+    return const FishInfo('work');
   }
 
   static int? nextRest(DateTime now, FishConfig cfg) {

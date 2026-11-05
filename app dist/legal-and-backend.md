@@ -49,7 +49,7 @@ App 内政策在 `flutter/lib/pages/legal_page.dart`，可作为对齐基准。�
 - 只上传 `trash/trash.js`，**不要覆盖线上 `trash/data/`**。
 - 顺序：备份线上 `trash/data/` → 停服务/维护窗口 → 替换 `trash.js` → 启动（PM2：`pm2 restart trash`）。
 - 确认 Nginx `/trashapi` 反代到 `127.0.0.1:10003`，HTTPS 正常。
-- `INVITE_CODE`、`SHOWAPI_KEY`、`GLM_API_KEY` 等只在服务端环境变量或 `trash/config.local.json`，不要进 App、不要进仓库。
+- `SHOWAPI_KEY`、`GLM_API_KEY` 等只在服务端环境变量或 `trash/config.local.json`，不要进 App、不要进仓库。
 - 1.9.9 的卡面收藏/抽卡同步依赖新版 `/api/cards/*`；旧后端会导致功能异常。
 
 ## 4. 功能核验（提交前）

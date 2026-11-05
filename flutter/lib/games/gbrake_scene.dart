@@ -850,15 +850,15 @@ class BrakeScenePainter extends CustomPainter {
       canvas.drawRect(
         bandRect,
         Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: const [
+            colors: [
               Color(0x00FFC48E),
               Color(0x2EFFC48E),
               Color(0x8CFFC48E),
             ],
-            stops: const [0, 0.55, 1],
+            stops: [0, 0.55, 1],
           ).createShader(bandRect),
       );
       // 地平线附近一层很淡的水平暖雾（原版是大气散射，不是光球）
@@ -1192,13 +1192,13 @@ class BrakeScenePainter extends CustomPainter {
               gr,
               Paint()
                 ..shader =
-                    RadialGradient(
-                      colors: const [
+                    const RadialGradient(
+                      colors: [
                         Color(0xD9FFECC8),
                         Color(0x59FFD096),
                         Color(0x00FFC58A),
                       ],
-                      stops: const [0, 0.24, 1],
+                      stops: [0, 0.24, 1],
                     ).createShader(
                       Rect.fromCircle(center: Offset(_p[0], _p[1]), radius: gr),
                     ),
@@ -2194,15 +2194,15 @@ class BrakeScenePainter extends CustomPainter {
         }
         if (gy1 - gy0 < 1.2) gy1 = gy0 + 1.2;
         paint = Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: const [
+            colors: [
               Color(0xF5586C86),
               Color(0xF71E2734),
               Color(0xFC090C12),
             ],
-            stops: const [0, 0.32, 1],
+            stops: [0, 0.32, 1],
           ).createShader(Rect.fromLTRB(0, gy0, 0 + 1, gy1));
       } else {
         final cc = _carCols[f.colIdx];
@@ -2305,13 +2305,13 @@ class BrakeScenePainter extends CustomPainter {
         Offset.zero,
         sw * 0.62,
         Paint()
-          ..shader = RadialGradient(
-            colors: const [
+          ..shader = const RadialGradient(
+            colors: [
               Color(0x9E000000),
               Color(0x4D000000),
               Color(0x00000000),
             ],
-            stops: const [0, 0.6, 1],
+            stops: [0, 0.6, 1],
           ).createShader(const Rect.fromLTWH(-1, -1, 2, 2)),
       );
       canvas.restore();

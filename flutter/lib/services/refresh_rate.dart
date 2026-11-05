@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// 游戏等持续动画场景请求系统使用屏幕最高刷新率。
+import 'platform.dart' as platform;
+
+/// 向系统请求屏幕最高刷新率（通常 120Hz）。
 ///
-/// Android 的 Choreographer 本来就会跟随屏幕 vsync，但部分 LTPO / 可变刷新率
-/// 机型（Android 15+ 更常见）在没有显式 rate 请求时会停留在 60Hz。这里通过
-/// 原生 `Window.setFrameRate` 申请最高模式；退出游戏后恢复系统默认，避免
-/// 全程 120Hz 带来的耗电。
+/// App 启动时常驻一个 lease，保证首页、滚动、弹层都能用上高刷；
+/// 游戏页进入时再叠加一层，退出游戏只释放自己那一层，不会把全局请求关掉。
+/// Android 侧同时写 preferredRefreshRate 与 preferredDisplayModeId，
+/// 并在 onResume / onPostResume / onWindowFocusChanged 重新申请，
+/// 因为 HyperOS / MIUI 会在切前台时把刷新率重置回 60Hz。
 class RefreshRate {
   static const MethodChannel _channel = MethodChannel('com.chimu.crew/display');
   static int _leases = 0;
@@ -26,6 +30,8 @@ class RefreshRate {
   }
 
   static Future<void> _set(bool high) async {
+    // 只有 Android 原生端有对应通道；Windows / Web 直接跳过，避免无谓异常。
+    if (kIsWeb || !platform.isAndroid) return;
     try {
       await _channel.invokeMethod<void>('setHighRefresh', {'on': high});
     } catch (_) {

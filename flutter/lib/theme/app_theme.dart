@@ -105,9 +105,9 @@ ThemeData buildCitroTheme(CitroColors colors) {
     splashFactory: NoSplash.splashFactory,
   );
   return base.copyWith(
-    pageTransitionsTheme: PageTransitionsTheme(
+    pageTransitionsTheme: const PageTransitionsTheme(
       builders: kIsWeb
-          ? const {
+          ? {
               TargetPlatform.android: CitroFastPageTransitionsBuilder(),
               TargetPlatform.iOS: CitroFastPageTransitionsBuilder(),
               TargetPlatform.macOS: CitroFastPageTransitionsBuilder(),
@@ -115,7 +115,7 @@ ThemeData buildCitroTheme(CitroColors colors) {
               TargetPlatform.linux: CitroFastPageTransitionsBuilder(),
               TargetPlatform.fuchsia: CitroFastPageTransitionsBuilder(),
             }
-          : const {
+          : {
               // 四端统一使用短时长；iOS/macOS 保留 Cupertino 转场以不丢边缘返回手势。
               // Android 不再使用 450ms 的 FadeForwards，避免同一操作在手机上明显更慢。
               TargetPlatform.android: CitroFastSlidePageTransitionsBuilder(),

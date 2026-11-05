@@ -998,7 +998,7 @@ svg {
 /* App cards */
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -1020,6 +1020,12 @@ svg {
   --app-accent: var(--green-deep);
   --app-tint: #e3ebe0;
   --app-chip: #e6efe2;
+}
+
+.app-card[data-platform="ios"] {
+  --app-accent: #2f6fd0;
+  --app-tint: #e4ebf8;
+  --app-chip: #eaf0fa;
 }
 
 .app-card::before {
@@ -1050,6 +1056,12 @@ svg {
 }
 
 .app-card[data-platform="android"] .app-watermark svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.app-card[data-platform="ios"] .app-watermark svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.2;
@@ -2273,6 +2285,10 @@ svg {
 
   .driver-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

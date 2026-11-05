@@ -32,11 +32,11 @@ Future<void> _pumpHome(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final page = contentWidth == null
-      ? HomePage(onSwitchTab: _noop)
+      ? const HomePage(onSwitchTab: _noop)
       : CitroLayoutScope(
           contentWidth: contentWidth,
           tabletNav: true,
-          child: HomePage(onSwitchTab: _noop),
+          child: const HomePage(onSwitchTab: _noop),
         );
   await tester.pumpWidget(_host(page));
   await tester.pump(const Duration(milliseconds: 400));

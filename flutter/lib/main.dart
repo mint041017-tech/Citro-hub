@@ -10,8 +10,10 @@ import 'overlays/pomodoro_sheet.dart';
 import 'overlays/timer_overlay.dart';
 import 'perf_probe.dart';
 import 'routes.dart';
+import 'services/image_store.dart';
 import 'services/orientation.dart';
 import 'services/platform.dart' as platform;
+import 'services/refresh_rate.dart';
 import 'services/web_route.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
@@ -26,6 +28,10 @@ import 'widgets/tablet_shell.dart';
 Future<void> main() async {
   PerfProbe.start();
   WidgetsFlutterBinding.ensureInitialized();
+  // 全局请求屏幕最高刷新率：HyperOS 的 LTPO 屏在静态画面会降到 60Hz，
+  // 常驻一个 lease，滚动/动画时系统才会升到 120Hz。游戏页的 acquire 会
+  // 叠加在同一个计数器上，退出游戏后不会把全局请求释放掉。
+  RefreshRate.acquire();
   await CitroDesktopShell.init();
   // 图片缓存是这类图文 App 最容易吃满内存的地方：限制总量，低内存时整块清掉。
   // 桌面端内存更宽裕，放宽缓存避免大图反复解码，帧时间更稳定。
@@ -141,6 +147,9 @@ class _MemoryGuardState extends State<_MemoryGuard>
     PaintingBinding.instance.imageCache
       ..clear()
       ..clearLiveImages();
+    // HyperOS / MIUI 的 onTrimMemory 来得频繁，连同自建的内存图片缓存一起释放，
+    // 否则 Flutter 画布缓存清了、原图字节还占着几十 MB。
+    ImageStore.clearMemory();
   }
 
   @override
@@ -155,6 +164,8 @@ class _MemoryGuardState extends State<_MemoryGuard>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // HyperOS / MIUI 的后台限制较严：退后台暂停轮询，回前台立即补一次。
+    AppState.instance.setForeground(state == AppLifecycleState.resumed);
     // 退到后台时清掉不在屏幕上的解码图，避免系统回收进程后回来直接重启。
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// 仅用于本地性能验收：默认关闭，构建时传
 /// `--dart-define=CITRO_PERF_PROBE=true` 才自动跑切页/滚动采样。
+/// profile 模式同样生效（release 下才彻底关闭），便于采集最接近线上的帧耗时。
 class PerfProbe {
   PerfProbe._();
 
@@ -19,14 +20,14 @@ class PerfProbe {
   static Future<void> _logTail = Future<void>.value();
 
   static void start() {
-    if (!enabled || !kDebugMode) return;
+    if (!enabled || kReleaseMode) return;
     _clock.reset();
     _clock.start();
     _logTail = _resetLog();
   }
 
   static void homeReady(void Function(int) switchTab) {
-    if (!enabled || !kDebugMode) return;
+    if (!enabled || kReleaseMode) return;
     unawaited(_log('CITRO_PERF home_ready_ms=${_clock.elapsedMilliseconds}'));
     unawaited(_runAuto(switchTab));
   }
@@ -58,7 +59,7 @@ class PerfProbe {
   }
 
   static void beginFrameCollection() {
-    if (!enabled || !kDebugMode) return;
+    if (!enabled || kReleaseMode) return;
     if (_collecting) {
       SchedulerBinding.instance.removeTimingsCallback(_onTimings);
     }
@@ -68,7 +69,7 @@ class PerfProbe {
   }
 
   static void endFrameCollection(String label) {
-    if (!enabled || !kDebugMode || !_collecting) return;
+    if (!enabled || kReleaseMode || !_collecting) return;
     _collecting = false;
     SchedulerBinding.instance.removeTimingsCallback(_onTimings);
     _report(label);

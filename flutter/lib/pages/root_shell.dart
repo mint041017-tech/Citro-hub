@@ -37,9 +37,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   int index = 0;
   // 首帧只构建当前页；其余页首次切到时才挂载，避免社区页在后台拉动态/起轮询。
   late final List<bool> _visited;
+  late final List<Widget> _pages;
   late final AnimationController _tabAnim;
   double _dir = 1;
   Timer? _updateTimer;
+  final List<Timer> _warmTimers = <Timer>[];
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
 
@@ -54,6 +56,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     instance = this;
     index = widget.initialIndex.clamp(0, _tabCount - 1);
     _visited = List<bool>.generate(5, (i) => i == index);
+    // 页面 widget 只创建一次：切 Tab 时不再生成新的 HomePage/CommunityPage 实例，
+    // 已挂载的页面不会因为父级 setState 而整棵 rebuild。
+    _pages = List<Widget>.generate(5, _pageAt);
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
     _tabAnim = AnimationController(
       vsync: this,
@@ -65,10 +70,24 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => PerfProbe.homeReady(switchTo),
     );
+    // 空闲时按顺序预挂载其余 Tab（Offstage），首次切过去不再整页构建。
+    // 错开时间，避免同一次 setState 里连续挂载多个页面。
+    _warmPage(1, 1200); // 游戏
+    _warmPage(_showResources ? 4 : 3, 2000); // 我的
+    _warmPage(2, 2800); // 社区（会顺带预取动态，游客不发请求）
     // 让启动路径先跑完，避免更新检查与首帧、权限申请抢带宽/主线程。
     _updateTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) unawaited(checkForUpdates(context, manual: false));
     });
+  }
+
+  void _warmPage(int i, int delayMs) {
+    _warmTimers.add(
+      Timer(Duration(milliseconds: delayMs), () {
+        if (!mounted || _visited[i]) return;
+        setState(() => _visited[i] = true);
+      }),
+    );
   }
 
   /// 启动完成、网络请求也让出主线程之后，再预解码常用小图。
@@ -115,6 +134,10 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    for (final timer in _warmTimers) {
+      timer.cancel();
+    }
+    _warmTimers.clear();
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
     _tabAnim.dispose();
@@ -166,6 +189,10 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _dir = i > index ? 1.0 : -1.0;
     final reduce = CitroMotion.reduced(context);
     PerfProbe.beginFrameCollection();
+    _tabAnim.duration = CitroMotion.tabLength;
+    // 先把动画值归零，保证等待新页首帧时它就以 t=0 呈现；
+    // 否则会先显示一帧 t=1 再跳回起点，出现闪动。
+    _tabAnim.value = 0;
     setState(() {
       _visited[i] = true;
       index = i;
@@ -178,7 +205,10 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       PerfProbe.endFrameCollection('tab_$i');
       return;
     }
-    _tabAnim.duration = CitroMotion.tabLength;
+    // 先让新页完成首帧 build/layout，再开始动画，避免“构建整页 + 动画”
+    // 挤在同一帧（首次切到社区/我的时最容易掉帧）。
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
     await _tabAnim.forward(from: 0);
     if (!mounted) return;
     if (PerfProbe.enabled) {
@@ -189,51 +219,58 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   }
 
   Widget _pageStack() {
-    return AnimatedBuilder(
-      animation: _tabAnim,
-      builder: (context, _) {
-        final t = CitroMotion.easeOut.transform(_tabAnim.value);
-        return Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.hardEdge,
-          children: [
-            for (var i = 0; i < 5; i++)
-              _visited[i] ? _pageLayer(i, t) : const SizedBox.shrink(),
-          ],
-        );
-      },
+    // 已挂载的页面保持原位，只有当前页参与切页动画。
+    // 旧实现把整棵 Stack 放进 AnimatedBuilder，动画期间后台页也会逐帧重建；
+    // 首页、社区这类长页面在每次切 Tab 时都要白白 build + layout 一遍。
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.hardEdge,
+      children: [
+        for (var i = 0; i < 5; i++)
+          _visited[i] ? _pageLayer(i) : const SizedBox.shrink(),
+      ],
     );
   }
 
-  Widget _pageLayer(int i, double t) {
+  Widget _pageLayer(int i) {
     final active = i == index;
-    // 旧页立即撤下：屏幕上永远只出现当前页，不会残留上一页的一条。
-    // 新页只做 10px 归位 + 轻微淡入——足够表达"切换发生了"，
-    // 又不会出现两页并存、残影或空白条。
-    final settling = active && t < 1;
-    final dx = settling ? _dir * 8 * (1 - t) : 0.0;
-    final dy = settling ? 6 * (1 - t) : 0.0;
-    final scale = settling ? .992 + .008 * t : 1.0;
-    final opacity = settling ? .82 + .18 * t : 1.0;
     // 关键：隐藏页和显示页必须返回同一棵 widget 结构，否则 Flutter 会整页重建，
     // 每次切 Tab 都重放入场动画并闪一下。
+    final page = RepaintBoundary(
+      child: TickerMode(enabled: active, child: _pages[i]),
+    );
     return Positioned.fill(
       child: Offstage(
         offstage: !active,
         child: IgnorePointer(
           ignoring: !active,
-          child: Opacity(
-            opacity: opacity,
-            child: Transform.scale(
-              scale: scale,
-              child: Transform.translate(
-                offset: Offset(dx, dy),
-                child: RepaintBoundary(
-                  child: TickerMode(enabled: active, child: _pageAt(i)),
-                ),
-              ),
-            ),
+          // 页面作为 child 传入，动画期间只更新外面这层包装，不重建页面本身。
+          // 后台页不监听切页动画（用常量动画占位），结构保持一致，
+          // 因此切 Tab 时既不会重挂 Element，也不会逐帧重建后台长页面。
+          child: AnimatedBuilder(
+            animation: active
+                ? _tabAnim
+                : const AlwaysStoppedAnimation<double>(1),
+            child: page,
+            builder: (context, child) => _settlePage(child!, active),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _settlePage(Widget child, bool active) {
+    final t = active ? CitroMotion.easeOut.transform(_tabAnim.value) : 1.0;
+    // 旧页立即撤下：屏幕上永远只出现当前页，不会残留上一页的一条。
+    // 新页只做 10px 归位 + 轻微淡入——足够表达"切换发生了"，
+    // 又不会出现两页并存、残影或空白条。
+    return Opacity(
+      opacity: .82 + .18 * t,
+      child: Transform.scale(
+        scale: .992 + .008 * t,
+        child: Transform.translate(
+          offset: Offset(_dir * 8 * (1 - t), 6 * (1 - t)),
+          child: child,
         ),
       ),
     );

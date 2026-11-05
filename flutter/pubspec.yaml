@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.9.10）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 2.0.3+2003
+version: 2.0.15+2015
 
 environment:
   sdk: ^3.13.5
@@ -37,6 +37,8 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
   window_manager: ^0.5.2
   speech_to_text: ^7.5.0
+  qr_flutter: 4.1.0
+  mobile_scanner: 5.2.3
 
 dev_dependencies:
   flutter_test:

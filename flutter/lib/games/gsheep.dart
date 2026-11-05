@@ -1339,7 +1339,7 @@ class GameSheepView extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: enabled ? onTap : null,
-        child: Opacity(opacity: enabled ? 1 : .45, child: row),
+        child: enabled ? row : Opacity(opacity: .45, child: row),
       ),
     );
   }

@@ -677,7 +677,7 @@ class _LiquidBrand extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 5),
-        Text(
+        const Text(
           '咕噜果冻铺',
           style: TextStyle(
             fontFamily: AppFonts.zcool,
@@ -776,13 +776,13 @@ class _Stat extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.fade,
       softWrap: false,
-      style: TextStyle(
+      style: const TextStyle(
         fontFamily: AppFonts.kalam,
         fontFamilyFallback: AppFonts.fallback,
         fontSize: 20,
         height: 1.05,
         color: _ink,
-        fontFeatures: const [ui.FontFeature.tabularFigures()],
+        fontFeatures: [ui.FontFeature.tabularFigures()],
       ),
     );
     if (bumpKey != null && bumpKey! > 0) {
@@ -880,7 +880,7 @@ class _NextChip extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         LiquidGame.formatBlobValue(LiquidLevels.valueForLevel(level)),
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.bodyFallback,
           fontWeight: FontWeight.w800,
@@ -962,7 +962,7 @@ class _LiquidToast extends StatelessWidget {
         maxLines: 2,
         textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.bodyFallback,
           fontSize: 11,
@@ -1027,7 +1027,7 @@ class _IntroOverlay extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
+                const Text(
                   '咕噜果冻铺',
                   style: TextStyle(
                     fontFamily: AppFonts.zcool,
@@ -1135,7 +1135,7 @@ class _HowTo extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             step,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: AppFonts.kalam,
               fontFamilyFallback: AppFonts.fallback,
               fontSize: 12,
@@ -1147,7 +1147,7 @@ class _HowTo extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: AppFonts.noto,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 11,
@@ -1227,7 +1227,7 @@ class _EndOverlay extends StatelessWidget {
                         color: _coral,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
+                      child: const Text(
                         '新的本机纪录',
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
@@ -1242,7 +1242,7 @@ class _EndOverlay extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            Text(
+            const Text(
               '罐口溢出来啦',
               style: TextStyle(
                 fontFamily: AppFonts.zcool,
@@ -1288,13 +1288,13 @@ class _EndOverlay extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.fade,
                         softWrap: false,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: AppFonts.kalam,
                           fontFamilyFallback: AppFonts.fallback,
                           fontSize: 36,
                           height: 1,
                           color: _ink,
-                          fontFeatures: const [ui.FontFeature.tabularFigures()],
+                          fontFeatures: [ui.FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -1435,12 +1435,12 @@ class _EndStat extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: AppFonts.kalam,
             fontFamilyFallback: AppFonts.fallback,
             fontSize: 15,
             color: _ink,
-            fontFeatures: const [ui.FontFeature.tabularFigures()],
+            fontFeatures: [ui.FontFeature.tabularFigures()],
           ),
         ),
       ],
@@ -1507,13 +1507,13 @@ class _PaperDialog extends StatelessWidget {
             ),
             child: child,
           ),
-          Positioned(
+          const Positioned(
             top: -8,
             left: 28,
             child: GameTape(
               width: 84,
               height: 22,
-              color: const Color(0xB8FFD696),
+              color: Color(0xB8FFD696),
               angle: -3,
             ),
           ),

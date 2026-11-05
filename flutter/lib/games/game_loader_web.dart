@@ -154,7 +154,7 @@ class _GameLoadError extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('🍊', style: const TextStyle(fontSize: 36)),
+              const Text('🍊', style: TextStyle(fontSize: 36)),
               const SizedBox(height: 10),
               Text('游戏加载失败', style: context.heading(size: 20)),
               const SizedBox(height: 6),
