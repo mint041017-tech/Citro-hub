@@ -78,7 +78,8 @@ class CitroTabBar extends StatelessWidget {
                                     ? Duration.zero
                                     : CitroMotion.indicatorLength,
                                 curve: CitroMotion.emphasized,
-                                left: itemWidth * index + (itemWidth - pill) / 2,
+                                left:
+                                    itemWidth * index + (itemWidth - pill) / 2,
                                 width: pill,
                                 top: 3,
                                 bottom: 3,
@@ -86,7 +87,7 @@ class CitroTabBar extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: c.dark
                                         ? c.hl
-                                        : const Color(0x57FECE66),
+                                        : c.accent.withAlpha(120),
                                     borderRadius: BorderRadius.circular(99),
                                   ),
                                 ),
@@ -243,7 +244,7 @@ class _Badge extends StatelessWidget {
           '$count',
           style: context.ui(
             size: 9,
-            weight: FontWeight.w600,
+            weight: FontWeight.w700,
             color: const Color(0xFF2E2C22),
             height: 1,
             letterSpacing: 0,

@@ -33,8 +33,8 @@ class GamesPage extends StatelessWidget {
     final side = math.max(8.0, (width - maxWidth) / 2);
     final duo = layout?.duo == true;
     final gameColumns = duo
-        ? (width >= 820 ? 5 : (width >= 520 ? 4 : 3))
-        : (width >= 1040 ? 5 : (width >= 760 ? 4 : 3));
+        ? (width >= 900 ? 6 : (width >= 640 ? 5 : (width >= 460 ? 4 : 3)))
+        : (width >= 1180 ? 7 : (width >= 920 ? 6 : (width >= 680 ? 5 : 3)));
     final games = kGameCards;
     final mobileApp = !kIsWeb && (platform.isAndroid || platform.isIOS);
     final gameTools = <_GameToolLink>[
@@ -149,7 +149,7 @@ class GamesPage extends StatelessWidget {
                               child: HighlightedText(
                                 '游戏',
                                 style: context.heading(
-                                  size: 33.4,
+                                  size: 32,
                                   color: c.ink,
                                   letterSpacing: 4,
                                 ),
@@ -162,13 +162,13 @@ class GamesPage extends StatelessWidget {
                                 '账号同步 · 全站排行',
                                 style: context.body(
                                   size: 13,
-                                  weight: FontWeight.w500,
+                                  weight: FontWeight.w400,
                                   color: c.inkSoft,
                                   letterSpacing: .78,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 7),
+                            const SizedBox(height: 8),
                             Center(
                               child: Transform.rotate(
                                 angle: -1 * math.pi / 180,
@@ -179,7 +179,7 @@ class GamesPage extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 16),
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -188,7 +188,7 @@ class GamesPage extends StatelessWidget {
                                     crossAxisCount: gameColumns,
                                     crossAxisSpacing: 10,
                                     mainAxisSpacing: 10,
-                                    childAspectRatio: 107.66 / 112,
+                                    childAspectRatio: 1.06,
                                   ),
                               itemCount: games.length,
                               itemBuilder: (_, i) => _GameCard(entry: games[i]),
@@ -239,7 +239,7 @@ class GamesPage extends StatelessWidget {
                         child: Center(
                           child: AppIcon(
                             strokeSvg(AppIcons.monitor, width: 2),
-                            size: 19,
+                            size: 20,
                             color: c.accentInk,
                           ),
                         ),
@@ -345,15 +345,15 @@ class _GameToolSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const SectionTitle('小工具', size: 21),
+              const SectionTitle('小工具', size: 20),
               const Spacer(),
               Text(
                 kIsWeb ? '在线工具 · 下载' : '在线工具',
-                style: context.body(size: 10.5, color: c.inkSoft),
+                style: context.body(size: 11, color: c.inkSoft),
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 620) {
@@ -419,7 +419,7 @@ class _GameToolCompactCard extends StatelessWidget {
       hoverShadow: false,
       hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(12),
@@ -450,7 +450,7 @@ class _GameToolCompactCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 11.5,
+                size: 12,
                 weight: FontWeight.w700,
                 color: c.ink,
                 height: 1.15,
@@ -478,7 +478,7 @@ class _GameToolCard extends StatelessWidget {
       hoverShadow: false,
       hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(12),
@@ -501,7 +501,7 @@ class _GameToolCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 9),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -512,7 +512,7 @@ class _GameToolCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 12.5,
+                      size: 13,
                       weight: FontWeight.w700,
                       color: c.ink,
                       height: 1.25,
@@ -524,7 +524,7 @@ class _GameToolCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 9.5,
+                      size: 10,
                       color: c.inkSoft,
                       height: 1.2,
                     ),
@@ -626,7 +626,7 @@ class _GameCard extends StatelessWidget {
             Container(
               height: large ? 48 : (compact ? 36 : 39),
               width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: large ? 12 : 9),
+              padding: EdgeInsets.symmetric(horizontal: large ? 12 : 10),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: c.line)),
               ),

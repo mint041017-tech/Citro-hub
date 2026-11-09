@@ -41,7 +41,7 @@ class TingyuPlayChip extends StatelessWidget {
             children: [
               AppIcon(
                 strokeSvg(AppIcons.wave, width: 2),
-                size: 17,
+                size: 18,
                 color: c.accentInk,
               ),
               const SizedBox(width: 8),
@@ -53,7 +53,7 @@ class TingyuPlayChip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.body(
                     size: 13,
-                    weight: FontWeight.w600,
+                    weight: FontWeight.w700,
                     color: c.ink,
                   ),
                 ),

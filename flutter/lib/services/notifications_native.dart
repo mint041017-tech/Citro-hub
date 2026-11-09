@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -279,9 +280,10 @@ class Notifications {
             ? AndroidScheduleMode.exactAllowWhileIdle
             : AndroidScheduleMode.inexactAllowWhileIdle,
       );
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('notification schedule failed: $error');
+    }
   }
-
   static Future<void> cancel(int id) async {
     _windowsTimers.remove(id)?.cancel();
     if (platform.isWindows) return;

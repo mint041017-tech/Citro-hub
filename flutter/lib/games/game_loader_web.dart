@@ -127,10 +127,7 @@ class _GameLoading extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                '正在准备游戏…',
-                style: context.body(size: 12.5, color: c.inkSoft),
-              ),
+              Text('正在准备游戏…', style: context.body(size: 13, color: c.inkSoft)),
             ],
           ),
         ),

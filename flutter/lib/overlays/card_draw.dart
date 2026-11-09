@@ -115,7 +115,7 @@ Future<void> showCardDrawPrompt(
               ),
             ),
             const SizedBox(height: 14),
-            Text('完成 7 局游戏', style: ctx.heading(size: 21)),
+            Text('完成 7 局游戏', style: ctx.heading(size: 20)),
             const SizedBox(height: 6),
             Text(
               '获得一次卡面抽取机会，现在翻开一张吗？\n当前待抽 $credits 次',
@@ -302,7 +302,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
               builder: (context, _) => CustomPaint(
                 painter: _HaloPainter(
                   t: _glow.value,
-                  color: const Color(0xFFF2A43C),
+                  color: const Color(0xFF7A9BBE),
                 ),
               ),
             ),
@@ -323,12 +323,14 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                           decoration: BoxDecoration(
                             color: Colors.black.withAlpha(80),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withAlpha(40)),
+                            border: Border.all(
+                              color: Colors.white.withAlpha(40),
+                            ),
                           ),
                           child: Center(
                             child: AppIcon(
                               strokeSvg(AppIcons.close, width: 2),
-                              size: 17,
+                              size: 18,
                               color: Colors.white.withAlpha(220),
                             ),
                           ),
@@ -397,7 +399,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                           style: context.body(
                             size: 11,
                             weight: FontWeight.w700,
-                            color: const Color(0xFFF2A43C),
+                            color: const Color(0xFF7A9BBE),
                             letterSpacing: 2.4,
                           ),
                         ),
@@ -433,7 +435,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                                       '再抽一次 (${AppState.instance.cardCredits})',
                                       style: context.body(
                                         size: 12,
-                                        weight: FontWeight.w600,
+                                        weight: FontWeight.w700,
                                         color: Colors.white.withAlpha(230),
                                       ),
                                     ),
@@ -451,7 +453,10 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                                 ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFF2C46B), Color(0xFFE79A3C)],
+                                    colors: [
+                                      Color(0xFFF2C46B),
+                                      Color(0xFFE79A3C),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(999),
                                   boxShadow: const [
@@ -466,8 +471,8 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                                   child: Text(
                                     '收下卡面',
                                     style: context.body(
-                                      size: 12.5,
-                                      weight: FontWeight.w800,
+                                      size: 13,
+                                      weight: FontWeight.w700,
                                       color: const Color(0xFF2E2C22),
                                     ),
                                   ),
@@ -541,11 +546,7 @@ class _CardBack extends StatelessWidget {
             blurRadius: 50,
             offset: Offset(0, 26),
           ),
-          BoxShadow(
-            color: Color(0x66F2A43C),
-            blurRadius: 40,
-            spreadRadius: -8,
-          ),
+          BoxShadow(color: Color(0x66F2A43C), blurRadius: 40, spreadRadius: -8),
         ],
       ),
       child: Stack(
@@ -607,7 +608,7 @@ class _CardBack extends StatelessWidget {
                 Text(
                   'CARD COLLECTION',
                   style: context.body(
-                    size: 7.5,
+                    size: 9,
                     weight: FontWeight.w700,
                     color: const Color(0xFFF2C46B).withAlpha(140),
                     letterSpacing: 3,
@@ -652,11 +653,7 @@ class _CardFront extends StatelessWidget {
             blurRadius: 52,
             offset: Offset(0, 28),
           ),
-          BoxShadow(
-            color: Color(0x80F2A43C),
-            blurRadius: 46,
-            spreadRadius: -6,
-          ),
+          BoxShadow(color: Color(0x80F2A43C), blurRadius: 46, spreadRadius: -6),
         ],
       ),
       child: ClipRRect(
@@ -674,7 +671,11 @@ class _CardFront extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0x00000000), Color(0x00000000), Color(0x99000000)],
+                  colors: [
+                    Color(0x00000000),
+                    Color(0x00000000),
+                    Color(0x99000000),
+                  ],
                   stops: [0, .62, 1],
                 ),
               ),
@@ -689,7 +690,7 @@ class _CardFront extends StatelessWidget {
                     child: Text(
                       card.categoryName,
                       style: context.display(
-                        size: 17,
+                        size: 18,
                         weight: FontWeight.w700,
                         color: Colors.white.withAlpha(235),
                         letterSpacing: 1.6,
@@ -698,7 +699,7 @@ class _CardFront extends StatelessWidget {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
+                      horizontal: 10,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
@@ -709,7 +710,7 @@ class _CardFront extends StatelessWidget {
                     child: Text(
                       '#${card.label}',
                       style: context.body(
-                        size: 9.5,
+                        size: 10,
                         weight: FontWeight.w700,
                         color: Colors.white.withAlpha(210),
                         letterSpacing: .6,
@@ -802,7 +803,7 @@ class _BurstPainter extends CustomPainter {
 
   static const _colors = [
     Color(0xFFF2C46B),
-    Color(0xFFF2A43C),
+    Color(0xFF7A9BBE),
     Color(0xFFE0796A),
     Color(0xFFC9D3B2),
     Color(0xFFFFF4DC),
@@ -818,7 +819,8 @@ class _BurstPainter extends CustomPainter {
       final speed = 120 + (i * 37 % 190);
       final dist = speed * eased;
       final gravity = 150 * eased * eased;
-      final p = origin +
+      final p =
+          origin +
           Offset(math.cos(angle), math.sin(angle) * .82) * dist +
           Offset(0, gravity);
       final paint = Paint()

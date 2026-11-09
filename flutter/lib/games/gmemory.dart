@@ -333,7 +333,7 @@ class _DiffTabs extends StatelessWidget {
           alignment: Alignment.center,
           decoration: on
               ? const BoxDecoration(
-                  color: Color(0xFFF2A43C),
+                  color: Color(0xFF7A9BBE),
                   borderRadius: BorderRadius.all(Radius.circular(999)),
                   boxShadow: [
                     BoxShadow(
@@ -703,7 +703,7 @@ class _CardBack extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppFonts.zcool,
                     fontFamilyFallback: AppFonts.fallback,
-                    fontSize: 21.06,
+                    fontSize: 20,
                     fontWeight: FontWeight.w400,
                     height: 1,
                     color: c.dark ? const Color(0xFFFFE0AE) : c.ink,
@@ -744,7 +744,7 @@ class _CardFront extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.kalam,
                 fontFamilyFallback: AppFonts.fallback,
-                fontSize: 23.4,
+                fontSize: 24,
                 fontWeight: FontWeight.w400,
                 height: 38.61 / 23.4,
                 color: matched ? c.mintInk : c.accentInk,

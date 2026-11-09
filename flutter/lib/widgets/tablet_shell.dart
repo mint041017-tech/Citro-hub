@@ -119,7 +119,7 @@ class CitroTabletSidebar extends StatelessWidget {
                               Text(
                                 'Citro',
                                 style: context.display(
-                                  size: 25,
+                                  size: 24,
                                   weight: FontWeight.w700,
                                   color: c.ink,
                                   height: 1.1,
@@ -128,10 +128,7 @@ class CitroTabletSidebar extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 '今天也要开心',
-                                style: context.hand(
-                                  size: 12.5,
-                                  color: c.inkSoft,
-                                ),
+                                style: context.hand(size: 13, color: c.inkSoft),
                               ),
                             ],
                           ),
@@ -154,7 +151,7 @@ class CitroTabletSidebar extends StatelessWidget {
                           // 分栏标题用系统字体 + 负字距，像 macOS/iPadOS 的 section header。
                           style: context.ui(
                             size: 11,
-                            weight: FontWeight.w600,
+                            weight: FontWeight.w700,
                             color: c.inkSoft,
                             letterSpacing: .8,
                           ),
@@ -208,7 +205,7 @@ class CitroTabletSidebar extends StatelessWidget {
                           '我的 Citro',
                           style: context.ui(
                             size: 11,
-                            weight: FontWeight.w600,
+                            weight: FontWeight.w700,
                             color: c.inkSoft,
                             letterSpacing: .8,
                           ),
@@ -265,7 +262,7 @@ class CitroTabletSidebar extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 9),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +279,7 @@ class CitroTabletSidebar extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.body(
-                                  size: 10.5,
+                                  size: 11,
                                   color: c.inkSoft,
                                   height: 1.45,
                                 ),
@@ -668,8 +665,8 @@ class CitroDuoRailItem extends StatelessWidget {
                             child: Text(
                               badge > 99 ? '99+' : '$badge',
                               style: context.body(
-                                size: 8,
-                                weight: FontWeight.w800,
+                                size: 9,
+                                weight: FontWeight.w700,
                                 color: const Color(0xFF2E2C22),
                                 height: 1,
                               ),
@@ -685,7 +682,7 @@ class CitroDuoRailItem extends StatelessWidget {
                 duration: reduce ? Duration.zero : CitroMotion.hover,
                 curve: CitroMotion.easeColor,
                 style: context.hand(
-                  size: 11.5,
+                  size: 12,
                   color: active ? c.accentInk : c.ink2,
                   height: 1.1,
                 ),
@@ -812,7 +809,7 @@ class _SidebarItem extends StatelessWidget {
                     curve: CitroMotion.easeOut,
                     child: AppIcon(
                       strokeSvg(icon, width: 2),
-                      size: 17,
+                      size: 18,
                       color: active ? const Color(0xFF2E2C22) : c.ink2,
                     ),
                   ),
@@ -847,7 +844,7 @@ class _SidebarItem extends StatelessWidget {
                       badge > 99 ? '99+' : '$badge',
                       style: context.ui(
                         size: 10,
-                        weight: FontWeight.w600,
+                        weight: FontWeight.w700,
                         color: const Color(0xFF2E2C22),
                         letterSpacing: 0,
                       ),

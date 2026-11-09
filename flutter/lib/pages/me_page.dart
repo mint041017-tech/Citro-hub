@@ -186,9 +186,13 @@ class MePage extends StatelessWidget {
                         child: _quickGrid(context, state, web: web),
                       ),
                       const SizedBox(height: 18),
-                      _accountGroup(context, user),
-                      const SizedBox(height: 18),
-                      _settingsColumn(context, state, user, web: web),
+                      _settingsColumn(
+                        context,
+                        state,
+                        user,
+                        web: web,
+                        accountAfterLegal: true,
+                      ),
                     ],
                   ],
                 ),
@@ -230,7 +234,7 @@ class MePage extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     '返回',
-                    style: context.body(size: 11.5, weight: FontWeight.w600),
+                    style: context.body(size: 12, weight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -243,14 +247,14 @@ class MePage extends StatelessWidget {
           height: 7,
           decoration: BoxDecoration(color: p.accent, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         Text('我的', style: context.heading(size: web ? 28 : 22)),
         if (web) ...[
           const SizedBox(width: 12),
           Text(
             'ACCOUNT & PREFERENCES',
             style: context.body(
-              size: 9.5,
+              size: 10,
               weight: FontWeight.w700,
               color: p.inkSoft,
               letterSpacing: 1.7,
@@ -329,6 +333,7 @@ class MePage extends StatelessWidget {
     AppState state,
     User? user, {
     required bool web,
+    bool accountAfterLegal = false,
   }) {
     final c = context.c;
     return Column(
@@ -389,6 +394,10 @@ class MePage extends StatelessWidget {
             ),
         ]),
         const SizedBox(height: 18),
+        if (accountAfterLegal) ...[
+          _accountGroup(context, user),
+          const SizedBox(height: 18),
+        ],
         _section(c, '关于'),
         const SizedBox(height: 8),
         _rows(c, [
@@ -537,7 +546,7 @@ class MePage extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
-                      colors: [c.accent.withAlpha(42), c.accent.withAlpha(0)],
+                      colors: [c.accent.withAlpha(20), c.accent.withAlpha(0)],
                     ),
                   ),
                 ),
@@ -545,10 +554,10 @@ class MePage extends StatelessWidget {
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(
-                web ? 22 : 15,
+                web ? 22 : 16,
                 web ? 20 : 14,
-                web ? 18 : 13,
-                web ? 18 : 13,
+                web ? 18 : 14,
+                web ? 18 : 14,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,7 +565,12 @@ class MePage extends StatelessWidget {
                   Row(
                     children: [
                       CitroHero(
-                        tag: CitroHero.tagOf('profile', 'me'),
+                        // 侧栏/折叠栏的头像才参与容器变换；Tab 内与浮层里的
+                        // 副本用独立 tag，避免同一路由子树出现两个相同 Hero。
+                        tag: CitroHero.tagOf(
+                          'profile',
+                          embedded || floating ? 'tab' : 'me',
+                        ),
                         child: Container(
                           width: avatarSize,
                           height: avatarSize,
@@ -591,7 +605,7 @@ class MePage extends StatelessWidget {
                                 ),
                         ),
                       ),
-                      const SizedBox(width: 13),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,7 +625,7 @@ class MePage extends StatelessWidget {
                                   ),
                                 ),
                                 if (user != null) ...[
-                                  const SizedBox(width: 7),
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
@@ -625,7 +639,7 @@ class MePage extends StatelessWidget {
                                     child: Text(
                                       state.loggedIn ? '云端同步' : '游客',
                                       style: context.body(
-                                        size: 8.5,
+                                        size: 9,
                                         weight: FontWeight.w700,
                                         color: c.mintInk,
                                       ),
@@ -652,7 +666,7 @@ class MePage extends StatelessWidget {
                       if (user != null)
                         AppIcon(
                           strokeSvg(AppIcons.chevronRight, width: 2),
-                          size: 17,
+                          size: 18,
                           color: c.inkSoft,
                         ),
                     ],
@@ -661,7 +675,7 @@ class MePage extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: web ? 14 : 6,
-                      vertical: web ? 11 : 9,
+                      vertical: web ? 12 : 10,
                     ),
                     decoration: BoxDecoration(
                       color: c.surface.withAlpha(c.dark ? 34 : 110),
@@ -726,14 +740,14 @@ class MePage extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.display(
-            size: 17,
+            size: 18,
             weight: FontWeight.w700,
             color: c.accentInk,
             height: 1.1,
           ),
         ),
         const SizedBox(height: 2),
-        Text(label, style: context.body(size: 9.5, color: c.inkSoft)),
+        Text(label, style: context.body(size: 10, color: c.inkSoft)),
       ],
     );
   }
@@ -752,7 +766,7 @@ class MePage extends StatelessWidget {
             title,
             style: ctx.body(
               size: kIsWeb ? 12.5 : 11.5,
-              weight: FontWeight.w800,
+              weight: FontWeight.w700,
               color: c.accentInk,
               letterSpacing: kIsWeb ? 1.3 : 1,
             ),
@@ -815,14 +829,14 @@ class MePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: kIsWeb ? 18 : 14,
-          vertical: kIsWeb ? 10 : 7,
+          vertical: kIsWeb ? 10 : 8,
         ),
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: c.line2.withAlpha(150)),
         ),
-        child: Text(label, style: context.body(size: 12.5, color: c.ink2)),
+        child: Text(label, style: context.body(size: 13, color: c.ink2)),
       ),
     );
   }
@@ -866,7 +880,7 @@ class MePage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('后台运行设置', style: context.heading(size: 21)),
+            Text('后台运行设置', style: context.heading(size: 20)),
             const SizedBox(height: 10),
             Text(
               'HyperOS / MIUI 的省电策略可能限制后台计时、定位与音频。'
@@ -913,7 +927,7 @@ class MePage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('退出登录？', style: context.heading(size: 21)),
+            Text('退出登录？', style: context.heading(size: 20)),
             const SizedBox(height: 8),
             Text(
               '退出后仍会保留社区内容',
@@ -970,7 +984,7 @@ class _MeToggleRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: kIsWeb ? 14 : 0,
-        vertical: kIsWeb ? 11 : 8,
+        vertical: kIsWeb ? 12 : 8,
       ),
       child: Row(
         children: [
@@ -980,9 +994,9 @@ class _MeToggleRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: context.body(size: 13.5, color: c.ink)),
+                Text(label, style: context.body(size: 14, color: c.ink)),
                 if (hint.isNotEmpty)
-                  Text(hint, style: context.body(size: 9.5, color: c.inkSoft)),
+                  Text(hint, style: context.body(size: 10, color: c.inkSoft)),
               ],
             ),
           ),
@@ -1009,7 +1023,7 @@ class _ThemeRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: kIsWeb ? 14 : 0,
-        vertical: kIsWeb ? 11 : 8,
+        vertical: kIsWeb ? 12 : 8,
       ),
       child: Row(
         children: [
@@ -1023,10 +1037,10 @@ class _ThemeRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('主题', style: context.body(size: 13.5, color: c.ink)),
+                Text('主题', style: context.body(size: 14, color: c.ink)),
                 Text(
                   '浅色、深色或跟随系统',
-                  style: context.body(size: 9.5, color: c.inkSoft),
+                  style: context.body(size: 10, color: c.inkSoft),
                 ),
               ],
             ),
@@ -1196,7 +1210,7 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
             children: [
               AppIcon(
                 strokeSvg(_icon(mode), width: 2),
-                size: 17,
+                size: 18,
                 color: active ? c.accentInk : c.inkSoft,
               ),
               const SizedBox(width: 10),
@@ -1264,8 +1278,8 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 11.5,
-                      weight: FontWeight.w600,
+                      size: 12,
+                      weight: FontWeight.w700,
                       color: c.ink2,
                     ),
                   ),
@@ -1338,7 +1352,7 @@ class _MeRowState extends State<_MeRow> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: kIsWeb ? 14 : 0,
-                  vertical: kIsWeb ? 11 : 8,
+                  vertical: kIsWeb ? 12 : 8,
                 ),
                 child: Row(
                   children: [
@@ -1353,7 +1367,7 @@ class _MeRowState extends State<_MeRow> {
                         widget.label,
                         style: context.body(
                           size: kIsWeb ? 14.5 : 13.5,
-                          weight: kIsWeb ? FontWeight.w600 : FontWeight.w400,
+                          weight: kIsWeb ? FontWeight.w700 : FontWeight.w400,
                           color: color,
                         ),
                       ),
@@ -1422,14 +1436,14 @@ class _QuickTile extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.body(
-                size: 10.5,
-                weight: FontWeight.w600,
+                size: 11,
+                weight: FontWeight.w700,
                 color: c.ink2,
               ),
             ),

@@ -115,7 +115,7 @@ class LiquidSfx {
           dur: 0.07,
           type: 'sine',
           vol: 0.025 * _master,
-      punchy: true,
+          punchy: true,
         ),
       ),
     );
@@ -182,12 +182,7 @@ class LiquidSfx {
         ),
       ),
     );
-    GameSfx.noiseSweep(
-      dur: 0.35,
-      from: 700,
-      to: 120,
-      vol: 0.03 * _master,
-    );
+    GameSfx.noiseSweep(dur: 0.35, from: 700, to: 120, vol: 0.03 * _master);
     GameSfx.vibrate(GameVibe.medium);
   }
 }

@@ -88,7 +88,7 @@ Future<void> _blockNick(BuildContext context, String nick) async {
           Text(
             '拉黑后，这个昵称的动态、评论与消息会从当前设备隐藏。匿名昵称每次随机，匿名内容建议直接举报。',
             textAlign: TextAlign.center,
-            style: ctx.body(size: 11.5, color: ctx.c.inkSoft, height: 1.6),
+            style: ctx.body(size: 12, color: ctx.c.inkSoft, height: 1.6),
           ),
           const SizedBox(height: 16),
           Row(
@@ -396,7 +396,7 @@ class _CommunityPageState extends State<CommunityPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('删除这条动态？', style: context.heading(size: 21)),
+            Text('删除这条动态？', style: context.heading(size: 20)),
             const SizedBox(height: 6),
             Text(
               '删除后无法恢复',
@@ -835,7 +835,7 @@ class _CommunityPageState extends State<CommunityPage>
               Text(
                 '登录账号即可发帖、点赞和评论；热榜按点赞量实时排行，精彩内容永久留档。',
                 textAlign: TextAlign.center,
-                style: context.body(size: 12.5, color: c.ink2, height: 1.8),
+                style: context.body(size: 13, color: c.ink2, height: 1.8),
               ),
               const SizedBox(height: 18),
               Pressable(
@@ -852,7 +852,7 @@ class _CommunityPageState extends State<CommunityPage>
                     child: Text(
                       '登录 / 注册',
                       style: context.body(
-                        size: 14.5,
+                        size: 14,
                         weight: FontWeight.w700,
                         color: const Color(0xFF2E2C22),
                       ),
@@ -863,7 +863,7 @@ class _CommunityPageState extends State<CommunityPage>
               const SizedBox(height: 24),
               Text(
                 'CITRO · COMMUNITY',
-                style: context.hand(size: 17, color: c.inkSoft),
+                style: context.hand(size: 18, color: c.inkSoft),
               ),
             ],
           ),
@@ -890,7 +890,7 @@ class _CommunityPageState extends State<CommunityPage>
                   cacheWidth: 150,
                   initial: user.name.isEmpty ? '·' : user.name[0],
                   textStyle: context.display(
-                    size: 21,
+                    size: 20,
                     color: const Color(0xFF2E2C22),
                   ),
                   gradient: LinearGradient(
@@ -910,7 +910,7 @@ class _CommunityPageState extends State<CommunityPage>
                       user.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.heading(size: 17, color: c.ink),
+                      style: context.heading(size: 18, color: c.ink),
                     ),
                     const SizedBox(height: 2),
                     FittedBox(
@@ -956,7 +956,7 @@ class _CommunityPageState extends State<CommunityPage>
                     onTap: _openInbox,
                     child: Container(
                       height: 42,
-                      padding: const EdgeInsets.fromLTRB(14, 0, 15, 0),
+                      padding: const EdgeInsets.fromLTRB(14, 0, 16, 0),
                       decoration: BoxDecoration(
                         color: c.dark ? c.mintSoft : const Color(0xFFF5F0DE),
                         borderRadius: BorderRadius.circular(999),
@@ -965,13 +965,17 @@ class _CommunityPageState extends State<CommunityPage>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('📬', style: TextStyle(fontSize: 17)),
+                          AppIcon(
+                            strokeSvg(AppIcons.inbox, width: 2),
+                            size: 18,
+                            color: c.ink2,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '收件箱',
                             style: context.body(
                               size: 12,
-                              weight: FontWeight.w600,
+                              weight: FontWeight.w700,
                               color: c.ink2,
                             ),
                           ),
@@ -989,8 +993,8 @@ class _CommunityPageState extends State<CommunityPage>
                               child: Text(
                                 '$unread',
                                 style: context.body(
-                                  size: 9.5,
-                                  weight: FontWeight.w800,
+                                  size: 10,
+                                  weight: FontWeight.w700,
                                   color: const Color(0xFF2E2C22),
                                 ),
                               ),
@@ -1000,7 +1004,7 @@ class _CommunityPageState extends State<CommunityPage>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _toggleSearch,
                     child: Container(
@@ -1066,7 +1070,7 @@ class _CommunityPageState extends State<CommunityPage>
               focusNode: searchFocus,
               onChanged: (v) => setState(() => search = v),
               onTapOutside: (_) => FocusScope.of(context).unfocus(),
-              style: context.body(size: 12.5),
+              style: context.body(size: 13),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
@@ -1093,10 +1097,7 @@ class _CommunityPageState extends State<CommunityPage>
         children: [
           const Text('🍊', style: TextStyle(fontSize: 36)),
           const SizedBox(height: 8),
-          Text(
-            '还没有动态，来发第一条吧',
-            style: context.body(size: 12.5, color: c.inkSoft),
-          ),
+          Text('还没有动态，来发第一条吧', style: context.body(size: 13, color: c.inkSoft)),
         ],
       ),
     );
@@ -1379,7 +1380,7 @@ class _PostCardState extends State<_PostCard> {
                   cacheWidth: 132,
                   initial: p.nick.isEmpty ? '?' : p.nick[0],
                   textStyle: context.display(
-                    size: 19,
+                    size: 20,
                     weight: FontWeight.w700,
                     color: c.accentInk,
                   ),
@@ -1387,7 +1388,7 @@ class _PostCardState extends State<_PostCard> {
                   border: Border.all(color: c.line2),
                 ),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 10),
               Expanded(
                 child: Row(
                   children: [
@@ -1397,7 +1398,7 @@ class _PostCardState extends State<_PostCard> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.body(
-                          size: 15.5,
+                          size: 15,
                           weight: FontWeight.w700,
                           color: c.ink,
                         ),
@@ -1416,7 +1417,7 @@ class _PostCardState extends State<_PostCard> {
                         ),
                         child: Text(
                           '匿',
-                          style: context.body(size: 8, color: c.accentInk),
+                          style: context.body(size: 9, color: c.accentInk),
                         ),
                       ),
                     ],
@@ -1443,7 +1444,7 @@ class _PostCardState extends State<_PostCard> {
                     padding: const EdgeInsets.all(6),
                     child: AppIcon(
                       strokeSvg(_moreIcon, width: 2),
-                      size: 17,
+                      size: 18,
                       color: c.inkSoft,
                     ),
                   ),
@@ -1451,21 +1452,21 @@ class _PostCardState extends State<_PostCard> {
             ],
           ),
           if (p.text.isNotEmpty) ...[
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
             Text(
               p.text,
-              style: context.body(size: 15.5, color: c.ink, height: 1.75),
+              style: context.body(size: 15, color: c.ink, height: 1.75),
             ),
           ],
           if (p.imgs.isNotEmpty) ...[
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
             _images(context),
           ],
           if (p.voice != null) ...[
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
             VoiceBubble(url: p.voice!, seconds: p.voiceDur),
           ],
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.only(top: 8),
             decoration: BoxDecoration(
@@ -1475,7 +1476,7 @@ class _PostCardState extends State<_PostCard> {
               children: [
                 Text(
                   timeAgo(p.ts),
-                  style: context.body(size: 11.5, color: c.inkSoft),
+                  style: context.body(size: 12, color: c.inkSoft),
                 ),
                 const Spacer(),
                 _action(
@@ -1516,7 +1517,7 @@ class _PostCardState extends State<_PostCard> {
                         padding: const EdgeInsets.only(top: 5),
                         child: Text(
                           '查看全部 ${visibleComments.length} 条评论',
-                          style: context.body(size: 10.5, color: c.accentInk),
+                          style: context.body(size: 11, color: c.accentInk),
                         ),
                       ),
                     ),
@@ -1544,7 +1545,7 @@ class _PostCardState extends State<_PostCard> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.body(
-                                  size: 10.5,
+                                  size: 11,
                                   color: c.accentInk,
                                 ),
                               ),
@@ -1566,8 +1567,8 @@ class _PostCardState extends State<_PostCard> {
                                 child: Text(
                                   '取消回复',
                                   style: context.body(
-                                    size: 10.5,
-                                    weight: FontWeight.w600,
+                                    size: 11,
+                                    weight: FontWeight.w700,
                                     color: c.ink2,
                                   ),
                                 ),
@@ -1600,7 +1601,7 @@ class _PostCardState extends State<_PostCard> {
                             const SizedBox(width: 5),
                             Text(
                               '录音中 ${recordSeconds}s',
-                              style: context.body(size: 10.5, color: c.stamp),
+                              style: context.body(size: 11, color: c.stamp),
                             ),
                             const Spacer(),
                             GestureDetector(
@@ -1621,7 +1622,7 @@ class _PostCardState extends State<_PostCard> {
                                 child: Text(
                                   '结束',
                                   style: context.body(
-                                    size: 10.5,
+                                    size: 11,
                                     weight: FontWeight.w700,
                                     color: c.stamp,
                                   ),
@@ -1670,8 +1671,8 @@ class _PostCardState extends State<_PostCard> {
                                 child: Text(
                                   '清除',
                                   style: context.body(
-                                    size: 10.5,
-                                    weight: FontWeight.w600,
+                                    size: 11,
+                                    weight: FontWeight.w700,
                                     color: c.ink2,
                                   ),
                                 ),
@@ -1698,7 +1699,7 @@ class _PostCardState extends State<_PostCard> {
                               onTapOutside: (_) =>
                                   FocusScope.of(context).unfocus(),
                               textInputAction: TextInputAction.send,
-                              style: context.body(size: 11.5),
+                              style: context.body(size: 12),
                               decoration: InputDecoration(
                                 border: InputBorder.none,
                                 isDense: true,
@@ -1714,13 +1715,13 @@ class _PostCardState extends State<_PostCard> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        _commentAction(c, AppIcons.image, _pickImage, size: 19),
+                        _commentAction(c, AppIcons.image, _pickImage, size: 20),
                         const SizedBox(width: 2),
                         _commentAction(
                           c,
                           AppIcons.mic,
                           _toggleRecord,
-                          size: 19,
+                          size: 20,
                           active: recording,
                         ),
                         const SizedBox(width: 4),
@@ -2012,8 +2013,8 @@ class _PostCardState extends State<_PostCard> {
               child: Text(
                 label,
                 style: context.body(
-                  size: 13.5,
-                  weight: FontWeight.w600,
+                  size: 14,
+                  weight: FontWeight.w700,
                   color: danger ? c.stamp : c.ink,
                 ),
               ),
@@ -2047,54 +2048,66 @@ class _PostCardState extends State<_PostCard> {
               cacheWidth: 90,
               initial: cm.nick.isEmpty ? '?' : cm.nick[0],
               textStyle: context.body(size: 12, color: c.accentInk),
+              asset: cm.bot && Api.imageUrl(cm.av).isEmpty
+                  ? 'assets/images/cici_avatar.webp'
+                  : null,
               color: c.surface2,
               border: Border.all(color: c.line),
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Stack(
                     children: [
-                      Flexible(
-                        child: Text(
-                          cm.nick,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.body(
-                            size: 12,
-                            weight: FontWeight.w700,
-                            color: c.accentInk,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 48),
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                cm.nick,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.body(
+                                  size: 12,
+                                  weight: FontWeight.w700,
+                                  color: c.accentInk,
+                                ),
+                              ),
+                            ),
+                            if (cm.replyTo != null) ...[
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  '回复 @${cm.replyTo}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.body(
+                                    size: 11,
+                                    color: c.inkSoft,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      if (cm.replyTo != null) ...[
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            '回复 @${cm.replyTo}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.body(size: 10.5, color: c.inkSoft),
-                          ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Text(
+                          timeAgo(cm.ts),
+                          style: context.body(size: 11, color: c.inkSoft),
                         ),
-                      ],
-                      const Spacer(),
-                      Text(
-                        timeAgo(cm.ts),
-                        style: context.body(size: 10.5, color: c.inkSoft),
                       ),
                     ],
                   ),
                   if (cm.text.isNotEmpty)
                     Text(
                       cm.text,
-                      style: context.body(
-                        size: 13.5,
-                        color: c.ink2,
-                        height: 1.6,
-                      ),
+                      style: context.body(size: 14, color: c.ink2, height: 1.6),
                     ),
                   if (cm.imgs.isNotEmpty)
                     Padding(
@@ -2211,6 +2224,7 @@ class _CommunityAvatar extends StatelessWidget {
     required this.cacheWidth,
     required this.initial,
     required this.textStyle,
+    this.asset,
     this.color,
     this.gradient,
     this.border,
@@ -2221,6 +2235,9 @@ class _CommunityAvatar extends StatelessWidget {
   final int cacheWidth;
   final String initial;
   final TextStyle textStyle;
+
+  /// 本地图片资源（CiCi 头像）；不为空时优先于网络头像。
+  final String? asset;
   final Color? color;
   final Gradient? gradient;
   final BoxBorder? border;
@@ -2239,7 +2256,17 @@ class _CommunityAvatar extends StatelessWidget {
       foregroundDecoration: border == null
           ? null
           : BoxDecoration(shape: BoxShape.circle, border: border),
-      child: url.isEmpty
+      child: asset != null
+          ? ClipOval(
+              child: Image.asset(
+                asset!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => fallback,
+              ),
+            )
+          : url.isEmpty
           ? fallback
           : ClipOval(
               child: AppImage(
@@ -2329,7 +2356,7 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('删除这条动态？', style: context.heading(size: 21)),
+            Text('删除这条动态？', style: context.heading(size: 20)),
             const SizedBox(height: 6),
             Text(
               '删除后无法恢复',
@@ -2502,7 +2529,7 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                       cacheWidth: 138,
                       initial: widget.nick.isEmpty ? '?' : widget.nick[0],
                       textStyle: context.display(
-                        size: 19,
+                        size: 20,
                         weight: FontWeight.w700,
                         color: c.accentInk,
                       ),
@@ -2518,12 +2545,12 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                             widget.mine ? '我的发布' : '${widget.nick} 的发布',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: context.heading(size: 19),
+                            style: context.heading(size: 20),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${visiblePosts.length} 条动态 · $likes 获赞',
-                            style: context.body(size: 10.5, color: c.inkSoft),
+                            style: context.body(size: 11, color: c.inkSoft),
                           ),
                         ],
                       ),
@@ -2561,7 +2588,7 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                             const SizedBox(height: 8),
                             Text(
                               widget.mine ? '你还没有发布过动态' : 'TA 还没有发布过动态',
-                              style: context.body(size: 12.5, color: c.inkSoft),
+                              style: context.body(size: 13, color: c.inkSoft),
                             ),
                           ],
                         ),
@@ -2657,7 +2684,7 @@ class _InboxSheetState extends State<_InboxSheet> {
               padding: const EdgeInsets.fromLTRB(18, 10, 8, 6),
               child: Row(
                 children: [
-                  Text('📬 收件箱', style: context.heading(size: 18)),
+                  Text('收件箱', style: context.heading(size: 18)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
@@ -2665,7 +2692,7 @@ class _InboxSheetState extends State<_InboxSheet> {
                       padding: const EdgeInsets.all(8),
                       child: AppIcon(
                         strokeSvg(AppIcons.close, width: 2.2),
-                        size: 17,
+                        size: 18,
                         color: c.inkSoft,
                       ),
                     ),
@@ -2697,9 +2724,9 @@ class _InboxSheetState extends State<_InboxSheet> {
                         final n = widget.items[i];
                         final icon = n.type == 'like'
                             ? '♥'
-                            : (n.type == 'reply' ? '↩' : '💬');
+                            : (n.type == 'reply' ? '↩' : '评');
                         return Container(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           color: n.unread ? c.hl.withAlpha(80) : null,
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2722,7 +2749,7 @@ class _InboxSheetState extends State<_InboxSheet> {
                                           TextSpan(
                                             text: n.nick,
                                             style: context.body(
-                                              size: 11.5,
+                                              size: 12,
                                               weight: FontWeight.w700,
                                               color: c.ink,
                                             ),

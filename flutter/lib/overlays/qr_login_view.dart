@@ -172,7 +172,7 @@ class _QrLoginViewState extends State<QrLoginView> {
                         )
                       : AppIcon(
                           strokeSvg(AppIcons.qr, width: 2),
-                          size: 34,
+                          size: 36,
                           color: c.inkSoft,
                         ),
                 )
@@ -193,7 +193,7 @@ class _QrLoginViewState extends State<QrLoginView> {
                   errorStateBuilder: (context, error) => Center(
                     child: Text(
                       '二维码生成失败',
-                      style: context.body(size: 11.5, color: c.stamp),
+                      style: context.body(size: 12, color: c.stamp),
                     ),
                   ),
                 ),
@@ -213,7 +213,7 @@ class _QrLoginViewState extends State<QrLoginView> {
               const SizedBox(width: 5),
               Text(
                 '打开 Citro App →「我的」→「扫一扫」',
-                style: context.body(size: 10.5, color: c.inkSoft),
+                style: context.body(size: 11, color: c.inkSoft),
               ),
             ],
           ),
@@ -221,7 +221,7 @@ class _QrLoginViewState extends State<QrLoginView> {
           const SizedBox(height: 6),
           Text(
             '有效期 $_countdown',
-            style: context.body(size: 10.5, color: c.inkSoft),
+            style: context.body(size: 11, color: c.inkSoft),
           ),
         ],
         if (_status == 'expired' || _status == 'error') ...[
@@ -229,7 +229,7 @@ class _QrLoginViewState extends State<QrLoginView> {
           GestureDetector(
             onTap: _create,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: c.surface2,
                 borderRadius: BorderRadius.circular(999),
@@ -247,8 +247,8 @@ class _QrLoginViewState extends State<QrLoginView> {
                   Text(
                     _status == 'error' ? '重新加载' : '刷新二维码',
                     style: context.body(
-                      size: 11.5,
-                      weight: FontWeight.w600,
+                      size: 12,
+                      weight: FontWeight.w700,
                       color: c.ink2,
                     ),
                   ),
@@ -264,15 +264,15 @@ class _QrLoginViewState extends State<QrLoginView> {
   Widget _statusLine(CitroColors c) {
     final (text, color, weight) = switch (_status) {
       'confirmed' => ('扫码成功，正在登录…', c.accentInk, FontWeight.w700),
-      'expired' => ('二维码已过期', c.stamp, FontWeight.w600),
-      'error' => (_error ?? '加载失败，请重试', c.stamp, FontWeight.w600),
+      'expired' => ('二维码已过期', c.stamp, FontWeight.w700),
+      'error' => (_error ?? '加载失败，请重试', c.stamp, FontWeight.w700),
       'creating' => ('正在生成二维码…', c.inkSoft, FontWeight.w400),
-      _ => ('请用手机扫码登录', c.ink, FontWeight.w600),
+      _ => ('请用手机扫码登录', c.ink, FontWeight.w700),
     };
     return Text(
       text,
       textAlign: TextAlign.center,
-      style: context.body(size: 12.5, weight: weight, color: color),
+      style: context.body(size: 13, weight: weight, color: color),
     );
   }
 }

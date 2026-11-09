@@ -74,7 +74,7 @@ class CheckinCard extends StatelessWidget {
                     done ? '今天已完成 · 连续 $streak 天' : '连续 $streak 天 · 轻轻一点记录今天',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 10.5, color: c.inkSoft),
+                    style: context.body(size: 11, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -97,7 +97,7 @@ class CheckinCard extends StatelessWidget {
             children: [
               AppIcon(
                 strokeSvg(AppIcons.calendar, width: 2),
-                size: 17,
+                size: 18,
                 color: c.accentInk,
               ),
               const SizedBox(width: 5),
@@ -133,7 +133,7 @@ class CheckinCard extends StatelessWidget {
                   '天',
                   style: context.body(
                     size: 11,
-                    weight: FontWeight.w600,
+                    weight: FontWeight.w700,
                     color: c.inkSoft,
                   ),
                 ),
@@ -151,7 +151,7 @@ class CheckinCard extends StatelessWidget {
             done ? '今天已完成，明天继续' : '轻轻一点，记录今天',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: context.body(size: 10.5, color: c.inkSoft),
+            style: context.body(size: 11, color: c.inkSoft),
           ),
         ],
       ),
@@ -200,7 +200,7 @@ class TingyuCard extends StatelessWidget {
                 children: [
                   AppIcon(
                     strokeSvg(AppIcons.wave, width: 2),
-                    size: 17,
+                    size: 18,
                     color: c.accentInk,
                   ),
                   const SizedBox(width: 5),
@@ -245,7 +245,7 @@ class TingyuCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context
-                    .heading(size: 17, color: c.ink, height: 1.2)
+                    .heading(size: 18, color: c.ink, height: 1.2)
                     .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 3),
@@ -299,7 +299,7 @@ class _NookToggleButton extends StatelessWidget {
           ),
           child: Icon(
             playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            size: 19,
+            size: 20,
             color: playing ? const Color(0xFF2E2C34) : c.mintInk,
           ),
         ),
@@ -341,7 +341,7 @@ class _StatePill extends StatelessWidget {
           Text(
             done ? '已完成' : '待打卡',
             style: context.body(
-              size: 9.5,
+              size: 10,
               weight: FontWeight.w700,
               color: fg,
               height: 1,
@@ -466,7 +466,7 @@ class HomeGameCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         '开局',
-                        style: context.body(size: 9.5, color: c.inkSoft),
+                        style: context.body(size: 10, color: c.inkSoft),
                       ),
                     ],
                   ],
@@ -581,7 +581,7 @@ class HomeResCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
+                            horizontal: 10,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
@@ -595,7 +595,7 @@ class HomeResCard extends StatelessWidget {
                               Text(
                                 action,
                                 style: context.body(
-                                  size: 11.5,
+                                  size: 12,
                                   weight: FontWeight.w700,
                                   color: accentInk,
                                   height: 1,

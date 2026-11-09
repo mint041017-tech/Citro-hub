@@ -80,14 +80,25 @@ class _TingyuPageState extends State<TingyuPage> {
                       scrolledUnderElevation: 0,
                       shadowColor: Colors.transparent,
                       centerTitle: false,
-                      leading: IconButton(
-                        tooltip: '返回',
-                        color: theme.colorScheme.onSurface,
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
+                      leadingWidth: 56,
+                      leading: Center(
+                        child: GestureDetector(
+                          onTap: () => _closeTingyu(context),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: theme.dividerColor),
+                            ),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 15,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
                         ),
-                        onPressed: () => _closeTingyu(context),
                       ),
                       titleSpacing: 4,
                       title: Text(
@@ -95,7 +106,7 @@ class _TingyuPageState extends State<TingyuPage> {
                         style: TextStyle(
                           fontFamily: AppFonts.zcool,
                           fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
@@ -109,7 +120,7 @@ class _TingyuPageState extends State<TingyuPage> {
                           onPressed: () => _homeKey.currentState?.openBreathe(),
                           icon: const Icon(
                             Icons.self_improvement_outlined,
-                            size: 21,
+                            size: 20,
                           ),
                         ),
                         Padding(
@@ -240,8 +251,8 @@ class TingyuPomoTicker extends StatelessWidget {
                       onTap: onOpen,
                       child: Padding(
                         padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 10 : 13,
-                          vertical: 7,
+                          horizontal: compact ? 10 : 14,
+                          vertical: 8,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -258,7 +269,7 @@ class TingyuPomoTicker extends StatelessWidget {
                               state.timeText,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: p.accent,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
@@ -336,7 +347,7 @@ class _TingyuPomodoroButtonState extends State<TingyuPomodoroButton> {
                               child: Text(
                                 state.timeText,
                                 style: TextStyle(
-                                  fontSize: 10.5,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   height: 1,
                                   fontFeatures: const [
@@ -415,7 +426,7 @@ class _TingyuTopClockState extends State<TingyuTopClock> {
       height: 1.1,
       color: p.text,
     );
-    final dateStyle = TextStyle(fontSize: 11.5, color: p.muted);
+    final dateStyle = TextStyle(fontSize: 12, color: p.muted);
     final timeWidth = _measureText(context, timeStyle, '88:88:88');
     final dateWidth =
         _measureText(context, dateStyle, '88.88') +
@@ -563,7 +574,7 @@ class NookApp extends StatelessWidget {
           textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -579,7 +590,7 @@ class NookApp extends StatelessWidget {
           textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 15,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ),
@@ -590,7 +601,7 @@ class NookApp extends StatelessWidget {
           textStyle: const TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: 15,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ),
@@ -614,7 +625,7 @@ class NookApp extends StatelessWidget {
         fillColor: p.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
-          vertical: 17,
+          vertical: 18,
         ),
         hintStyle: TextStyle(color: p.muted, fontSize: 15),
         labelStyle: TextStyle(color: p.muted, fontSize: 14),
@@ -735,7 +746,7 @@ class _NookHomeState extends State<NookHome> {
 
   @override
   void dispose() {
-    PomodoroState.instance.audioHook = null;
+    // 保留钩子：离开听隅后，待办页的专注仍能自动播放/暂停混音。
     search.dispose();
     super.dispose();
   }
@@ -836,7 +847,7 @@ class _NookHomeState extends State<NookHome> {
     final choice = await showCitroDialog<String>(
       context,
       builder: (ctx) => AlertDialog(
-        title: const Text('保存这份声音配方？', style: TextStyle(fontSize: 21)),
+        title: const Text('保存这份声音配方？', style: TextStyle(fontSize: 20)),
         content: const Text('当前混音有未保存的调整。保存后，下次就能直接回来。'),
         actions: [
           TextButton(
@@ -998,7 +1009,7 @@ class _NookHomeState extends State<NookHome> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              icon: const Icon(Icons.bookmark_add_outlined, size: 19),
+              icon: const Icon(Icons.bookmark_add_outlined, size: 20),
               label: Text(update ? '更新组合' : '保存组合'),
               onPressed: () {
                 if (name.text.trim().isEmpty) {
@@ -1059,15 +1070,15 @@ class _NookHomeState extends State<NookHome> {
                     child: Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   IconButton(
                     tooltip: '关闭面板',
                     onPressed: () => Navigator.pop(ctx),
-                    icon: const Icon(Icons.close_rounded, size: 21),
+                    icon: const Icon(Icons.close_rounded, size: 20),
                   ),
                 ],
               ),
@@ -1177,7 +1188,7 @@ class _NookHomeState extends State<NookHome> {
             const SizedBox(height: 22),
             const Text(
               '结束前渐弱',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -1308,7 +1319,7 @@ class _NookHomeState extends State<NookHome> {
         backgroundColor: selected ? p.soft : p.surface,
         side: BorderSide(color: selected ? p.accent : p.border),
         foregroundColor: selected ? p.accent : p.text,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
       child: Text(text, style: const TextStyle(fontSize: 15)),
     );
@@ -1550,7 +1561,7 @@ class _NookHomeState extends State<NookHome> {
                                                   fontFamily: AppFonts.noto,
                                                   fontSize: 12,
                                                   fontWeight: page == i
-                                                      ? FontWeight.w600
+                                                      ? FontWeight.w700
                                                       : FontWeight.w400,
                                                   color: page == i
                                                       ? p.accent
@@ -1588,20 +1599,6 @@ class _NookHomeState extends State<NookHome> {
       padding: EdgeInsets.fromLTRB(desktop ? 34 : 20, 14, desktop ? 34 : 20, 0),
       child: Row(
         children: [
-          IconButton(
-            tooltip: '返回',
-            onPressed: () => _closeTingyu(context),
-            style: IconButton.styleFrom(
-              backgroundColor: p.surface,
-              foregroundColor: p.text,
-              side: BorderSide(color: p.border),
-              minimumSize: const Size(38, 38),
-              padding: EdgeInsets.zero,
-              shape: const CircleBorder(),
-            ),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 17),
-          ),
-          const SizedBox(width: 6),
           if (!desktop) brand(context, compact: true),
           const Spacer(),
           TingyuPomoTicker(onOpen: () => openPage(1)),
@@ -1662,7 +1659,7 @@ class _NookHomeState extends State<NookHome> {
                 style: TextStyle(
                   fontFamily: AppFonts.zcool,
                   fontSize: compact ? 22 : 25,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 3,
                   color: p.text,
                 ),
@@ -1694,10 +1691,28 @@ class _NookHomeState extends State<NookHome> {
         color: p.surface,
         border: Border(right: BorderSide(color: p.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(22, 33, 18, 24),
+      padding: const EdgeInsets.fromLTRB(22, 34, 18, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          GestureDetector(
+            onTap: () => _closeTingyu(context),
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: p.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: p.border),
+              ),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 15,
+                color: p.text,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           brand(context),
           const SizedBox(height: 54),
           for (var i = 0; i < nav.length; i++) ...[
@@ -1728,7 +1743,7 @@ class _NookHomeState extends State<NookHome> {
                             Icon(
                               navIcons[i],
                               color: page == i ? p.accent : p.muted,
-                              size: 21,
+                              size: 20,
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -1737,7 +1752,7 @@ class _NookHomeState extends State<NookHome> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: page == i
-                                      ? FontWeight.w600
+                                      ? FontWeight.w700
                                       : FontWeight.w400,
                                   color: page == i ? p.accent : p.muted,
                                 ),
@@ -1755,7 +1770,7 @@ class _NookHomeState extends State<NookHome> {
                                     pomo.timeText,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       color: p.accent,
                                       fontFeatures: const [
                                         FontFeature.tabularFigures(),
@@ -1775,26 +1790,6 @@ class _NookHomeState extends State<NookHome> {
           ],
           const Spacer(),
           pomoSideCard(context),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.eco_outlined, color: p.muted, size: 29),
-                const SizedBox(height: 12),
-                Text(
-                  '此刻，不必着急。',
-                  style: TextStyle(fontSize: 14, color: p.muted, height: 1.8),
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  p.dark ? '夜色正好' : '日光正好',
-                  style: TextStyle(fontSize: 12, color: p.muted),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -1813,11 +1808,11 @@ class _NookHomeState extends State<NookHome> {
           hoverColor: p.accent.withValues(alpha: .06),
           onTap: breathe,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
               children: [
-                Icon(Icons.self_improvement_outlined, color: p.muted, size: 21),
-                const SizedBox(width: 15),
+                Icon(Icons.self_improvement_outlined, color: p.muted, size: 20),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     '呼吸',
@@ -1837,7 +1832,7 @@ class _NookHomeState extends State<NookHome> {
                     '1 分钟',
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: p.accent,
                     ),
                   ),
@@ -1887,7 +1882,7 @@ class _NookHomeState extends State<NookHome> {
                               state.running
                                   ? Icons.timer_rounded
                                   : Icons.timer_outlined,
-                              size: 19,
+                              size: 20,
                               color: p.accent,
                             ),
                             const SizedBox(width: 10),
@@ -1906,8 +1901,8 @@ class _NookHomeState extends State<NookHome> {
                                   Text(
                                     state.timeText,
                                     style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
                                       color: p.accent,
                                       fontFeatures: const [
                                         FontFeature.tabularFigures(),
@@ -1955,7 +1950,7 @@ class _NookHomeState extends State<NookHome> {
                     fontFamily: AppFonts.zcool,
                     fontSize: 26,
                     height: 1.25,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: .2,
                   ),
                 ),
@@ -2046,7 +2041,7 @@ class _NookHomeState extends State<NookHome> {
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 7,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: p.soft,
@@ -2061,7 +2056,7 @@ class _NookHomeState extends State<NookHome> {
                       '今日 ${state.todayMinutes} 分钟',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: p.accent,
                       ),
                     ),
@@ -2133,7 +2128,7 @@ class _NookHomeState extends State<NookHome> {
                       '节奏',
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -2151,7 +2146,7 @@ class _NookHomeState extends State<NookHome> {
               IconButton(
                 tooltip: '调节时长与间隔',
                 onPressed: () => _openDurationSettings(context),
-                icon: const Icon(Icons.tune_rounded, size: 21),
+                icon: const Icon(Icons.tune_rounded, size: 20),
               ),
             ],
           ),
@@ -2221,7 +2216,7 @@ class _NookHomeState extends State<NookHome> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.volume_down_outlined, size: 19, color: p.muted),
+                Icon(Icons.volume_down_outlined, size: 20, color: p.muted),
                 Expanded(
                   child: Slider(
                     value: state.chimeVolume.toDouble(),
@@ -2288,10 +2283,10 @@ class _NookHomeState extends State<NookHome> {
       type: MaterialType.transparency,
       child: SwitchListTile.adaptive(
         contentPadding: EdgeInsets.zero,
-        secondary: Icon(icon, size: 21, color: p.muted),
+        secondary: Icon(icon, size: 20, color: p.muted),
         title: Text(
           title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400),
         ),
         subtitle: Text(
           subtitle,
@@ -2323,7 +2318,7 @@ class _NookHomeState extends State<NookHome> {
             '最近 7 天',
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: p.muted,
             ),
           ),
@@ -2349,7 +2344,7 @@ class _NookHomeState extends State<NookHome> {
         alignment: Alignment.centerRight,
         child: TextButton.icon(
           onPressed: state.sessions.isEmpty ? null : state.clearHistory,
-          icon: const Icon(Icons.delete_sweep_outlined, size: 17),
+          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
           label: const Text('清空记录'),
           style: TextButton.styleFrom(foregroundColor: p.muted),
         ),
@@ -2365,7 +2360,7 @@ class _NookHomeState extends State<NookHome> {
           value,
           style: TextStyle(
             fontSize: 26,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: p.text,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
@@ -2421,7 +2416,7 @@ class _NookHomeState extends State<NookHome> {
                   style: TextStyle(
                     fontSize: 10,
                     color: i == 6 ? p.accent : p.muted,
-                    fontWeight: i == 6 ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: i == 6 ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),
               ],
@@ -2468,7 +2463,7 @@ class _NookHomeState extends State<NookHome> {
                                       '时长与间隔',
                                       style: TextStyle(
                                         fontSize: 20,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -2568,7 +2563,7 @@ class _NookHomeState extends State<NookHome> {
                 children: [
                   const Text(
                     '长休息间隔',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -2598,7 +2593,7 @@ class _NookHomeState extends State<NookHome> {
                     '${state.longEvery}',
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
@@ -2632,7 +2627,7 @@ class _NookHomeState extends State<NookHome> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -2762,7 +2757,7 @@ class _NookHomeState extends State<NookHome> {
                       style: const TextStyle(
                         fontFamily: AppFonts.zcool,
                         fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         height: 1.3,
                       ),
                     ),
@@ -2788,7 +2783,7 @@ class _NookHomeState extends State<NookHome> {
                               size: 15,
                               color: p.muted,
                             ),
-                            const SizedBox(width: 7),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 timerCaption!,
@@ -2815,7 +2810,7 @@ class _NookHomeState extends State<NookHome> {
               const Expanded(
                 child: Text(
                   '当前声音',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
               Text(
@@ -2835,13 +2830,13 @@ class _NookHomeState extends State<NookHome> {
             child: mixContents(context, embedded: true),
           ),
         ],
-        const SizedBox(height: 31),
+        const SizedBox(height: 32),
         Row(
           children: [
             const Expanded(
               child: Text(
                 '为此刻，选一套声音',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
             TextButton(
@@ -2857,7 +2852,7 @@ class _NookHomeState extends State<NookHome> {
             ),
           ],
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 14),
         LayoutBuilder(
           builder: (ctx, box) {
             final scale = MediaQuery.textScalerOf(ctx).scale(16) / 16;
@@ -2880,7 +2875,7 @@ class _NookHomeState extends State<NookHome> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.info_outline_rounded, size: 15, color: p.muted),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 kIsWeb
@@ -2899,10 +2894,10 @@ class _NookHomeState extends State<NookHome> {
     final timer = timerAction(context);
     final save = OutlinedButton.icon(
       onPressed: saveMix,
-      icon: const Icon(Icons.bookmark_border_rounded, size: 19),
+      icon: const Icon(Icons.bookmark_border_rounded, size: 20),
       label: const Text('保存'),
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
       ),
     );
     final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
@@ -2941,7 +2936,7 @@ class _NookHomeState extends State<NookHome> {
     final active = c.hasTimer || c.timerStatus == 'expired';
     return OutlinedButton.icon(
       onPressed: timerSheet,
-      icon: const Icon(Icons.timer_outlined, size: 19),
+      icon: const Icon(Icons.timer_outlined, size: 20),
       label: Text(
         c.hasTimer
             ? clockText(c.remaining)
@@ -2950,7 +2945,7 @@ class _NookHomeState extends State<NookHome> {
             : '定时',
         style: TextStyle(
           fontSize: active ? 17 : 15,
-          fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
@@ -2979,7 +2974,7 @@ class _NookHomeState extends State<NookHome> {
             children: [
               Row(
                 children: [
-                  Icon(scene.icon, color: p.accent, size: 25),
+                  Icon(scene.icon, color: p.accent, size: 24),
                   const Spacer(),
                   Text(
                     '${scene.minutes} 分钟',
@@ -2994,7 +2989,7 @@ class _NookHomeState extends State<NookHome> {
                     scene.title,
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -3084,7 +3079,7 @@ class _NookHomeState extends State<NookHome> {
               const Expanded(
                 child: Text(
                   '当前混音',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
               playButton(context, size: 48),
@@ -3108,7 +3103,7 @@ class _NookHomeState extends State<NookHome> {
                   style: TextStyle(
                     color: p.accent,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
             ],
@@ -3128,7 +3123,7 @@ class _NookHomeState extends State<NookHome> {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: openLibrary,
-            icon: const Icon(Icons.add_rounded, size: 19),
+            icon: const Icon(Icons.add_rounded, size: 20),
             label: const Text('添加声音'),
           ),
         ),
@@ -3137,8 +3132,8 @@ class _NookHomeState extends State<NookHome> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Icon(Icons.volume_down_outlined, size: 21, color: p.muted),
-            const SizedBox(width: 9),
+            Icon(Icons.volume_down_outlined, size: 20, color: p.muted),
+            const SizedBox(width: 10),
             const Text('总音量', style: TextStyle(fontSize: 15)),
             const Spacer(),
             Text(
@@ -3162,7 +3157,7 @@ class _NookHomeState extends State<NookHome> {
           ),
         ),
         if (!embedded) ...[
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
           Material(
             color: p.soft,
             borderRadius: BorderRadius.circular(13),
@@ -3172,11 +3167,11 @@ class _NookHomeState extends State<NookHome> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 13,
+                  vertical: 14,
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.timer_outlined, size: 19, color: p.accent),
+                    Icon(Icons.timer_outlined, size: 20, color: p.accent),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -3186,7 +3181,7 @@ class _NookHomeState extends State<NookHome> {
                             c.hasTimer ? clockText(c.remaining) : '定时关闭',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: p.accent,
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),
@@ -3211,7 +3206,7 @@ class _NookHomeState extends State<NookHome> {
               ),
             ),
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -3261,7 +3256,7 @@ class _NookHomeState extends State<NookHome> {
                   color: p.subtle,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(sound.icon, size: 21, color: tint),
+                child: Icon(sound.icon, size: 20, color: tint),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3269,7 +3264,7 @@ class _NookHomeState extends State<NookHome> {
                   sound.name,
                   style: const TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w400,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -3286,7 +3281,7 @@ class _NookHomeState extends State<NookHome> {
                   '${value.round()}%',
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w400,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -3294,7 +3289,7 @@ class _NookHomeState extends State<NookHome> {
               IconButton(
                 tooltip: '移除${sound.name}',
                 onPressed: () => act('remove', {'id': sound.id}),
-                icon: const Icon(Icons.close_rounded, size: 17),
+                icon: const Icon(Icons.close_rounded, size: 18),
                 style: IconButton.styleFrom(
                   minimumSize: const Size(48, 48),
                   padding: EdgeInsets.zero,
@@ -3349,7 +3344,7 @@ class _NookHomeState extends State<NookHome> {
                 '$current%',
                 style: TextStyle(
                   fontSize: 32,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w400,
                   color: p.accent,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
@@ -3423,7 +3418,7 @@ class _NookHomeState extends State<NookHome> {
             side: BorderSide(color: p.border),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(15, 0, 8, 0),
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
             child: Row(
               children: [
                 Expanded(
@@ -3435,7 +3430,7 @@ class _NookHomeState extends State<NookHome> {
                       child: Row(
                         children: [
                           Icon(Icons.spa_outlined, size: 24, color: p.accent),
-                          const SizedBox(width: 11),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -3447,7 +3442,7 @@ class _NookHomeState extends State<NookHome> {
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -3477,7 +3472,7 @@ class _NookHomeState extends State<NookHome> {
                       clockText(c.remaining),
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: p.accent,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
@@ -3534,7 +3529,7 @@ class _NookHomeState extends State<NookHome> {
           ),
           onChanged: (v) => setState(() => query = v.trim()),
         ),
-        const SizedBox(height: 19),
+        const SizedBox(height: 20),
         SizedBox(
           height: barHeight,
           child: Stack(
@@ -3556,7 +3551,7 @@ class _NookHomeState extends State<NookHome> {
                           labelStyle: TextStyle(
                             color: category == v ? p.accent : p.muted,
                             fontWeight: category == v
-                                ? FontWeight.w600
+                                ? FontWeight.w700
                                 : FontWeight.w400,
                           ),
                           side: BorderSide(
@@ -3564,8 +3559,8 @@ class _NookHomeState extends State<NookHome> {
                           ),
                           shape: const StadiumBorder(),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 13,
-                            vertical: 9,
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                           onSelected: (_) => setState(() => category = v),
                         ),
@@ -3605,10 +3600,10 @@ class _NookHomeState extends State<NookHome> {
                   c.supportsImport ? '把自己的声音，收进来。' : '内置声音，随时可用。',
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 10),
                 Text(
                   c.supportsImport
                       ? '音频只保存在${kIsWeb ? "此浏览器" : "此设备"}，不会上传。支持常见音频格式，单个文件不超过 50 MB，时长 5 秒到 10 分钟。'
@@ -3719,7 +3714,7 @@ class _NookHomeState extends State<NookHome> {
                   ),
                   const Spacer(),
                   if (selected)
-                    Icon(Icons.check_circle_rounded, size: 19, color: p.accent),
+                    Icon(Icons.check_circle_rounded, size: 20, color: p.accent),
                 ],
               ),
               const SizedBox(height: 14),
@@ -3727,7 +3722,7 @@ class _NookHomeState extends State<NookHome> {
                 sound.name,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -3835,7 +3830,7 @@ class _NookHomeState extends State<NookHome> {
                   color: p.subtle,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(sound.icon, size: 38, color: tint),
+                child: Icon(sound.icon, size: 40, color: tint),
               ),
               const SizedBox(width: 18),
               Expanded(
@@ -3846,7 +3841,7 @@ class _NookHomeState extends State<NookHome> {
                       sound.name,
                       style: const TextStyle(
                         fontSize: 24,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -3879,7 +3874,7 @@ class _NookHomeState extends State<NookHome> {
                   }),
                   icon: Icon(
                     previewing ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                    size: 19,
+                    size: 20,
                   ),
                   label: Text(previewing ? '停止试听' : '单独试听'),
                 ),
@@ -3897,7 +3892,7 @@ class _NookHomeState extends State<NookHome> {
                   },
                   icon: Icon(
                     selected ? Icons.check_rounded : Icons.add_rounded,
-                    size: 19,
+                    size: 20,
                   ),
                   label: Text(selected ? '已加入' : '加入混音'),
                 ),
@@ -3942,12 +3937,12 @@ class _NookHomeState extends State<NookHome> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(color: p.soft, shape: BoxShape.circle),
-              child: Icon(icon, size: 34, color: p.accent),
+              child: Icon(icon, size: 36, color: p.accent),
             ),
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Text(
@@ -4114,7 +4109,7 @@ class _NookHomeState extends State<NookHome> {
                                   f['name'] as String,
                                   style: const TextStyle(
                                     fontSize: 18,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -4217,7 +4212,7 @@ class _NookHomeState extends State<NookHome> {
                         alignment: Alignment.centerRight,
                         child: FilledButton.icon(
                           onPressed: unavailable ? null : () => loadFavorite(f),
-                          icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                          icon: const Icon(Icons.play_arrow_rounded, size: 20),
                           label: Text(unavailable ? '声音不可用' : '加载并播放'),
                         ),
                       ),
@@ -4240,7 +4235,7 @@ class _NookHomeState extends State<NookHome> {
       context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('重命名', style: TextStyle(fontSize: 21)),
+          title: const Text('重命名', style: TextStyle(fontSize: 20)),
           content: TextField(
             controller: input,
             autofocus: true,
@@ -4288,7 +4283,7 @@ class _NookHomeState extends State<NookHome> {
         settingSection(context, '播放', [
           const Text(
             '默认渐弱',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
@@ -4339,7 +4334,7 @@ class _NookHomeState extends State<NookHome> {
               if (c.supportsImport)
                 TextButton.icon(
                   onPressed: c.busy ? null : importAudio,
-                  icon: const Icon(Icons.file_upload_outlined, size: 17),
+                  icon: const Icon(Icons.file_upload_outlined, size: 18),
                   label: const Text('导入'),
                 ),
             ],
@@ -4406,7 +4401,7 @@ class _NookHomeState extends State<NookHome> {
                 children: [
                   const Text(
                     '听隅',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -4475,7 +4470,7 @@ class _NookHomeState extends State<NookHome> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 18),
           ...children,
@@ -4494,7 +4489,7 @@ class _NookHomeState extends State<NookHome> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 21, color: p.accent),
+        Icon(icon, size: 20, color: p.accent),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -4504,7 +4499,7 @@ class _NookHomeState extends State<NookHome> {
                 title,
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
@@ -4755,7 +4750,7 @@ class _BreathingPageState extends State<BreathingPage>
                                     '呼吸',
                                     style: TextStyle(
                                       fontSize: 22,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       letterSpacing: 1,
                                       color: p.text,
                                     ),
@@ -4795,7 +4790,7 @@ class _BreathingPageState extends State<BreathingPage>
                                     '$minutes 分钟',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       color: p.accent,
                                     ),
                                   ),
@@ -4911,13 +4906,13 @@ class _BreathingPageState extends State<BreathingPage>
                                                       style: TextStyle(
                                                         fontSize: 28,
                                                         fontWeight:
-                                                            FontWeight.w500,
+                                                            FontWeight.w400,
                                                         letterSpacing: 4,
                                                         color: accent,
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(height: 9),
+                                                  const SizedBox(height: 10),
                                                   Text(
                                                     done
                                                         ? '舒服就好'
@@ -4925,7 +4920,7 @@ class _BreathingPageState extends State<BreathingPage>
                                                         ? remainText
                                                         : '$phaseSecondsLeft 秒',
                                                     style: TextStyle(
-                                                      fontSize: 17,
+                                                      fontSize: 18,
                                                       color: p.muted,
                                                       letterSpacing: 1,
                                                       fontFeatures: const [
@@ -5041,7 +5036,7 @@ class _BreathingPageState extends State<BreathingPage>
                                     '留一点时间',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       color: p.text,
                                     ),
                                   ),
@@ -5108,7 +5103,7 @@ class _BreathingPageState extends State<BreathingPage>
                                               : running
                                               ? Icons.pause_rounded
                                               : Icons.play_arrow_rounded,
-                                          size: 21,
+                                          size: 20,
                                         ),
                                         label: Text(
                                           done
@@ -5120,7 +5115,7 @@ class _BreathingPageState extends State<BreathingPage>
                                               : '继续引导',
                                           style: const TextStyle(
                                             fontSize: 16,
-                                            fontWeight: FontWeight.w600,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
@@ -5225,7 +5220,7 @@ class _BreathGlassButton extends StatelessWidget {
             child: SizedBox(
               width: 48,
               height: 48,
-              child: Icon(icon, size: 21, color: color),
+              child: Icon(icon, size: 20, color: color),
             ),
           ),
         ),
@@ -5279,7 +5274,7 @@ class _BreathDurationButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                   color: selected ? color : textColor,
                 ),
               ),

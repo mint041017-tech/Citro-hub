@@ -190,6 +190,7 @@ void main() {
     // 清空右上角，给拖动留出明确的目标格。
     for (final id in [
       HomeCardId.tingyu,
+      HomeCardId.ledger,
       HomeCardId.fish,
       HomeCardId.quote,
       HomeCardId.cook,

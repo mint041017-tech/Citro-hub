@@ -191,7 +191,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             _versionCard(c),
             const SizedBox(height: 14),
             _sectionLabel(c, '更新内容'),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 168),
               child: SingleChildScrollView(
@@ -213,7 +213,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   if (info.size > 0) _sizeText(info.size),
                   if (info.publishedAt != null) info.publishedAt!,
                 ].join(' · '),
-                style: context.body(size: 10.5, color: c.inkSoft),
+                style: context.body(size: 11, color: c.inkSoft),
               ),
             ],
             const SizedBox(height: 18),
@@ -243,7 +243,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             ),
           ),
         ),
-        const SizedBox(width: 11),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +252,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               const SizedBox(height: 2),
               Text(
                 'Citro v${widget.info.version}',
-                style: context.body(size: 11.5, color: c.inkSoft),
+                style: context.body(size: 12, color: c.inkSoft),
               ),
             ],
           ),
@@ -281,7 +281,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         children: [
           Text(
             current.isEmpty ? '当前版本' : '当前 v$current',
-            style: context.body(size: 11.5, color: c.inkSoft),
+            style: context.body(size: 12, color: c.inkSoft),
           ),
           const Spacer(),
           Container(
@@ -300,8 +300,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           Text(
             '最新 v${widget.info.version}',
             style: context.body(
-              size: 12.5,
-              weight: FontWeight.w800,
+              size: 13,
+              weight: FontWeight.w700,
               color: c.accentInk,
             ),
           ),
@@ -323,7 +323,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           text,
           style: context.body(
             size: 11,
-            weight: FontWeight.w800,
+            weight: FontWeight.w700,
             color: c.accentInk,
             letterSpacing: 1,
           ),
@@ -341,13 +341,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           Container(
             width: 4,
             height: 4,
-            margin: const EdgeInsets.only(top: 7, right: 8),
+            margin: const EdgeInsets.only(top: 8, right: 8),
             decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
           ),
           Expanded(
             child: Text(
               text,
-              style: context.body(size: 12.5, color: c.ink2, height: 1.55),
+              style: context.body(size: 13, color: c.ink2, height: 1.55),
             ),
           ),
         ],
@@ -394,7 +394,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         if (widget.info.force) ...[
           Text(
             '此版本包含重要更新，完成更新后才能继续使用。',
-            style: context.body(size: 11.5, color: c.stamp, height: 1.5),
+            style: context.body(size: 12, color: c.stamp, height: 1.5),
           ),
           const SizedBox(height: 10),
         ],
@@ -453,7 +453,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             else if (_received > 0)
               _sizeText(_received),
           ].join(' · '),
-          style: context.body(size: 11.5, color: c.inkSoft),
+          style: context.body(size: 12, color: c.inkSoft),
         ),
         const SizedBox(height: 12),
         AccentButton(
@@ -472,7 +472,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       children: [
         Text(
           'Android 需要先允许 Citro 安装应用。授权后回到这里继续安装。',
-          style: context.body(size: 11.5, color: c.ink2, height: 1.55),
+          style: context.body(size: 12, color: c.ink2, height: 1.55),
         ),
         const SizedBox(height: 12),
         AccentButton(text: '去系统设置', onTap: _openSettings),
@@ -650,7 +650,7 @@ class _CheckingDialog extends StatelessWidget {
             Expanded(
               child: Text(
                 '正在检查更新…',
-                style: context.body(size: 13.5, color: c.ink),
+                style: context.body(size: 14, color: c.ink),
               ),
             ),
           ],

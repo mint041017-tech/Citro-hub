@@ -510,7 +510,7 @@ class GameBrakeView extends StatelessWidget {
     return Container(
       width: width,
       height: 54.25,
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: _surface2,
         borderRadius: BorderRadius.circular(12),
@@ -662,7 +662,7 @@ class GameBrakeView extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
-                        colors: [Color(0xFFD2482F), Color(0xFFF2A43C), _mint],
+                        colors: [Color(0xFFD2482F), Color(0xFF7A9BBE), _mint],
                         stops: [0, 0.46, 1],
                       ),
                       boxShadow: const [
@@ -933,7 +933,7 @@ class GameBrakeView extends StatelessWidget {
     final base = const TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 12.5,
+      fontSize: 13,
       height: 1.6,
       letterSpacing: 0,
       color: _ink2,
@@ -941,7 +941,7 @@ class GameBrakeView extends StatelessWidget {
     const bold = TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 12.5,
+      fontSize: 13,
       height: 1.6,
       letterSpacing: 0,
       fontWeight: FontWeight.w700,
@@ -950,7 +950,7 @@ class GameBrakeView extends StatelessWidget {
     const boldBad = TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 12.5,
+      fontSize: 13,
       height: 1.6,
       letterSpacing: 0,
       fontWeight: FontWeight.w700,
@@ -980,7 +980,7 @@ class GameBrakeView extends StatelessWidget {
     ];
     return Container(
       height: 160,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _surface2,
         borderRadius: BorderRadius.circular(10),
@@ -1051,7 +1051,7 @@ class GameBrakeView extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: [
                       Color(0x00F2A43C),
-                      Color(0xFFF2A43C),
+                      Color(0xFF7A9BBE),
                       Color(0x00F2A43C),
                     ],
                   ),
@@ -1117,7 +1117,7 @@ class GameBrakeView extends StatelessWidget {
 
   Widget _toast(String text, {bool alert = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: alert ? const Color(0xD9C81E14) : const Color(0xD91B1712),
         borderRadius: BorderRadius.circular(999),
@@ -1274,7 +1274,7 @@ class GameBrakeView extends StatelessWidget {
             style: const TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 14.5,
+              fontSize: 14,
               height: 1.65,
               letterSpacing: 0,
               fontWeight: FontWeight.w700,
@@ -1388,7 +1388,7 @@ class GameBrakeView extends StatelessWidget {
 const TextStyle _legendStyle = TextStyle(
   fontFamily: AppFonts.noto,
   fontFamilyFallback: AppFonts.bodyFallback,
-  fontSize: 9.5,
+  fontSize: 10,
   height: 1.2,
   letterSpacing: 0,
   color: Color(0xFF76715E),

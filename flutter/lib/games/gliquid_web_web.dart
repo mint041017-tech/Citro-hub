@@ -10,12 +10,7 @@ import '../state/app_state.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
-    show
-        GameActionButton,
-        GameIcons,
-        GameScaffold,
-        GameScorePill,
-        showGameRank;
+    show GameActionButton, GameIcons, GameScaffold, GameScorePill, showGameRank;
 
 /// Web 端用 iframe 装载同一份 liquid2048 资源；桌面 / iPad 与 Web 统一标准骨架。
 class GameLiquidPage extends StatefulWidget {
@@ -179,10 +174,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       onBack: () => Navigator.maybePop(context),
       pills: [
         GameScorePill(label: '分数', value: '$_score'),
-        GameScorePill(
-          label: '最高分',
-          value: '${math.max(_best, _score)}',
-        ),
+        GameScorePill(label: '最高分', value: '${math.max(_best, _score)}'),
         GameScorePill(
           label: '接下来',
           value: _next.isEmpty ? '—' : _next.join('·'),
@@ -198,8 +190,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         GameActionButton(
           label: '排行榜',
           icon: GameIcons.trophy,
-          onTap: () =>
-              showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+          onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
         ),
       ],
       boardGap: 12,

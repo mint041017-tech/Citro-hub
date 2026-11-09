@@ -141,7 +141,7 @@ class _CoinDialogState extends State<_CoinDialog>
           Text(
             '抛硬币',
             textAlign: TextAlign.center,
-            style: context.heading(size: 25, color: c.ink),
+            style: context.heading(size: 24, color: c.ink),
           ),
           const SizedBox(height: 4),
           AnimatedSwitcher(
@@ -305,7 +305,7 @@ class _CoinDialogState extends State<_CoinDialog>
               ),
               child: front
                   ? Padding(
-                      padding: const EdgeInsets.all(19),
+                      padding: const EdgeInsets.all(20),
                       child: Image.asset(
                         'assets/images/logo.webp',
                         fit: BoxFit.contain,

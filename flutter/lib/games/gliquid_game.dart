@@ -338,10 +338,8 @@ class LiquidGhost {
 }
 
 class LiquidGame {
-  LiquidGame({
-    required this.layout,
-    math.Random? random,
-  }) : rnd = random ?? math.Random() {
+  LiquidGame({required this.layout, math.Random? random})
+    : rnd = random ?? math.Random() {
     _createWorld();
     reset();
   }

@@ -134,6 +134,39 @@ class Api {
     Map<String, Object?> layout,
   ) => post('/api/home/layout', {'layout': layout});
 
+  /// 待办数据按账号同步（任务、清单、分类、复盘、心情）。
+  /// 语音转写：上传录音，由服务端调用 GLM-ASR 返回文字。
+  static Future<String> transcribe(String base64Audio) async {
+    final data = await _request(
+      'POST',
+      '/api/asr',
+      body: {'audio': base64Audio},
+      timeout: const Duration(seconds: 45),
+    );
+    if (data is Map && data['text'] is String) {
+      return (data['text'] as String).trim();
+    }
+    return '';
+  }
+
+  static Future<Map<String, dynamic>> todoGet() => get('/api/todo');
+
+  static Future<Map<String, dynamic>> todoSave(Map<String, Object?> todo) =>
+      post('/api/todo', {'todo': todo});
+
+  /// 日历倒数日 / 纪念日与待办同构：整包读写，服务端用 at 返回最后更新时间。
+  static Future<Map<String, dynamic>> calendarGet() => get('/api/calendar');
+
+  static Future<Map<String, dynamic>> calendarSave(
+    Map<String, Object?> calendar,
+  ) => post('/api/calendar', {'calendar': calendar});
+
+  /// 记账数据与待办同构：整包读写，服务端用 at 返回最后更新时间。
+  static Future<Map<String, dynamic>> ledgerGet() => get('/api/ledger');
+
+  static Future<Map<String, dynamic>> ledgerSave(Map<String, Object?> ledger) =>
+      post('/api/ledger', {'ledger': ledger});
+
   static Future<Map<String, dynamic>> login(String account, String password) =>
       post('/api/auth/login', {
         'account': account,

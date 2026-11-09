@@ -82,10 +82,7 @@ class Chime {
         await player.setAudioContext(_mixContext);
       }
       await player.stop();
-      await player.play(
-        AssetSource('tingyu/audio/$name.wav'),
-        volume: volume,
-      );
+      await player.play(AssetSource('tingyu/audio/$name.wav'), volume: volume);
       Timer(Duration(milliseconds: maxMs), () {
         unawaited(player.stop());
       });

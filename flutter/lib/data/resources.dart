@@ -119,8 +119,7 @@ const List<ToolItem> kTools = [
     name: "视野live",
     desc: "实时视野 · 在线直播",
     section: "游戏工具",
-    icon:
-        "<path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+    icon: "<path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
     hash: null,
     url: "https://shijiao.xingpaste.com/",
     warn: null,
@@ -130,8 +129,7 @@ const List<ToolItem> kTools = [
     name: "MsLab",
     desc: "毫秒实验室 · 无畏契约灵敏度调试",
     section: "游戏工具",
-    icon:
-        "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v4l2.5 1.5\"/><path d=\"M12 1v3M12 20v3M1 12h3M20 12h3\"/>",
+    icon: "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v4l2.5 1.5\"/><path d=\"M12 1v3M12 20v3M1 12h3M20 12h3\"/>",
     hash: null,
     url: "https://mslab.gg/",
     warn: null,
@@ -144,7 +142,7 @@ const List<ToolItem> kTools = [
     icon: "<circle cx=\"12\" cy=\"12\" r=\"9\"/><line x1=\"21\" y1=\"12\" x2=\"17\" y2=\"12\"/><line x1=\"7\" y1=\"12\" x2=\"3\" y2=\"12\"/><line x1=\"12\" y1=\"7\" x2=\"12\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"17\"/>",
     hash: null,
     url: "https://ishoutu.cn/aim",
-    warn: "打瓦的时候不要挂在后台！！！",
+    warn: "打瓦时不要挂在后台",
     versions: [],
   ),
   ToolItem(

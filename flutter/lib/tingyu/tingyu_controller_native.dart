@@ -123,8 +123,7 @@ class NookController extends ChangeNotifier {
     _ => '定时关闭',
   };
 
-  bool get dirty =>
-      ready && _baseline.isNotEmpty && signature != _baseline;
+  bool get dirty => ready && _baseline.isNotEmpty && signature != _baseline;
 
   String get signature => jsonEncode({'tracks': tracks, 'master': master});
 
@@ -438,9 +437,7 @@ class NookController extends ChangeNotifier {
       }
       _playing = true;
       if (_timerStatus == 'armed') {
-        _timerDeadline = DateTime.now().add(
-          Duration(seconds: _timerDuration),
-        );
+        _timerDeadline = DateTime.now().add(Duration(seconds: _timerDuration));
         _timerStatus = 'running';
         _ensureTicker();
       }
@@ -499,7 +496,10 @@ class NookController extends ChangeNotifier {
     if (contains(id)) return;
     if (_tracks.length >= 6) throw StateError('最多同时播放 6 种声音。');
     final volume = ((payload['volume'] as num?)?.toInt() ?? 45).clamp(0, 100);
-    _tracks = [..._tracks, {'id': id, 'volume': volume}];
+    _tracks = [
+      ..._tracks,
+      {'id': id, 'volume': volume},
+    ];
     if (_playing) {
       await _preparePlayer(id);
       final player = _player(id);
@@ -813,8 +813,7 @@ class NookController extends ChangeNotifier {
     return true;
   }
 
-  Future<void> _saveFavorites() =>
-      _write('favorites', jsonEncode(favorites));
+  Future<void> _saveFavorites() => _write('favorites', jsonEncode(favorites));
 
   @override
   void dispose() {

@@ -284,7 +284,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     '待使用',
                     style: context.body(
                       size: 9,
-                      weight: FontWeight.w800,
+                      weight: FontWeight.w700,
                       color: const Color(0xFF2E2C22),
                     ),
                   ),
@@ -299,7 +299,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                 : ready
                 ? '好事已经分享给 CiCi，这一签可以重新抽。'
                 : '跟 CiCi 说说今天做的一件好事，就能换一签。',
-            style: context.body(size: 10.5, color: c.inkSoft, height: 1.45),
+            style: context.body(size: 11, color: c.inkSoft, height: 1.45),
           ),
           const SizedBox(height: 8),
           Pressable(
@@ -521,7 +521,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                     Positioned.fill(
                                       child: IgnorePointer(
                                         child: Padding(
-                                          padding: const EdgeInsets.all(9),
+                                          padding: const EdgeInsets.all(10),
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               borderRadius:
@@ -558,7 +558,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                   shape: BoxShape.circle,
                                                 ),
                                               ),
-                                              const SizedBox(width: 7),
+                                              const SizedBox(width: 8),
                                               Text(
                                                 festId != null
                                                     ? '${festivalName(festId)}特别签'
@@ -569,18 +569,18 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                   letterSpacing: .8,
                                                 ),
                                               ),
-                                              const SizedBox(width: 9),
+                                              const SizedBox(width: 10),
                                               Expanded(
                                                 child: Container(
                                                   height: 1,
                                                   color: c.accent.withAlpha(58),
                                                 ),
                                               ),
-                                              const SizedBox(width: 9),
+                                              const SizedBox(width: 10),
                                               Text(
                                                 'DAILY DRAW',
                                                 style: context.body(
-                                                  size: 7.5,
+                                                  size: 9,
                                                   weight: FontWeight.w700,
                                                   color: c.inkSoft,
                                                   letterSpacing: 1.7,
@@ -619,7 +619,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                         Padding(
                                                           padding:
                                                               const EdgeInsets.only(
-                                                                bottom: 7,
+                                                                bottom: 8,
                                                               ),
                                                           child: Column(
                                                             crossAxisAlignment:
@@ -632,7 +632,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                               Text(
                                                                 '${today.year} / ${today.month.toString().padLeft(2, '0')}',
                                                                 style: context.body(
-                                                                  size: 10.5,
+                                                                  size: 11,
                                                                   color:
                                                                       c.inkSoft,
                                                                   letterSpacing:
@@ -658,7 +658,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                         ),
                                                       ],
                                                     ),
-                                                    const SizedBox(height: 9),
+                                                    const SizedBox(height: 10),
                                                     Wrap(
                                                       spacing: 6,
                                                       runSpacing: 5,
@@ -697,9 +697,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                 padding:
                                                     const EdgeInsets.fromLTRB(
                                                       14,
-                                                      15,
+                                                      16,
                                                       14,
-                                                      15,
+                                                      16,
                                                     ),
                                                 decoration: BoxDecoration(
                                                   color: c.surface.withAlpha(
@@ -763,7 +763,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                               .ellipsis,
                                                                       style: context.display(
                                                                         size:
-                                                                            23,
+                                                                            24,
                                                                         weight:
                                                                             FontWeight.w700,
                                                                         color: c
@@ -780,7 +780,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                         horizontal:
                                                                             12,
                                                                         vertical:
-                                                                            9,
+                                                                            10,
                                                                       ),
                                                                       decoration: BoxDecoration(
                                                                         color: c.accent.withAlpha(
@@ -808,8 +808,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                               line,
                                                                               textAlign: TextAlign.center,
                                                                               style: context.display(
-                                                                                size: 13.5,
-                                                                                weight: FontWeight.w600,
+                                                                                size: 14,
+                                                                                weight: FontWeight.w700,
                                                                                 color: c.ink,
                                                                                 height: 1.75,
                                                                               ),
@@ -871,7 +871,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                             textAlign: TextAlign
                                                                 .center,
                                                             style: context.body(
-                                                              size: 12.5,
+                                                              size: 13,
                                                               color: c.ink2,
                                                               height: 1.65,
                                                             ),
@@ -916,9 +916,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                           const SizedBox(height: 12),
                                           Container(
                                             padding: const EdgeInsets.fromLTRB(
-                                              11,
+                                              12,
                                               8,
-                                              11,
+                                              12,
                                               8,
                                             ),
                                             decoration: BoxDecoration(
@@ -951,7 +951,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: context.body(
-                                                      size: 10.5,
+                                                      size: 11,
                                                       color: c.inkSoft,
                                                     ),
                                                   ),
@@ -967,7 +967,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                         TextOverflow.ellipsis,
                                                     textAlign: TextAlign.right,
                                                     style: context.body(
-                                                      size: 9.5,
+                                                      size: 10,
                                                       color: c.inkSoft
                                                           .withAlpha(170),
                                                       letterSpacing: .2,
@@ -1161,7 +1161,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 8.5,
+                      fontSize: 9,
                       letterSpacing: 2,
                       color: Color(0xCCFFF6E4),
                     ),
@@ -1205,7 +1205,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
         ? c.mintLine
         : (c.dark ? const Color(0x33E0796A) : const Color(0xFFF0D2C8));
     return Container(
-      padding: const EdgeInsets.fromLTRB(9, 9, 9, 10),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
@@ -1230,12 +1230,12 @@ class _FortuneDialogState extends State<_FortuneDialog>
               mark,
               style: context.body(
                 size: 10,
-                weight: FontWeight.w800,
+                weight: FontWeight.w700,
                 color: tone,
               ),
             ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
@@ -1288,7 +1288,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
           ),
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.all(9),
+              padding: const EdgeInsets.all(10),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(17),
@@ -1301,7 +1301,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
             left: 14,
             top: 13,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: const Color(0x59000000),
                 borderRadius: BorderRadius.circular(99),
@@ -1310,8 +1310,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
               child: Text(
                 '轻点翻开',
                 style: context.body(
-                  size: 10.5,
-                  weight: FontWeight.w600,
+                  size: 11,
+                  weight: FontWeight.w700,
                   color: const Color(0xE6FFF6E4),
                   letterSpacing: 1.4,
                   height: 1,
@@ -1324,7 +1324,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
               right: 14,
               bottom: 13,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0x73000000),
                   borderRadius: BorderRadius.circular(99),
@@ -1333,8 +1336,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
                 child: Text(
                   '${card.categoryName} · ${card.label}',
                   style: context.body(
-                    size: 9.5,
-                    weight: FontWeight.w600,
+                    size: 10,
+                    weight: FontWeight.w700,
                     color: const Color(0xD9FFF6E4),
                     letterSpacing: .8,
                     height: 1,
@@ -1375,7 +1378,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: border),
       ),
-      child: Text(text, style: context.body(size: 10.5, color: fg)),
+      child: Text(text, style: context.body(size: 11, color: fg)),
     );
   }
 

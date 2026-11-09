@@ -12,7 +12,7 @@ import 'game_common.dart';
 import 'game_ui.dart';
 
 /// 结算卡数字高亮色（与淘气小球 _floatInk 同款金棕）。
-const Color _slideFloatInk = Color(0xFF8A5A12);
+const Color _slideFloatInk = Color(0xFF35506E);
 
 class GameSlidePage extends StatefulWidget {
   const GameSlidePage({super.key});

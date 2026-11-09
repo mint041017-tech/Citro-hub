@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`2.0.15+2015` · 更新日期：2026-11-05
+> 当前版本：`2.1.0+2100` · 更新日期：2026-11-09
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `2.0.15+2015` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `2.1.0+2100` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 2.0.15 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 2015 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 2.1.0 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 2100 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=2.0.15`、`FLUTTER_BUILD_NUMBER=2015`。
+`FLUTTER_BUILD_NAME=2.1.0`、`FLUTTER_BUILD_NUMBER=2100`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -88,7 +88,7 @@ bash ios/build_ipa.sh
 ```bash
 flutter build ipa --release \
   --export-method app-store \
-  --dart-define=APP_VERSION=2.0.15
+  --dart-define=APP_VERSION=2.1.0
 ```
 
 产物：`flutter/build/ios/ipa/*.ipa`。
@@ -96,17 +96,17 @@ flutter build ipa --release \
 ## 4. 产物归档与上传
 
 ```bash
-cp build/ios/ipa/*.ipa "../IPA/Citro-v2.0.15-unsigned.ipa"
-shasum -a 256 "../IPA/Citro-v2.0.15-unsigned.ipa"
+cp build/ios/ipa/*.ipa "../IPA/Citro-v2.1.0-unsigned.ipa"
+shasum -a 256 "../IPA/Citro-v2.1.0-unsigned.ipa"
 
-curl -X PUT -T "IPA/Citro-v2.0.15-unsigned.ipa" \
+curl -X PUT -T "IPA/Citro-v2.1.0-unsigned.ipa" \
   -H "Content-Type: application/octet-stream" \
-  "https://obs.chimu-claw.xyz/IPA/Citro-v2.0.15-unsigned.ipa"
+  "https://obs.chimu-claw.xyz/IPA/Citro-v2.1.0-unsigned.ipa"
 ```
 
 ## 5. 发版前验证
 
-1. `CFBundleShortVersionString` 为 `2.0.15`，`CFBundleVersion` 为 `2015`。
+1. `CFBundleShortVersionString` 为 `2.1.0`，`CFBundleVersion` 为 `2100`。
 2. 真机走查：
    - 我的页快捷区不再出现「编辑资料」，点击顶部头像仍可编辑资料；
    - 主题胶囊更短，下拉菜单选项完整显示；
@@ -147,3 +147,5 @@ curl -X PUT -T "IPA/Citro-v2.0.15-unsigned.ipa" \
 | 2.0.13 | 我的页回弹；登录注册页重设计；手机号 / 邮箱注册与登录；移除邀请码限制（后端同步）。 |
 | 2.0.14 | Web / Windows / iPad 扫码登录；手机端扫一扫；登录子标签居中；主题下拉重设计；后台运行设置行对齐；引入 `qr_flutter` / `mobile_scanner`。 |
 | 2.0.15 | 我的页移除「编辑资料」快捷卡片；主题胶囊缩短；Windows 左下角头像改用 `AppImage` 修复显示。 |
+| 2.0.16–2.0.40 | 新增记账 / 待办 / 日历详情 / 倒数日与纪念日 / 首页卡片编排与迷你卡；评论时间右上角；CiCi 自定义性格；后台轮询门控与低内存清理；CORS、限流、WebView 外链与备份安全加固。 |
+| 2.1.0 | 版本号与 iOS 构建配置同步到 `2.1.0+2100`；日历/待办/记账卡与评论时间定稿；性能与安全修复合并；四端重新打包，IPA 待 macOS 生成。 |

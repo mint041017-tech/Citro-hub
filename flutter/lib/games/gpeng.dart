@@ -46,9 +46,9 @@ const Color _wallColor = Color(0xAD4A3A22); // rgba(74,58,34,.68)
 const Color _gapDotColor = Color(0xF2C45E16); // rgba(196,94,22,.95)
 const Color _dangerRgb = Color(0xFFC62E24); // rgba(198,46,36,x)
 const Color _dangerInk = Color(0xFFB5392B);
-const Color _floatInk = Color(0xFF8A5A12);
+const Color _floatInk = Color(0xFF35506E);
 const Color _timebarBg = Color(0xFFE4DCC9); // var(--line)
-const Color _timebarFill = Color(0xFFF2A43C); // var(--accent)
+const Color _timebarFill = Color(0xFF7A9BBE); // var(--accent)
 
 const double _cardRadius = 14;
 
@@ -1268,12 +1268,12 @@ class GamePengView extends StatelessWidget {
                 width: 62,
                 child: GameScorePill(label: '分数', value: '$score'),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 10),
               SizedBox(
                 width: 63.047,
                 child: GameScorePill(label: '最高分', value: '$best'),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 10),
               SizedBox(
                 width: 62,
                 child: GameScorePill(label: '时间', value: '$time'),
@@ -1340,11 +1340,11 @@ class _PengHint extends StatelessWidget {
               width: 6,
               height: 6,
               decoration: const BoxDecoration(
-                color: Color(0xFFF2A43C),
+                color: Color(0xFF7A9BBE),
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 '按住拖动 · 旋转边框守球',
@@ -1354,7 +1354,7 @@ class _PengHint extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: AppFonts.noto,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   height: 1.65,
                   letterSpacing: 0.6,
                   color: c.ink2,

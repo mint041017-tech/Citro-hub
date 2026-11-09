@@ -1,4 +1,4 @@
-# Citro 部署上传清单
+﻿# Citro 部署上传清单
 
 > 站点根目录示例：`/path/to/site/`（下文以宝塔默认站点根为例）。把下面文件按原目录结构覆盖即可。
 
@@ -49,6 +49,7 @@
 | 变量 / 字段 | 用途 | 不配置时 |
 | --- | --- | --- |
 | `SHOWAPI_KEY` | 万维易源 appKey（星座运势接口） | 运势接口不可用，其余功能正常 |
+| `GLM_API_KEY` | 智谱 GLM API Key（CiCi 对话、社区主动评论等 AI 功能） | AI 功能不可用 |
 
 两种配置方式任选：
 
@@ -60,6 +61,16 @@ pm2 start trash/trash.js --name trash --env SHOWAPI_KEY=xxx
 # 方式二：本地配置文件（复制模板后填写）
 cp trash/config.local.example.json trash/config.local.json
 ```
+
+### 3.2 CiCi 社区主动评论
+
+- `trash.js` 启动后会**立即扫描一次**当天社区动态；之后**只有有人新发动态才扫描**。
+- 有人回复 CiCi 的评论或明确 `@CiCi` 时，CiCi 会继续回复，形成连续对话；单帖最多 6 条。
+- CiCi 提到自己时只使用「CiCi」，不使用「我」「姐姐」「本 AI」等其它自称。
+- 每次最多评论 4 条，每帖最多 1 条，全站每天最多 24 条；只处理当天带文字的动态，纯图片/语音动态暂不判断。
+- 首次启动会自动创建 CiCi 的独立社区账号（写入 `users.json`），并自动写入头像 `data/avatars/cici.jpg`，无需手动上传。
+- CiCi 账号只发表评论，不允许登录；注册和改名也不能使用 `CiCi` 昵称。
+- 需要配置 `GLM_API_KEY`；未配置时只跳过 CiCi 评论，其他功能正常。
 
 ### ⚠️ 数据目录不要覆盖
 
@@ -80,3 +91,4 @@ cp trash/config.local.example.json trash/config.local.json
 - `trash/data/`
 - 服务器上的 Nginx/Apache 反代配置（线上 vhost 与 `/trashapi` 反代的同步副本在 `docs/nginx/`）
 - `trash/config.local.json`（含密钥，单独保管）
+

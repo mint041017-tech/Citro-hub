@@ -307,6 +307,13 @@ class AppState extends ChangeNotifier {
     _postSeeded = false;
     _lastPostTs = null;
     unawaited(_seedCommunityPosts());
+    _armNotifyTimer();
+  }
+
+  /// 60 秒一次的前台轮询；退到后台时由 [setForeground] 取消，
+  /// 避免整夜拿着定时器反复唤醒进程。
+  void _armNotifyTimer() {
+    _notifyTimer?.cancel();
     _notifyTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (!_foreground) return;
       _refreshUnread();
@@ -380,10 +387,14 @@ class AppState extends ChangeNotifier {
   void setForeground(bool value) {
     if (_foreground == value) return;
     _foreground = value;
-    if (!value) return;
+    if (!value) {
+      _notifyTimer?.cancel();
+      return;
+    }
     if (loggedIn) {
       unawaited(_refreshUnread());
       unawaited(_refreshCommunityPosts());
+      _armNotifyTimer();
     }
   }
 

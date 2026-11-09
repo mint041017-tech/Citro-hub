@@ -108,8 +108,8 @@ class _ResPageState extends State<ResPage> {
                                 Text(
                                   widget.embedded ? '首页' : '返回',
                                   style: context.body(
-                                    size: 11.5,
-                                    weight: FontWeight.w600,
+                                    size: 12,
+                                    weight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -117,11 +117,11 @@ class _ResPageState extends State<ResPage> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text('资源库', style: context.heading(size: 27)),
+                        Text('资源库', style: context.heading(size: 28)),
                         const Spacer(),
                         Text(
                           '全部资源',
-                          style: context.body(size: 10.5, color: c.inkSoft),
+                          style: context.body(size: 11, color: c.inkSoft),
                         ),
                       ],
                     ),
@@ -152,7 +152,7 @@ class _ResPageState extends State<ResPage> {
                             const SizedBox(width: 14),
                             AppIcon(
                               strokeSvg(AppIcons.search, width: 2),
-                              size: 17,
+                              size: 18,
                               color: c.accentInk,
                             ),
                             const SizedBox(width: 8),
@@ -216,11 +216,11 @@ class _ResPageState extends State<ResPage> {
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Column(
                           children: [
-                            Text('没有找到本地资源', style: context.heading(size: 17)),
+                            Text('没有找到本地资源', style: context.heading(size: 18)),
                             const SizedBox(height: 5),
                             Text(
                               '按回车去必应搜索「${query.trim()}」',
-                              style: context.body(size: 11.5, color: c.inkSoft),
+                              style: context.body(size: 12, color: c.inkSoft),
                             ),
                           ],
                         ),
@@ -355,7 +355,7 @@ class _ResPageState extends State<ResPage> {
                               child: Center(
                                 child: AppIcon(
                                   strokeSvg(AppIcons.monitor, width: 2),
-                                  size: 19,
+                                  size: 20,
                                   color: c.accentInk,
                                 ),
                               ),
@@ -409,7 +409,7 @@ class _ResPageState extends State<ResPage> {
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.paper(c),
         ),
-        padding: const EdgeInsets.fromLTRB(7, 7, 7, 9),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -442,8 +442,8 @@ class _ResPageState extends State<ResPage> {
                         child: Text(
                           m.tag,
                           style: context.body(
-                            size: 9.5,
-                            weight: FontWeight.w600,
+                            size: 10,
+                            weight: FontWeight.w700,
                             color: c.accentInk,
                           ),
                         ),
@@ -470,25 +470,18 @@ class _ResPageState extends State<ResPage> {
                     m.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: 17),
+                    style: context.heading(size: 18),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 3),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
                 color: c.hl.withAlpha(120),
                 border: Border.all(color: c.accentInk.withAlpha(75)),
                 borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: c.accent.withAlpha(18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -503,7 +496,7 @@ class _ResPageState extends State<ResPage> {
                     child: Text(
                       '网盘下载',
                       style: context.body(
-                        size: 10.5,
+                        size: 11,
                         weight: FontWeight.w700,
                         color: c.accentInk,
                       ),
@@ -549,7 +542,7 @@ class _ResPageState extends State<ResPage> {
       hoverColor: c.hl.withAlpha(c.dark ? 22 : 60),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 6, 9),
+        padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: c.line2.withAlpha(120))),
         ),
@@ -566,7 +559,7 @@ class _ResPageState extends State<ResPage> {
               child: Center(
                 child: AppIcon(
                   strokeSvg(tool.icon, width: 2),
-                  size: 17,
+                  size: 18,
                   color: c.accentInk,
                 ),
               ),
@@ -643,7 +636,7 @@ class _ResPageState extends State<ResPage> {
       hoverColor: c.hl.withAlpha(c.dark ? 18 : 48),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: c.line2.withAlpha(100))),
         ),
@@ -657,19 +650,19 @@ class _ResPageState extends State<ResPage> {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 d.name,
                 style: context.body(
                   size: 14,
-                  weight: FontWeight.w600,
+                  weight: FontWeight.w700,
                   color: c.ink,
                 ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: c.hl,
                 borderRadius: BorderRadius.circular(999),
@@ -677,7 +670,7 @@ class _ResPageState extends State<ResPage> {
               child: Text(
                 d.client ? '客户端' : '网页',
                 style: context.body(
-                  size: 10.5,
+                  size: 11,
                   weight: FontWeight.w700,
                   color: c.accentInk,
                 ),
@@ -758,7 +751,7 @@ class _ResPageState extends State<ResPage> {
                         Text(
                           v.name,
                           style: context.body(
-                            size: 12.5,
+                            size: 13,
                             weight: FontWeight.w700,
                             color: ctx.c.ink,
                           ),
@@ -766,7 +759,7 @@ class _ResPageState extends State<ResPage> {
                         const SizedBox(height: 2),
                         Text(
                           v.desc,
-                          style: context.body(size: 10.5, color: ctx.c.inkSoft),
+                          style: context.body(size: 11, color: ctx.c.inkSoft),
                         ),
                       ],
                     ),

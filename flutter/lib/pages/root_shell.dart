@@ -14,6 +14,10 @@ import '../services/web_route.dart';
 import '../state/app_state.dart';
 import '../theme/breakpoints.dart';
 import '../theme/motion.dart';
+import '../todo/todo_store.dart';
+import '../ledger/ledger_store.dart';
+import '../calendar/calendar_store.dart';
+import '../widgets/home_layout.dart';
 import '../widgets/tab_bar.dart';
 import '../games/gbrake_web.dart';
 import '../widgets/tablet_shell.dart';
@@ -44,6 +48,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   final List<Timer> _warmTimers = <Timer>[];
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
+  bool _wasLoggedIn = false;
 
   /// Windows 多一个「资源」槽位，其余端（手机 / Web）是四格：
   /// 首页、游戏、社区、我的。「我的」始终在最后一个。
@@ -60,12 +65,22 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 已挂载的页面不会因为父级 setState 而整棵 rebuild。
     _pages = List<Widget>.generate(5, _pageAt);
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
+    _wasLoggedIn = AppState.instance.loggedIn;
+    AppState.instance.addListener(_onAuthChanged);
     _tabAnim = AnimationController(
       vsync: this,
       duration: CitroMotion.tab,
       value: 1,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _requestPermissions());
+    // 首页的待办卡、心情卡要在还没进待办页时就能显示数据，所以这里先初始化一次。
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(TodoStore.instance.ensureInit()),
+    );
+    // 首页记账卡要在没进记账页时就能显示本月数据。
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(LedgerStore.instance.ensureInit()),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _warmAssets());
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => PerfProbe.homeReady(switchTo),
@@ -140,9 +155,25 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _warmTimers.clear();
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
+    AppState.instance.removeListener(_onAuthChanged);
     _tabAnim.dispose();
     if (instance == this) instance = null;
     super.dispose();
+  }
+
+  void _onAuthChanged() {
+    final loggedIn = AppState.instance.loggedIn;
+    if (loggedIn && !_wasLoggedIn) {
+      // 登录完成后立即对齐云端：首页布局与待办数据。
+      unawaited(HomeLayoutStore.instance.syncFromAccount(force: true));
+      unawaited(TodoStore.instance.syncFromAccount(force: true));
+      unawaited(LedgerStore.instance.syncFromAccount(force: true));
+      unawaited(CalendarStore.instance.syncFromAccount(force: true));
+    } else if (!loggedIn && _wasLoggedIn) {
+      // 登出 / 会话失效：账本属于账号数据，本机副本一并清掉。
+      unawaited(LedgerStore.instance.clearLocal());
+    }
+    _wasLoggedIn = loggedIn;
   }
 
   void _onCardPrompt() {

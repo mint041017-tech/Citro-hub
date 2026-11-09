@@ -144,7 +144,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       const SizedBox(height: 2),
                       Text(
                         '已收集 $unlocked / $total · 抽到才会点亮',
-                        style: context.body(size: 10.5, color: c.inkSoft),
+                        style: context.body(size: 11, color: c.inkSoft),
                       ),
                     ],
                   ),
@@ -172,8 +172,8 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                           Text(
                             '抽卡 ${state.cardCredits}',
                             style: context.body(
-                              size: 11.5,
-                              weight: FontWeight.w800,
+                              size: 12,
+                              weight: FontWeight.w700,
                               color: const Color(0xFF2E2C22),
                             ),
                           ),
@@ -209,7 +209,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 8),
                   Text(
                     category.name,
                     style: context.display(
@@ -385,8 +385,8 @@ class _CardTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: context.body(
-              size: 9.5,
-              weight: unlocked ? FontWeight.w600 : FontWeight.w400,
+              size: 10,
+              weight: unlocked ? FontWeight.w700 : FontWeight.w400,
               color: unlocked ? c.ink2 : c.inkSoft,
             ),
           ),
@@ -484,7 +484,7 @@ class _CardZoom extends StatelessWidget {
                 child: Center(
                   child: AppIcon(
                     strokeSvg(AppIcons.close, width: 2),
-                    size: 17,
+                    size: 18,
                     color: Colors.white.withAlpha(230),
                   ),
                 ),
@@ -498,7 +498,7 @@ class _CardZoom extends StatelessWidget {
               '${card.categoryName} · ${card.label}',
               style: context.body(
                 size: 11,
-                weight: FontWeight.w600,
+                weight: FontWeight.w700,
                 color: Colors.white.withAlpha(190),
                 letterSpacing: 1.2,
               ),
@@ -532,9 +532,9 @@ class CardCollectionEntry extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.fromLTRB(
           16,
-          compact ? 13 : 16,
+          compact ? 14 : 16,
           12,
-          compact ? 13 : 16,
+          compact ? 14 : 16,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -565,7 +565,7 @@ class CardCollectionEntry extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 11),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,10 +585,10 @@ class CardCollectionEntry extends StatelessWidget {
                         ),
                       ),
                       if (state.cardCredits > 0) ...[
-                        const SizedBox(width: 7),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
+                            horizontal: 8,
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
@@ -599,8 +599,8 @@ class CardCollectionEntry extends StatelessWidget {
                             '可抽 ${state.cardCredits}',
                             maxLines: 1,
                             style: context.body(
-                              size: 8.5,
-                              weight: FontWeight.w800,
+                              size: 9,
+                              weight: FontWeight.w700,
                               color: const Color(0xFF2E2C22),
                             ),
                           ),

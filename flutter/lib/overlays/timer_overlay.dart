@@ -105,7 +105,7 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                   child: Container(
                     height: 44,
                     constraints: const BoxConstraints(maxWidth: 238),
-                    padding: const EdgeInsets.symmetric(horizontal: 13),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: BorderRadius.circular(999),
@@ -125,7 +125,7 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                               '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
                               width: 2.2,
                             ),
-                            size: 17,
+                            size: 18,
                             color: c.accentLt,
                           ),
                           const SizedBox(width: 6),
@@ -137,13 +137,13 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                               color: c.accentLt,
                             ),
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 8),
                           Container(
                             width: 1,
                             height: 16,
                             color: fg.withAlpha(55),
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               current.label,

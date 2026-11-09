@@ -123,8 +123,8 @@ class _GamePageShellState extends State<GamePageShell> {
                         onTap: () => Navigator.of(context).maybePop(),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 7,
+                            horizontal: 10,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: c.surface2,
@@ -143,8 +143,8 @@ class _GamePageShellState extends State<GamePageShell> {
                               Text(
                                 '返回',
                                 style: context.body(
-                                  size: 11.5,
-                                  weight: FontWeight.w600,
+                                  size: 12,
+                                  weight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -218,7 +218,7 @@ class _GamePageShellState extends State<GamePageShell> {
                             const SizedBox(width: 4),
                             Text(
                               state.loggedIn ? state.displayName : '游客',
-                              style: context.body(size: 10.5, color: c.ink2),
+                              style: context.body(size: 11, color: c.ink2),
                             ),
                           ],
                         ),
@@ -244,7 +244,7 @@ class _GamePageShellState extends State<GamePageShell> {
                         widget.subtitle,
                         textAlign: TextAlign.center,
                         style: context.body(
-                          size: 12.5,
+                          size: 13,
                           color: c.inkSoft,
                           height: 1.6,
                         ),
@@ -263,7 +263,7 @@ class _GamePageShellState extends State<GamePageShell> {
                       Text(
                         widget.note,
                         style: context.body(
-                          size: 10.5,
+                          size: 11,
                           color: c.inkSoft,
                           height: 1.65,
                         ),
@@ -356,7 +356,7 @@ class GamePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -366,7 +366,7 @@ class GamePill extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: context.body(size: 9.5, color: c.inkSoft)),
+          Text(label, style: context.body(size: 10, color: c.inkSoft)),
           const SizedBox(height: 1),
           Text(
             value,
@@ -407,7 +407,7 @@ class GameButton extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: small ? 10 : 12,
-          vertical: small ? 7 : 9,
+          vertical: small ? 8 : 10,
         ),
         decoration: BoxDecoration(
           color: primary ? c.accent : c.surface2,
@@ -451,7 +451,7 @@ class LivePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -493,7 +493,7 @@ class LivePanel extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 10.5,
+                        size: 11,
                         color: (raw['you'] == true) ? c.accentInk : c.inkSoft,
                       ),
                     ),
@@ -593,7 +593,7 @@ class GameDiffTabs extends StatelessWidget {
                 d.$2,
                 style: context.body(
                   size: 12,
-                  weight: FontWeight.w600,
+                  weight: FontWeight.w700,
                   color: selected == d.$1 ? c.accentInk : c.inkSoft,
                 ),
               ),
@@ -672,7 +672,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
         setState(() => boardTab = key);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: on ? c.hl : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
@@ -681,8 +681,8 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
         child: Text(
           label,
           style: context.body(
-            size: 12.5,
-            weight: FontWeight.w600,
+            size: 13,
+            weight: FontWeight.w700,
             color: on ? c.accentInk : c.inkSoft,
           ),
         ),
@@ -757,7 +757,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                   Expanded(
                     child: Text(
                       '${widget.title} · 全站排行',
-                      style: context.heading(size: 17),
+                      style: context.heading(size: 18),
                     ),
                   ),
                   GestureDetector(
@@ -780,7 +780,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                 child: Row(
                   children: [
                     _aiTab('player', '玩家榜'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _aiTab('ai', 'AI 榜'),
                   ],
                 ),
@@ -900,8 +900,8 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: context.body(
-                                    size: 12.5,
-                                    weight: FontWeight.w600,
+                                    size: 13,
+                                    weight: FontWeight.w700,
                                     color: c.ink,
                                   ),
                                 ),
@@ -909,7 +909,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                               Text(
                                 '${r.score}',
                                 style: context.display(
-                                  size: 17,
+                                  size: 18,
                                   weight: FontWeight.w700,
                                   color: c.accentInk,
                                 ),
@@ -930,7 +930,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                 child: Text(
                   '我的排名：第 ${me!['rank'] ?? '—'} 名 · ${me!['score'] ?? 0} 分',
                   textAlign: TextAlign.center,
-                  style: context.body(size: 11.5, color: c.accentInk),
+                  style: context.body(size: 12, color: c.accentInk),
                 ),
               ),
           ],
@@ -1062,7 +1062,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
             children: [
               AppIcon(
                 strokeSvg(AppIcons.trophy, width: 2),
-                size: 17,
+                size: 18,
                 color: c.accentInk,
               ),
               const SizedBox(width: 6),
@@ -1077,13 +1077,13 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                   widget.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 10.5, color: c.inkSoft),
+                  style: context.body(size: 11, color: c.inkSoft),
                 ),
               ),
             ],
           ),
         if (widget.difficulties.isNotEmpty) ...[
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -1113,7 +1113,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                     child: Text(
                       item.$2,
                       style: context.body(
-                        size: 11.5,
+                        size: 12,
                         weight: FontWeight.w700,
                         color: diff == item.$1
                             ? const Color(0xFF2E2C22)
@@ -1126,7 +1126,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
           ),
         ],
         if (widget.aiSplit) ...[
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Row(
             children: [
               for (final item in const [('player', '玩家榜'), ('ai', 'AI 榜')])
@@ -1152,7 +1152,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                       child: Text(
                         item.$2,
                         style: context.body(
-                          size: 11.5,
+                          size: 12,
                           weight: FontWeight.w700,
                           color: boardTab == item.$1 ? c.accentInk : c.inkSoft,
                         ),
@@ -1193,7 +1193,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
         if (me != null) ...[
           const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: c.hl,
               borderRadius: BorderRadius.circular(9),
@@ -1203,7 +1203,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
               '我的排名：第 ${me!['rank'] ?? '—'} 名 · ${me!['score'] ?? 0} 分',
               textAlign: TextAlign.center,
               style: context.body(
-                size: 10.5,
+                size: 11,
                 weight: FontWeight.w700,
                 color: c.accentInk,
               ),
@@ -1218,7 +1218,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
     final c = context.c;
     return Container(
       margin: const EdgeInsets.only(bottom: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: row.you ? c.hl.withAlpha(120) : Colors.transparent,
         borderRadius: BorderRadius.circular(9),
@@ -1255,15 +1255,15 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                     ),
                   ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               row.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.body(
-                size: 11.5,
-                weight: FontWeight.w600,
+                size: 12,
+                weight: FontWeight.w700,
                 color: c.ink,
               ),
             ),

@@ -53,6 +53,9 @@ class PostComment {
   final int voiceDur;
   final List<String> imgs;
   final bool mine;
+
+  /// 是否为 CiCi 的社区评论（用于显示本地头像与「知心」标记）。
+  final bool bot;
   final int ts;
 
   const PostComment({
@@ -66,6 +69,7 @@ class PostComment {
     this.voiceDur = 0,
     this.imgs = const [],
     this.mine = false,
+    this.bot = false,
     required this.ts,
   });
 
@@ -80,6 +84,7 @@ class PostComment {
     voiceDur: _asInt(j['voiceDur']),
     imgs: _asStringList(j['imgs']),
     mine: j['mine'] == true,
+    bot: j['bot'] == true,
     ts: _asInt(j['ts']),
   );
 }

@@ -56,9 +56,7 @@ class ProgressStore {
           stars[n] = s.clamp(1, 3);
         }
       }
-      final maxCompleted = completed.isEmpty
-          ? 0
-          : completed.reduce(math.max);
+      final maxCompleted = completed.isEmpty ? 0 : completed.reduce(math.max);
       final highest = math.max(
         math.max(unlocked, last),
         math.min(totalLevels, maxCompleted + 1),
@@ -152,10 +150,9 @@ class ProgressStore {
       await p.setInt(_kUnlocked, _highestUnlocked);
       await p.setInt(_kLastPlayed, _lastPlayed);
       final completed = _completed.toList()..sort();
-      await p.setStringList(
-        _kCompleted,
-        <String>[for (final n in completed) '$n'],
-      );
+      await p.setStringList(_kCompleted, <String>[
+        for (final n in completed) '$n',
+      ]);
       await p.setString(
         _kStars,
         <String>[

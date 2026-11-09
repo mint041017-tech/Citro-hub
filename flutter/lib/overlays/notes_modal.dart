@@ -227,7 +227,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                           n.title.isEmpty ? '无标题' : n.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.heading(size: 14.5, color: c.ink),
+                          style: context.heading(size: 14, color: c.ink),
                         ),
                         if (n.content.isNotEmpty) ...[
                           const SizedBox(height: 3),
@@ -276,15 +276,15 @@ class _NotesDialogState extends State<_NotesDialog> {
                 children: [
                   AppIcon(
                     strokeSvg(AppIcons.arrowLeft, width: 2.2),
-                    size: 17,
+                    size: 18,
                     color: c.accentInk,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '返回',
                     style: context.body(
-                      size: 12.5,
-                      weight: FontWeight.w600,
+                      size: 13,
+                      weight: FontWeight.w700,
                       color: c.accentInk,
                     ),
                   ),
@@ -294,7 +294,7 @@ class _NotesDialogState extends State<_NotesDialog> {
             const Spacer(),
             Text(
               editingId == null ? '新建笔记' : '编辑笔记',
-              style: context.heading(size: 17),
+              style: context.heading(size: 18),
             ),
             const Spacer(),
             const SizedBox(width: 44),

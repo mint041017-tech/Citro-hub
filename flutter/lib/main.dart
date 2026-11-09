@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_keys.dart';
+import 'ledger/ledger_intake.dart';
 import 'overlays/pomodoro_sheet.dart';
 import 'overlays/timer_overlay.dart';
 import 'perf_probe.dart';
@@ -49,6 +50,8 @@ Future<void> main() async {
     } catch (_) {}
   }
   runApp(const CitroApp());
+  // 系统分享 / iOS 快捷指令可能冷启动 App：首帧后注册原生通道并消费待处理截图。
+  LedgerIntake.instance.attach();
   // 方向同步不再阻塞首帧；RootShell 布局时也会按实际窗口再同步一次。
   if (!kIsWeb && platform.isIOS) {
     final view = WidgetsBinding.instance.platformDispatcher.implicitView;
@@ -70,6 +73,11 @@ class CitroRouteObserver extends NavigatorObserver {
 
   void _sync() => AppState.instance.setPopupActive(_popups > 0);
 
+  void _setPage(String? name) {
+    pageName.value = name;
+    citroActiveRoute.value = name;
+  }
+
   void _setPopup(int value) {
     _popups = value < 0 ? 0 : value;
     popupDepth.value = _popups;
@@ -82,7 +90,7 @@ class CitroRouteObserver extends NavigatorObserver {
       _setPopup(_popups + 1);
     } else {
       pageDepth.value += 1;
-      pageName.value = route.settings.name;
+      _setPage(route.settings.name);
     }
   }
 
@@ -92,7 +100,7 @@ class CitroRouteObserver extends NavigatorObserver {
       _setPopup(_popups - 1);
     } else {
       if (pageDepth.value > 0) pageDepth.value -= 1;
-      pageName.value = previousRoute?.settings.name;
+      _setPage(previousRoute?.settings.name);
     }
   }
 
@@ -102,7 +110,7 @@ class CitroRouteObserver extends NavigatorObserver {
       _setPopup(_popups - 1);
     } else {
       if (pageDepth.value > 0) pageDepth.value -= 1;
-      pageName.value = previousRoute?.settings.name;
+      _setPage(previousRoute?.settings.name);
     }
   }
 
@@ -116,7 +124,7 @@ class CitroRouteObserver extends NavigatorObserver {
       _sync();
     }
     if (newRoute is! PopupRoute) {
-      pageName.value = newRoute?.settings.name;
+      _setPage(newRoute?.settings.name);
     }
   }
 }
@@ -461,7 +469,7 @@ class _BootError extends StatelessWidget {
                 FilledButton(
                   onPressed: onRetry,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF2A43C),
+                    backgroundColor: const Color(0xFF7A9BBE),
                     foregroundColor: const Color(0xFF2E2C22),
                   ),
                   child: const Text('重试'),
@@ -498,7 +506,7 @@ class SplashScreen extends StatelessWidget {
                 width: 88,
                 child: LinearProgressIndicator(
                   minHeight: 3,
-                  color: Color(0xFFF2A43C),
+                  color: Color(0xFF7A9BBE),
                   backgroundColor: Color(0x22F2A43C),
                 ),
               ),
@@ -551,7 +559,7 @@ class _FriendlyError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🍊', style: TextStyle(fontSize: 34)),
+            const Text('🍊', style: TextStyle(fontSize: 36)),
             const SizedBox(height: 8),
             const Text(
               '页面加载出了点问题',

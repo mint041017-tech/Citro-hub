@@ -93,13 +93,13 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Text(
             '注销账号',
             textAlign: TextAlign.center,
-            style: context.heading(size: 23, color: c.ink),
+            style: context.heading(size: 24, color: c.ink),
           ),
           const SizedBox(height: 6),
           Text(
             '注销后，以下数据会被永久删除且无法恢复：',
             textAlign: TextAlign.center,
-            style: context.body(size: 11.5, color: c.inkSoft),
+            style: context.body(size: 12, color: c.inkSoft),
           ),
           const SizedBox(height: 8),
           Container(
@@ -157,7 +157,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                   child: Text(
                     '我已了解注销不可恢复，并确认永久删除账号',
                     style: context.body(
-                      size: 11.5,
+                      size: 12,
                       color: _confirmed ? c.stamp : c.ink2,
                       height: 1.5,
                     ),
@@ -184,7 +184,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               _error!,
               style: context.body(
                 size: 11,
-                weight: FontWeight.w600,
+                weight: FontWeight.w700,
                 color: c.stamp,
               ),
             ),

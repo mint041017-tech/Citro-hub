@@ -154,7 +154,7 @@ class WebDesktopHeader extends StatelessWidget {
                 children: [
                   if (LanternApi.currentWindow() != null) ...[
                     _LanternNavButton(onTap: () => showLanternSheet(context)),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 10),
                   ],
                   AnimatedSize(
                     duration: reduce ? Duration.zero : CitroMotion.size,
@@ -184,7 +184,7 @@ class WebDesktopHeader extends StatelessWidget {
                       child: playing
                           ? const Padding(
                               key: ValueKey('web-tingyu-chip'),
-                              padding: EdgeInsets.only(left: 9),
+                              padding: EdgeInsets.only(left: 10),
                               child: TingyuPlayChip(),
                             )
                           : const SizedBox.shrink(
@@ -238,7 +238,7 @@ class _HeaderAvatar extends StatelessWidget {
             child: user == null || user.name.isEmpty
                 ? AppIcon(
                     strokeSvg(AppIcons.user, width: 2),
-                    size: 17,
+                    size: 18,
                     color: c.ink2,
                   )
                 : Text(
@@ -288,10 +288,10 @@ class _Brand extends StatelessWidget {
                       fit: BoxFit.contain,
                       cacheWidth: 168,
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 10),
                     HighlightedText(
                       'Citro',
-                      style: context.display(size: 34, color: c.ink),
+                      style: context.display(size: 36, color: c.ink),
                       highlight: c.hl,
                     ),
                   ],
@@ -306,7 +306,7 @@ class _Brand extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: Container(
                   height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: c.surface2.withAlpha(210),
                     borderRadius: BorderRadius.circular(999),
@@ -364,7 +364,11 @@ class _LanternNavButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🌕', style: TextStyle(fontSize: 18)),
+            AppIcon(
+              strokeSvg(AppIcons.moon, width: 2),
+              size: 18,
+              color: c.accentInk,
+            ),
             const SizedBox(width: 6),
             Text('灯谜', style: context.heading(size: 15, color: c.ink)),
           ],
@@ -413,7 +417,7 @@ class WebThemeMenu extends StatelessWidget {
               Text(
                 '外观主题',
                 style: context.body(
-                  size: 10.5,
+                  size: 11,
                   weight: FontWeight.w700,
                   color: c.inkSoft,
                   letterSpacing: 1.4,
@@ -434,7 +438,7 @@ class WebThemeMenu extends StatelessWidget {
       ],
       child: Container(
         height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: c.surface2.withAlpha(220),
           borderRadius: BorderRadius.circular(99),
@@ -445,8 +449,8 @@ class WebThemeMenu extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('主题', style: context.display(size: 13, color: c.inkSoft)),
-            const SizedBox(width: 7),
-            AppIcon(strokeSvg(icon), size: 25, color: c.accentInk),
+            const SizedBox(width: 8),
+            AppIcon(strokeSvg(icon), size: 24, color: c.accentInk),
           ],
         ),
       ),
@@ -498,7 +502,7 @@ class WebThemeMenu extends StatelessWidget {
                 label,
                 style: context.body(
                   size: 14,
-                  weight: selected ? FontWeight.w700 : FontWeight.w500,
+                  weight: selected ? FontWeight.w700 : FontWeight.w400,
                   color: selected ? c.accentInk : c.ink,
                 ),
               ),
@@ -570,7 +574,7 @@ class _WebDesktopClockState extends State<WebDesktopClock> {
                 '${two(_now.hour)}:${two(_now.minute)}',
                 style: context.display(
                   size: 48,
-                  weight: FontWeight.w600,
+                  weight: FontWeight.w700,
                   color: c.ink,
                   height: 1,
                 ),
@@ -640,8 +644,8 @@ class WebHomeBackPill extends StatelessWidget {
             Text(
               label,
               style: context.body(
-                size: 12.5,
-                weight: FontWeight.w600,
+                size: 13,
+                weight: FontWeight.w700,
                 color: c.ink2,
               ),
             ),

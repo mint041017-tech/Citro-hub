@@ -73,9 +73,8 @@ class CitroNative {
     _ => const ['NotoSC'],
   };
 
-  /// Apple 的字距规范：标题 >20pt 用 -0.022em，正文用 -0.011em。
-  static double trackingFor(double size) =>
-      size >= 20 ? -0.022 * size : -0.011 * size;
+  /// Apple 的字距规范：大标题收紧，小字保持 0，避免正文挤在一起。
+  static double trackingFor(double size) => size >= 20 ? -0.02 * size : 0;
 }
 
 /// 给 UI 文本用的系统无衬线样式（导航、按钮、标签、表单）。

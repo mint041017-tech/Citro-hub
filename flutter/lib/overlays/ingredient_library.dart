@@ -110,7 +110,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.title, style: context.heading(size: 21)),
+                          Text(widget.title, style: context.heading(size: 20)),
                           const SizedBox(height: 1),
                           Text(
                             widget.multi ? '可多选，选完点「加入」' : '选一个食材',
@@ -140,12 +140,12 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                         size: 15,
                         color: c.inkSoft,
                       ),
-                      const SizedBox(width: 7),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           controller: search,
                           onChanged: (_) => setState(() {}),
-                          style: context.body(size: 12.5),
+                          style: context.body(size: 13),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             isDense: true,
@@ -258,8 +258,10 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding:
-                                    const EdgeInsets.only(top: 8, bottom: 7),
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 8,
+                                ),
                                 child: Row(
                                   children: [
                                     Container(
@@ -329,7 +331,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                             '清空',
                             style: context.body(
                               size: 12,
-                              weight: FontWeight.w600,
+                              weight: FontWeight.w700,
                               color: picked.isEmpty ? c.inkSoft : c.ink2,
                             ),
                           ),
@@ -373,7 +375,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
         child: Center(
           child: AppIcon(
             strokeSvg(AppIcons.close, width: 2.2),
-            size: 21,
+            size: 20,
             color: c.inkSoft,
           ),
         ),
@@ -388,7 +390,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: on ? c.accent : c.surface2,
           borderRadius: BorderRadius.circular(999),
@@ -405,7 +407,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
               name,
               style: context.body(
                 size: 12,
-                weight: on ? FontWeight.w700 : FontWeight.w500,
+                weight: on ? FontWeight.w700 : FontWeight.w400,
                 color: on ? const Color(0xFF2E2C22) : c.ink2,
               ),
             ),

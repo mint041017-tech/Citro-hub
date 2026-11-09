@@ -115,7 +115,7 @@ class _InAppWebPageState extends State<InAppWebPage> {
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
                                 style: context.body(
-                                  size: 10.5,
+                                  size: 11,
                                   color: c.inkSoft.withAlpha(190),
                                 ),
                               ),
@@ -275,6 +275,22 @@ class _InAppWebPageState extends State<InAppWebPage> {
                                 );
                                 return NavigationActionPolicy.CANCEL;
                               }
+                              // 站外网页交给系统浏览器：WebView 只浏览自家域，
+                              // 避免被外部页面借内置浏览器做钓鱼/注入。
+                              final host = uri.host.toLowerCase();
+                              final ownSite =
+                                  host == 'chimu-claw.xyz' ||
+                                  host.endsWith('.chimu-claw.xyz') ||
+                                  host == 'localhost' ||
+                                  host == '127.0.0.1';
+                              if ((scheme == 'http' || scheme == 'https') &&
+                                  !ownSite) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                                return NavigationActionPolicy.CANCEL;
+                              }
                               return NavigationActionPolicy.ALLOW;
                             },
                           ),
@@ -319,7 +335,7 @@ class _InAppWebPageState extends State<InAppWebPage> {
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.center,
                                         style: context.body(
-                                          size: 11.5,
+                                          size: 12,
                                           color: c.inkSoft,
                                           height: 1.5,
                                         ),
@@ -406,8 +422,8 @@ class _PageButton extends StatelessWidget {
                       Text(
                         label,
                         style: context.body(
-                          size: 11.5,
-                          weight: FontWeight.w600,
+                          size: 12,
+                          weight: FontWeight.w700,
                           color: c.ink2,
                         ),
                       ),

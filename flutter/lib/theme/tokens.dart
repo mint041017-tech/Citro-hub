@@ -150,10 +150,10 @@ class CitroColors {
     line: Color(0xFFE4DCC9),
     line2: Color(0xFFD2C8B0),
     grid: Color(0x1660523A),
-    accent: Color(0xFFF2A43C),
-    accent2: Color(0xFFDE8A1F),
-    accentLt: Color(0xFFFFC873),
-    accentInk: Color(0xFF8F4E05),
+    accent: Color(0xFFE9932F),
+    accent2: Color(0xFFD07C1F),
+    accentLt: Color(0xFFF7D8A9),
+    accentInk: Color(0xFF7C4A12),
     mint: Color(0xFF8FC7A0),
     mintInk: Color(0xFF2C6B50),
     mintSoft: Color(0xFFEAF2E3),
@@ -185,10 +185,10 @@ class CitroColors {
     line: Color(0x1AFFF6E4),
     line2: Color(0x2BFFF6E4),
     grid: Color(0x0DFFF0D6),
-    accent: Color(0xFFFFAE52),
-    accent2: Color(0xFFE08A24),
-    accentLt: Color(0xFFFFD2A0),
-    accentInk: Color(0xFFFFC078),
+    accent: Color(0xFFF0AC55),
+    accent2: Color(0xFFDE9636),
+    accentLt: Color(0xFFF7DDB4),
+    accentInk: Color(0xFFF6D9AE),
     mint: Color(0xFFC9D3B2),
     mintInk: Color(0xFFD8DFC4),
     mintSoft: Color(0x1AC9D3B2),
@@ -330,6 +330,59 @@ class AppShadows {
             offset: Offset(0, 10),
           ),
         ];
+}
+
+/// 字号刻度。界面只从这里取值，避免同一层级的文字在 2 到 3 个
+/// 相邻字号之间摇摆。内容里的贴纸、邮票可以继续用小字，但要落在
+/// [small] 与 [micro] 两档上。
+class CitroType {
+  const CitroType._();
+
+  /// 邮票、胶带上的装饰小字。
+  static const double micro = 8;
+
+  /// 角标、计数、极紧凑的标签。
+  static const double small = 10;
+
+  /// 说明文字、次级标签。
+  static const double caption = 11;
+
+  /// 元信息、时间、来源。
+  static const double meta = 12;
+
+  /// 紧凑标签、按钮副标题。
+  static const double label = 13;
+
+  /// 正文、导航项。
+  static const double body = 14;
+
+  /// 稍大的正文、列表主行。
+  static const double bodyLg = 15;
+
+  /// 小节标题、卡片标题。
+  static const double title = 16;
+
+  /// 卡片主标题。
+  static const double titleLg = 18;
+
+  /// 页面副标题、弹层标题。
+  static const double subtitle = 20;
+
+  /// 页面标题。
+  static const double heading = 24;
+
+  /// 大标题、封面字。
+  static const double display = 28;
+
+  /// 首屏标题。
+  static const double hero = 36;
+
+  /// 海报字、艺术字。
+  static const double poster = 48;
+
+  /// 手账里两档字重足够：正文 400，强调与标题 700（字体文件实际只提供这两档）。
+  static const FontWeight regular = FontWeight.w400;
+  static const FontWeight strong = FontWeight.w700;
 }
 
 class AppFonts {

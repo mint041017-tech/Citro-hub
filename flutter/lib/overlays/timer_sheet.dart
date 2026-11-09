@@ -33,7 +33,7 @@ Future<int?> showTimerMinutesSheet(
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(top: 9),
+                margin: const EdgeInsets.only(top: 10),
                 decoration: BoxDecoration(
                   color: c.line2,
                   borderRadius: BorderRadius.circular(2),
@@ -43,7 +43,7 @@ Future<int?> showTimerMinutesSheet(
                 padding: const EdgeInsets.fromLTRB(18, 8, 8, 0),
                 child: Row(
                   children: [
-                    Text('设定计时', style: ctx.heading(size: 19)),
+                    Text('设定计时', style: ctx.heading(size: 20)),
                     const Spacer(),
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx),
@@ -160,7 +160,7 @@ Future<void> showTimerManageSheet(BuildContext context) async {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Text('计时中', style: ctx.heading(size: 19)),
+                      Text('计时中', style: ctx.heading(size: 20)),
                       const Spacer(),
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
@@ -263,7 +263,7 @@ Widget _option(BuildContext context, String label, VoidCallback onTap) {
       ),
       child: Text(
         label,
-        style: context.body(size: 11, weight: FontWeight.w600, color: c.ink2),
+        style: context.body(size: 11, weight: FontWeight.w700, color: c.ink2),
       ),
     ),
   );

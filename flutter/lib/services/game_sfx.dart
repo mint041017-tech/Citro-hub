@@ -137,10 +137,7 @@ class GameSfx {
     if (!_supported || _muted || !soundsEnabled) return;
     try {
       final key = 'n$dur|$vol|$freq';
-      final bytes = _cached(
-        key,
-        () => _noise(dur: dur, vol: vol, freq: freq),
-      );
+      final bytes = _cached(key, () => _noise(dur: dur, vol: vol, freq: freq));
       final p = _nextPlayer()!;
       await p.stop();
       await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
@@ -161,12 +158,7 @@ class GameSfx {
       final key = 's$dur|$vol|$from|$to';
       final bytes = _cached(
         key,
-        () => _noiseSweep(
-          dur: dur,
-          vol: vol,
-          from: from,
-          to: to,
-        ),
+        () => _noiseSweep(dur: dur, vol: vol, from: from, to: to),
       );
       final p = _nextPlayer()!;
       await p.stop();

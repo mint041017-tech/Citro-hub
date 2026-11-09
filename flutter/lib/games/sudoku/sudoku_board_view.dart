@@ -334,8 +334,7 @@ class _SudokuBoardPainter extends CustomPainter {
         if (selectedValue != 0 && value == selectedValue) {
           color = Color.alphaBlend(focusColor.withValues(alpha: .18), color);
         }
-        if (index == selected &&
-            puzzle.variant != SudokuVariant.killer) {
+        if (index == selected && puzzle.variant != SudokuVariant.killer) {
           color = Color.alphaBlend(focusColor.withValues(alpha: .28), color);
         }
         if (conflicts.contains(index)) {
@@ -511,7 +510,7 @@ class _SudokuBoardPainter extends CustomPainter {
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.fallback,
           fontSize: fontSize,
-          fontWeight: given ? FontWeight.w700 : FontWeight.w600,
+          fontWeight: given ? FontWeight.w700 : FontWeight.w700,
           color: conflict
               ? colors.stamp
               : (given ? colors.ink : colors.accentInk),
@@ -537,7 +536,7 @@ class _SudokuBoardPainter extends CustomPainter {
           style: TextStyle(
             fontFamily: AppFonts.noto,
             fontSize: fontSize,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: colors.ink2,
             height: 1,
           ),
@@ -783,10 +782,7 @@ class _SudokuBoardPainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(
-        canvas,
-        Offset(leftCol * cell + 2, topRow * cell + 1),
-      );
+      tp.paint(canvas, Offset(leftCol * cell + 2, topRow * cell + 1));
     }
   }
 

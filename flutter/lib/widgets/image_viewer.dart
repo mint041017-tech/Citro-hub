@@ -317,8 +317,8 @@ class _CountPill extends StatelessWidget {
           '${current + 1} / $total',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
@@ -397,7 +397,7 @@ class _ArrowButton extends StatelessWidget {
           child: Center(
             child: AppIcon(
               strokeSvg(icon, width: 2),
-              size: 19,
+              size: 20,
               color: Colors.white,
             ),
           ),
@@ -424,7 +424,7 @@ class _ArrowButton extends StatelessWidget {
           child: Center(
             child: AppIcon(
               strokeSvg(icon, width: 2),
-              size: 19,
+              size: 20,
               color: Colors.white,
             ),
           ),

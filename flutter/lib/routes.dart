@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'games/game_loader.dart';
+import 'calendar/calendar_page.dart';
 import 'services/platform.dart' as platform;
 import 'pages/cook_page.dart';
 import 'pages/me_page.dart';
@@ -10,8 +11,11 @@ import 'pages/res_page.dart';
 import 'pages/root_shell.dart';
 import 'pages/search_page.dart';
 import 'pages/sens_page.dart';
+import 'ledger/ledger_page.dart';
 import 'theme/motion.dart';
 import 'tingyu/tingyu_page.dart';
+import 'todo/todo_focus.dart';
+import 'todo/todo_page.dart';
 
 class CitroRoutes {
   static const home = '/home';
@@ -24,6 +28,10 @@ class CitroRoutes {
   static const sens = '/sens';
   static const search = '/search';
   static const tingyu = '/tingyu';
+  static const todo = '/todo';
+  static const todoFocus = '/todo/focus';
+  static const ledger = '/ledger';
+  static const calendar = '/calendar';
 
   static const tabs = <String>[home, games, community, resources];
   static const _games = <String>{
@@ -56,6 +64,10 @@ class CitroRoutes {
     if (kIsWeb && path == resources) return home;
     if (tabs.contains(path) ||
         path == cook ||
+        path == todo ||
+        path == todoFocus ||
+        path == ledger ||
+        path == calendar ||
         path == me ||
         path == play ||
         path == sens ||
@@ -67,8 +79,16 @@ class CitroRoutes {
     return home;
   }
 
-  static Widget pageFor(String? raw) {
+  static Widget pageFor(String? raw, {Object? args}) {
     final route = normalize(raw);
+    if (route == todo) {
+      return TodoPage(initialTab: args is int ? args : 0);
+    }
+    if (route == todoFocus) return const TodoFocusPage();
+    if (route == ledger) {
+      return LedgerPage(initialTab: args is int ? args : 0);
+    }
+    if (route == calendar) return const CalendarPage();
     if (route == cook) return const CookPage();
     if (route == me) return const MePage();
     // 资源库只在 Windows 的 Tab 里占位；其他端（含移动端深链）直接开独立页，
@@ -86,7 +106,7 @@ class CitroRoutes {
     final route = normalize(settings.name);
     return _CitroPageRoute<dynamic>(
       settings: RouteSettings(name: route, arguments: settings.arguments),
-      builder: (_) => pageFor(route),
+      builder: (_) => pageFor(route, args: settings.arguments),
     );
   }
 }
@@ -95,14 +115,12 @@ class _CitroPageRoute<T> extends MaterialPageRoute<T> {
   _CitroPageRoute({required super.builder, super.settings});
 
   @override
-  Duration get transitionDuration =>
-      kIsWeb || platform.isWindows
+  Duration get transitionDuration => kIsWeb || platform.isWindows
       ? CitroMotion.pageDesktop
       : CitroMotion.pageTouch;
 
   @override
-  Duration get reverseTransitionDuration =>
-      kIsWeb || platform.isWindows
+  Duration get reverseTransitionDuration => kIsWeb || platform.isWindows
       ? CitroMotion.pageDesktopReverse
       : CitroMotion.pageTouchReverse;
 }

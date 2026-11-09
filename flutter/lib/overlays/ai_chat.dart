@@ -10,11 +10,16 @@ import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/cici_persona.dart';
 import '../services/media.dart';
+import '../services/platform.dart' as platform;
 import '../services/speech.dart';
 import '../state/app_state.dart';
 import '../services/models.dart';
+import '../todo/todo_ai.dart';
+import '../todo/todo_models.dart';
+import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/cici_composer.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -32,6 +37,9 @@ class _ChatMessage {
 }
 
 final List<_ChatMessage> _history = [];
+
+/// 转运对话同样跟着一次 App 会话走，关掉面板不会丢，退出 App 才清空。
+final List<_ChatMessage> _deedHistory = [];
 
 Future<void> showAiChat(
   BuildContext context, {
@@ -66,7 +74,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
   final FocusNode _focus = FocusNode();
-  final List<_ChatMessage> _deedHistory = [];
   bool _sending = false;
   bool _deedShared = false;
   String? _pendingImage;
@@ -126,7 +133,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
     });
   }
 
-  static const _deedDoneText = '好事收到，转运机会已经到账 ✅\n回到签卡，点「再抽一签」看看新运气。';
+  static const _deedDoneText = '好事收到，转运机会已经到账\n回到签卡，点「再抽一签」看看新运气。';
 
   Future<void> _toggleVoice() async {
     if (_sending || _picking) return;
@@ -280,6 +287,22 @@ class _AiChatSheetState extends State<_AiChatSheet>
           assistant.pending = false;
           assistant.text = '我刚刚走神了，再问我一次吧。';
         });
+      } else {
+        // CiCi 可以在回复里带上待办草稿，这里落库并补一句确认。
+        final (clean, drafts) = TodoAi.parseReply(assistant.text);
+        final created = drafts.isEmpty
+            ? const <String>[]
+            : _createTodos(drafts);
+        if (created.isNotEmpty) {
+          setState(() {
+            assistant.pending = false;
+            assistant.text =
+                '${clean.trim().isEmpty ? '已经帮你记下了。' : clean.trim()}\n\n'
+                '已加入待办：${created.join('、')}';
+          });
+        } else if (clean.trim().isNotEmpty && clean != assistant.text) {
+          setState(() => assistant.text = clean.trim());
+        }
       }
     } on AiException catch (e) {
       if (!mounted) return;
@@ -366,7 +389,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
       );
       if (!mounted) return;
       setState(() {
-        message.text = '${message.text}\n已同步到社区动态 🌱';
+        message.text = '${message.text}\n已同步到社区动态';
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -389,8 +412,70 @@ class _AiChatSheetState extends State<_AiChatSheet>
         '用户今天抽到了下签或下下签，正通过分享一件今天做过的好事来转运。'
         '请温柔地接住这件事、肯定对方，不要说教、不要追问隐私；2~4 句，口语化。',
       );
+    } else {
+      // 首页的 CiCi 也能顺手把待办建出来，和待办页用同一套约定。
+      final store = TodoStore.instance;
+      store.ensureInit();
+      parts.add(TodoAi.assistantSystem);
+      parts.add(
+        '【当前待办数据】\n${TodoAi.contextFor(tasks: store.tasks, moods: store.moods, focusMinutes: 0, streak: store.streak, now: DateTime.now())}',
+      );
     }
     return parts.isEmpty ? null : parts.join('\n');
+  }
+
+  /// 把 CiCi 返回的任务草稿落成真正的待办，返回已建好的标题。
+  List<String> _createTodos(List<TodoDraft> drafts) {
+    final store = TodoStore.instance;
+    final out = <String>[];
+    for (final d in drafts) {
+      final title = d.title.trim();
+      if (title.isEmpty) continue;
+      // 更新指令：给已有任务补备注/改时间。
+      if (d.update) {
+        TodoTask? target;
+        for (final t in store.tasks) {
+          if (t.title.trim() == title) {
+            target = t;
+            break;
+          }
+        }
+        if (target == null) continue;
+        final note = d.note.trim();
+        if (note.isNotEmpty) {
+          target.note = target.note.trim().isEmpty
+              ? note
+              : '${target.note.trim()}；$note';
+        }
+        if (d.at != null) {
+          if (target.kind == TodoKind.task) target.dueAt = d.at;
+          if (target.kind == TodoKind.reminder) target.remindAt = d.at;
+        }
+        store.updateTask(target);
+        out.add(title);
+        continue;
+      }
+      final cat = store.categories.firstWhere(
+        (c) => c.name == d.categoryName,
+        orElse: () => store.categories.first,
+      );
+      store.createTask(
+        title: title,
+        note: d.note,
+        kind: d.kind,
+        categoryId: cat.id,
+        listId: store.lists.first.id,
+        remindAt: d.at,
+        dueAt: d.kind == TodoKind.task
+            ? (d.at ?? DateTime.now().add(const Duration(days: 1)))
+            : null,
+        subtasks: d.subtasks,
+        priority: d.priority,
+        source: 'cici',
+      );
+      out.add(title);
+    }
+    return out;
   }
 
   String _recipeContext(Recipe r) {
@@ -508,10 +593,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 _subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: context.body(
-                                  size: 9.5,
-                                  color: c.inkSoft,
-                                ),
+                                style: context.body(size: 10, color: c.inkSoft),
                               ),
                             ],
                           ),
@@ -538,8 +620,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 Text(
                                   '性格',
                                   style: context.body(
-                                    size: 12.5,
-                                    weight: FontWeight.w600,
+                                    size: 13,
+                                    weight: FontWeight.w700,
                                     color: c.ink2,
                                   ),
                                 ),
@@ -572,8 +654,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 Text(
                                   '新对话',
                                   style: context.body(
-                                    size: 12.5,
-                                    weight: FontWeight.w600,
+                                    size: 13,
+                                    weight: FontWeight.w700,
                                     color: _sending
                                         ? c.inkSoft.withAlpha(100)
                                         : c.ink2,
@@ -612,8 +694,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 7,
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           color: c.hl.withAlpha(120),
@@ -632,8 +714,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                               child: Text(
                                 '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
                                 style: context.body(
-                                  size: 10.5,
-                                  weight: FontWeight.w600,
+                                  size: 11,
+                                  weight: FontWeight.w700,
                                   color: c.accentInk,
                                 ),
                               ),
@@ -679,7 +761,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
                                 style: context.body(
                                   size: 11,
-                                  weight: FontWeight.w600,
+                                  weight: FontWeight.w700,
                                   color: c.mintInk,
                                 ),
                               ),
@@ -693,7 +775,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                       child: Text(
                         _error!,
-                        style: context.body(size: 10.5, color: c.stamp),
+                        style: context.body(size: 11, color: c.stamp),
                       ),
                     ),
                   Padding(
@@ -701,7 +783,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     child: Text(
                       'AI 生成内容仅供参考；文字与图片会发送至第三方 AI 服务处理，请勿发送敏感信息。',
                       textAlign: TextAlign.center,
-                      style: context.body(size: 9.5, color: c.inkSoft),
+                      style: context.body(size: 10, color: c.inkSoft),
                     ),
                   ),
                   _inputBar(context),
@@ -789,7 +871,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 context.app.loggedIn
                     ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会以「今日好事：…」同步到社区动态（含图片，公开可见）。'
                     : '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后才能获得转运机会。',
-                style: context.body(size: 11.5, color: c.mintInk, height: 1.6),
+                style: context.body(size: 12, color: c.mintInk, height: 1.6),
               ),
             ),
           ],
@@ -798,7 +880,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
             Text(
               '可以试试',
               style: context.body(
-                size: 10.5,
+                size: 11,
                 weight: FontWeight.w700,
                 color: c.inkSoft,
                 letterSpacing: .5,
@@ -824,7 +906,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       ),
                       child: Text(
                         p,
-                        style: context.body(size: 11.5, color: c.ink2),
+                        style: context.body(size: 12, color: c.ink2),
                       ),
                     ),
                   ),
@@ -908,14 +990,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
             ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Flexible(
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.sizeOf(context).width * .76,
               ),
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.fromLTRB(13, 10, 13, 10),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: BoxDecoration(
                 color: c.surface2,
                 borderRadius: const BorderRadius.only(
@@ -938,10 +1020,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             color: c.accent,
                           ),
                         ),
-                        const SizedBox(width: 7),
+                        const SizedBox(width: 8),
                         Text(
                           '正在想想…',
-                          style: context.body(size: 11.5, color: c.inkSoft),
+                          style: context.body(size: 12, color: c.inkSoft),
                         ),
                       ],
                     )
@@ -958,6 +1040,69 @@ class _AiChatSheetState extends State<_AiChatSheet>
 
   Widget _inputBar(BuildContext context) {
     final c = context.c;
+    // 手机端统一用胶囊输入栏：按住说话、松开发送。
+    if (platform.isAndroid || platform.isIOS) {
+      return Container(
+        decoration: BoxDecoration(
+          color: c.surface.withAlpha(235),
+          border: Border(top: BorderSide(color: c.line)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_pendingImage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.memory(
+                        base64Decode(_pendingImage!.split(',').last),
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '这张图会一起发给 CiCi',
+                        style: context.body(
+                          size: CitroType.caption,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() => _pendingImage = null),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: AppIcon(
+                          strokeSvg(AppIcons.close, width: 2),
+                          size: 15,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            CiciComposer(
+              controller: _input,
+              sending: _sending,
+              picking: _picking,
+              hint: '和 CiCi 说一句…',
+              onSend: () => _send(),
+              onPickImage: _pickImage,
+              onSubmitVoice: (text) async {
+                await _send(text);
+              },
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
       decoration: BoxDecoration(
@@ -1010,7 +1155,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: Text(
                       '图片会和文字一起发给 CiCi',
-                      style: context.body(size: 10.5, color: c.inkSoft),
+                      style: context.body(size: 11, color: c.inkSoft),
                     ),
                   ),
                 ],
@@ -1018,7 +1163,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
             ),
           if (_listening)
             Padding(
-              padding: const EdgeInsets.only(bottom: 7, left: 2),
+              padding: const EdgeInsets.only(bottom: 8, left: 2),
               child: Row(
                 children: [
                   SizedBox(
@@ -1047,7 +1192,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 child: Container(
                   width: 38,
                   height: 38,
-                  margin: const EdgeInsets.only(right: 7, bottom: 1),
+                  margin: const EdgeInsets.only(right: 8, bottom: 1),
                   decoration: BoxDecoration(
                     color: c.surface2,
                     shape: BoxShape.circle,
@@ -1077,7 +1222,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   duration: const Duration(milliseconds: 180),
                   width: 38,
                   height: 38,
-                  margin: const EdgeInsets.only(right: 7, bottom: 1),
+                  margin: const EdgeInsets.only(right: 8, bottom: 1),
                   decoration: BoxDecoration(
                     color: _listening ? c.accent.withAlpha(36) : c.surface2,
                     shape: BoxShape.circle,
@@ -1095,7 +1240,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             ? Icons.stop_rounded
                             : Icons.mic_none_rounded,
                         key: ValueKey(_listening),
-                        size: 19,
+                        size: 20,
                         color: _listening ? c.accent : c.accentInk,
                       ),
                     ),
@@ -1108,7 +1253,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     minHeight: 40,
                     maxHeight: 108,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: c.surface2,
                     borderRadius: BorderRadius.circular(18),
@@ -1141,7 +1286,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       hintText: '和 CiCi 聊聊…',
-                      hintStyle: context.body(size: 12.5, color: c.inkSoft),
+                      hintStyle: context.body(size: 13, color: c.inkSoft),
                     ),
                   ),
                 ),
@@ -1263,7 +1408,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   children: [
                     Text(
                       'CiCi 的性格',
-                      style: context.heading(size: 21, color: c.ink),
+                      style: context.heading(size: 20, color: c.ink),
                     ),
                     const Spacer(),
                     GestureDetector(
@@ -1308,18 +1453,18 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   maxLines: 5,
                   maxLength: CiciPersona.maxLength,
                   onChanged: (_) => setState(() {}),
-                  style: context.body(size: 13.5, color: c.ink, height: 1.6),
+                  style: context.body(size: 14, color: c.ink, height: 1.6),
                   cursorColor: c.accent,
                   decoration: InputDecoration(
                     hintText: '例如：说话像邻居姐姐，爱用「呀」「啦」结尾，会主动关心我今天吃了什么。',
                     hintStyle: context.body(
-                      size: 12.5,
+                      size: 13,
                       color: c.inkSoft,
                       height: 1.6,
                     ),
                     filled: true,
                     fillColor: c.surface2,
-                    counterStyle: context.body(size: 10.5, color: c.inkSoft),
+                    counterStyle: context.body(size: 11, color: c.inkSoft),
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -1375,8 +1520,8 @@ class _PersonaSheetState extends State<_PersonaSheet> {
         child: Text(
           preset.label,
           style: context.body(
-            size: 12.5,
-            weight: selected ? FontWeight.w600 : FontWeight.w500,
+            size: 13,
+            weight: selected ? FontWeight.w700 : FontWeight.w400,
             color: selected ? c.accentInk : c.ink2,
           ),
         ),
@@ -1477,7 +1622,7 @@ class AiHomeButton extends StatelessWidget {
             Text(
               'CiCi',
               style: context.display(
-                size: 8.5,
+                size: 9,
                 weight: FontWeight.w700,
                 color: c.accentInk,
                 height: 1,

@@ -271,8 +271,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
     if (web == null) return;
     try {
       await web.evaluateJavascript(
-        source:
-            "window.__gulu && (window.__gulu.state === 'start' ? window.__gulu.startGame() : window.__gulu.startNewRound('restart'));",
+        source: "window.__gulu && (window.__gulu.state === 'start' ? window.__gulu.startGame() : window.__gulu.startNewRound('restart'));",
       );
     } catch (_) {}
   }
@@ -373,10 +372,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       onBack: () => Navigator.maybePop(context),
       pills: [
         GameScorePill(label: '分数', value: '$_score'),
-        GameScorePill(
-          label: '最高分',
-          value: '${math.max(_best, _score)}',
-        ),
+        GameScorePill(label: '最高分', value: '${math.max(_best, _score)}'),
         GameScorePill(
           label: '接下来',
           value: _next.isEmpty ? '—' : _next.join('·'),
@@ -392,8 +388,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         GameActionButton(
           label: '排行榜',
           icon: GameIcons.trophy,
-          onTap: () =>
-              showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+          onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
         ),
       ],
       boardGap: 12,
@@ -528,7 +523,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: context.body(
-                          size: 11.5,
+                          size: 12,
                           color: const Color(0xFF66727E),
                           height: 1.5,
                         ),
@@ -551,10 +546,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       ],
     );
     if (!clipped) return panel;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: panel,
-    );
+    return ClipRRect(borderRadius: BorderRadius.circular(16), child: panel);
   }
 
   Widget _testBody(BuildContext context) {
@@ -589,7 +581,7 @@ class _RankButton extends StatelessWidget {
           border: Border.all(color: c.line2),
         ),
         child: Center(
-          child: gameIcon(GameIcons.trophy, size: 17, color: c.ink2),
+          child: gameIcon(GameIcons.trophy, size: 18, color: c.ink2),
         ),
       ),
     );

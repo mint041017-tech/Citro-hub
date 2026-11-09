@@ -58,7 +58,7 @@ class _FishDialogState extends State<_FishDialog> {
       saving = false;
       showSettings = false;
     });
-    AppToast.show(context, state.loggedIn ? '已保存，并同步到云端 🐟' : '已保存（登录后可多设备同步）');
+    AppToast.show(context, state.loggedIn ? '已保存，并同步到云端' : '已保存（登录后可多设备同步）');
   }
 
   Future<void> _pickTime({required bool start}) async {
@@ -131,13 +131,13 @@ class _FishDialogState extends State<_FishDialog> {
       detail = '放心睡懒觉～';
     } else if (info.type == 'makeup') {
       status = '调休补班日';
-      detail = '补班也是为了更好的假期 💪';
+      detail = '补班也是为了更好的假期';
     } else if (nowM < startM) {
       status = '休息中';
       detail = '距上班还有 ${startM - nowM} 分钟';
     } else if (nowM >= endM) {
       status = '休息中';
-      detail = '已下班 🎉 摸鱼成功';
+      detail = '已下班，摸鱼成功';
     } else if (inBreak) {
       status = '休息中';
       detail = '午休时间，喘口气';
@@ -159,7 +159,7 @@ class _FishDialogState extends State<_FishDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('🐟 摸鱼日历', style: context.heading(size: 18, color: c.accentInk)),
+          Text('摸鱼日历', style: context.heading(size: 18, color: c.accentInk)),
           const SizedBox(height: 10),
           Text(
             info.type == 'rest' ? '休息中' : status,
@@ -170,7 +170,7 @@ class _FishDialogState extends State<_FishDialog> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(subtitle, style: context.body(size: 11.5, color: c.inkSoft)),
+          Text(subtitle, style: context.body(size: 12, color: c.inkSoft)),
           if (showProgress) ...[
             const SizedBox(height: 12),
             ClipRRect(
@@ -196,7 +196,7 @@ class _FishDialogState extends State<_FishDialog> {
               style: context.body(
                 size: detail.startsWith('距上班还有') ? 16 : 12,
                 weight: detail.startsWith('距上班还有')
-                    ? FontWeight.w600
+                    ? FontWeight.w700
                     : FontWeight.w400,
                 color: detail.startsWith('距上班还有') ? c.ink : c.ink2,
                 height: detail.startsWith('距上班还有') ? 1.45 : null,
@@ -210,7 +210,7 @@ class _FishDialogState extends State<_FishDialog> {
               textAlign: TextAlign.center,
               style: context.body(
                 size: 16,
-                weight: FontWeight.w600,
+                weight: FontWeight.w700,
                 color: c.accentInk,
                 height: 1.4,
               ),
@@ -219,7 +219,7 @@ class _FishDialogState extends State<_FishDialog> {
           const SizedBox(height: 14),
           if (!showSettings)
             AccentButton(
-              text: '⚙ 设置休息日与上班时间',
+              text: '设置休息日与上班时间',
               outlined: true,
               height: 42,
               onTap: () => setState(() => showSettings = true),
@@ -239,12 +239,12 @@ class _FishDialogState extends State<_FishDialog> {
         Text(
           '每周休息日（可多选）',
           style: context.body(
-            size: 11.5,
+            size: 12,
             weight: FontWeight.w700,
             color: c.inkSoft,
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -274,7 +274,7 @@ class _FishDialogState extends State<_FishDialog> {
                       '${'日一二三四五六'[i]}',
                       style: context.body(
                         size: 12,
-                        weight: FontWeight.w600,
+                        weight: FontWeight.w700,
                         color: cfg.rest.contains(i) ? c.accentInk : c.inkSoft,
                       ),
                     ),
@@ -380,7 +380,7 @@ class _FishDialogState extends State<_FishDialog> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(10),

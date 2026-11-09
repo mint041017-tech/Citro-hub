@@ -81,13 +81,13 @@ class _LanternWelcome extends StatelessWidget {
           Text(
             '中秋猜灯谜',
             textAlign: TextAlign.center,
-            style: context.heading(size: 27),
+            style: context.heading(size: 28),
           ),
           const SizedBox(height: 12),
           Text(
             '月圆人圆，灯谜开猜。\n三十道灯谜，答对一题记一分。\n请登录后作答，${window.welcomeDeadline} 收卷。',
             textAlign: TextAlign.center,
-            style: context.body(size: 13.5, color: c.ink2, height: 1.75),
+            style: context.body(size: 14, color: c.ink2, height: 1.75),
           ),
           const SizedBox(height: 12),
           Text(
@@ -313,7 +313,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         : Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(width: 205, child: _buildBoard(c)),
+              SizedBox(width: 206, child: _buildBoard(c)),
               const SizedBox(width: 18),
               Expanded(child: _buildGuess(c)),
             ],
@@ -381,7 +381,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         ? '灯谜日 ${state?.date ?? window?.date ?? ''} · 可作答 · $closedAfter 收卷'
         : '已收卷 · $closedAfter 截止';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _open ? c.mintSoft : c.surface2,
         borderRadius: BorderRadius.circular(10),
@@ -392,7 +392,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         textAlign: TextAlign.center,
         style: context.body(
           size: 12,
-          weight: FontWeight.w600,
+          weight: FontWeight.w700,
           color: _open ? c.mintInk : c.inkSoft,
         ),
       ),
@@ -407,7 +407,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           Expanded(
             child: Text(
               '灯谜服务开小差了… $_error',
-              style: context.body(size: 11.5, color: c.stamp),
+              style: context.body(size: 12, color: c.stamp),
             ),
           ),
           TextButton(onPressed: _load, child: const Text('重试')),
@@ -478,7 +478,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           Row(
             children: [
               Icon(Icons.emoji_events_outlined, size: 20, color: c.accentInk),
-              const SizedBox(width: 7),
+              const SizedBox(width: 8),
               Text('灯谜榜', style: context.heading(size: 18)),
             ],
           ),
@@ -500,7 +500,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           else
             for (var i = 0; i < board.length; i++) ...[
               _rankItem(board[i], i, me),
-              if (i != board.length - 1) const SizedBox(height: 7),
+              if (i != board.length - 1) const SizedBox(height: 8),
             ],
         ],
       ),
@@ -551,7 +551,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           Text(
             '${_score(entry.score)} 分',
             style: context.body(
-              size: 11.5,
+              size: 12,
               weight: FontWeight.w700,
               color: c.accentInk,
             ),
@@ -612,7 +612,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           label,
           style: context.body(
             size: 11,
-            weight: FontWeight.w600,
+            weight: FontWeight.w700,
             color: selected ? const Color(0xFF2E2C22) : c.inkSoft,
           ),
         ),
@@ -681,7 +681,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         : '${solvers.map((solver) => solver.name == me ? '我' : solver.name).join(' · ')} 猜中';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: solved ? c.mintSoft : c.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -696,12 +696,12 @@ class _LanternDialogState extends State<_LanternDialog> {
               Text(
                 riddle.id.toString().padLeft(2, '0'),
                 style: context.display(
-                  size: 21,
+                  size: 20,
                   weight: FontWeight.w700,
                   color: solved ? c.mintInk : c.accentInk,
                 ),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 10),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 2),
@@ -709,7 +709,7 @@ class _LanternDialogState extends State<_LanternDialog> {
                     riddle.question,
                     style: context.body(
                       size: 13,
-                      weight: FontWeight.w600,
+                      weight: FontWeight.w700,
                       color: c.ink,
                       height: 1.55,
                     ),
@@ -722,16 +722,16 @@ class _LanternDialogState extends State<_LanternDialog> {
           Text(
             solverText,
             style: context.body(
-              size: 10.5,
+              size: 11,
               color: solved ? c.mintInk : c.inkSoft,
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           if (_open)
             Row(
               children: [
                 Expanded(child: _answerInput(riddle)),
-                const SizedBox(width: 7),
+                const SizedBox(width: 8),
                 AccentButton(
                   text: '揭榜',
                   width: 64,
@@ -744,7 +744,7 @@ class _LanternDialogState extends State<_LanternDialog> {
               ],
             )
           else
-            Text('已收卷', style: context.body(size: 11.5, color: c.stamp)),
+            Text('已收卷', style: context.body(size: 12, color: c.stamp)),
           SizedBox(
             height: 20,
             child: _messages[riddle.id] == null
@@ -756,7 +756,7 @@ class _LanternDialogState extends State<_LanternDialog> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 10.5,
+                        size: 11,
                         color: _messages[riddle.id] == '猜中啦！'
                             ? c.mintInk
                             : c.stamp,
@@ -786,8 +786,8 @@ class _LanternDialogState extends State<_LanternDialog> {
         filled: true,
         fillColor: c.surface,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 11,
-          vertical: 11,
+          horizontal: 12,
+          vertical: 12,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
@@ -810,7 +810,7 @@ class _LanternDialogState extends State<_LanternDialog> {
     final solved = emoji?.solved.length ?? 0;
     final total = emoji?.total ?? 30;
     return PaperCard(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       color: c.dark ? c.surface2 : c.noteB,
       shadow: PaperShadow.none,
       child: Column(
@@ -825,22 +825,22 @@ class _LanternDialogState extends State<_LanternDialog> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('附加题 · emoji 猜成语', style: context.heading(size: 17)),
+                  Text('附加题 · emoji 猜成语', style: context.heading(size: 18)),
                   const SizedBox(height: 3),
                   Text(
                     '抽取制 · 答对自动下一题 · 每题 0.5 分 · 共 30 题',
-                    style: context.body(size: 10.5, color: c.inkSoft),
+                    style: context.body(size: 11, color: c.inkSoft),
                   ),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  HandChip('已解 $solved/$total', size: 10.5),
+                  HandChip('已解 $solved/$total', size: 11),
                   const SizedBox(width: 5),
                   HandChip(
                     '附加分 ${_score(emoji?.score ?? 0)}',
-                    size: 10.5,
+                    size: 11,
                     bg: c.hl,
                   ),
                 ],
@@ -899,7 +899,7 @@ class _LanternDialogState extends State<_LanternDialog> {
             ),
             child: Text(
               current.emoji,
-              style: const TextStyle(fontSize: 38, height: 1.35),
+              style: const TextStyle(fontSize: 40, height: 1.35),
             ),
           ),
           const SizedBox(height: 12),
@@ -961,11 +961,11 @@ class _LanternDialogState extends State<_LanternDialog> {
                 ),
               ),
             ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Text(
             '答对自动抽取下一题 · 停在本题直到答对',
             textAlign: TextAlign.center,
-            style: context.body(size: 10.5, color: c.inkSoft),
+            style: context.body(size: 11, color: c.inkSoft),
           ),
         ],
       );
@@ -977,7 +977,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         Text(
           done ? '附加题已全部解完' : (_open ? '点击下方抽取一题' : '已收卷'),
           textAlign: TextAlign.center,
-          style: context.body(size: 12.5, color: c.inkSoft),
+          style: context.body(size: 13, color: c.inkSoft),
         ),
         if (!done && _open) ...[
           const SizedBox(height: 12),
@@ -1000,7 +1000,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         Text(
           '答对自动抽取下一题 · 每题 0.5 分',
           textAlign: TextAlign.center,
-          style: context.body(size: 10.5, color: c.inkSoft),
+          style: context.body(size: 11, color: c.inkSoft),
         ),
       ],
     );

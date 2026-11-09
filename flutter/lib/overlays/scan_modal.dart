@@ -175,7 +175,7 @@ class _ScanDialogState extends State<_ScanDialog> {
                             child: Center(
                               child: AppIcon(
                                 strokeSvg(AppIcons.flash, width: 2),
-                                size: 17,
+                                size: 18,
                                 color: torchOn
                                     ? const Color(0xFFFFD166)
                                     : Colors.white,
@@ -210,8 +210,8 @@ class _ScanDialogState extends State<_ScanDialog> {
               _error!,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 11.5,
-                weight: FontWeight.w600,
+                size: 12,
+                weight: FontWeight.w700,
                 color: c.stamp,
                 height: 1.45,
               ),
@@ -244,7 +244,7 @@ class _ScanDialogState extends State<_ScanDialog> {
                 const SizedBox(width: 5),
                 Text(
                   '将二维码放入框内，即可自动识别',
-                  style: context.body(size: 10.5, color: c.inkSoft),
+                  style: context.body(size: 11, color: c.inkSoft),
                 ),
               ],
             ),
@@ -256,7 +256,7 @@ class _ScanDialogState extends State<_ScanDialog> {
   Widget _pill(CitroColors c, String label) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(999),
@@ -265,8 +265,8 @@ class _ScanDialogState extends State<_ScanDialog> {
         child: Text(
           label,
           style: context.body(
-            size: 11.5,
-            weight: FontWeight.w600,
+            size: 12,
+            weight: FontWeight.w700,
             color: c.accentInk,
           ),
         ),

@@ -75,6 +75,19 @@
 		<string>zh_CN</string>
 		<string>en</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.chimu.crew.ledger</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>citro</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍摄头像、帖子配图、食谱照片，以及扫描登录二维码。</string>
 	<key>NSMicrophoneUsageDescription</key>

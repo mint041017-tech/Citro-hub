@@ -853,11 +853,7 @@ class BrakeScenePainter extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0x00FFC48E),
-              Color(0x2EFFC48E),
-              Color(0x8CFFC48E),
-            ],
+            colors: [Color(0x00FFC48E), Color(0x2EFFC48E), Color(0x8CFFC48E)],
             stops: [0, 0.55, 1],
           ).createShader(bandRect),
       );
@@ -1332,7 +1328,7 @@ class BrakeScenePainter extends CustomPainter {
           sg[5] as String,
           Offset(sx + sw / 2, sy + sh * 0.70),
           sh * 0.26,
-          FontWeight.w600,
+          FontWeight.w700,
           _mix(sg[3] as Color, _haze, st * 0.35),
         );
       }
@@ -2197,11 +2193,7 @@ class BrakeScenePainter extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xF5586C86),
-              Color(0xF71E2734),
-              Color(0xFC090C12),
-            ],
+            colors: [Color(0xF5586C86), Color(0xF71E2734), Color(0xFC090C12)],
             stops: [0, 0.32, 1],
           ).createShader(Rect.fromLTRB(0, gy0, 0 + 1, gy1));
       } else {
@@ -2286,7 +2278,7 @@ class BrakeScenePainter extends CustomPainter {
           '沪A·D1612F',
           rect.center,
           ph * 0.60,
-          FontWeight.w600,
+          FontWeight.w700,
           const Color(0xFFF4F8F4),
         );
       }
@@ -2306,11 +2298,7 @@ class BrakeScenePainter extends CustomPainter {
         sw * 0.62,
         Paint()
           ..shader = const RadialGradient(
-            colors: [
-              Color(0x9E000000),
-              Color(0x4D000000),
-              Color(0x00000000),
-            ],
+            colors: [Color(0x9E000000), Color(0x4D000000), Color(0x00000000)],
             stops: [0, 0.6, 1],
           ).createShader(const Rect.fromLTWH(-1, -1, 2, 2)),
       );

@@ -132,7 +132,7 @@ void main() {
     final grid = tester.widget<GridView>(find.byType(GridView).first);
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(delegate.crossAxisCount, 4);
+    expect(delegate.crossAxisCount, 5);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

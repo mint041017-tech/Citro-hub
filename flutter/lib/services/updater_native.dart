@@ -257,12 +257,8 @@ class UpdateService {
          windows ?? Platform.isWindows,
        );
 
-  UpdateService._(
-    this._client,
-    Uri? manifestUri,
-    Uri? listingUri,
-    this.windows,
-  ) : manifestUri =
+  UpdateService._(this._client, Uri? manifestUri, Uri? listingUri, this.windows)
+    : manifestUri =
           manifestUri ??
           Uri.parse(windows ? windowsManifestUrl : defaultManifestUrl),
       listingUri =
@@ -514,7 +510,8 @@ class UpdateInstaller {
     String quote(String value) => "'${value.replaceAll("'", "''")}'";
     final currentExe = Platform.resolvedExecutable;
     final script = File('${installer.parent.path}\\citro_apply_update.ps1');
-    final content = '''
+    final content =
+        '''
 \$ErrorActionPreference = 'SilentlyContinue'
 \$installer = ${quote(installer.path)}
 \$current = ${quote(currentExe)}

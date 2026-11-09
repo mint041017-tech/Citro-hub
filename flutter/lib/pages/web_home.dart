@@ -124,7 +124,7 @@ class _WebGames extends StatelessWidget {
               const Spacer(),
               Text(
                 '账号同步 · 全站排行',
-                style: context.body(size: 10.5, color: c.inkSoft),
+                style: context.body(size: 11, color: c.inkSoft),
               ),
             ],
           ),
@@ -141,13 +141,12 @@ class _WebGames extends StatelessWidget {
                 mainAxisExtent: (constraints.maxHeight - 30) / 4,
               ),
               itemCount: kGameCards.length,
-              itemBuilder: (context, index) => _WebGameCard(
-                entry: kGameCards[index],
-                              ),
+              itemBuilder: (context, index) =>
+                  _WebGameCard(entry: kGameCards[index]),
             ),
           ),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 10),
         const WebGameToolsRow(),
       ],
     );
@@ -297,7 +296,7 @@ class _WebGameToolCard extends StatelessWidget {
               child: Center(
                 child: AppIcon(
                   strokeSvg(tool.icon, width: 2),
-                  size: 17,
+                  size: 18,
                   color: tool.foreground,
                 ),
               ),
@@ -309,7 +308,7 @@ class _WebGameToolCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 12.5,
+                size: 13,
                 weight: FontWeight.w700,
                 color: c.ink,
                 height: 1.15,
@@ -321,7 +320,7 @@ class _WebGameToolCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: context.body(size: 9.5, color: c.inkSoft, height: 1.15),
+              style: context.body(size: 10, color: c.inkSoft, height: 1.15),
             ),
           ],
         ),
@@ -377,7 +376,7 @@ class _WebDownloadCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 9),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -389,7 +388,7 @@ class _WebDownloadCard extends StatelessWidget {
                         '下载站',
                         style: context.body(
                           size: 13,
-                          weight: FontWeight.w800,
+                          weight: FontWeight.w700,
                           color: c.mintInk,
                           height: 1.2,
                         ),
@@ -407,8 +406,8 @@ class _WebDownloadCard extends StatelessWidget {
                         child: Text(
                           '官方',
                           style: context.body(
-                            size: 8.5,
-                            weight: FontWeight.w800,
+                            size: 9,
+                            weight: FontWeight.w700,
                             color: const Color(0xFF2E2C22),
                             height: 1.15,
                           ),
@@ -422,7 +421,7 @@ class _WebDownloadCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 9.5,
+                      size: 10,
                       color: c.mintInk.withAlpha(190),
                       height: 1.15,
                     ),
@@ -542,7 +541,7 @@ class _WebCommunityTicket extends StatelessWidget {
         borderColor: c.line,
         fold: true,
         borderRadius: BorderRadius.circular(14),
-        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
         tapeWidth: 54,
         tapeHeight: 15,
@@ -551,7 +550,7 @@ class _WebCommunityTicket extends StatelessWidget {
         child: Row(
           children: [
             const _EntryIcon(icon: AppIcons.users),
-            const SizedBox(width: 9),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -562,11 +561,7 @@ class _WebCommunityTicket extends StatelessWidget {
                     '在清爽的汽水里，与同频的灵魂相遇',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: 10.5,
-                      color: c.ink2,
-                      height: 1.35,
-                    ),
+                    style: context.body(size: 11, color: c.ink2, height: 1.35),
                   ),
                 ],
               ),
@@ -595,7 +590,7 @@ class _WebRecipeTicket extends StatelessWidget {
         borderColor: c.line,
         fold: true,
         borderRadius: BorderRadius.circular(14),
-        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
         tapeWidth: 54,
         tapeHeight: 15,
@@ -604,7 +599,7 @@ class _WebRecipeTicket extends StatelessWidget {
         child: Row(
           children: [
             const _EntryIcon(icon: AppIcons.book),
-            const SizedBox(width: 9),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -615,11 +610,7 @@ class _WebRecipeTicket extends StatelessWidget {
                     '记录每一道拿手菜，把喜欢的味道收好。',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: 10.5,
-                      color: c.ink2,
-                      height: 1.35,
-                    ),
+                    style: context.body(size: 11, color: c.ink2, height: 1.35),
                   ),
                 ],
               ),
@@ -652,7 +643,7 @@ class _EntryIcon extends StatelessWidget {
       child: Center(
         child: AppIcon(
           strokeSvg(icon, width: 1.9),
-          size: 17,
+          size: 18,
           color: c.accentInk,
         ),
       ),
@@ -734,8 +725,8 @@ class _EntryArrow extends StatelessWidget {
                   child: Text(
                     badge > 9 ? '9+' : '$badge',
                     style: context.body(
-                      size: 8.5,
-                      weight: FontWeight.w800,
+                      size: 9,
+                      weight: FontWeight.w700,
                       color: c.surface2,
                     ),
                   ),
@@ -762,7 +753,7 @@ class _WebQuoteStrip extends StatelessWidget {
       child: PaperCard(
         color: c.dark ? const Color(0xFF201E19) : const Color(0xFFFBF3E1),
         borderColor: c.accent.withAlpha(70),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         tapeColor: c.tape3,
         tapeWidth: 42,
         tapeHeight: 14,
@@ -789,7 +780,7 @@ class _WebQuoteStrip extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Citro',
-                    style: context.display(size: 17, color: c.inkSoft),
+                    style: context.display(size: 18, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -812,7 +803,7 @@ class _WebQuoteStrip extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: context.heading(size: 21.5, color: c.ink),
+                          style: context.heading(size: 22, color: c.ink),
                         ),
                       ),
                       Container(
@@ -829,7 +820,7 @@ class _WebQuoteStrip extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: context.hand(
-                            size: 19.5,
+                            size: 20,
                             color: c.inkSoft,
                             style: FontStyle.italic,
                           ),

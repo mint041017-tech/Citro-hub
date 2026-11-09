@@ -177,7 +177,7 @@ List<_SearchEntry> _buildSearchIndex() {
     const _SearchEntry(
       type: '功能',
       name: '赞赏码',
-      desc: '给广告费！！！',
+      desc: '给广告费',
       keys: 'appreciate sponsor 赞赏 广告费 支持',
       action: _SearchAction.appreciate,
     ),
@@ -251,8 +251,7 @@ List<_SearchEntry> _buildSearchIndex() {
 String _gameKeywords(String key) => switch (key) {
   'g2048' => '2048 数字 合成',
   'gmem' => 'memory jiyi 记忆 翻牌 配对 卡牌',
-  'gsudoku' =>
-    'sudoku 数独 九宫格 逻辑 异形 风车 重叠 奇偶 对角线 不等式 杀手 3d',
+  'gsudoku' => 'sudoku 数独 九宫格 逻辑 异形 风车 重叠 奇偶 对角线 不等式 杀手 3d',
   'gnono' => 'nonogram nono 数织 填涂',
   'gslide' => 'slide huarongdao 华容道 拼图 滑动',
   'gsnake' => 'snake 贪吃蛇 蛇',
@@ -529,7 +528,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
       clipBehavior: Clip.antiAlias,
       child: ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           if (_controller.text.trim().isEmpty && _history.isNotEmpty)
             _panelHeader(context, '最近搜索', clear: true),
@@ -539,7 +538,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               child: Text(
                 _rows.isEmpty ? '输入关键词搜索站内功能，回车必应' : '站内无匹配，回车直接必应搜索',
-                style: context.body(size: 11.5, color: c.inkSoft),
+                style: context.body(size: 12, color: c.inkSoft),
               ),
             ),
         ],
@@ -552,7 +551,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
       padding: const EdgeInsets.fromLTRB(14, 5, 8, 5),
       child: Row(
         children: [
-          Text(text, style: context.body(size: 10.5, color: context.c.inkSoft)),
+          Text(text, style: context.body(size: 11, color: context.c.inkSoft)),
           const Spacer(),
           if (clear)
             TextButton(
@@ -563,7 +562,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               },
               child: Text(
                 '清空',
-                style: context.body(size: 10.5, color: context.c.accentInk),
+                style: context.body(size: 11, color: context.c.accentInk),
               ),
             ),
         ],
@@ -597,7 +596,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
       },
       child: Container(
         color: _active == index ? c.hl.withAlpha(170) : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
             Container(
@@ -610,7 +609,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ),
               child: Text(
                 tag,
-                style: context.body(size: 9.5, color: c.accentInk),
+                style: context.body(size: 10, color: c.accentInk),
               ),
             ),
             const SizedBox(width: 10),
@@ -623,8 +622,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 12.5,
-                      weight: FontWeight.w600,
+                      size: 13,
+                      weight: FontWeight.w700,
                       color: c.ink,
                     ),
                   ),
@@ -633,7 +632,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                       desc,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.body(size: 10.5, color: c.inkSoft),
+                      style: context.body(size: 11, color: c.inkSoft),
                     ),
                 ],
               ),
@@ -678,14 +677,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 onTap: _showPanel,
                 textInputAction: TextInputAction.search,
                 style: context.body(
-                  size: 14.5,
-                  weight: FontWeight.w600,
+                  size: 14,
+                  weight: FontWeight.w700,
                   color: c.ink,
                 ),
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: widget.hint,
-                  hintStyle: context.body(size: 13.5, color: c.inkSoft),
+                  hintStyle: context.body(size: 14, color: c.inkSoft),
                   contentPadding: const EdgeInsets.fromLTRB(18, 0, 44, 1),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,

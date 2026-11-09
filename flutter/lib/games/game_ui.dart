@@ -17,6 +17,7 @@ import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 
 import '../services/api.dart';
+import '../services/play_log.dart';
 import '../services/refresh_rate.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -165,10 +166,12 @@ class _GameScaffoldState extends State<GameScaffold> {
   Timer? _timer;
   List<dynamic> _live = const [];
   bool _leaving = false;
+  DateTime? _entered;
 
   @override
   void initState() {
     super.initState();
+    _entered = DateTime.now();
     RefreshRate.acquire();
     if (widget.showLive && GameScaffold.liveEnabled) _startLive();
   }
@@ -197,6 +200,8 @@ class _GameScaffoldState extends State<GameScaffold> {
 
   @override
   void dispose() {
+    final entered = _entered;
+    if (entered != null) PlayLog.add(DateTime.now().difference(entered));
     RefreshRate.release();
     _leaving = true;
     _timer?.cancel();
@@ -272,7 +277,7 @@ class _GameScaffoldState extends State<GameScaffold> {
             if (!duo)
               _RoundIconButton(
                 onTap: widget.onBack ?? () => popOrHome(context),
-                size: 38,
+                size: 40,
                 child: gameIcon(GameIcons.arrowLeft, size: 18, color: c.ink2),
               )
             else
@@ -464,7 +469,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                   if (!duo)
                     _RoundIconButton(
                       onTap: widget.onBack ?? () => popOrHome(context),
-                      size: 38,
+                      size: 40,
                       child: gameIcon(
                         GameIcons.arrowLeft,
                         size: 18,
@@ -529,7 +534,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 8),
                   Text('数据看板', style: context.body(size: 10, color: c.inkSoft)),
                 ],
               ),
@@ -651,7 +656,7 @@ class _GameScaffoldState extends State<GameScaffold> {
     final av = raw['av'];
     final hasAv = av != null && '$av'.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(7),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(10),
@@ -715,7 +720,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 9.5,
+                      fontSize: 10,
                       color: c.inkSoft,
                     ),
                   ),
@@ -1042,7 +1047,7 @@ class GameScorePill extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppFonts.kalam,
               fontFamilyFallback: AppFonts.fallback,
-              fontSize: 19,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               height: 1.15,
               letterSpacing: 0.38,
@@ -1193,7 +1198,7 @@ class GameActionButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 gameIcon(icon!, size: 14, color: fg),
-                const SizedBox(width: 7),
+                const SizedBox(width: 8),
               ],
               Text(
                 label,
@@ -1305,7 +1310,7 @@ class GameSegTabs<T> extends StatelessWidget {
               onTap: () => onChanged(it.$1),
               child: Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: dense ? 10 : 13,
+                  horizontal: dense ? 10 : 14,
                   vertical: dense ? 5 : 6,
                 ),
                 decoration: BoxDecoration(
@@ -1424,14 +1429,14 @@ class GameLiveBar extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppFonts.zcool,
               fontFamilyFallback: AppFonts.fallback,
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w400,
               height: 1.65,
               letterSpacing: 0.25,
               color: c.ink,
             ),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 10),
           Expanded(
             child: list.isEmpty
                 ? const Padding(
@@ -1439,14 +1444,14 @@ class GameLiveBar extends StatelessWidget {
                       top: 2,
                       right: 2,
                       bottom: 3,
-                      left: 7,
+                      left: 8,
                     ),
                     child: Text(
                       '还没有人在玩',
                       style: TextStyle(
                         fontFamily: AppFonts.noto,
                         fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         height: 1.8,
                         color: Color(0xFF575446),
                       ),
@@ -1487,7 +1492,7 @@ class _LiveChip extends StatelessWidget {
     final hasAv = av != null && '$av'.isNotEmpty;
     final you = raw['you'] == true || raw['you'] == 1;
     return Container(
-      padding: const EdgeInsets.fromLTRB(4, 4, 11, 4),
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
       decoration: BoxDecoration(
         color: you ? const Color(0x29FE923B) : c.line,
         borderRadius: BorderRadius.circular(99),
@@ -1554,7 +1559,7 @@ class _LiveChip extends StatelessWidget {
                   fontSize: 10,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF8F4E05),
+                  color: Color(0xFF35506E),
                 ),
               ),
             ),

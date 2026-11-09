@@ -131,7 +131,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                     Expanded(
                       child: Text(
                         widget.type == 'comment' ? '举报评论' : '举报动态',
-                        style: context.heading(size: 21, color: c.ink),
+                        style: context.heading(size: 20, color: c.ink),
                       ),
                     ),
                     GestureDetector(
@@ -142,7 +142,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                         padding: const EdgeInsets.all(6),
                         child: AppIcon(
                           strokeSvg(AppIcons.close, width: 2.2),
-                          size: 17,
+                          size: 18,
                           color: c.inkSoft,
                         ),
                       ),
@@ -152,7 +152,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                 if (preview.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                     decoration: BoxDecoration(
                       color: c.surface2,
                       borderRadius: BorderRadius.circular(8),
@@ -176,12 +176,12 @@ class _ReportSheetState extends State<_ReportSheet> {
                 Text(
                   '选择原因',
                   style: context.body(
-                    size: 11.5,
+                    size: 12,
                     weight: FontWeight.w700,
                     color: c.inkSoft,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 7,
                   runSpacing: 7,
@@ -197,7 +197,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 7,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: _reason == reason ? c.hl : c.surface2,
@@ -209,10 +209,10 @@ class _ReportSheetState extends State<_ReportSheet> {
                           child: Text(
                             reason,
                             style: context.body(
-                              size: 11.5,
+                              size: 12,
                               weight: _reason == reason
                                   ? FontWeight.w700
-                                  : FontWeight.w500,
+                                  : FontWeight.w400,
                               color: _reason == reason ? c.accentInk : c.ink2,
                             ),
                           ),
@@ -230,7 +230,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                     if (_error != null) setState(() => _error = null);
                   },
                   onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                  style: context.body(size: 12.5, height: 1.5),
+                  style: context.body(size: 13, height: 1.5),
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: '补充说明（选填）',
@@ -254,7 +254,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                     _error!,
                     style: context.body(
                       size: 11,
-                      weight: FontWeight.w600,
+                      weight: FontWeight.w700,
                       color: c.stamp,
                     ),
                   ),
@@ -270,7 +270,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                 Text(
                   '恶意举报可能影响账号使用。我们会在合理期限内审核。',
                   textAlign: TextAlign.center,
-                  style: context.body(size: 9.5, color: c.inkSoft),
+                  style: context.body(size: 10, color: c.inkSoft),
                 ),
               ],
             ),

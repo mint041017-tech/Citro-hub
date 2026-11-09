@@ -44,8 +44,8 @@ class PomodoroState extends ChangeNotifier {
   static const _longKey = 'citro_pomo_long';
   static const _everyKey = 'citro_pomo_every';
   static const _autoKey = 'citro_pomo_auto';
-  static const _playKey = 'citro_pomo_play';
-  static const _pauseKey = 'citro_pomo_pause';
+  static const _playKey = 'citro_pomo_play_v2';
+  static const _pauseKey = 'citro_pomo_pause_v2';
   static const _chimeKey = 'citro_pomo_chime';
   static const _chimeVolumeKey = 'citro_pomo_chime_volume';
   static const _chimeKindKey = 'citro_pomo_chime_kind';
@@ -73,8 +73,8 @@ class PomodoroState extends ChangeNotifier {
   int longMinutes = defaultLongMinutes;
   int longEvery = 4;
   bool autoStart = false;
-  bool playWithFocus = true;
-  bool pauseOnBreak = true;
+  bool playWithFocus = false;
+  bool pauseOnBreak = false;
   bool chime = true;
   bool chimeKindWood = false;
   int chimeVolume = 55;
@@ -188,8 +188,8 @@ class PomodoroState extends ChangeNotifier {
     longMinutes = Prefs.getInt(_longKey, defaultLongMinutes).clamp(5, 120);
     longEvery = Prefs.getInt(_everyKey, 4).clamp(2, 8);
     autoStart = Prefs.getBool(_autoKey, false);
-    playWithFocus = Prefs.getBool(_playKey, true);
-    pauseOnBreak = Prefs.getBool(_pauseKey, true);
+    playWithFocus = Prefs.getBool(_playKey, false);
+    pauseOnBreak = Prefs.getBool(_pauseKey, false);
     chime = Prefs.getBool(_chimeKey, true);
     chimeVolume = Prefs.getInt(_chimeVolumeKey, 55).clamp(0, 100);
     chimeKindWood = Prefs.getString(_chimeKindKey) == 'wood';

@@ -71,11 +71,7 @@ class _PlayPageState extends State<PlayPage> {
       try {
         final j = jsonDecode(raw);
         records.add(
-          _PlayRecord(
-            '${j['t']}',
-            int.tryParse('${j['ts']}') ?? 0,
-            you: true,
-          ),
+          _PlayRecord('${j['t']}', int.tryParse('${j['ts']}') ?? 0, you: true),
         );
       } catch (_) {}
     }
@@ -312,7 +308,7 @@ class _PlayPageState extends State<PlayPage> {
                                   child: Text(
                                     '“',
                                     style: context.display(
-                                      size: 42,
+                                      size: 40,
                                       color: c.hl,
                                       height: 1,
                                     ),
@@ -373,7 +369,7 @@ class _PlayPageState extends State<PlayPage> {
                                                 : '开始抽取'),
                                       style: context.body(
                                         size: 14,
-                                        weight: FontWeight.w800,
+                                        weight: FontWeight.w700,
                                         color: const Color(0xFF2E2C22),
                                       ),
                                     ),
@@ -460,12 +456,12 @@ class _PlayPageState extends State<PlayPage> {
                                                 shape: BoxShape.circle,
                                               ),
                                             ),
-                                            const SizedBox(width: 7),
+                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
                                                 r.text,
                                                 style: context.body(
-                                                  size: 12.5,
+                                                  size: 13,
                                                   color: c.ink2,
                                                 ),
                                               ),
@@ -490,7 +486,7 @@ class _PlayPageState extends State<PlayPage> {
                         Text(
                           '玩法仅供参考，快乐第一。',
                           textAlign: TextAlign.center,
-                          style: context.body(size: 10.5, color: c.inkSoft),
+                          style: context.body(size: 11, color: c.inkSoft),
                         ),
                       ],
                     ),
@@ -551,7 +547,7 @@ class _PlayPageState extends State<PlayPage> {
             Text(
               label,
               style: context.body(
-                size: 11.5,
+                size: 12,
                 weight: FontWeight.w700,
                 color: c.ink2,
               ),
@@ -640,76 +636,80 @@ class _PlayPageState extends State<PlayPage> {
               ),
             )
           else
-            ...remote.take(20).map(
-              (r) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      margin: const EdgeInsets.only(top: 1),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: r.you ? c.accent : c.hl,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: c.line2),
-                      ),
-                      child: Text(
-                        r.name.isEmpty ? '?' : r.name.characters.last,
-                        style: context.body(
-                          size: 9,
-                          weight: FontWeight.w700,
-                          color: r.you ? const Color(0xFF2E2C22) : c.accentInk,
+            ...remote
+                .take(20)
+                .map(
+                  (r) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          margin: const EdgeInsets.only(top: 1),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: r.you ? c.accent : c.hl,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: c.line2),
+                          ),
+                          child: Text(
+                            r.name.isEmpty ? '?' : r.name.characters.last,
+                            style: context.body(
+                              size: 9,
+                              weight: FontWeight.w700,
+                              color: r.you
+                                  ? const Color(0xFF2E2C22)
+                                  : c.accentInk,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  r.you ? '你' : r.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.body(
-                                    size: 10.5,
-                                    weight: FontWeight.w700,
-                                    color: r.you ? c.accentInk : c.inkSoft,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      r.you ? '你' : r.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: context.body(
+                                        size: 11,
+                                        weight: FontWeight.w700,
+                                        color: r.you ? c.accentInk : c.inkSoft,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _time(r.ts),
+                                    style: context.body(
+                                      size: 10,
+                                      color: c.inkSoft.withAlpha(200),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(height: 1),
                               Text(
-                                _time(r.ts),
+                                r.text,
                                 style: context.body(
-                                  size: 9.5,
-                                  color: c.inkSoft.withAlpha(200),
+                                  size: 12,
+                                  color: c.ink2,
+                                  height: 1.45,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 1),
-                          Text(
-                            r.text,
-                            style: context.body(
-                              size: 12,
-                              color: c.ink2,
-                              height: 1.45,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
         ],
       ),
     );

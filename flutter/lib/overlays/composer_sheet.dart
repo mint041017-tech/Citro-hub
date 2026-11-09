@@ -158,10 +158,7 @@ class _ComposerState extends State<_Composer> {
           ? await context.app.grantPostCardDraw()
           : false;
       if (!mounted) return;
-      AppToast.show(
-        context,
-        cardReward ? '发布成功 · 获得一次卡面抽卡机会' : '发布成功',
-      );
+      AppToast.show(context, cardReward ? '发布成功 · 获得一次卡面抽卡机会' : '发布成功');
       widget.onCreated(post);
       Navigator.of(context).pop();
     } on Exception catch (e) {
@@ -246,14 +243,11 @@ class _ComposerState extends State<_Composer> {
                             border: InputBorder.none,
                             counterText: '',
                             counterStyle: context.body(
-                              size: 9.5,
+                              size: 10,
                               color: c.inkSoft,
                             ),
                             hintText: '说点什么，和队友们聊聊…',
-                            hintStyle: context.body(
-                              size: 13.5,
-                              color: c.inkSoft,
-                            ),
+                            hintStyle: context.body(size: 14, color: c.inkSoft),
                           ),
                         ),
                       ),
@@ -330,7 +324,7 @@ class _ComposerState extends State<_Composer> {
                                   shape: BoxShape.circle,
                                 ),
                               ),
-                              const SizedBox(width: 7),
+                              const SizedBox(width: 8),
                               Text(
                                 '录音中 ${recordSeconds}s / 60s',
                                 style: context.body(size: 12, color: c.stamp),
@@ -354,7 +348,7 @@ class _ComposerState extends State<_Composer> {
                                   child: Text(
                                     '结束',
                                     style: context.body(
-                                      size: 11.5,
+                                      size: 12,
                                       weight: FontWeight.w700,
                                       color: c.stamp,
                                     ),
@@ -377,7 +371,7 @@ class _ComposerState extends State<_Composer> {
                             const SizedBox(width: 8),
                             Text(
                               '点击试听',
-                              style: context.body(size: 10.5, color: c.inkSoft),
+                              style: context.body(size: 11, color: c.inkSoft),
                             ),
                             const Spacer(),
                             GestureDetector(
@@ -398,8 +392,8 @@ class _ComposerState extends State<_Composer> {
                                 child: Text(
                                   '删除',
                                   style: context.body(
-                                    size: 11.5,
-                                    weight: FontWeight.w600,
+                                    size: 12,
+                                    weight: FontWeight.w700,
                                     color: c.stamp,
                                   ),
                                 ),
@@ -420,7 +414,7 @@ class _ComposerState extends State<_Composer> {
                         const SizedBox(height: 8),
                         Text(
                           error!,
-                          style: context.body(size: 11.5, color: c.stamp),
+                          style: context.body(size: 12, color: c.stamp),
                         ),
                       ],
                     ],
@@ -463,7 +457,7 @@ class _ComposerState extends State<_Composer> {
                               : Text(
                                   '发布',
                                   style: context.body(
-                                    size: 13.5,
+                                    size: 14,
                                     weight: FontWeight.w700,
                                     color: const Color(0xFF2E2C22),
                                   ),

@@ -21,7 +21,7 @@ class _AppreciationDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '给广告费！！！',
+            '给广告费',
             textAlign: TextAlign.center,
             style: context.heading(size: 24, color: c.ink),
           ),

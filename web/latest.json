@@ -1,13 +1,13 @@
 {
-    "schema":  1,
-    "app_name":  "citro",
-    "version":  "2.0.15",
-    "build_number":  "2015",
-    "build_id":  "9a4cd5f87796c396999c061b2429cedb",
-    "file":  "Citro-web-2.0.15.zip",
-    "url":  "https://obs.chimu-claw.xyz/web/Citro-web-2.0.15.zip",
-    "size":  39109975,
-    "sha256":  "9a4cd5f87796c396999c061b2429cedb98f75639ed78c89a17b96de759dc49ef",
-    "published_at":  "2026-11-05T05:24:12Z",
-    "notes":  "2.0.15：移除编辑资料快捷卡片、主题胶囊缩短、修复 Windows 左下角头像显示"
+    "schema": 1,
+    "app_name": "citro",
+    "version": "2.1.0",
+    "build_number": "2100",
+    "build_id": "c7057a7e9ca07934622b7ce3e9450910",
+    "file": "Citro-web-2.1.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.1.0.zip",
+    "size": 31363958,
+    "sha256": "c7057a7e9ca07934622b7ce3e9450910c707463f6821a99d2d441d0ab97c862c",
+    "published_at": "2026-11-09T09:42:51Z",
+    "notes": "2.1.0：首页卡片编排与迷你卡、记账/待办/日历、倒数日与纪念日、评论时间右上、性能与安全优化。"
 }

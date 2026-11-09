@@ -160,7 +160,7 @@ class _QtyStepper extends StatelessWidget {
                     ? TextInputType.text
                     : const TextInputType.numberWithOptions(decimal: true),
                 style: context.body(
-                  size: 12.5,
+                  size: 13,
                   weight: FontWeight.w700,
                   color: c.ink,
                 ),
@@ -443,7 +443,7 @@ class _CookEditorState extends State<_CookEditor> {
                   padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
                   child: Row(
                     children: [
-                      Text(title, style: ctx.heading(size: 17)),
+                      Text(title, style: ctx.heading(size: 18)),
                       const Spacer(),
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
@@ -462,7 +462,7 @@ class _CookEditorState extends State<_CookEditor> {
                           child: Text(
                             '确定',
                             style: ctx.body(
-                              size: 12.5,
+                              size: 13,
                               weight: FontWeight.w700,
                               color: c.accentInk,
                             ),
@@ -741,7 +741,7 @@ class _CookEditorState extends State<_CookEditor> {
                         Container(
                           width: 46,
                           height: 5,
-                          margin: const EdgeInsets.only(top: 7),
+                          margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
                             color: c.line2,
                             borderRadius: BorderRadius.circular(3),
@@ -770,7 +770,7 @@ class _CookEditorState extends State<_CookEditor> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 9),
+                              const SizedBox(width: 10),
                               Text(
                                 widget.initial == null ? '新建食谱' : '编辑食谱',
                                 style: context.heading(size: 20),
@@ -778,10 +778,7 @@ class _CookEditorState extends State<_CookEditor> {
                               const Spacer(),
                               Text(
                                 '第 $step / 4 步',
-                                style: context.body(
-                                  size: 10.5,
-                                  color: c.inkSoft,
-                                ),
+                                style: context.body(size: 11, color: c.inkSoft),
                               ),
                               const SizedBox(width: 2),
                             ],
@@ -921,7 +918,7 @@ class _CookEditorState extends State<_CookEditor> {
                         Text(
                           labels[i],
                           style: context.body(
-                            size: 11.5,
+                            size: 12,
                             weight: FontWeight.w700,
                             color: step == i + 1 ? c.accentInk : c.inkSoft,
                           ),
@@ -967,7 +964,7 @@ class _CookEditorState extends State<_CookEditor> {
                         )
                       : Icon(
                           Icons.auto_awesome_rounded,
-                          size: 19,
+                          size: 20,
                           color: c.accentInk,
                         ),
                 ),
@@ -980,8 +977,8 @@ class _CookEditorState extends State<_CookEditor> {
                     Text(
                       _aiCreating ? 'CiCi 正在起草…' : '让 CiCi 帮我写',
                       style: context.body(
-                        size: 13.5,
-                        weight: FontWeight.w600,
+                        size: 14,
+                        weight: FontWeight.w700,
                         color: c.ink,
                       ),
                     ),
@@ -989,7 +986,7 @@ class _CookEditorState extends State<_CookEditor> {
                     Text(
                       '说说冰箱里有什么，AI 自动起草菜名、食材和做法',
                       style: context.body(
-                        size: 10.5,
+                        size: 11,
                         color: c.inkSoft,
                         height: 1.45,
                       ),
@@ -1074,7 +1071,7 @@ class _CookEditorState extends State<_CookEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: context.heading(size: 17, color: c.ink)),
+        Text(title, style: context.heading(size: 18, color: c.ink)),
         const SizedBox(height: 3),
         Text(
           desc,
@@ -1101,7 +1098,7 @@ class _CookEditorState extends State<_CookEditor> {
           cover.isEmpty ? '封面必填 · 选图后可自由拖动、缩放裁成 1:1' : '点击封面可重新选图、裁切',
           textAlign: TextAlign.center,
           style: context.body(
-            size: 9.5,
+            size: 10,
             color: cover.isEmpty ? c.stamp : c.inkSoft,
           ),
         ),
@@ -1204,7 +1201,7 @@ class _CookEditorState extends State<_CookEditor> {
                   child: Text(
                     '换封面',
                     textAlign: TextAlign.center,
-                    style: context.body(size: 9.5, color: Colors.white),
+                    style: context.body(size: 10, color: Colors.white),
                   ),
                 ),
               )
@@ -1220,7 +1217,7 @@ class _CookEditorState extends State<_CookEditor> {
                   Text(
                     '上传封面 *',
                     style: context.body(
-                      size: 10.5,
+                      size: 11,
                       weight: FontWeight.w700,
                       color: c.accentInk,
                     ),
@@ -1228,7 +1225,7 @@ class _CookEditorState extends State<_CookEditor> {
                   const SizedBox(height: 2),
                   Text(
                     '裁成 1:1',
-                    style: context.body(size: 8.5, color: c.inkSoft),
+                    style: context.body(size: 9, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -1251,7 +1248,7 @@ class _CookEditorState extends State<_CookEditor> {
           children: [
             Text(
               '${servingsValue} 人份',
-              style: context.body(size: 12.5, color: c.ink),
+              style: context.body(size: 13, color: c.ink),
             ),
             const Spacer(),
             AppIcon(
@@ -1292,7 +1289,7 @@ class _CookEditorState extends State<_CookEditor> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('几人份', style: ctx.heading(size: 19)),
+                Text('几人份', style: ctx.heading(size: 20)),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
@@ -1426,7 +1423,7 @@ class _CookEditorState extends State<_CookEditor> {
                 hint,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.body(size: 9.5, color: c.inkSoft),
+                style: context.body(size: 10, color: c.inkSoft),
               ),
             ),
             GestureDetector(
@@ -1451,7 +1448,7 @@ class _CookEditorState extends State<_CookEditor> {
                     Text(
                       '食材库',
                       style: context.body(
-                        size: 10.5,
+                        size: 11,
                         weight: FontWeight.w700,
                         color: c.accentInk,
                       ),
@@ -1486,8 +1483,8 @@ class _CookEditorState extends State<_CookEditor> {
                   Text(
                     group == 'main' ? '加一个食材' : '加一个调料',
                     style: context.body(
-                      size: 11.5,
-                      weight: FontWeight.w600,
+                      size: 12,
+                      weight: FontWeight.w700,
                       color: c.accentInk,
                     ),
                   ),
@@ -1502,7 +1499,7 @@ class _CookEditorState extends State<_CookEditor> {
 
   Widget _ingredientRow(CitroColors c, _IngRow row) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 9),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
       decoration: BoxDecoration(
         color: c.surface2,
@@ -1526,7 +1523,7 @@ class _CookEditorState extends State<_CookEditor> {
                       filled: true,
                       fillColor: c.surface,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 11,
+                        horizontal: 12,
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(9),
@@ -1554,7 +1551,7 @@ class _CookEditorState extends State<_CookEditor> {
                     row.unit = '克';
                   }
                 }),
-                size: 38,
+                size: 40,
               ),
             ],
           ),
@@ -1566,7 +1563,7 @@ class _CookEditorState extends State<_CookEditor> {
                 Flexible(
                   child: Container(
                     height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 11),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
                       color: c.surface,
@@ -1659,12 +1656,12 @@ class _CookEditorState extends State<_CookEditor> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('选择单位', style: ctx.heading(size: 19)),
+                Text('选择单位', style: ctx.heading(size: 20)),
                 const SizedBox(height: 5),
                 Text(
                   '一小把、少许、少量、适量、不用单位不需要填数量',
                   textAlign: TextAlign.center,
-                  style: ctx.body(size: 10.5, color: c.inkSoft),
+                  style: ctx.body(size: 11, color: c.inkSoft),
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
@@ -1759,8 +1756,8 @@ class _CookEditorState extends State<_CookEditor> {
                   Text(
                     '加一步',
                     style: context.body(
-                      size: 11.5,
-                      weight: FontWeight.w600,
+                      size: 12,
+                      weight: FontWeight.w700,
                       color: c.accentInk,
                     ),
                   ),
@@ -1778,7 +1775,7 @@ class _CookEditorState extends State<_CookEditor> {
     final timer = int.tryParse(row.timer.text.trim()) ?? 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(10, 10, 9, 10),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -1847,7 +1844,7 @@ class _CookEditorState extends State<_CookEditor> {
             ),
           ),
           if (row.img.isNotEmpty) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: SizedBox(
@@ -1910,9 +1907,9 @@ class _CookEditorState extends State<_CookEditor> {
         _label(c, '谁可以看'),
         Row(
           children: [
-            Expanded(child: _visBtn(c, false, '🔒 私密', '仅自己可见')),
+            Expanded(child: _visBtn(c, false, '私密', '仅自己可见')),
             const SizedBox(width: 8),
-            Expanded(child: _visBtn(c, true, '🌐 公开', '出现在食谱广场')),
+            Expanded(child: _visBtn(c, true, '公开', '出现在食谱广场')),
           ],
         ),
         const SizedBox(height: 6),
@@ -1944,7 +1941,7 @@ class _CookEditorState extends State<_CookEditor> {
             Text(
               label,
               style: context.body(
-                size: 12.5,
+                size: 13,
                 weight: FontWeight.w700,
                 color: on ? c.accentInk : c.ink2,
               ),
@@ -2007,7 +2004,7 @@ class _CookEditorState extends State<_CookEditor> {
             onTap: () => onSelected(option),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: value == option ? c.accent : c.surface2,
                 borderRadius: BorderRadius.circular(999),
@@ -2016,8 +2013,8 @@ class _CookEditorState extends State<_CookEditor> {
               child: Text(
                 option,
                 style: context.body(
-                  size: 11.5,
-                  weight: FontWeight.w600,
+                  size: 12,
+                  weight: FontWeight.w700,
                   color: value == option ? const Color(0xFF2E2C22) : c.ink2,
                 ),
               ),
@@ -2036,7 +2033,7 @@ class _CookEditorState extends State<_CookEditor> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(10),
@@ -2054,7 +2051,7 @@ class _CookEditorState extends State<_CookEditor> {
                     minutes > 0 ? '$minutes 分钟' : '未设置',
                     style: context.body(
                       size: 12,
-                      weight: FontWeight.w600,
+                      weight: FontWeight.w700,
                       color: minutes > 0 ? c.accentInk : c.inkSoft,
                     ),
                   ),
@@ -2085,15 +2082,15 @@ class _CookEditorState extends State<_CookEditor> {
       maxLength: maxLength,
       maxLines: maxLines,
       keyboardType: numeric ? TextInputType.number : TextInputType.text,
-      style: context.body(size: 12.5),
+      style: context.body(size: 13),
       decoration: InputDecoration(
         counterText: '',
         hintText: hint,
-        hintStyle: context.body(size: 11.5, color: c.inkSoft),
+        hintStyle: context.body(size: 12, color: c.inkSoft),
         filled: true,
         fillColor: c.surface2,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 11,
+          horizontal: 12,
           vertical: 10,
         ),
         constraints: BoxConstraints(minHeight: maxLines > 1 ? 88 : 38),
@@ -2136,8 +2133,8 @@ class _CookEditorState extends State<_CookEditor> {
             Text(
               label,
               style: context.body(
-                size: 11.5,
-                weight: FontWeight.w600,
+                size: 12,
+                weight: FontWeight.w700,
                 color: c.ink2,
               ),
             ),
@@ -2212,7 +2209,7 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
               Icon(Icons.auto_awesome_rounded, size: 20, color: c.accentInk),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('AI 快速创建食谱', style: context.heading(size: 19)),
+                child: Text('AI 快速创建食谱', style: context.heading(size: 20)),
               ),
               IconButton(
                 tooltip: '关闭',
@@ -2224,7 +2221,7 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
           ),
           Text(
             '说说现有的食材、口味或想要的做法，CiCi 会先写一版草稿，你再改。',
-            style: context.body(size: 11.5, color: c.inkSoft, height: 1.6),
+            style: context.body(size: 12, color: c.inkSoft, height: 1.6),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -2409,7 +2406,7 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('这张图读不出来', style: context.heading(size: 19, color: c.ink)),
+              Text('这张图读不出来', style: context.heading(size: 20, color: c.ink)),
               const SizedBox(height: 6),
               Text('换一张图片再试', style: context.body(size: 11, color: c.inkSoft)),
               const SizedBox(height: 14),
@@ -2454,8 +2451,8 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
                     child: Text(
                       '重置',
                       style: context.body(
-                        size: 10.5,
-                        weight: FontWeight.w600,
+                        size: 11,
+                        weight: FontWeight.w700,
                         color: c.ink2,
                       ),
                     ),
@@ -2466,7 +2463,7 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
             const SizedBox(height: 3),
             Text(
               '单指拖动 · 双指缩放 · 自由取景',
-              style: context.body(size: 10.5, color: c.inkSoft),
+              style: context.body(size: 11, color: c.inkSoft),
             ),
             const SizedBox(height: 12),
             Center(
@@ -2587,7 +2584,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
               Text(
                 recipe.name,
                 textAlign: TextAlign.center,
-                style: context.body(size: 11.5, color: c.inkSoft),
+                style: context.body(size: 12, color: c.inkSoft),
               ),
               const SizedBox(height: 12),
               GestureDetector(
@@ -2603,7 +2600,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 9,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: c.surface2,
@@ -2614,7 +2611,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
                     children: [
                       Text(
                         '日期',
-                        style: context.body(size: 11.5, color: c.inkSoft),
+                        style: context.body(size: 12, color: c.inkSoft),
                       ),
                       const Spacer(),
                       Text(
@@ -2628,7 +2625,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text('评分', style: context.body(size: 11.5, color: c.inkSoft)),
+                  Text('评分', style: context.body(size: 12, color: c.inkSoft)),
                   const SizedBox(width: 8),
                   for (var i = 1; i <= 5; i++)
                     GestureDetector(
@@ -2800,7 +2797,7 @@ Future<FridgeItem?> showFridgeDialog(
                 child: Text(
                   '数量',
                   style: context.body(
-                    size: 11.5,
+                    size: 12,
                     weight: FontWeight.w700,
                     color: c.inkSoft,
                   ),
@@ -2815,7 +2812,7 @@ Future<FridgeItem?> showFridgeDialog(
               Text(
                 '单位',
                 style: context.body(
-                  size: 11.5,
+                  size: 12,
                   weight: FontWeight.w700,
                   color: c.inkSoft,
                 ),
@@ -2832,7 +2829,7 @@ Future<FridgeItem?> showFridgeDialog(
                         duration: const Duration(milliseconds: 150),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 7,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           color: unit == u ? c.accent : c.surface2,
@@ -2844,8 +2841,8 @@ Future<FridgeItem?> showFridgeDialog(
                         child: Text(
                           u,
                           style: context.body(
-                            size: 11.5,
-                            weight: FontWeight.w600,
+                            size: 12,
+                            weight: FontWeight.w700,
                             color: unit == u ? const Color(0xFF2E2C22) : c.ink2,
                           ),
                         ),
@@ -2943,7 +2940,7 @@ Widget _dateBox(
   String value,
 ) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
     decoration: BoxDecoration(
       color: c.surface2,
       borderRadius: BorderRadius.circular(10),
@@ -2957,7 +2954,7 @@ Widget _dateBox(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: context.body(size: 11.5, color: c.ink),
+          style: context.body(size: 12, color: c.ink),
         ),
       ],
     ),
@@ -3290,7 +3287,7 @@ class _FoodSheetState extends State<_FoodSheet> {
                           Text(
                             cat == _recipeCat ? '抽到食谱会直接打开详情' : '抽到满意的，就去厨房试试吧',
                             textAlign: TextAlign.center,
-                            style: context.body(size: 9.5, color: c.inkSoft),
+                            style: context.body(size: 10, color: c.inkSoft),
                           ),
                         ],
                       ),

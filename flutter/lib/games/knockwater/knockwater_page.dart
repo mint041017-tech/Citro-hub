@@ -1035,7 +1035,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: _serif.copyWith(
-                                fontSize: 21 * s,
+                                fontSize: 20 * s,
                                 letterSpacing: 4.6 * s,
                                 color: _paper.withValues(alpha: 0.94),
                                 height: 1.1,
@@ -1112,7 +1112,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         Text(
                           '花瓣',
                           style: TextStyle(
-                            fontSize: 9.5 * s,
+                            fontSize: 10 * s,
                             letterSpacing: 1.4 * s,
                             color: kGlow.withValues(alpha: 0.4),
                           ),
@@ -1121,7 +1121,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         Text(
                           '${hud.petalsInBay}/${hud.petalCount}',
                           style: TextStyle(
-                            fontSize: 12.5 * s,
+                            fontSize: 13 * s,
                             letterSpacing: 1 * s,
                             color: kCoral,
                             fontFeatures: const <FontFeature>[
@@ -1136,7 +1136,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       '星数 $_starTotal/$_maxStars',
                       key: const ValueKey('kw-hud-stars'),
                       style: TextStyle(
-                        fontSize: 8.5 * s,
+                        fontSize: 9 * s,
                         letterSpacing: 0.6 * s,
                         color: kGold.withValues(alpha: 0.55),
                         fontFeatures: const <FontFeature>[
@@ -1168,7 +1168,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               width: math.min(340 * s, width - 28),
               child: Container(
                 key: const ValueKey('kw-hint'),
-                padding: EdgeInsets.fromLTRB(14 * s, 9 * s, 16 * s, 10 * s),
+                padding: EdgeInsets.fromLTRB(14 * s, 10 * s, 16 * s, 10 * s),
                 decoration: BoxDecoration(
                   color: const Color(0xFF051214).withValues(alpha: 0.78),
                   borderRadius: BorderRadius.circular(24 * s),
@@ -1288,7 +1288,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               Text(
                 '重叩',
                 style: _serif.copyWith(
-                  fontSize: 17 * s,
+                  fontSize: 18 * s,
                   letterSpacing: 3 * s,
                   color: kGold,
                 ),
@@ -1509,7 +1509,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                           Text(
                             level.name,
                             style: _serif.copyWith(
-                              fontSize: 34 * s,
+                              fontSize: 36 * s,
                               letterSpacing: 10 * s,
                               color: _paper.withValues(alpha: 0.96),
                               shadows: <Shadow>[
@@ -2060,15 +2060,17 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       );
                     }
                     return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: row.last ? 16 * s : gap,
-                      ),
+                      padding: EdgeInsets.only(bottom: row.last ? 16 * s : gap),
                       child: LayoutBuilder(
                         builder: (context, cons) {
                           final tileW = (cons.maxWidth - gap * 3) / 4;
                           return Row(
                             children: <Widget>[
-                              for (var i = 0; i < row.levels.length; i++) ...<Widget>[
+                              for (
+                                var i = 0;
+                                i < row.levels.length;
+                                i++
+                              ) ...<Widget>[
                                 SizedBox(
                                   width: tileW,
                                   child: _levelTile(row.levels[i], s),
@@ -2105,9 +2107,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
       height: 66 * s,
       padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 6 * s),
       decoration: BoxDecoration(
-        color: unlocked
-            ? const Color(0xCC0A1D1F)
-            : const Color(0x99071113),
+        color: unlocked ? const Color(0xCC0A1D1F) : const Color(0x99071113),
         border: Border.all(color: border),
       ),
       child: Column(
@@ -2442,7 +2442,7 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 11 * scale),
+        padding: EdgeInsets.symmetric(vertical: 12 * scale),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(40),

@@ -80,6 +80,9 @@ void main() {
     expect(find.text('用户协议'), findsOneWidget);
     expect(find.text('注销账号（永久删除）'), findsOneWidget);
 
+    // 注销入口现在排在用户协议之后，小屏上要先滚进视野才能点。
+    await tester.ensureVisible(find.text('注销账号（永久删除）'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('注销账号（永久删除）'));
     await tester.pumpAndSettle();
     expect(find.text('登录密码'), findsOneWidget);

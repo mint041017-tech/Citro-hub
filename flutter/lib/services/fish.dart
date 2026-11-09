@@ -123,7 +123,7 @@ class FishState {
     if (inf.type == 'holiday') return '${inf.name}假期中';
     if (inf.type == 'makeup') {
       final n = nextRest(now, cfg);
-      return '补班中 😩${n != null ? ' · 距休息日 $n 天' : ''}';
+      return '补班中${n != null ? ' · 距休息日 $n 天' : ''}';
     }
     if (inf.type == 'work') {
       final nowM = now.hour * 60 + now.minute;

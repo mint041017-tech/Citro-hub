@@ -38,8 +38,8 @@ extension CitroContext on BuildContext {
   );
 
   TextStyle display({
-    double size = 24,
-    FontWeight weight = FontWeight.w400,
+    double size = CitroType.display,
+    FontWeight weight = CitroType.regular,
     Color? color,
     double? height,
     double? letterSpacing,
@@ -54,7 +54,7 @@ extension CitroContext on BuildContext {
   );
 
   TextStyle heading({
-    double size = 23,
+    double size = CitroType.heading,
     Color? color,
     double? height,
     double? letterSpacing,
@@ -62,10 +62,10 @@ extension CitroContext on BuildContext {
     fontFamily: AppFonts.zcool,
     fontFamilyFallback: AppFonts.bodyFallback,
     fontSize: size,
-    fontWeight: FontWeight.w400,
+    fontWeight: CitroType.regular,
     color: color ?? c.ink,
     height: height ?? 1.2,
-    letterSpacing: letterSpacing ?? 0.46,
+    letterSpacing: letterSpacing ?? 0.02 * size,
   );
 
   TextStyle hand({
@@ -135,6 +135,15 @@ ThemeData buildCitroTheme(CitroColors colors) {
     extensions: [CitroSkin(colors)],
     dividerColor: colors.line,
     iconTheme: IconThemeData(color: colors.ink2),
+    // 滚动条收窄到 6px 并贴边，避免遮住卡片右侧圆角。
+    scrollbarTheme: ScrollbarThemeData(
+      thickness: const WidgetStatePropertyAll(6),
+      radius: const Radius.circular(3),
+      crossAxisMargin: 2,
+      thumbColor: WidgetStatePropertyAll(colors.inkSoft.withAlpha(110)),
+      trackColor: const WidgetStatePropertyAll(Colors.transparent),
+      trackBorderColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
     bottomSheetTheme: BottomSheetThemeData(
       constraints: const BoxConstraints(maxWidth: 760),
       backgroundColor: colors.surface,

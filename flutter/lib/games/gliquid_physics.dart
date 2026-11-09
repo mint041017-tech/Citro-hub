@@ -563,9 +563,7 @@ class SoftBlob {
         final p0 = oldPositions[segment];
         final p1 = oldPositions[segment + 1];
         final segLen = _hypot(p1.x - p0.x, p1.y - p0.y);
-        final t = segLen > 1e-6
-            ? _clamp((dist - walked) / segLen, 0, 1)
-            : 0.0;
+        final t = segLen > 1e-6 ? _clamp((dist - walked) / segLen, 0, 1) : 0.0;
         final v0 = oldVelocities[segment];
         final v1 = oldVelocities[segment + 1];
         final p = points[i];
@@ -1094,10 +1092,5 @@ class SoftWorld {
     }
   }
 
-  return (
-    inside: inside,
-    x: bestX,
-    y: bestY,
-    depth: math.sqrt(bestD2),
-  );
+  return (inside: inside, x: bestX, y: bestY, depth: math.sqrt(bestD2));
 }

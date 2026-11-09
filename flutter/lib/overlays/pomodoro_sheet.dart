@@ -252,12 +252,12 @@ class _PomodoroDoneDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(title, style: context.heading(size: 25, color: c.ink)),
+              Text(title, style: context.heading(size: 24, color: c.ink)),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: context.body(size: 12.5, color: c.inkSoft, height: 1.65),
+                style: context.body(size: 13, color: c.inkSoft, height: 1.65),
               ),
               const SizedBox(height: 14),
               Container(
@@ -273,7 +273,7 @@ class _PomodoroDoneDialog extends StatelessWidget {
                   '今日已完成 ${PomodoroState.instance.todayCount} 颗番茄',
                   style: context.body(
                     size: 11,
-                    weight: FontWeight.w600,
+                    weight: FontWeight.w700,
                     color: c.accentInk,
                   ),
                 ),
@@ -296,7 +296,7 @@ class _PomodoroDoneDialog extends StatelessWidget {
                   child: Text(
                     action,
                     style: context.body(
-                      size: 14.5,
+                      size: 14,
                       weight: FontWeight.w700,
                       color: const Color(0xFF2E2C22),
                     ),
@@ -308,7 +308,7 @@ class _PomodoroDoneDialog extends StatelessWidget {
                 onPressed: () => Navigator.of(context).maybePop(),
                 child: Text(
                   '稍后再说',
-                  style: context.body(size: 12.5, color: c.inkSoft),
+                  style: context.body(size: 13, color: c.inkSoft),
                 ),
               ),
             ],
@@ -445,15 +445,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 _cycleRow(context, state),
                 const SizedBox(height: 18),
                 _actions(context, state),
-                const SizedBox(height: 13),
+                const SizedBox(height: 14),
                 Text(
                   state.running ? '通知栏常驻倒计时 · 到点会弹窗提醒' : '关闭窗口后计时继续 · 到点会提醒你',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: c.inkSoft,
-                    height: 1.6,
-                  ),
+                  style: TextStyle(fontSize: 12, color: c.inkSoft, height: 1.6),
                 ),
               ],
             );
@@ -506,7 +502,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 '番茄钟',
                 style: TextStyle(
                   fontSize: 22,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: .5,
                   color: c.ink,
                 ),
@@ -516,14 +512,14 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 '一段一段地做，把心放回此刻。',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: c.inkSoft),
+                style: TextStyle(fontSize: 12, color: c.inkSoft),
               ),
             ],
           ),
         ),
         const SizedBox(width: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: c.accent.withAlpha(c.dark ? 34 : 22),
             borderRadius: BorderRadius.circular(999),
@@ -537,7 +533,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 '今日 ${state.todayMinutes} 分钟',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: c.accentInk,
                 ),
               ),
@@ -618,13 +614,13 @@ class _PomodoroCardState extends State<PomodoroCard> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(item.$3, size: 17, color: selected ? color : c.inkSoft),
+                Icon(item.$3, size: 18, color: selected ? color : c.inkSoft),
                 const SizedBox(height: 4),
                 Text(
                   item.$2,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                     color: selected ? color : c.inkSoft,
                   ),
                 ),
@@ -643,12 +639,12 @@ class _PomodoroCardState extends State<PomodoroCard> {
       children: [
         Row(
           children: [
-            Text('长休时长', style: TextStyle(fontSize: 11.5, color: c.inkSoft)),
+            Text('长休时长', style: TextStyle(fontSize: 12, color: c.inkSoft)),
             const Spacer(),
             Text(
               '${state.longMinutes} 分钟',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: c.accentInk,
               ),
@@ -710,13 +706,13 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 style: TextStyle(
                   fontSize: dimension * .225,
                   height: 1.05,
-                  fontWeight: FontWeight.w300,
+                  fontWeight: FontWeight.w400,
                   letterSpacing: .5,
                   color: c.ink,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 10),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -729,7 +725,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 8),
                   Text(
                     _statusLabel(state),
                     style: TextStyle(
@@ -790,7 +786,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
           '第 $current / 4 轮',
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w400,
             color: c.inkSoft,
           ),
         ),
@@ -858,7 +854,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
                   key: ValueKey(label),
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

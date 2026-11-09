@@ -509,7 +509,7 @@ class _BrakeLoadingState extends State<_BrakeLoading>
                       opacity: 0.75 + 0.25 * (1 - (_c.value - 0.5).abs() * 2),
                       child: const Icon(
                         Icons.speed_rounded,
-                        size: 34,
+                        size: 36,
                         color: Color(0xFFF1DCAE),
                       ),
                     ),
@@ -521,10 +521,10 @@ class _BrakeLoadingState extends State<_BrakeLoading>
             Text(
               _label,
               style: const TextStyle(
-                fontSize: 13.5,
+                fontSize: 14,
                 height: 1.4,
                 letterSpacing: 1.2,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: Color(0xE6F5EFE6),
               ),
             ),

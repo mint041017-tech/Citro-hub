@@ -34,8 +34,7 @@ class CardFace {
     return RegExp(r'^\d+$').hasMatch(raw) ? raw : '特别';
   }
 
-  double get aspect =>
-      width > 0 && height > 0 ? width / height : 3 / 4;
+  double get aspect => width > 0 && height > 0 ? width / height : 3 / 4;
 
   static CardFace? fromJson(
     Map<String, dynamic> json,

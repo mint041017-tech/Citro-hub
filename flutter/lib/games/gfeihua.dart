@@ -562,7 +562,7 @@ class GameFeihuaView extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 11.5,
+                fontSize: 12,
                 height: 1.65,
                 letterSpacing: 0.575,
                 color: c.inkSoft,
@@ -616,7 +616,7 @@ class GameFeihuaView extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12.5,
+              fontSize: 13,
               height: 1.65,
               letterSpacing: 0.75,
               color: c.ink2,
@@ -647,7 +647,7 @@ class GameFeihuaView extends StatelessWidget {
     final base = TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 13.5,
+      fontSize: 14,
       height: 22.95 / 13.5,
       letterSpacing: 0,
       color: c.ink2,
@@ -685,7 +685,7 @@ class GameFeihuaView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < texts.length; i++) ...[
-          if (i > 0) const SizedBox(height: 7),
+          if (i > 0) const SizedBox(height: 8),
           _ruleRow(ord[i], TextSpan(style: base, children: texts[i])),
         ],
       ],
@@ -736,13 +736,13 @@ class GameFeihuaView extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
                           fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 11.5,
+                          fontSize: 12,
                           height: 1.65,
                           letterSpacing: 0.92,
                           color: c.inkSoft,
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.fromLTRB(14, 2, 14, 3),
                         decoration: BoxDecoration(
@@ -778,7 +778,7 @@ class GameFeihuaView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       Container(
                         width: 58,
                         height: 7,
@@ -817,7 +817,7 @@ class GameFeihuaView extends StatelessWidget {
                   // 计时器每秒都会重建整页；懒构建避免整条诗句链跟着重建。
                   itemCount: chain.length,
                   itemBuilder: (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: _chainRow(chain[index]),
                   ),
                 ),
@@ -873,7 +873,7 @@ class GameFeihuaView extends StatelessWidget {
                             fillColor: c.surface2,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 11,
+                              vertical: 12,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -894,12 +894,12 @@ class GameFeihuaView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       _pillButton(
                         label: '对',
                         width: 66,
                         height: 46,
-                        fontSize: 17,
+                        fontSize: 18,
                         letterSpacing: 1.02,
                         onTap: thinking ? null : onSubmit,
                       ),
@@ -913,14 +913,14 @@ class GameFeihuaView extends StatelessWidget {
         SizedBox(
           height: 28.266,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(15, 0, 15, 6),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
             child: Row(
               children: [
                 // v1.6.1：令字常驻输入行上方（用户反馈：键盘抬起会遮住顶部
                 // 的令字，把它复制到键盘上方永远可见的位置）。
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
+                    horizontal: 10,
                     vertical: 1,
                   ),
                   decoration: BoxDecoration(
@@ -933,7 +933,7 @@ class GameFeihuaView extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppFonts.noto,
                         fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         height: 1.65,
                         letterSpacing: 0.23,
                         color: c.ink2,
@@ -943,7 +943,7 @@ class GameFeihuaView extends StatelessWidget {
                         TextSpan(
                           text: ch.isEmpty ? '—' : ch,
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: c.stamp,
                           ),
@@ -959,7 +959,7 @@ class GameFeihuaView extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     child: Container(
                       height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: c.line2),
@@ -970,7 +970,7 @@ class GameFeihuaView extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
                           fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 12.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
                           height: 1.65,
                           letterSpacing: 0.5,
@@ -986,7 +986,7 @@ class GameFeihuaView extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       height: 1.65,
                       letterSpacing: 0.23,
                       color: c.inkSoft,
@@ -996,7 +996,7 @@ class GameFeihuaView extends StatelessWidget {
                       TextSpan(
                         text: '×$mult',
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: c.mintInk,
                         ),
@@ -1032,7 +1032,7 @@ class GameFeihuaView extends StatelessWidget {
             Container(width: 4, color: bar),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1099,7 +1099,7 @@ class GameFeihuaView extends StatelessWidget {
     final base = TextStyle(
       fontFamily: AppFonts.zcool,
       fontFamilyFallback: AppFonts.fallback,
-      fontSize: 17,
+      fontSize: 18,
       height: 1.5,
       letterSpacing: 1.2,
       color: c.ink,
@@ -1116,10 +1116,7 @@ class GameFeihuaView extends StatelessWidget {
           if (i < parts.length - 1)
             TextSpan(
               text: ch,
-              style: TextStyle(
-                color: c.accentInk,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: c.accentInk, fontWeight: FontWeight.w700),
             ),
         ],
       ],
@@ -1150,7 +1147,7 @@ class GameFeihuaView extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1163,7 +1160,7 @@ class GameFeihuaView extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppFonts.noto,
                     fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     height: 1.65,
                     letterSpacing: 0.75,
                     color: c.ink2,
@@ -1174,7 +1171,7 @@ class GameFeihuaView extends StatelessWidget {
               _tagRule(),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1185,7 +1182,7 @@ class GameFeihuaView extends StatelessWidget {
               _stat('本局得分', '$score', accent: true),
             ],
           ),
-          const SizedBox(height: 17),
+          const SizedBox(height: 18),
           SizedBox(width: 140, height: 48, child: _bigButton('再来一局', onAgain)),
         ],
       ),
@@ -1201,7 +1198,7 @@ class GameFeihuaView extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.noto,
             fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 11.5,
+            fontSize: 12,
             height: 1.65,
             letterSpacing: 0.46,
             color: c.inkSoft,
@@ -1213,7 +1210,7 @@ class GameFeihuaView extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.kalam,
             fontFamilyFallback: AppFonts.fallback,
-            fontSize: 23,
+            fontSize: 24,
             fontWeight: FontWeight.w700,
             height: 1.65,
             letterSpacing: 0,
@@ -1339,10 +1336,10 @@ class GameFeihuaView extends StatelessWidget {
         style: TextStyle(
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.bodyFallback,
-          fontSize: 12.5,
+          fontSize: 13,
           height: 1.5,
           letterSpacing: 0,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: c.ink2,
         ),
       ),

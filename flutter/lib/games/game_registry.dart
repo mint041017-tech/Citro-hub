@@ -126,7 +126,7 @@ Widget _tile(
         style: TextStyle(
           fontFamily: AppFonts.noto,
           fontSize: fontSize,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           color: fg,
           height: 1,
         ),
@@ -171,7 +171,7 @@ Widget _art2048(BuildContext context) => Row(
       const Color(0xFF2A211C),
       w: 26,
       h: 24,
-      fontSize: 6.5,
+      fontSize: 9,
     ),
   ],
 );
@@ -241,7 +241,7 @@ Widget _artSudoku(BuildContext context) {
             child: Text(
               values[i],
               style: TextStyle(
-                fontSize: 6,
+                fontSize: 9,
                 color: i == 0
                     ? const Color(0xFF2A211C)
                     : const Color(0xFF5C524A),
@@ -308,8 +308,8 @@ Widget _artSlide(BuildContext context) => Container(
           child: Text(
             '$i',
             style: TextStyle(
-              fontSize: 6.5,
-              fontWeight: FontWeight.w800,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
               color: i == 8 ? const Color(0xFF2A211C) : const Color(0xFF5C524A),
             ),
           ),
@@ -601,9 +601,7 @@ Widget _petal(BuildContext context, double angle) => Transform.rotate(
         topRight: Radius.circular(12),
         bottomLeft: Radius.zero,
       ),
-      gradient: LinearGradient(
-        colors: [Color(0xFFE4F2F0), Color(0xFFB7DAD7)],
-      ),
+      gradient: LinearGradient(colors: [Color(0xFFE4F2F0), Color(0xFFB7DAD7)]),
       boxShadow: [
         BoxShadow(
           color: Color(0x382E6B73),
@@ -639,8 +637,22 @@ class _KnockwaterArtPainter extends CustomPainter {
     canvas.rotate(angle);
     final path = Path()
       ..moveTo(0, -4.6 * scale)
-      ..cubicTo(3.2 * scale, -2.6 * scale, 3.4 * scale, 1.6 * scale, 0, 4.2 * scale)
-      ..cubicTo(-3.4 * scale, 1.6 * scale, -3.2 * scale, -2.6 * scale, 0, -4.6 * scale)
+      ..cubicTo(
+        3.2 * scale,
+        -2.6 * scale,
+        3.4 * scale,
+        1.6 * scale,
+        0,
+        4.2 * scale,
+      )
+      ..cubicTo(
+        -3.4 * scale,
+        1.6 * scale,
+        -3.2 * scale,
+        -2.6 * scale,
+        0,
+        -4.6 * scale,
+      )
       ..close();
     canvas.drawPath(path, Paint()..color = const Color(0xFFFFB69A));
     canvas.drawPath(
@@ -666,7 +678,11 @@ class _KnockwaterArtPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFF245B55), Color(0xFF123F3D), Color(0xFF071F1E)],
+          colors: <Color>[
+            Color(0xFF245B55),
+            Color(0xFF123F3D),
+            Color(0xFF071F1E),
+          ],
           stops: <double>[0, 0.55, 1],
         ).createShader(pond),
     );
@@ -844,4 +860,3 @@ class _LiquidJarPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => false;
 }
-

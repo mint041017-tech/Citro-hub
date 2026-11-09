@@ -61,9 +61,7 @@ class PerfProbe {
         _frames.map((t) => t.buildDuration.inMicroseconds / 1000.0).toList()
           ..sort();
     final rasters =
-        _frames
-            .map((t) => t.rasterDuration.inMicroseconds / 1000.0)
-            .toList()
+        _frames.map((t) => t.rasterDuration.inMicroseconds / 1000.0).toList()
           ..sort();
     double p(List<double> xs, double q) =>
         xs[((xs.length - 1) * q).round().clamp(0, xs.length - 1)];

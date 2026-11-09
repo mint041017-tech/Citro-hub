@@ -337,7 +337,7 @@ class CitroField extends StatelessWidget {
           label,
           style: context.ui(
             size: 12,
-            weight: FontWeight.w600,
+            weight: FontWeight.w700,
             color: c.inkSoft,
           ),
         ),
@@ -446,7 +446,7 @@ class AccentButton extends StatelessWidget {
                   text,
                   style: context.ui(
                     size: 15,
-                    weight: FontWeight.w600,
+                    weight: FontWeight.w700,
                     color: fg,
                   ),
                 ),

@@ -183,7 +183,7 @@ class _CubeResetButton extends StatelessWidget {
               color: c.surface.withValues(alpha: .9),
               border: Border.all(color: c.ink.withValues(alpha: .22)),
             ),
-            child: Icon(Icons.restart_alt_rounded, size: 17, color: c.ink2),
+            child: Icon(Icons.restart_alt_rounded, size: 18, color: c.ink2),
           ),
         ),
       ),
@@ -214,10 +214,7 @@ class _CubeGeometry {
   late final Offset vz;
   late final double height;
 
-  SudokuCubeFaceMap? mapOf(
-    List<SudokuCubeFaceMap> maps,
-    SudokuCubeFace face,
-  ) {
+  SudokuCubeFaceMap? mapOf(List<SudokuCubeFaceMap> maps, SudokuCubeFace face) {
     for (final m in maps) {
       if (m.face == face) return m;
     }
@@ -271,8 +268,7 @@ class _CubeGeometry {
     return bu.dx * bv.dy - bu.dy * bv.dx < 0;
   }
 
-  Offset _project(_V3 p) =>
-      origin + vx * p.x + vy * p.y + vz * p.z;
+  Offset _project(_V3 p) => origin + vx * p.x + vy * p.y + vz * p.z;
 
   Offset point(SudokuCubeFace face, num r, num c) =>
       _project(_rotate(_face3(face, r.toDouble(), c.toDouble())));
@@ -308,10 +304,7 @@ class _CubeGeometry {
     ]);
   }
 
-  (SudokuCubeFace, int, int)? hit(
-    Offset p,
-    List<SudokuCubeFaceMap> maps,
-  ) {
+  (SudokuCubeFace, int, int)? hit(Offset p, List<SudokuCubeFaceMap> maps) {
     (SudokuCubeFace, int, int)? best;
     var bestDepth = double.negativeInfinity;
     for (final face in const [
@@ -401,9 +394,7 @@ class _SudokuCubePainter extends CustomPainter {
       SudokuCubeFace.top,
       SudokuCubeFace.frontLeft,
       SudokuCubeFace.frontRight,
-    ]..sort(
-      (a, b) => geometry.faceDepth(a).compareTo(geometry.faceDepth(b)),
-    );
+    ]..sort((a, b) => geometry.faceDepth(a).compareTo(geometry.faceDepth(b)));
     // 由远到近逐个面完整绘制，旋转后近面会自然盖住远面。
     for (final face in faces) {
       final map = geometry.mapOf(maps, face);
@@ -466,10 +457,7 @@ class _SudokuCubePainter extends CustomPainter {
           );
         }
         fill.color = color;
-        canvas.drawRect(
-          Rect.fromLTWH(c.toDouble(), r.toDouble(), 1, 1),
-          fill,
-        );
+        canvas.drawRect(Rect.fromLTWH(c.toDouble(), r.toDouble(), 1, 1), fill);
       }
     }
     if (selected >= 0) {
@@ -575,7 +563,7 @@ class _SudokuCubePainter extends CustomPainter {
             TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.fallback,
-              fontWeight: given ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: given ? FontWeight.w700 : FontWeight.w700,
               color: conflict
                   ? colors.stamp
                   : (given ? colors.ink : colors.accentInk),
@@ -604,7 +592,7 @@ class _SudokuCubePainter extends CustomPainter {
         '$n',
         TextStyle(
           fontFamily: AppFonts.noto,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: colors.ink2,
           height: 1,
         ),
@@ -639,10 +627,7 @@ class _SudokuCubePainter extends CustomPainter {
     if (mirrored) canvas.scale(-1, 1);
     canvas.scale(emCells / _glyphBase);
     // 数字字形落在基线以上，视觉中心比行框中心高约 5.6%，补回来。
-    tp.paint(
-      canvas,
-      Offset(-tp.width / 2, -tp.height / 2 + tp.height * .056),
-    );
+    tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2 + tp.height * .056));
     canvas.restore();
   }
 

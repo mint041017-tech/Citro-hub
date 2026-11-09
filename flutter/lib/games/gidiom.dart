@@ -563,7 +563,7 @@ class GameIdiomView extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 11.5,
+                fontSize: 12,
                 height: 1.65,
                 letterSpacing: 0.575,
                 color: c.inkSoft,
@@ -617,7 +617,7 @@ class GameIdiomView extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12.5,
+              fontSize: 13,
               height: 1.65,
               letterSpacing: 0.75,
               color: c.ink2,
@@ -648,7 +648,7 @@ class GameIdiomView extends StatelessWidget {
     final base = TextStyle(
       fontFamily: AppFonts.noto,
       fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 13.5,
+      fontSize: 14,
       height: 22.95 / 13.5,
       letterSpacing: 0,
       color: c.ink2,
@@ -682,7 +682,7 @@ class GameIdiomView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < texts.length; i++) ...[
-          if (i > 0) const SizedBox(height: 7),
+          if (i > 0) const SizedBox(height: 8),
           _ruleRow(ord[i], TextSpan(style: base, children: texts[i])),
         ],
       ],
@@ -732,13 +732,13 @@ class GameIdiomView extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
                           fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 11.5,
+                          fontSize: 12,
                           height: 1.65,
                           letterSpacing: 0.92,
                           color: c.inkSoft,
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.fromLTRB(12, 2, 12, 3),
                         decoration: BoxDecoration(
@@ -774,7 +774,7 @@ class GameIdiomView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       Container(
                         width: 58,
                         height: 7,
@@ -813,7 +813,7 @@ class GameIdiomView extends StatelessWidget {
                   // 计时器每秒都会重建整页；懒构建避免整条成语链跟着重建。
                   itemCount: chain.length,
                   itemBuilder: (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: _chainRow(chain[index]),
                   ),
                 ),
@@ -869,7 +869,7 @@ class GameIdiomView extends StatelessWidget {
                             fillColor: c.surface2,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 11,
+                              vertical: 12,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -890,12 +890,12 @@ class GameIdiomView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       _pillButton(
                         label: '接',
                         width: 66,
                         height: 46,
-                        fontSize: 17,
+                        fontSize: 18,
                         letterSpacing: 1.02,
                         onTap: aiThinking ? null : onSubmit,
                       ),
@@ -909,7 +909,7 @@ class GameIdiomView extends StatelessWidget {
         SizedBox(
           height: 28.266,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(15, 0, 15, 6),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
             child: Row(
               children: [
                 if (aiThinking)
@@ -918,7 +918,7 @@ class GameIdiomView extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       height: 1.65,
                       letterSpacing: 0,
                       color: c.inkSoft,
@@ -928,7 +928,7 @@ class GameIdiomView extends StatelessWidget {
                 // 顶部的拼音提示，把它复制到键盘上方永远可见的位置）。
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
+                    horizontal: 10,
                     vertical: 1,
                   ),
                   decoration: BoxDecoration(
@@ -941,7 +941,7 @@ class GameIdiomView extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppFonts.noto,
                         fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         height: 1.65,
                         letterSpacing: 0.23,
                         color: c.ink2,
@@ -951,7 +951,7 @@ class GameIdiomView extends StatelessWidget {
                         TextSpan(
                           text: need.isEmpty ? '—' : need,
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: c.stamp,
                           ),
@@ -966,7 +966,7 @@ class GameIdiomView extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       height: 1.65,
                       letterSpacing: 0.23,
                       color: c.inkSoft,
@@ -976,7 +976,7 @@ class GameIdiomView extends StatelessWidget {
                       TextSpan(
                         text: '×${math.max(1, (count ~/ 2) * 2)}',
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: c.accentInk,
                         ),
@@ -1013,7 +1013,7 @@ class GameIdiomView extends StatelessWidget {
             Container(width: 4, color: bar),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1108,7 +1108,7 @@ class GameIdiomView extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1121,7 +1121,7 @@ class GameIdiomView extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppFonts.noto,
                     fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     height: 1.65,
                     letterSpacing: 0.75,
                     color: c.ink2,
@@ -1132,7 +1132,7 @@ class GameIdiomView extends StatelessWidget {
               _tagRule(),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1143,7 +1143,7 @@ class GameIdiomView extends StatelessWidget {
               _stat('本局得分', '$score', accent: true),
             ],
           ),
-          const SizedBox(height: 17),
+          const SizedBox(height: 18),
           SizedBox(width: 140, height: 48, child: _bigButton('再来一局', onAgain)),
         ],
       ),
@@ -1159,7 +1159,7 @@ class GameIdiomView extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.noto,
             fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 11.5,
+            fontSize: 12,
             height: 1.65,
             letterSpacing: 0.46,
             color: c.inkSoft,
@@ -1171,7 +1171,7 @@ class GameIdiomView extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.kalam,
             fontFamilyFallback: AppFonts.fallback,
-            fontSize: 23,
+            fontSize: 24,
             fontWeight: FontWeight.w700,
             height: 1.65,
             letterSpacing: 0,
@@ -1297,10 +1297,10 @@ class GameIdiomView extends StatelessWidget {
         style: TextStyle(
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.bodyFallback,
-          fontSize: 12.5,
+          fontSize: 13,
           height: 1.5,
           letterSpacing: 0,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: c.ink2,
         ),
       ),
@@ -1416,12 +1416,7 @@ class _DashedLinePainter extends CustomPainter {
 // ---------------------------------------------------------------------------
 
 class OrdinalGlyph extends StatelessWidget {
-  const OrdinalGlyph(
-    this.ord, {
-    super.key,
-    this.fontSize = 12,
-    this.color,
-  });
+  const OrdinalGlyph(this.ord, {super.key, this.fontSize = 12, this.color});
 
   final String ord;
   final double fontSize;

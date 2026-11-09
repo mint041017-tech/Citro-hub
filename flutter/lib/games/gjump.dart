@@ -888,7 +888,7 @@ class GameJumpView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         GameScorePill(label: '分数', value: '$score'),
-        const SizedBox(width: 9),
+        const SizedBox(width: 10),
         GameScorePill(label: '最高分', value: '$best'),
       ],
     );
@@ -1033,7 +1033,7 @@ class _JumpHint extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 (platform.isWindows || kIsWeb)
@@ -1046,7 +1046,7 @@ class _JumpHint extends StatelessWidget {
                   fontFamily: AppFonts.noto,
                   fontFamilyFallback: AppFonts.bodyFallback,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   height: 1.65,
                   letterSpacing: .6,
                   color: c.ink2,

@@ -207,10 +207,8 @@ class _FaceCell extends StatelessWidget {
                     fontFamily: AppFonts.noto,
                     fontFamilyFallback: AppFonts.fallback,
                     fontSize: fontSize,
-                    fontWeight: isGiven ? FontWeight.w700 : FontWeight.w600,
-                    color: conflict
-                        ? c.stamp
-                        : (isGiven ? c.ink : c.accentInk),
+                    fontWeight: isGiven ? FontWeight.w700 : FontWeight.w700,
+                    color: conflict ? c.stamp : (isGiven ? c.ink : c.accentInk),
                     height: 1,
                   ),
                 ),
@@ -229,13 +227,14 @@ class _FaceCell extends StatelessWidget {
                                 for (var q = 0; q < 3; q++)
                                   Expanded(
                                     child: Center(
-                                      child: notes[index].contains(r * 3 + q + 1)
+                                      child:
+                                          notes[index].contains(r * 3 + q + 1)
                                           ? Text(
                                               '${r * 3 + q + 1}',
                                               style: TextStyle(
                                                 fontFamily: AppFonts.noto,
                                                 fontSize: noteSize,
-                                                fontWeight: FontWeight.w600,
+                                                fontWeight: FontWeight.w700,
                                                 color: c.ink2,
                                                 height: 1,
                                               ),

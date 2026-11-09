@@ -52,7 +52,7 @@ class _BlockedUsersSheet extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       child: AppIcon(
                         strokeSvg(AppIcons.close, width: 2.2),
-                        size: 17,
+                        size: 18,
                         color: c.inkSoft,
                       ),
                     ),
@@ -64,7 +64,7 @@ class _BlockedUsersSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
               child: Text(
                 '黑名单只保存在当前设备。被拉黑昵称的动态、评论和消息会从这里隐藏；匿名内容请使用举报处理。',
-                style: context.body(size: 10.5, color: c.inkSoft, height: 1.6),
+                style: context.body(size: 11, color: c.inkSoft, height: 1.6),
               ),
             ),
             DashedLine(color: c.line2.withAlpha(140)),
@@ -78,16 +78,16 @@ class _BlockedUsersSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🫧', style: TextStyle(fontSize: 34)),
+                          const Text('🫧', style: TextStyle(fontSize: 36)),
                           const SizedBox(height: 8),
                           Text(
                             '还没有拉黑任何人',
-                            style: context.body(size: 12.5, color: c.inkSoft),
+                            style: context.body(size: 13, color: c.inkSoft),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '在动态或评论的「…」里可以拉黑',
-                            style: context.body(size: 10.5, color: c.inkSoft),
+                            style: context.body(size: 11, color: c.inkSoft),
                           ),
                         ],
                       ),
@@ -103,7 +103,7 @@ class _BlockedUsersSheet extends StatelessWidget {
                     itemBuilder: (_, i) {
                       final nick = users[i];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Row(
                           children: [
                             Container(
@@ -132,8 +132,8 @@ class _BlockedUsersSheet extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.body(
-                                  size: 13.5,
-                                  weight: FontWeight.w600,
+                                  size: 14,
+                                  weight: FontWeight.w700,
                                   color: c.ink,
                                 ),
                               ),
@@ -148,7 +148,7 @@ class _BlockedUsersSheet extends StatelessWidget {
                               child: Container(
                                 height: 30,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 13,
+                                  horizontal: 14,
                                 ),
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(

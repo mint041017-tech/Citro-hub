@@ -45,7 +45,7 @@ class SudokuModeSelect extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _GroupHeader(index: '01', title: '数独', subtitle: '经典九宫 · 四档难度'),
-        const SizedBox(height: 9),
+        const SizedBox(height: 10),
         _ModeCard(
           mode: classic,
           onStart: onStart,
@@ -62,7 +62,7 @@ class SudokuModeSelect extends StatelessWidget {
           title: '异形数独',
           subtitle: '宫形每局变化 · 风车 · 多盘重叠',
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
             final two = box.maxWidth >= 560;
@@ -142,7 +142,7 @@ class SudokuModeSelect extends StatelessWidget {
           title: '高级阶数',
           subtitle: '规则变体 · 3D 立方',
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
             final columns = box.maxWidth >= 620 ? 3 : 2;
@@ -182,7 +182,7 @@ class SudokuModeSelect extends StatelessWidget {
             child: Text(
               '每一局都复核唯一解；难度按逻辑技巧与搜索分支评级，'
               '标为“专家”的题目不能只靠最基础的裸单技巧推完。',
-              style: context.body(size: 11.5, color: c.inkSoft, height: 1.65),
+              style: context.body(size: 12, color: c.inkSoft, height: 1.65),
             ),
           ),
         ],
@@ -288,7 +288,7 @@ class _ResumeCard extends StatelessWidget {
                 Text(
                   '继续上一局',
                   style: context.body(
-                    size: 13.5,
+                    size: 14,
                     weight: FontWeight.w700,
                     color: c.ink,
                   ),
@@ -298,7 +298,7 @@ class _ResumeCard extends StatelessWidget {
                   '${resume.modeLabel} · ${resume.difficultyLabel} · '
                   '${resume.remainingLabel(DateTime.now())}',
                   style: context.body(
-                    size: 10.5,
+                    size: 11,
                     color: c.accentInk,
                     height: 1.4,
                   ),
@@ -352,7 +352,7 @@ class _Hero extends StatelessWidget {
                           .copyWith(letterSpacing: 1.6),
                     ),
                     const SizedBox(height: 4),
-                    Text('选一种数独', style: context.heading(size: 27)),
+                    Text('选一种数独', style: context.heading(size: 28)),
                     const SizedBox(height: 5),
                     Text(
                       '经典九宫、异形宫形与高阶变体，全部唯一解。',
@@ -431,7 +431,7 @@ class _GroupHeader extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 33, top: 3),
+          padding: const EdgeInsets.only(left: 34, top: 3),
           child: Text(
             subtitle,
             style: context.body(size: 11, color: c.inkSoft),
@@ -463,7 +463,7 @@ class _SubTitle extends StatelessWidget {
             hint,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: context.body(size: 10.5, color: c.inkSoft),
+            style: context.body(size: 11, color: c.inkSoft),
           ),
         ),
       ],
@@ -486,7 +486,7 @@ class _ModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.fromLTRB(13, 13, 13, 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(16),
@@ -497,7 +497,7 @@ class _ModeCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           glyph,
-          const SizedBox(width: 11),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,13 +527,9 @@ class _ModeCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   mode.blurb,
-                  style: context.body(
-                    size: 10.5,
-                    color: c.inkSoft,
-                    height: 1.45,
-                  ),
+                  style: context.body(size: 11, color: c.inkSoft, height: 1.45),
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 7,
                   runSpacing: 6,
@@ -575,7 +571,7 @@ class _CompactModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(14),
@@ -608,7 +604,7 @@ class _CompactModeCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 9.5,
+                        size: 10,
                         color: c.inkSoft,
                         height: 1.35,
                       ),
@@ -632,7 +628,7 @@ class _CompactModeCard extends StatelessWidget {
               if (_largeBoard && MediaQuery.sizeOf(context).shortestSide < 600)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
+                    horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
@@ -642,11 +638,7 @@ class _CompactModeCard extends StatelessWidget {
                   ),
                   child: Text(
                     '手机建议 iPad/桌面/网页',
-                    style: context.body(
-                      size: 8.5,
-                      color: c.inkSoft,
-                      height: 1.2,
-                    ),
+                    style: context.body(size: 9, color: c.inkSoft, height: 1.2),
                   ),
                 ),
             ],
@@ -674,7 +666,7 @@ class _Tag extends StatelessWidget {
       child: Text(
         text,
         style: context.body(
-          size: 8.5,
+          size: 9,
           weight: FontWeight.w700,
           color: c.accentInk,
           height: 1.2,
@@ -704,7 +696,7 @@ class _StartChip extends StatelessWidget {
       scale: .96,
       child: Container(
         height: compact ? 25 : 28,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 9 : 11),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
         decoration: BoxDecoration(
           color: c.hl,
           borderRadius: BorderRadius.circular(999),

@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'tingyu_models.dart';
 
 @JS('tingyuCommand')
@@ -199,14 +201,9 @@ class NookController extends ChangeNotifier {
     Map<String, dynamic> payload = const {},
   ]) async {
     try {
-      final result =
-          jsonDecode(
-                (await _command(
-                  action.toJS,
-                  jsonEncode(payload).toJS,
-                ).toDart).toDart,
-              )
-              as Map;
+      final result = jsonDecode(
+        (await _command(action.toJS, jsonEncode(payload).toJS).toDart).toDart,
+      ) as Map;
       error = result['ok'] == true
           ? null
           : result['error'] as String? ?? '操作没有完成，请再试一次。';

@@ -71,7 +71,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         Text(
           '选择你的本命星座，选定后不可更改',
           textAlign: TextAlign.center,
-          style: context.body(size: 11.5, color: c.inkSoft),
+          style: context.body(size: 12, color: c.inkSoft),
         ),
         const SizedBox(height: 12),
         GridView.count(
@@ -108,8 +108,8 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                       Text(
                         z.name,
                         style: context.body(
-                          size: 10.5,
-                          weight: FontWeight.w600,
+                          size: 11,
+                          weight: FontWeight.w700,
                           color: c.ink2,
                         ),
                       ),
@@ -189,13 +189,13 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                         Text(sign.name, style: context.heading(size: 22)),
                         Text(
                           '${sign.range} · ${sign.element}象星座',
-                          style: context.body(size: 10.5, color: c.inkSoft),
+                          style: context.body(size: 11, color: c.inkSoft),
                         ),
                         const SizedBox(height: 3),
                         if (f != null)
                           Text(
                             '✦ ${f.tag}',
-                            style: context.body(size: 11.5, color: c.accentInk),
+                            style: context.body(size: 12, color: c.accentInk),
                           )
                         else
                           Text(
@@ -205,7 +205,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                                       ? '星语生成失败'
                                       : '等待生成今日星语'),
                             style: context.body(
-                              size: 11.5,
+                              size: 12,
                               color: state.zodiacError != null
                                   ? c.stamp
                                   : c.inkSoft,
@@ -270,7 +270,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                       Expanded(
                         child: Text(
                           'AI 正在写今天的星语…',
-                          style: context.body(size: 12.5, color: c.ink2),
+                          style: context.body(size: 13, color: c.ink2),
                         ),
                       ),
                     ],
@@ -280,7 +280,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                 Text(
                   state.zodiacError ?? '今日星语还没有生成。',
                   style: context.body(
-                    size: 12.5,
+                    size: 13,
                     color: state.zodiacError != null ? c.stamp : c.ink2,
                     height: 1.6,
                   ),
@@ -313,7 +313,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                   style: context.heading(size: 14, color: c.accentInk),
                 ),
                 const SizedBox(height: 10),
-                _bar(context, c, '爱情', f.love, const Color(0xFFF2A43C)),
+                _bar(context, c, '爱情', f.love, const Color(0xFF7A9BBE)),
                 _bar(context, c, '事业', f.work, const Color(0xFF8FC7A0)),
                 _bar(context, c, '财运', f.wealth, const Color(0xFFE8C25A)),
                 _bar(context, c, '健康', f.health, const Color(0xFF8CBEDC)),
@@ -370,15 +370,15 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
     return Expanded(
       child: Column(
         children: [
-          Text(label, style: context.body(size: 9.5, color: c.inkSoft)),
+          Text(label, style: context.body(size: 10, color: c.inkSoft)),
           const SizedBox(height: 2),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.body(
-              size: 11.5,
-              weight: FontWeight.w600,
+              size: 12,
+              weight: FontWeight.w700,
               color: c.ink2,
             ),
           ),

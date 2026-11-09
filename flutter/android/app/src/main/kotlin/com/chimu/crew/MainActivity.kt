@@ -9,6 +9,8 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
@@ -30,6 +32,7 @@ import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -37,6 +40,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivity : FlutterActivity() {
     private var pendingResult: MethodChannel.Result? = null
     private var memoryChannel: MethodChannel? = null
+    private var ledgerChannel: MethodChannel? = null
+    private var ledgerAttached = false
+    private var pendingLedgerImage: Map<String, Any>? = null
     private var highRefreshRequested = false
     private var locationHandler: Handler? = null
 
@@ -130,11 +136,107 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // 系统分享入口：其他 App 分享图片到 Citro 时交给 Dart 侧识别记账。
+        val ledger = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/ledger_intake")
+        ledgerChannel = ledger
+        ledger.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "attach" -> {
+                    ledgerAttached = true
+                    val pending = pendingLedgerImage
+                    pendingLedgerImage = null
+                    result.success(pending)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        consumeLedgerIntent(intent)
     }
 
     private fun canInstallPackages(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
         return packageManager.canRequestPackageInstalls()
+    }
+
+    /** 读取系统分享的图片，缩到 1800px 内再交给 Dart，避免跨通道传超大字节。 */
+    private fun consumeLedgerIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE) return
+        val mime = intent.type ?: intent.clipData?.description?.getMimeType(0)
+        if (mime?.startsWith("image/") != true) return
+        // 消费后清掉动作，Activity 重建时不会把同一张图再次入账。
+        intent.action = null
+        intent.removeExtra(Intent.EXTRA_STREAM)
+        val uri = firstSharedImageUri(intent)
+        if (uri == null) {
+            dispatchLedgerError("没有读取到分享的图片，请重新分享或从相册选择")
+            return
+        }
+        val bytes = readSharedImage(uri)
+        if (bytes == null) {
+            dispatchLedgerError("无法读取分享的图片，请重新分享或从相册选择")
+            return
+        }
+        dispatchLedgerImage(bytes)
+    }
+
+    private fun firstSharedImageUri(intent: Intent): Uri? {
+        val clip = intent.clipData
+        if (clip != null) {
+            for (i in 0 until clip.itemCount) {
+                val uri = clip.getItemAt(i).uri
+                if (uri != null) return uri
+            }
+        }
+        @Suppress("DEPRECATION")
+        return intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+    }
+
+    private fun readSharedImage(uri: Uri): ByteArray? = runCatching {
+        val raw = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return@runCatching null
+        if (raw.isEmpty()) return@runCatching null
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(raw, 0, raw.size, bounds)
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        while (longest / sample > 1800) sample *= 2
+        val options = BitmapFactory.Options().apply { inSampleSize = sample }
+        val bitmap = BitmapFactory.decodeByteArray(raw, 0, raw.size, options)
+            ?: return@runCatching raw
+
+        val out = ByteArrayOutputStream()
+        try {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 88, out)
+        } finally {
+            bitmap.recycle()
+        }
+        out.toByteArray()
+    }.getOrNull()
+
+    private fun dispatchLedgerImage(bytes: ByteArray, origin: String = "androidShare") {
+        val payload = mapOf<String, Any>("bytes" to bytes, "origin" to origin)
+        if (ledgerAttached) {
+            ledgerChannel?.invokeMethod("ledgerImage", payload)
+        } else {
+            pendingLedgerImage = payload
+        }
+    }
+
+    private fun dispatchLedgerError(message: String) {
+        val payload = mapOf<String, Any>("error" to message)
+        if (ledgerAttached) {
+            ledgerChannel?.invokeMethod("ledgerIntakeError", message)
+        } else {
+            pendingLedgerImage = payload
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeLedgerIntent(intent)
     }
 
     private fun openInstallSettings(): Boolean {
@@ -302,6 +404,8 @@ class MainActivity : FlutterActivity() {
         locationHandler = null
         pendingResult = null
         memoryChannel = null
+        ledgerChannel = null
+        ledgerAttached = false
         super.onDestroy()
     }
 

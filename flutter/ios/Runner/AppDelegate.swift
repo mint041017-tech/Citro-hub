@@ -31,10 +31,23 @@ import UserNotifications
     return duoInner ? .allButUpsideDown : .portrait
   }
 
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if LedgerIntakeBridge.shared.handle(url: url) { return true }
+    return super.application(app, open: url, options: options)
+  }
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
     CitroTimerChannel.shared.register(messenger: messenger)
+    LedgerIntakeBridge.shared.register(messenger: messenger)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "CitroLedgerIntake") {
+      registrar.addSceneDelegate(LedgerIntakeBridge.shared)
+    }
     // Duo 内屏横握需要横屏；普通 iPhone 仍由 Dart 侧锁竖屏，
     // 因此这里只提供设备形态，不直接改全局方向。
     FlutterMethodChannel(
@@ -57,5 +70,149 @@ import UserNotifications
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+}
+
+/// iOS 系统分享入口。
+///
+/// ShareExtension 把 JPG 写入 App Group，然后尝试打开 `citro://ledger/scan`。
+/// 主 App 通过 `com.chimu.crew/ledger_intake` 读取并删除共享图片，交给 Dart
+/// 进入与 Android 相同的识别草稿确认流程。
+final class LedgerIntakeBridge: NSObject, FlutterSceneLifeCycleDelegate {
+  static let shared = LedgerIntakeBridge()
+  static let appGroup = "group.com.chimu.crew"
+
+  private var channel: FlutterMethodChannel?
+  private var dartAttached = false
+  private var pendingPayload: [String: Any]?
+  private var resolving = false
+
+  func register(messenger: FlutterBinaryMessenger) {
+    guard channel == nil else { return }
+    let channel = FlutterMethodChannel(
+      name: "com.chimu.crew/ledger_intake",
+      binaryMessenger: messenger
+    )
+    self.channel = channel
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else {
+        result(nil)
+        return
+      }
+      switch call.method {
+      case "attach":
+        self.dartAttached = true
+        if let payload = self.pendingPayload {
+          self.pendingPayload = nil
+          result(payload)
+          return
+        }
+        self.deliverPending(result: result)
+      case "consume":
+        self.dartAttached = true
+        self.deliverPending(result: result)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  /// 返回 true 表示这个 URL 是记账分享入口，已由本类消费。
+  @discardableResult
+  func handle(url: URL) -> Bool {
+    guard url.scheme?.lowercased() == "citro" else { return false }
+    let host = url.host?.lowercased()
+    let path = url.path.lowercased()
+    guard host == "ledger" || path == "/ledger" || path == "/ledger/scan" else {
+      return false
+    }
+    // URL 可能早于 Flutter 通道就绪；attach 时还会再检查一次共享目录。
+    guard dartAttached, channel != nil else { return true }
+    deliverPending()
+    return true
+  }
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions?
+  ) -> Bool {
+    guard let url = connectionOptions?.urlContexts.first?.url else { return false }
+    return handle(url: url)
+  }
+
+  func scene(
+    _ scene: UIScene,
+    openURLContexts URLContexts: Set<UIOpenURLContext>
+  ) -> Bool {
+    var handled = false
+    for context in URLContexts {
+      if handle(url: context.url) { handled = true }
+    }
+    return handled
+  }
+
+  private func deliverPending(result: FlutterResult? = nil) {
+    guard !resolving else {
+      result?(nil)
+      return
+    }
+    resolving = true
+    let payload = consumeSharedFile()
+    resolving = false
+
+    guard let payload = payload else {
+      result?(nil)
+      return
+    }
+    if let result = result {
+      result(payload)
+      return
+    }
+    if dartAttached, let channel = channel {
+      channel.invokeMethod("ledgerImage", arguments: payload)
+    } else {
+      pendingPayload = payload
+    }
+  }
+
+  /// ShareExtension 写入 `ledger-intake-<毫秒>.jpg`；读取最新一张并清理全部旧图。
+  private func consumeSharedFile() -> [String: Any]? {
+    let fm = FileManager.default
+    guard
+      let container = fm.containerURL(
+        forSecurityApplicationGroupIdentifier: LedgerIntakeBridge.appGroup
+      ),
+      let files = try? fm.contentsOfDirectory(
+        at: container,
+        includingPropertiesForKeys: [.contentModificationDateKey],
+        options: [.skipsHiddenFiles]
+      )
+    else { return nil }
+
+    let allowed = ["jpg", "jpeg", "png"]
+    let candidates = files
+      .filter {
+        $0.lastPathComponent.lowercased().hasPrefix("ledger-intake") &&
+          allowed.contains($0.pathExtension.lowercased())
+      }
+      .sorted {
+        let left = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]))?
+          .contentModificationDate ?? .distantPast
+        let right = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]))?
+          .contentModificationDate ?? .distantPast
+        return left > right
+      }
+
+    guard let newest = candidates.first else { return nil }
+    guard let data = try? Data(contentsOf: newest), !data.isEmpty else {
+      for file in candidates { try? fm.removeItem(at: file) }
+      return nil
+    }
+    for file in candidates { try? fm.removeItem(at: file) }
+    return [
+      "bytes": FlutterStandardTypedData(bytes: data),
+      "origin": "iosShare",
+    ]
   }
 }

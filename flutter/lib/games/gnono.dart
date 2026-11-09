@@ -444,7 +444,7 @@ class _NonoButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     gameIcon(icon, size: 15, color: fg),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     Text(
                       label,
                       style: TextStyle(
@@ -533,8 +533,8 @@ class _NonoBoard extends StatelessWidget {
     }
     final hintColW = maxRowHints * 6.0 + (maxRowHints - 1) * 3.0 + 6.0;
     final hintRowH = maxColHints * 10.0 + (maxColHints - 1) * 3.0 + 6.0;
-    final boardW = 14.0 + hintColW + size * cell + size * 2.0;
-    final boardH = 14.0 + hintRowH + size * cell + size * 2.0;
+    final boardW = 16.0 + hintColW + size * cell + size * 2.0;
+    final boardH = 16.0 + hintRowH + size * cell + size * 2.0;
 
     return SizedBox(
       width: double.infinity,
@@ -569,7 +569,7 @@ class _NonoBoard extends StatelessWidget {
                 ),
                 Positioned.fill(
                   child: Padding(
-                    padding: const EdgeInsets.all(7),
+                    padding: const EdgeInsets.all(8),
                     child: _grid(context, c, cell, hintColW, hintRowH),
                   ),
                 ),

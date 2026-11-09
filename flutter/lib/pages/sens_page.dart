@@ -118,7 +118,7 @@ class _SensPageState extends State<SensPage> {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
+                                      horizontal: 8,
                                     ),
                                     child: GestureDetector(
                                       onTap: () => setState(() {
@@ -140,7 +140,7 @@ class _SensPageState extends State<SensPage> {
                                               '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
                                               width: 2,
                                             ),
-                                            size: 17,
+                                            size: 18,
                                             color: c.accentInk,
                                           ),
                                         ),
@@ -186,8 +186,8 @@ class _SensPageState extends State<SensPage> {
                                     Text(
                                       '${dstGame.code} · 目标灵敏度',
                                       style: context.body(
-                                        size: 11.5,
-                                        weight: FontWeight.w600,
+                                        size: 12,
+                                        weight: FontWeight.w700,
                                         color: c.accentInk,
                                       ),
                                     ),
@@ -242,7 +242,7 @@ class _SensPageState extends State<SensPage> {
                                             Text(
                                               '复制',
                                               style: context.body(
-                                                size: 11.5,
+                                                size: 12,
                                                 color: c.accentInk,
                                               ),
                                             ),
@@ -260,7 +260,7 @@ class _SensPageState extends State<SensPage> {
                         Text(
                           '换算只取决于引擎 yaw 比；DPI 视为两边共用，仅用于展示 eDPI。',
                           textAlign: TextAlign.center,
-                          style: context.body(size: 10.5, color: c.inkSoft),
+                          style: context.body(size: 11, color: c.inkSoft),
                         ),
                       ],
                     ),
@@ -311,7 +311,7 @@ class _SensPageState extends State<SensPage> {
           label,
           style: context.body(
             size: 11,
-            weight: FontWeight.w600,
+            weight: FontWeight.w700,
             color: c.inkSoft,
             letterSpacing: .5,
           ),
@@ -330,7 +330,7 @@ class _SensPageState extends State<SensPage> {
               value: value,
               isExpanded: true,
               dropdownColor: c.surface2,
-              style: context.body(size: 12.5, color: c.ink),
+              style: context.body(size: 13, color: c.ink),
               icon: AppIcon(
                 strokeSvg(AppIcons.chevronDown, width: 2),
                 size: 13,
@@ -365,7 +365,7 @@ class _SensPageState extends State<SensPage> {
           label,
           style: context.body(
             size: 11,
-            weight: FontWeight.w600,
+            weight: FontWeight.w700,
             color: c.inkSoft,
             letterSpacing: .5,
           ),
@@ -379,7 +379,7 @@ class _SensPageState extends State<SensPage> {
           decoration: InputDecoration(
             filled: true,
             fillColor: c.surface2,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 13),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14),
             constraints: const BoxConstraints(minHeight: 44),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -369,7 +369,7 @@ class _HomeBentoState extends State<HomeBento> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('删除「$label」卡片？', style: context.heading(size: 19)),
+            Text('删除「$label」卡片？', style: context.heading(size: 20)),
             const SizedBox(height: 8),
             Text(
               '删除后可以在「添加卡片」里随时加回来。',
@@ -860,7 +860,7 @@ class _EmptyBoard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('首页空空的', style: context.heading(size: 17, color: c.ink)),
+          Text('首页空空的', style: context.heading(size: 18, color: c.ink)),
           const SizedBox(height: 6),
           Text(
             '右上角「添加卡片」可以找回，删除后也能随时加回来',
@@ -988,7 +988,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                               Text(
                                 '按分类挑选要放回首页的卡片，会自动寻找空位；卡片右上角的垃圾桶可以删除',
                                 style: context.body(
-                                  size: 11.5,
+                                  size: 12,
                                   color: c.inkSoft,
                                   height: 1.4,
                                 ),
@@ -1108,7 +1108,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                           },
                           child: Text(
                             '恢复默认',
-                            style: context.body(size: 12.5, color: c.inkSoft),
+                            style: context.body(size: 13, color: c.inkSoft),
                           ),
                         ),
                         const Spacer(),
@@ -1182,7 +1182,7 @@ class _AllCardsAdded extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '删掉的卡片会重新出现在这里',
-            style: context.body(size: 11.5, color: c.inkSoft),
+            style: context.body(size: 12, color: c.inkSoft),
           ),
         ],
       ),
@@ -1226,7 +1226,7 @@ class _AddCardTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1241,7 +1241,7 @@ class _AddCardTile extends StatelessWidget {
                   option.hint,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 10.5, color: c.inkSoft),
+                  style: context.body(size: 11, color: c.inkSoft),
                 ),
               ],
             ),
@@ -1252,7 +1252,7 @@ class _AddCardTile extends StatelessWidget {
             children: [
               Text(
                 '${size.w}×${size.h}',
-                style: context.body(size: 9.5, color: c.inkSoft),
+                style: context.body(size: 10, color: c.inkSoft),
               ),
               const SizedBox(height: 4),
               Pressable(
@@ -1380,7 +1380,7 @@ class _CategoryChip extends StatelessWidget {
             ? Duration.zero
             : CitroMotion.press,
         curve: CitroMotion.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? background : c.surface2,
           borderRadius: BorderRadius.circular(99),
@@ -1394,8 +1394,8 @@ class _CategoryChip extends StatelessWidget {
             Text(
               label,
               style: context.body(
-                size: 11.5,
-                weight: selected ? FontWeight.w700 : FontWeight.w600,
+                size: 12,
+                weight: selected ? FontWeight.w700 : FontWeight.w700,
                 color: selected ? foreground : c.inkSoft,
                 height: 1,
               ),
@@ -1404,8 +1404,8 @@ class _CategoryChip extends StatelessWidget {
             Text(
               '$count',
               style: context.body(
-                size: 9.5,
-                weight: FontWeight.w600,
+                size: 10,
+                weight: FontWeight.w700,
                 color: selected ? foreground.withAlpha(200) : c.inkSoft,
                 height: 1,
               ),
@@ -1438,11 +1438,8 @@ class _CategoryHeader extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 7),
-          Text(
-            category.label,
-            style: context.heading(size: 13.5, color: c.ink),
-          ),
+          const SizedBox(width: 8),
+          Text(category.label, style: context.heading(size: 14, color: c.ink)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -1476,6 +1473,9 @@ Color _categoryInk(CitroColors c, HomeCardCategory category) =>
 
 String _homeCardIcon(HomeCardId id) => switch (id) {
   HomeCardId.checkin => AppIcons.calendar,
+  HomeCardId.todo => AppIcons.check,
+  HomeCardId.mood => AppIcons.smile,
+  HomeCardId.ledger => AppIcons.wallet,
   HomeCardId.tingyu => AppIcons.wave,
   HomeCardId.fish => '<path d="M2.5 12s3.2-5 8-5 8.5 5 8.5 5-3.7 5-8.5 5-8-5-8-5z"/><circle cx="9" cy="12" r="1.2"/><path d="M18.5 8.5 22 5v14l-3.5-3.5"/>',
   HomeCardId.weather => AppIcons.sun,

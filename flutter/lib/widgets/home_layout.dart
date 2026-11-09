@@ -17,6 +17,9 @@ import '../state/app_state.dart';
 /// [HomeSlot.item] 决定，默认不出现在首页，需要手动添加。
 enum HomeCardId {
   checkin,
+  todo,
+  mood,
+  ledger,
   tingyu,
   fish,
   weather,
@@ -83,6 +86,9 @@ class HomeCardInfo {
 
 const Map<HomeCardId, HomeCardInfo> kHomeCardInfo = {
   HomeCardId.checkin: HomeCardInfo('打卡', '连续记录与今日状态'),
+  HomeCardId.todo: HomeCardInfo('待办', '今日任务、进度与专注入口'),
+  HomeCardId.mood: HomeCardInfo('心情', '记录此刻的状态与变化'),
+  HomeCardId.ledger: HomeCardInfo('记账', '收支、预算与账单分析'),
   HomeCardId.tingyu: HomeCardInfo('听隅', '白噪音与沉浸声景'),
   HomeCardId.fish: HomeCardInfo('摸鱼日历', '距离休息日还有几天'),
   HomeCardId.weather: HomeCardInfo('天气', '实时天气与体感湿度'),
@@ -221,7 +227,23 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
   return switch (id) {
     HomeCardId.checkin ||
     HomeCardId.tingyu => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 3),
+    HomeCardId.todo => HomeCardSpec(
+      // 待办卡从小尺寸的一行概览到整宽的完整列表都能承接。
+      minW: 3,
+      maxW: cols,
+      minH: 2,
+      maxH: 6,
+    ),
     HomeCardId.fish => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
+    HomeCardId.mood => HomeCardSpec(minW: 3, maxW: cols, minH: 2, maxH: 4),
+    // 记账支持 3×2 小卡到整宽大卡：小卡只放今日支出与预算剩余，
+    // 大卡才展开近 7 日柱图与分类 Top。
+    HomeCardId.ledger => HomeCardSpec(
+      minW: half,
+      maxW: cols,
+      minH: 2,
+      maxH: 5,
+    ),
     HomeCardId.weather ||
     HomeCardId.cook => HomeCardSpec(minW: half, maxW: cols, minH: 3, maxH: 6),
     HomeCardId.calendar => HomeCardSpec(
@@ -250,25 +272,32 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
 List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
   if (key.form == HomeForm.wide) {
     return const [
-      HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 4, h: 2),
-      HomeSlot(HomeCardId.tingyu, col: 4, row: 0, w: 4, h: 2),
-      HomeSlot(HomeCardId.fish, col: 8, row: 0, w: 4, h: 2),
-      HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 6, h: 4),
-      HomeSlot(HomeCardId.cook, col: 6, row: 2, w: 6, h: 4),
-      HomeSlot(HomeCardId.calendar, col: 0, row: 6, w: 6, h: 5),
-      HomeSlot(HomeCardId.zodiac, col: 6, row: 6, w: 6, h: 5),
-      HomeSlot(HomeCardId.quote, col: 0, row: 11, w: 12, h: 3),
+      HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.ledger, col: 6, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.fish, col: 9, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.todo, col: 0, row: 2, w: 6, h: 4),
+      HomeSlot(HomeCardId.weather, col: 6, row: 2, w: 6, h: 4),
+      HomeSlot(HomeCardId.cook, col: 0, row: 6, w: 6, h: 4),
+      HomeSlot(HomeCardId.calendar, col: 6, row: 6, w: 6, h: 5),
+      HomeSlot(HomeCardId.zodiac, col: 0, row: 11, w: 6, h: 5),
+      HomeSlot(HomeCardId.quote, col: 6, row: 11, w: 6, h: 3),
+      HomeSlot(HomeCardId.mood, col: 6, row: 14, w: 6, h: 4),
     ];
   }
   return const [
     HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 4),
-    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 4),
-    HomeSlot(HomeCardId.fish, col: 0, row: 6, w: 6, h: 2),
-    HomeSlot(HomeCardId.calendar, col: 0, row: 8, w: 6, h: 6),
-    HomeSlot(HomeCardId.zodiac, col: 0, row: 14, w: 6, h: 5),
-    HomeSlot(HomeCardId.quote, col: 0, row: 19, w: 6, h: 4),
+    HomeSlot(HomeCardId.todo, col: 0, row: 2, w: 6, h: 4),
+    HomeSlot(HomeCardId.weather, col: 0, row: 6, w: 3, h: 4),
+    HomeSlot(HomeCardId.cook, col: 3, row: 6, w: 3, h: 4),
+    // 默认小档：与摸鱼日历并排，不把首屏撑高。
+    HomeSlot(HomeCardId.ledger, col: 0, row: 10, w: 3, h: 2),
+    HomeSlot(HomeCardId.fish, col: 3, row: 10, w: 3, h: 2),
+    HomeSlot(HomeCardId.calendar, col: 0, row: 12, w: 6, h: 6),
+    HomeSlot(HomeCardId.zodiac, col: 0, row: 18, w: 6, h: 5),
+    HomeSlot(HomeCardId.quote, col: 0, row: 23, w: 6, h: 4),
+    HomeSlot(HomeCardId.mood, col: 0, row: 27, w: 6, h: 4),
   ];
 }
 
@@ -287,6 +316,7 @@ HomeSlot initialHomeSlotFor(HomeLayoutKey key, HomeCardId id, {String? item}) {
   final (w, h) = switch (id) {
     HomeCardId.game => wide ? (4, 3) : (3, 3),
     HomeCardId.res => wide ? (4, 2) : (6, 2),
+    HomeCardId.ledger => (3, 2),
     _ => (key.form.columns, 2),
   };
   return HomeSlot(
@@ -572,6 +602,15 @@ class HomeLayoutStore extends ChangeNotifier {
   }) {
     final form = key.form;
     final spec = homeCardSpec(form, id);
+    // 记账卡的三档语义和其它卡不同：小 = 今日+预算，标准 = 本月收支，
+    // 大 = 整宽趋势。默认布局里是小档，但仍然需要三档预设。
+    if (id == HomeCardId.ledger) {
+      return switch (level) {
+        0 => (3, 2),
+        1 => (6, 3),
+        _ => (form.columns, 4),
+      };
+    }
     final base =
         defaultHomeSlotFor(key, id) ?? initialHomeSlotFor(key, id, item: item);
     return switch (level) {
@@ -648,6 +687,9 @@ class HomeLayoutStore extends ChangeNotifier {
     final out = <HomeCardOption>[];
     for (final id in const [
       HomeCardId.checkin,
+      HomeCardId.todo,
+      HomeCardId.mood,
+      HomeCardId.ledger,
       HomeCardId.tingyu,
       HomeCardId.fish,
       HomeCardId.weather,

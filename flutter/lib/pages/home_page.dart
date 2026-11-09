@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/quotes.dart';
+import '../calendar/calendar_models.dart';
+import '../calendar/calendar_page.dart';
+import '../calendar/calendar_store.dart';
 import '../services/fish.dart';
 import '../overlays/ai_chat.dart';
 import '../overlays/appreciation_sheet.dart';
@@ -26,6 +29,9 @@ import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
+import '../widgets/todo_home_card.dart';
+import '../widgets/mood_home_card.dart';
+import '../widgets/ledger_home_card.dart';
 import '../widgets/tablet_shell.dart';
 import 'cook_page.dart';
 import 'web_home.dart';
@@ -95,6 +101,9 @@ class _HomePageState extends State<HomePage> {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(8.0, (width - maxWidth) / 2);
+    // 手机端状态栏已由 SafeArea 避开，额外的顶部留白压到 8px，
+    // 让首屏更紧凑；平板 / 桌面仍保留原来的 48px 呼吸感。
+    final topPadding = width < 700 ? 8.0 : AppSpacing.pageTop(width);
     return Stack(
       children: [
         Positioned.fill(
@@ -108,7 +117,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 padding: EdgeInsets.fromLTRB(
                   side,
-                  AppSpacing.pageTop(width),
+                  topPadding,
                   side,
                   sideNav ? 32 : 100,
                 ),
@@ -140,7 +149,7 @@ class _HomePageState extends State<HomePage> {
                                         Text(
                                           '${now.month} 月 ${now.day} 日',
                                           style: context.heading(
-                                            size: 19,
+                                            size: 20,
                                             color: c.ink,
                                             height: 1.1,
                                             letterSpacing: .4,
@@ -150,7 +159,7 @@ class _HomePageState extends State<HomePage> {
                                         Text(
                                           _weekdayLabel(now),
                                           style: context.body(
-                                            size: 10.5,
+                                            size: 11,
                                             color: c.inkSoft,
                                             letterSpacing: .3,
                                           ),
@@ -206,7 +215,7 @@ class _HomePageState extends State<HomePage> {
                         child: Text(
                           'Citro · 今天也要开心',
                           style: context.body(
-                            size: 10.5,
+                            size: 11,
                             color: c.inkSoft.withAlpha(150),
                             letterSpacing: .5,
                           ),
@@ -232,6 +241,9 @@ class _HomePageState extends State<HomePage> {
   /// 首页卡片的内容映射：栅格只负责位置，卡片自身保持原来的交互与动效。
   Widget _cardFor(HomeSlot slot) => switch (slot.id) {
     HomeCardId.checkin => const CheckinCard(),
+    HomeCardId.todo => const TodoHomeCard(),
+    HomeCardId.mood => const MoodHomeCard(),
+    HomeCardId.ledger => const LedgerHomeCard(),
     HomeCardId.tingyu => const TingyuCard(),
     HomeCardId.fish => const FishCard(),
     HomeCardId.weather => const WeatherCard(),
@@ -289,7 +301,7 @@ class _LayoutEditButton extends StatelessWidget {
             children: [
               AppIcon(
                 strokeSvg(editing ? AppIcons.calendar : _slidersIcon, width: 2),
-                size: 17,
+                size: 18,
                 color: editing ? const Color(0xFF2E2C34) : c.ink2,
               ),
               if (editing && !compact) ...[
@@ -297,7 +309,7 @@ class _LayoutEditButton extends StatelessWidget {
                 Text(
                   '完成',
                   style: context.body(
-                    size: 12.5,
+                    size: 13,
                     weight: FontWeight.w700,
                     color: const Color(0xFF2E2C34),
                   ),
@@ -345,7 +357,7 @@ class _EditHintBar extends StatelessWidget {
                   compact ? '拖圆柄换位 · 右上角删除' : '拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 11.5, color: c.accentInk),
+                  style: context.body(size: 12, color: c.accentInk),
                 ),
               ),
               const SizedBox(width: 8),
@@ -367,7 +379,7 @@ class _EditHintBar extends StatelessWidget {
                     child: Text(
                       '添加卡片',
                       style: context.body(
-                        size: 11.5,
+                        size: 12,
                         weight: FontWeight.w700,
                         color: c.accentInk,
                       ),
@@ -406,7 +418,11 @@ class LanternEntry extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🌕', style: TextStyle(fontSize: 17)),
+            AppIcon(
+              strokeSvg(AppIcons.moon, width: 2),
+              size: 18,
+              color: c.accentInk,
+            ),
             const SizedBox(width: 5),
             Text('灯谜', style: context.heading(size: 14, color: c.ink)),
           ],
@@ -461,7 +477,7 @@ class WeatherCard extends StatelessWidget {
                     textAlign: TextAlign.right,
                     style: context
                         .heading(
-                          size: 16.5,
+                          size: 16,
                           color: c.ink,
                           height: 1.1,
                           letterSpacing: .2,
@@ -480,7 +496,7 @@ class WeatherCard extends StatelessWidget {
                   Text(
                     '天气',
                     style: context.heading(
-                      size: 12.5,
+                      size: 13,
                       color: c.accentInk,
                       letterSpacing: .25,
                     ),
@@ -502,7 +518,7 @@ class WeatherCard extends StatelessWidget {
                         children: [
                           Text(
                             w.emoji,
-                            style: const TextStyle(fontSize: 42, height: 1),
+                            style: const TextStyle(fontSize: 40, height: 1),
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -520,7 +536,7 @@ class WeatherCard extends StatelessWidget {
                               'C',
                               style: context.body(
                                 size: 14,
-                                weight: FontWeight.w600,
+                                weight: FontWeight.w700,
                                 color: c.ink2,
                               ),
                             ),
@@ -531,7 +547,7 @@ class WeatherCard extends StatelessWidget {
                     Text(
                       w.desc,
                       style: context.heading(
-                        size: 16.5,
+                        size: 16,
                         color: c.accentInk,
                         letterSpacing: .8,
                       ),
@@ -600,8 +616,8 @@ class _WeatherMetric extends StatelessWidget {
         Text(
           label,
           style: context.body(
-            size: 11.5,
-            weight: FontWeight.w600,
+            size: 12,
+            weight: FontWeight.w700,
             color: c.inkSoft,
             letterSpacing: .5,
           ),
@@ -610,7 +626,7 @@ class _WeatherMetric extends StatelessWidget {
         Text(
           value,
           style: context.display(
-            size: 17,
+            size: 18,
             weight: FontWeight.w700,
             color: c.ink,
             height: 1.1,
@@ -702,7 +718,7 @@ class CookCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -724,7 +740,7 @@ class CookCard extends StatelessWidget {
                         Text(
                           '进日记',
                           style: context.body(
-                            size: 11.5,
+                            size: 12,
                             weight: FontWeight.w700,
                             color: c.accentInk,
                           ),
@@ -765,7 +781,7 @@ class FishCard extends StatelessWidget {
           Text(
             '摸鱼日历',
             style: context.heading(
-              size: 12.5,
+              size: 13,
               color: c.accentInk,
               letterSpacing: .3,
             ),
@@ -801,7 +817,7 @@ class FishCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: context.body(
                               size: 13,
-                              weight: FontWeight.w600,
+                              weight: FontWeight.w700,
                               color: c.ink,
                               height: 1.3,
                             ),
@@ -811,7 +827,7 @@ class FishCard extends StatelessWidget {
                             days,
                             style: context.display(
                               size: 28,
-                              weight: FontWeight.w800,
+                              weight: FontWeight.w700,
                               color: c.ink,
                               height: 1,
                             ),
@@ -822,7 +838,7 @@ class FishCard extends StatelessWidget {
                             maxLines: 1,
                             style: context.body(
                               size: 13,
-                              weight: FontWeight.w600,
+                              weight: FontWeight.w700,
                               color: c.ink,
                               height: 1.3,
                             ),
@@ -836,7 +852,7 @@ class FishCard extends StatelessWidget {
                     '点击查看摸鱼详情',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 10.5, color: c.inkSoft),
+                    style: context.body(size: 11, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -857,6 +873,35 @@ class CalendarCard extends StatefulWidget {
 
 class _CalendarCardState extends State<CalendarCard> {
   int _monthOffset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    CalendarStore.instance.ensureInit();
+  }
+
+  void _open(BuildContext context) {
+    final rect = CitroCardFlight.rectOf(context);
+    if (rect.isEmpty) {
+      Navigator.of(context).pushNamed('/calendar');
+      return;
+    }
+    CitroCardMorph.pushPageSoft(
+      context,
+      source: rect,
+      settings: const RouteSettings(name: '/calendar'),
+      builder: (_) => const CalendarPage(),
+      snapshot: CitroCardFlight.snapshotOf(context, rect),
+    );
+  }
+
+  /// 日期上是否有倒数日 / 纪念日，供月历格显示小红点。
+  bool _hasMark(DateTime date) {
+    for (final mark in CalendarStore.instance.marks) {
+      if (CalendarDates.hits(mark, date)) return true;
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -895,126 +940,226 @@ class _CalendarCardState extends State<CalendarCard> {
           cm == current.month;
       cells.add(_CalCellData(day, date, dim, isToday));
     }
-    return PaperCard(
-      tapeColor: c.tape2,
-      tapeAngle: 2.5,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final fill = constraints.hasBoundedHeight;
-          // 迷你尺寸：收紧标题与字号，把空间留给 6 行日期。
-          final dense =
-              constraints.maxHeight < 260 || constraints.maxWidth < 240;
-          Widget row(int r) => Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var col = 0; col < 7; col++) ...[
-                if (col > 0) const SizedBox(width: 2),
-                Expanded(
-                  child: _CalCell(
-                    day: cells[r * 7 + col].day,
-                    date: cells[r * 7 + col].date,
-                    dim: cells[r * 7 + col].dim,
-                    today: cells[r * 7 + col].today,
-                    fill: fill,
-                    dense: dense,
-                  ),
-                ),
-              ],
-            ],
-          );
-          final gridRows = <Widget>[
-            for (var r = 0; r < 6; r++)
-              if (fill)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: r == 0 ? 0 : 2),
-                    child: row(r),
-                  ),
-                )
-              else
-                SizedBox(
-                  height: 44,
-                  child: Padding(
-                    padding: EdgeInsets.only(top: r == 0 ? 0 : 2),
-                    child: row(r),
-                  ),
-                ),
-          ];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    '日历',
-                    style: context.heading(
-                      size: dense ? 11 : 12.5,
-                      color: c.accentInk,
-                    ),
-                  ),
-                  const Spacer(),
-                  Pressable(
-                    onTap: () => setState(() => _monthOffset--),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.chevron_left_rounded,
-                        size: dense ? 16 : 20,
-                        color: const Color(0x8F8F4E05),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    dense ? '${now.month}月' : '${now.year}年${now.month}月',
-                    style: context.display(
-                      size: dense ? 13 : 16,
-                      color: c.accentInk,
-                    ),
-                  ),
-                  Pressable(
-                    onTap: () => setState(() => _monthOffset++),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        size: dense ? 16 : 20,
-                        color: const Color(0x8F8F4E05),
-                      ),
+    return ListenableBuilder(
+      listenable: CalendarStore.instance,
+      builder: (context, _) => PaperCard(
+        tapeColor: c.tape2,
+        tapeAngle: 2.5,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        onTap: () => _open(context),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // 3×3 起的小卡片只保留「今天」：大日期 + 星期 + 农历，
+            // 不再铺整月日期格，避免小尺寸里 42 个日期挤成一团。
+            final mini =
+                constraints.maxHeight < 210 || constraints.maxWidth < 210;
+            if (mini) return _todayOnly(context, current);
+            final fill = constraints.hasBoundedHeight;
+            // 迷你尺寸：收紧标题与字号，把空间留给 6 行日期。
+            final dense =
+                constraints.maxHeight < 260 || constraints.maxWidth < 240;
+            Widget row(int r) => Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var col = 0; col < 7; col++) ...[
+                  if (col > 0) const SizedBox(width: 2),
+                  Expanded(
+                    child: _CalCell(
+                      day: cells[r * 7 + col].day,
+                      date: cells[r * 7 + col].date,
+                      dim: cells[r * 7 + col].dim,
+                      today: cells[r * 7 + col].today,
+                      dot: _hasMark(cells[r * 7 + col].date),
+                      fill: fill,
+                      dense: dense,
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  for (var i = 0; i < 7; i++) ...[
-                    if (i > 0) const SizedBox(width: 2),
-                    Expanded(
+              ],
+            );
+            final gridRows = <Widget>[
+              for (var r = 0; r < 6; r++)
+                if (fill)
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: r == 0 ? 0 : 2),
+                      child: row(r),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 44,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: r == 0 ? 0 : 2),
+                      child: row(r),
+                    ),
+                  ),
+            ];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '日历',
+                      style: context.heading(
+                        size: dense ? 11 : 12.5,
+                        color: c.accentInk,
+                      ),
+                    ),
+                    const Spacer(),
+                    Pressable(
+                      onTap: () => setState(() => _monthOffset--),
                       child: Padding(
-                        padding: EdgeInsets.only(bottom: dense ? 2 : 3),
-                        child: Text(
-                          wd[i],
-                          textAlign: TextAlign.center,
-                          style: context.body(
-                            size: dense ? 10 : 13,
-                            weight: FontWeight.w700,
-                            color: (i == 0 || i == 6) ? c.accentInk : c.inkSoft,
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Icons.chevron_left_rounded,
+                          size: dense ? 16 : 20,
+                          color: const Color(0x8F8F4E05),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      dense ? '${now.month}月' : '${now.year}年${now.month}月',
+                      style: context.display(
+                        size: dense ? 13 : 16,
+                        color: c.accentInk,
+                      ),
+                    ),
+                    Pressable(
+                      onTap: () => setState(() => _monthOffset++),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: dense ? 16 : 20,
+                          color: const Color(0x8F8F4E05),
                         ),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    for (var i = 0; i < 7; i++) ...[
+                      if (i > 0) const SizedBox(width: 2),
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: dense ? 2 : 3),
+                          child: Text(
+                            wd[i],
+                            textAlign: TextAlign.center,
+                            style: context.body(
+                              size: dense ? 10 : 13,
+                              weight: FontWeight.w700,
+                              color: (i == 0 || i == 6)
+                                  ? c.accentInk
+                                  : c.inkSoft,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (fill)
+                  Expanded(child: Column(children: gridRows))
+                else
+                  ...gridRows,
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 迷你卡片：参照系统日历小组件的排版，只显示今天。
+  ///
+  /// 顶部年月、左侧超大日期、底部事件卡；事件卡第一行放节日 / 节气 / 今日
+  /// 标记，第二行补上公历日期与农历，保证小卡也看得见农历。
+  Widget _todayOnly(BuildContext context, DateTime today) {
+    final c = context.c;
+    final lunar = lunarOf(today);
+    final fid = festivalIdOf(today);
+    final term = termToday(today);
+    final marks = CalendarStore.instance.todayMarks(today);
+    final headline = fid != null
+        ? festivalName(fid)
+        : (term ??
+              (marks.isNotEmpty ? marks.first.title : weekdayChinese(today)));
+    final lunarDay = lunar != null ? kLunarDayNames[lunar.day - 1] : '';
+    String two(int value) => value.toString().padLeft(2, '0');
+    final yearMonth =
+        '${today.year}/${two(today.month)}'
+        '${lunarDay.isEmpty ? '' : ' · $lunarDay'}';
+    final dateLine = '${today.month}月${today.day}日';
+    final markLabel = marks.isNotEmpty
+        ? CalendarDates.labelFor(marks.first, today)
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(yearMonth, style: context.display(size: 14, color: c.accentInk)),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${today.day}',
+                style: context.display(size: 54, color: c.ink, height: .95),
+              ),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+          decoration: BoxDecoration(
+            color: c.surface2.withAlpha(230),
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: c.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      headline,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.body(
+                        size: 12,
+                        weight: FontWeight.w700,
+                        color: c.ink,
+                      ),
+                    ),
+                  ),
+                  if (markLabel != null) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      markLabel,
+                      maxLines: 1,
+                      style: context.body(size: 8.5, color: c.stamp),
+                    ),
+                  ],
                 ],
               ),
-              if (fill)
-                Expanded(child: Column(children: gridRows))
-              else
-                ...gridRows,
+              const SizedBox(height: 1),
+              Text(
+                dateLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.body(size: 9.5, color: c.inkSoft),
+              ),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1034,6 +1179,9 @@ class _CalCell extends StatelessWidget {
   final bool today;
   final bool fill;
 
+  /// 该日期是否有倒数日 / 纪念日，有则在日期右上角点一颗小圆点。
+  final bool dot;
+
   /// 迷你日历：缩小日期与农历字号，隐藏次要标签。
   final bool dense;
   const _CalCell({
@@ -1041,6 +1189,7 @@ class _CalCell extends StatelessWidget {
     required this.date,
     required this.dim,
     required this.today,
+    this.dot = false,
     this.fill = false,
     this.dense = false,
   });
@@ -1068,6 +1217,12 @@ class _CalCell extends StatelessWidget {
         }
       }
     }
+    final dayColor = today
+        ? const Color(0xFF2E2C34)
+        : (dim ? c.ink.withAlpha(140) : c.ink);
+    final subColor = today
+        ? const Color(0xFF2E2C34)
+        : (labelColor ?? c.inkSoft).withAlpha(dim ? 140 : 255);
     final content = FittedBox(
       fit: BoxFit.scaleDown,
       // 日历格高度随卡片尺寸变化，用 scaleDown 兜底，避免字体
@@ -1076,13 +1231,33 @@ class _CalCell extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            '$day',
-            style: context.display(
-              size: dense ? 15 : (fill ? 20 : 19),
-              color: today ? const Color(0xFF2E2C34) : c.ink,
-              height: 1.05,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '$day',
+                style: context.display(
+                  size: dense ? 15 : (fill ? 20 : 19),
+                  color: dayColor,
+                  height: 1.05,
+                ),
+              ),
+              if (dot)
+                Padding(
+                  padding: const EdgeInsets.only(left: 2),
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: today
+                          ? const Color(0xFF2E2C34)
+                          : (dim ? c.stamp.withAlpha(140) : c.stamp),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
           if (label != null)
             Padding(
@@ -1093,9 +1268,7 @@ class _CalCell extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.body(
                   size: dense ? 7.5 : (fill ? 9.5 : 10),
-                  color: today
-                      ? const Color(0xFF2E2C34)
-                      : (labelColor ?? c.inkSoft),
+                  color: subColor,
                   height: 1.15,
                 ),
               ),
@@ -1112,8 +1285,9 @@ class _CalCell extends StatelessWidget {
               borderRadius: BorderRadius.circular(fill ? 10 : 8),
             )
           : null,
-      // 只有非本月日期需要压暗；正常日期直接绘制，滚动时少一层离屏合成。
-      child: dim ? Opacity(opacity: .55, child: content) : content,
+      // 非本月日期在上面的颜色里已经压暗，不再额外套 Opacity，
+      // 避免整个日期格多一层离屏合成。
+      child: content,
     );
   }
 }
@@ -1262,7 +1436,7 @@ class ZodiacCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         Text(
           '今日星象',
           style: context.heading(
@@ -1272,11 +1446,11 @@ class ZodiacCard extends StatelessWidget {
           ),
         ),
         if (!micro) ...[
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Text(
             'DAILY ZODIAC',
             style: context.body(
-              size: 7.5,
+              size: 9,
               weight: FontWeight.w700,
               color: tone.inkSoft.withAlpha(180),
               letterSpacing: 1.4,
@@ -1286,7 +1460,7 @@ class ZodiacCard extends StatelessWidget {
         const Spacer(),
         if (!micro)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: tone.chipBg,
               borderRadius: BorderRadius.circular(99),
@@ -1379,7 +1553,7 @@ class ZodiacCard extends StatelessWidget {
                 Text(
                   '综合运势',
                   style: context.body(
-                    size: 8.5,
+                    size: 9,
                     weight: FontWeight.w700,
                     color: tone.inkSoft,
                     letterSpacing: 1.2,
@@ -1400,7 +1574,7 @@ class ZodiacCard extends StatelessWidget {
                   '${sign.range} · ${sign.element}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 9.5, color: tone.inkSoft),
+                  style: context.body(size: 10, color: tone.inkSoft),
                 ),
               ],
             ),
@@ -1416,7 +1590,7 @@ class ZodiacCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: _tagPill(context, state, f, tone),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Expanded(
                   child: ClipRect(
                     child: Align(
@@ -1426,7 +1600,7 @@ class ZodiacCard extends StatelessWidget {
                         maxLines: tall ? 6 : 3,
                         overflow: TextOverflow.ellipsis,
                         style: context.body(
-                          size: 12.5,
+                          size: 13,
                           color: tone.ink2,
                           height: 1.62,
                         ),
@@ -1476,7 +1650,7 @@ class ZodiacCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.body(size: 10, color: tone.inkSoft),
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: _tagPill(context, state, f, tone),
@@ -1486,7 +1660,7 @@ class ZodiacCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 10),
         if (f != null) ...[
           Expanded(
             child: ClipRect(
@@ -1496,11 +1670,7 @@ class ZodiacCard extends StatelessWidget {
                   f.text,
                   maxLines: tall ? 5 : 3,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(
-                    size: 12.5,
-                    color: tone.ink2,
-                    height: 1.62,
-                  ),
+                  style: context.body(size: 13, color: tone.ink2, height: 1.62),
                 ),
               ),
             ),
@@ -1587,7 +1757,7 @@ class ZodiacCard extends StatelessWidget {
         ? (state.zodiacError != null ? '星语生成失败' : '星语生成中…')
         : '✦ ${f.tag}';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: tone.chipBg,
         borderRadius: BorderRadius.circular(99),
@@ -1598,8 +1768,8 @@ class ZodiacCard extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: context.body(
-          size: 10.5,
-          weight: FontWeight.w600,
+          size: 11,
+          weight: FontWeight.w700,
           color: f == null ? tone.inkSoft : tone.accentInk,
           letterSpacing: .4,
         ),
@@ -1646,7 +1816,7 @@ class ZodiacCard extends StatelessWidget {
                   '分',
                   style: TextStyle(
                     fontFamily: AppFonts.noto,
-                    fontSize: 7,
+                    fontSize: 9,
                     height: 1,
                     color: tone.inkSoft,
                   ),
@@ -1659,7 +1829,7 @@ class ZodiacCard extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 8.5,
+                fontSize: 9,
                 height: 1.2,
                 color: tone.inkSoft,
               ),
@@ -1707,7 +1877,7 @@ class ZodiacCard extends StatelessWidget {
       style: TextStyle(
         fontFamily: AppFonts.noto,
         fontFamilyFallback: AppFonts.bodyFallback,
-        fontSize: 8.5,
+        fontSize: 9,
         height: 1.2,
         color: tone.inkSoft,
       ),
@@ -1741,8 +1911,8 @@ class ZodiacCard extends StatelessWidget {
                 child: Text(
                   '选择星座 →',
                   style: context.body(
-                    size: 10.5,
-                    weight: FontWeight.w600,
+                    size: 11,
+                    weight: FontWeight.w700,
                     color: tone.accentInk,
                   ),
                 ),
@@ -2053,7 +2223,7 @@ class QuoteCard extends StatelessWidget {
                   Text(
                     '每日一言',
                     textAlign: TextAlign.center,
-                    style: context.heading(size: 12.5, color: c.accentInk),
+                    style: context.heading(size: 13, color: c.accentInk),
                   ),
                   const SizedBox(height: 6),
                   SizedBox(
@@ -2063,7 +2233,7 @@ class QuoteCard extends StatelessWidget {
                       textAlign: TextAlign.center,
                       locale: const Locale('zh', 'CN'),
                       style: context.heading(
-                        size: 19.5,
+                        size: 20,
                         color: c.ink,
                         height: 1.7,
                         letterSpacing: .3,
@@ -2077,7 +2247,7 @@ class QuoteCard extends StatelessWidget {
                       '— ${q.en}',
                       textAlign: TextAlign.center,
                       style: context.hand(
-                        size: 14.5,
+                        size: 14,
                         color: c.inkSoft,
                         height: 1.45,
                         style: FontStyle.italic,
@@ -2095,7 +2265,7 @@ class QuoteCard extends StatelessWidget {
                   child: Text(
                     '“',
                     style: context.display(
-                      size: 27,
+                      size: 28,
                       color: const Color(0x38B8924A),
                       height: 1,
                     ),

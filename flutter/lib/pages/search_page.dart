@@ -52,8 +52,8 @@ class SearchPage extends StatelessWidget {
                                 Text(
                                   '返回',
                                   style: context.body(
-                                    size: 11.5,
-                                    weight: FontWeight.w600,
+                                    size: 12,
+                                    weight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -61,7 +61,7 @@ class SearchPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text('全站搜索', style: context.heading(size: 27)),
+                        Text('全站搜索', style: context.heading(size: 28)),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -84,7 +84,7 @@ class SearchPage extends StatelessWidget {
                           Text(
                             '支持上下键选择，回车直接打开；没有本地结果时回退到必应。',
                             style: context.body(
-                              size: 10.5,
+                              size: 11,
                               color: c.inkSoft.withAlpha(200),
                               height: 1.5,
                             ),
@@ -151,7 +151,7 @@ class _SearchHint extends StatelessWidget {
           Text(
             label,
             style: context.body(
-              size: 11.5,
+              size: 12,
               weight: FontWeight.w700,
               color: c.accentInk,
             ),

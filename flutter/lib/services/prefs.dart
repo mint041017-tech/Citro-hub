@@ -54,6 +54,7 @@ class Prefs {
       PrefKeys.cardRecipeDay,
       PrefKeys.cardChatDay,
       PrefKeys.cardOwner,
+      PrefKeys.ledger,
     ];
     for (final key in keys) {
       await _sp.remove(key);
@@ -105,4 +106,7 @@ class PrefKeys {
   static const updateLastCheck = 'citro_update_last_check';
   static const updateSkippedVersion = 'citro_update_skipped_version';
   static const homeLayout = 'citro_home_layout_v1';
+  static const todo = 'citro_todo_v1';
+  static const ledger = 'citro_ledger_v1';
+  static const calendarMarks = 'citro_calendar_marks_v1';
 }

@@ -49,9 +49,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text('🌤️ 天气详情', style: context.heading(size: 20)),
-              ),
+              Expanded(child: Text('天气详情', style: context.heading(size: 20))),
               if (state.weatherLoading || locating)
                 const Padding(
                   padding: EdgeInsets.only(right: 6),
@@ -111,7 +109,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                 if (today != null)
                   Text(
                     '最高 ${today.max.round()}° / 最低 ${today.min.round()}°',
-                    style: context.body(size: 11.5, color: c.inkSoft),
+                    style: context.body(size: 12, color: c.inkSoft),
                   ),
               ],
             ),
@@ -163,7 +161,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                             ? '现在'
                             : '${hour.time.hour.toString().padLeft(2, '0')}:00',
                         style: context.body(
-                          size: 10.5,
+                          size: 11,
                           weight: current ? FontWeight.w700 : FontWeight.w400,
                           color: current ? c.accentInk : c.inkSoft,
                         ),
@@ -216,7 +214,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                           : '周${'一二三四五六日'[d.date.weekday - 1]}',
                       style: context.body(
                         size: 12,
-                        weight: FontWeight.w600,
+                        weight: FontWeight.w700,
                         color: c.ink2,
                       ),
                     ),
@@ -243,7 +241,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                     '${d.min.round()}° / ${d.max.round()}°',
                     style: context.body(
                       size: 12,
-                      weight: FontWeight.w600,
+                      weight: FontWeight.w700,
                       color: c.ink,
                     ),
                   ),
@@ -265,7 +263,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
               const SizedBox(width: 4),
               Text(
                 locating ? '定位中…' : '定位并刷新',
-                style: context.body(size: 11.5, color: c.accentInk),
+                style: context.body(size: 12, color: c.accentInk),
               ),
             ],
           ),

@@ -322,7 +322,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('大棋盘提示', style: ctx.heading(size: 25)),
+            Text('大棋盘提示', style: ctx.heading(size: 24)),
             const SizedBox(height: 10),
             Text(
               '「${mode.title}」的棋盘较大，手机屏幕上格子会比较小。\n'
@@ -375,7 +375,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
             Text(
               '当前这一局还没有完成，返回后会放弃进度。',
               textAlign: TextAlign.center,
-              style: ctx.body(size: 12.5, color: ctx.c.inkSoft, height: 1.7),
+              style: ctx.body(size: 13, color: ctx.c.inkSoft, height: 1.7),
             ),
             const SizedBox(height: 16),
             Row(
@@ -1715,7 +1715,7 @@ class _DiffTabs extends StatelessWidget {
             difficulty.label,
             style: TextStyle(
               fontFamily: AppFonts.noto,
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: on ? const Color(0xFF2E2C22) : c.ink2,
               height: 1.2,
@@ -1753,7 +1753,7 @@ class _CubeViewToggle extends StatelessWidget {
           child: Text(
             label,
             style: context.body(
-              size: 10.5,
+              size: 11,
               weight: FontWeight.w700,
               color: on ? const Color(0xFF2E2C22) : c.ink2,
               height: 1,
@@ -1824,7 +1824,7 @@ class _CubeFaceTabs extends StatelessWidget {
       scale: .96,
       child: Container(
         height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: on ? c.accent : c.surface2,
@@ -2150,7 +2150,7 @@ class _ColumnPeek extends StatelessWidget {
             Text(
               '纵列',
               style: context.body(
-                size: 10.5,
+                size: 11,
                 weight: FontWeight.w700,
                 color: c.inkSoft,
               ),
@@ -2200,7 +2200,7 @@ class _ColumnPeek extends StatelessWidget {
               '${l + 1}',
               style: TextStyle(
                 fontFamily: AppFonts.noto,
-                fontSize: 7.5,
+                fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: on ? const Color(0xFF2E2C22) : c.inkSoft,
                 height: 1,
@@ -2243,11 +2243,11 @@ class _DifficultyNotice extends StatelessWidget {
       child: Row(
         children: [
           gameIcon(GameIcons.lightbulb, size: 14, color: c.stamp),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               '本局实际评级低于标称档（已自动重试 3 次）。点「新游戏」可再换一局。',
-              style: context.body(size: 10.5, color: c.ink2, height: 1.5),
+              style: context.body(size: 11, color: c.ink2, height: 1.5),
             ),
           ),
         ],
@@ -2275,11 +2275,11 @@ class _LargeBoardNotice extends StatelessWidget {
       child: Row(
         children: [
           gameIcon(GameIcons.lightbulb, size: 14, color: c.accentInk),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               '手机屏幕较小，建议使用 iPad / 桌面端 / 网页端游玩；可双指放大。',
-              style: context.body(size: 10.5, color: c.accentInk, height: 1.5),
+              style: context.body(size: 11, color: c.accentInk, height: 1.5),
             ),
           ),
           GestureDetector(
@@ -2343,19 +2343,19 @@ class _SudokuPad extends StatelessWidget {
             Text(
               keyboardMode!,
               textAlign: TextAlign.center,
-              style: context.body(size: 10.5, color: c.inkSoft),
+              style: context.body(size: 11, color: c.inkSoft),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
           ],
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               row(const [1, 2, 3, 4, 5]),
-              const SizedBox(height: 9),
+              const SizedBox(height: 10),
               row(const [6, 7, 8, 9]),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 10),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
@@ -2424,7 +2424,7 @@ class _SudokuPad extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.kalam,
                       fontSize: size * .18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: c.inkSoft,
                       height: 1,
                     ),
@@ -2513,7 +2513,7 @@ class _ToolBtn extends StatelessWidget {
                       label,
                       style: TextStyle(
                         fontFamily: AppFonts.noto,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: .2,
                         color: fg,
@@ -2526,7 +2526,7 @@ class _ToolBtn extends StatelessWidget {
                         trailing!,
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
-                          fontSize: 10.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: fg.withValues(alpha: .7),
                           height: 1,
@@ -2575,7 +2575,7 @@ class _Legend extends StatelessWidget {
     };
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(11, 8, 11, 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: c.bg2,
         borderRadius: BorderRadius.circular(12),
@@ -2585,11 +2585,11 @@ class _Legend extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           gameIcon(GameIcons.sparkle, size: 13, color: c.accentInk),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: context.body(size: 10.5, color: c.inkSoft, height: 1.55),
+              style: context.body(size: 11, color: c.inkSoft, height: 1.55),
             ),
           ),
         ],
@@ -2652,7 +2652,7 @@ class _BoardOverlay extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: AppFonts.zcool,
                   fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 25,
+                  fontSize: 24,
                   fontWeight: FontWeight.w400,
                   height: 1.3,
                   letterSpacing: 1.4,
@@ -2660,7 +2660,7 @@ class _BoardOverlay extends StatelessWidget {
                 ),
               ),
               if (description.isNotEmpty) ...[
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Text(
                   description,
                   textAlign: TextAlign.center,
@@ -2778,7 +2778,7 @@ class _ErrorPanel extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: context.body(size: 11.5, color: c.inkSoft, height: 1.6),
+              style: context.body(size: 12, color: c.inkSoft, height: 1.6),
             ),
             const SizedBox(height: 16),
             Row(

@@ -432,7 +432,7 @@ class SectionTitle extends StatelessWidget {
             child: Container(
               width: 16,
               height: 5,
-              margin: const EdgeInsets.only(right: 9, top: 4),
+              margin: const EdgeInsets.only(right: 10, top: 4),
               decoration: BoxDecoration(
                 color: c.accent,
                 borderRadius: BorderRadius.circular(3),
@@ -673,7 +673,23 @@ class AppIcons {
       '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01"/>';
   static const scan =
       '<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="3"/>';
+  static const wallet =
+      '<path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2"/><path d="M3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a1 1 0 0 0-1-1H5"/><path d="M17 13h.01"/>';
+  static const trendUp =
+      '<path d="M3 17 9.5 10.5l4 4L21 7"/><path d="M15 7h6v6"/>';
   static const flash = '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/>';
+  static const check = '<path d="M20 6 9 17l-5-5"/>';
+  static const list =
+      '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.3"/><circle cx="4" cy="12" r="1.3"/><circle cx="4" cy="18" r="1.3"/>';
+  static const board =
+      '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15 4v16"/>';
+  static const smile =
+      '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>';
+  static const flag = '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>';
+  static const repeat =
+      '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>';
+  static const target =
+      '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>';
 }
 
 /// 点击缩放包装。
@@ -938,7 +954,7 @@ class _ToastBubbleState extends State<_ToastBubble>
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 9,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
                   color: c.ink.withAlpha(240),

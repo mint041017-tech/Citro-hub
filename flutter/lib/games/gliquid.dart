@@ -682,7 +682,7 @@ class _LiquidBrand extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.zcool,
             fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 17,
+            fontSize: 18,
             height: 1.1,
             letterSpacing: 1.2,
             color: _ink,
@@ -808,7 +808,7 @@ class _Stat extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.noto,
             fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 8.5,
+            fontSize: 9,
             height: 1,
             letterSpacing: 0.8,
             color: _ink.withValues(alpha: 0.55),
@@ -829,7 +829,7 @@ class _LiquidNextCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(9, 4, 9, 4),
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
       decoration: BoxDecoration(
         color: _cream.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(12),
@@ -843,12 +843,12 @@ class _LiquidNextCard extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 8.5,
+              fontSize: 9,
               letterSpacing: 0.6,
               color: _ink.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           for (var i = 0; i < next.length; i++) ...[
             if (i > 0) const SizedBox(width: 4),
             _NextChip(level: next[i]),
@@ -883,8 +883,8 @@ class _NextChip extends StatelessWidget {
         style: const TextStyle(
           fontFamily: AppFonts.noto,
           fontFamilyFallback: AppFonts.bodyFallback,
-          fontWeight: FontWeight.w800,
-          fontSize: 8.5,
+          fontWeight: FontWeight.w700,
+          fontSize: 9,
           height: 1,
           color: _ink,
         ),
@@ -902,7 +902,7 @@ class _LiquidHint extends StatelessWidget {
         !kIsWeb && (Theme.of(context).platform == TargetPlatform.windows);
     final text = desktop ? '按住蓄力 · ← → 微调 · 空格或松开出手' : '按住蓄力 · 拖动瞄准 · 松开出手';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: _cream.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(999),
@@ -919,13 +919,13 @@ class _LiquidHint extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 10.5,
+              fontSize: 11,
               letterSpacing: 0.3,
               color: _ink.withValues(alpha: 0.82),
             ),
@@ -1002,7 +1002,7 @@ class _IntroOverlay extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 8.5,
+                fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.8,
                 color: _ink.withValues(alpha: 0.55),
@@ -1161,7 +1161,7 @@ class _HowTo extends StatelessWidget {
           style: TextStyle(
             fontFamily: AppFonts.noto,
             fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 8.5,
+            fontSize: 9,
             color: _ink.withValues(alpha: 0.6),
           ),
         ),
@@ -1208,7 +1208,7 @@ class _EndOverlay extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 8.5,
+                      fontSize: 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.8,
                       color: _ink.withValues(alpha: 0.5),
@@ -1220,7 +1220,7 @@ class _EndOverlay extends StatelessWidget {
                     angle: 0.045,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
+                        horizontal: 10,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
@@ -1232,7 +1232,7 @@ class _EndOverlay extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: AppFonts.noto,
                           fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 8.5,
+                          fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: _cream,
                         ),
@@ -1259,7 +1259,7 @@ class _EndOverlay extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppFonts.noto,
                 fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 10.5,
+                fontSize: 11,
                 color: _ink.withValues(alpha: 0.66),
               ),
             ),
@@ -1320,7 +1320,7 @@ class _EndOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: _paper.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(10),
@@ -1339,7 +1339,7 @@ class _EndOverlay extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppFonts.noto,
                         fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 9.5,
+                        fontSize: 10,
                         color: _ink.withValues(alpha: 0.65),
                       ),
                     ),
@@ -1349,7 +1349,7 @@ class _EndOverlay extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: AppFonts.noto,
                       fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 9.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: maxEdge,
                     ),
@@ -1581,7 +1581,7 @@ class _PaperButton extends StatelessWidget {
               ),
             ),
             if (trailing != null && !compact) ...[
-              const SizedBox(width: 7),
+              const SizedBox(width: 8),
               Text(
                 trailing!,
                 style: TextStyle(
@@ -1863,9 +1863,9 @@ class _LiquidStagePainter extends CustomPainter {
         canvas,
         '${i * 25}',
         Offset(layout.jarX0 + 39, y),
-        fontSize: 8,
+        fontSize: 9,
         color: _ink.withValues(alpha: 0.24),
-        weight: FontWeight.w600,
+        weight: FontWeight.w700,
         align: TextAlign.left,
         centerVertically: true,
       );
@@ -2024,9 +2024,9 @@ class _LiquidStagePainter extends CustomPainter {
       canvas,
       'NO. 6',
       const Offset(2, -3),
-      fontSize: 8,
+      fontSize: 9,
       color: _ink,
-      weight: FontWeight.w800,
+      weight: FontWeight.w700,
       centerVertically: true,
     );
     canvas.drawLine(
@@ -2040,9 +2040,9 @@ class _LiquidStagePainter extends CustomPainter {
       canvas,
       'LIQUID 2048+',
       const Offset(1, 11),
-      fontSize: 6,
+      fontSize: 9,
       color: _ink.withValues(alpha: 0.55),
-      weight: FontWeight.w600,
+      weight: FontWeight.w700,
       centerVertically: true,
     );
     canvas.restore();
@@ -2602,15 +2602,15 @@ class _LiquidStagePainter extends CustomPainter {
     final label = LiquidGame.formatBlobValue(value);
     var fontSize = radius * (belowFace ? 0.54 : 0.68);
     final maxWidth = radius * (belowFace ? 1.5 : 1.7);
-    var painter = _textPainter(label, fontSize, _ink, FontWeight.w800);
+    var painter = _textPainter(label, fontSize, _ink, FontWeight.w700);
     if (painter.width > maxWidth) {
       fontSize *= maxWidth / painter.width;
-      painter = _textPainter(label, fontSize, _ink, FontWeight.w800);
+      painter = _textPainter(label, fontSize, _ink, FontWeight.w700);
     }
     final maxHeight = radius * (belowFace ? 0.46 : 0.62);
     if (painter.height > maxHeight) {
       fontSize *= maxHeight / painter.height;
-      painter = _textPainter(label, fontSize, _ink, FontWeight.w800);
+      painter = _textPainter(label, fontSize, _ink, FontWeight.w700);
     }
 
     final center = Offset(cx, cy);
@@ -2644,7 +2644,7 @@ class _LiquidStagePainter extends CustomPainter {
       label,
       fontSize,
       _cream.withValues(alpha: 0.8),
-      FontWeight.w800,
+      FontWeight.w700,
       strokeWidth: math.max(2.5, fontSize * 0.2),
     );
     stroke.paint(canvas, offset);
@@ -2737,13 +2737,13 @@ class _LiquidStagePainter extends CustomPainter {
         item.text,
         item.size,
         color,
-        FontWeight.w800,
+        FontWeight.w700,
       );
       final stroke = _textPainter(
         item.text,
         item.size,
         _cream.withValues(alpha: 0.78),
-        FontWeight.w800,
+        FontWeight.w700,
         strokeWidth: 4,
       );
       canvas.save();
@@ -3344,7 +3344,7 @@ void _drawText(
   Offset position, {
   required double fontSize,
   required Color color,
-  FontWeight weight = FontWeight.w600,
+  FontWeight weight = FontWeight.w700,
   TextAlign align = TextAlign.center,
   bool centerVertically = false,
 }) {

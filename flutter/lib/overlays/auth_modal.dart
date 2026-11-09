@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../pages/legal_page.dart';
@@ -169,7 +169,7 @@ class _AuthDialogState extends State<_AuthDialog> {
         Text(
           '用手机 Citro App 扫一扫，电脑端立即登录',
           textAlign: TextAlign.center,
-          style: context.body(size: 11.5, color: c.inkSoft, height: 1.5),
+          style: context.body(size: 12, color: c.inkSoft, height: 1.5),
         ),
         const SizedBox(height: 18),
         QrLoginView(onConfirmed: _onQrConfirmed),
@@ -182,7 +182,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               child: Text(
                 '返回账号登录',
                 style: context.body(
-                  size: 11.5,
+                  size: 12,
                   weight: FontWeight.w700,
                   color: c.accentInk,
                 ),
@@ -210,7 +210,7 @@ class _AuthDialogState extends State<_AuthDialog> {
         Text(
           mode == 'login' ? '用手机号或邮箱继续' : '手机号 / 邮箱都可以注册',
           textAlign: TextAlign.center,
-          style: context.body(size: 11.5, color: c.inkSoft, height: 1.5),
+          style: context.body(size: 12, color: c.inkSoft, height: 1.5),
         ),
         const SizedBox(height: 18),
         _modeSwitch(),
@@ -275,8 +275,8 @@ class _AuthDialogState extends State<_AuthDialog> {
                 child: Text(
                   error!,
                   style: context.body(
-                    size: 11.5,
-                    weight: FontWeight.w600,
+                    size: 12,
+                    weight: FontWeight.w700,
                     color: c.stamp,
                     height: 1.45,
                   ),
@@ -304,12 +304,9 @@ class _AuthDialogState extends State<_AuthDialog> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(
-                '登录即表示你同意',
-                style: context.body(size: 10.5, color: c.inkSoft),
-              ),
+              Text('登录即表示你同意', style: context.body(size: 11, color: c.inkSoft)),
               _legalLink('《用户协议》', LegalDoc.terms),
-              Text('和', style: context.body(size: 10.5, color: c.inkSoft)),
+              Text('和', style: context.body(size: 11, color: c.inkSoft)),
               _legalLink('《隐私政策》', LegalDoc.privacy),
             ],
           ),
@@ -327,7 +324,7 @@ class _AuthDialogState extends State<_AuthDialog> {
       child: Pressable(
         onTap: () => setState(() => _qrMode = true),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: c.surface2,
             borderRadius: BorderRadius.circular(999),
@@ -345,8 +342,8 @@ class _AuthDialogState extends State<_AuthDialog> {
               Text(
                 '扫码登录',
                 style: context.body(
-                  size: 11.5,
-                  weight: FontWeight.w600,
+                  size: 12,
+                  weight: FontWeight.w700,
                   color: c.ink2,
                 ),
               ),
@@ -366,11 +363,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           width: 8,
           height: 8,
           decoration: const BoxDecoration(
-            color: Color(0xFFF2A43C),
+            color: Color(0xFF7A9BBE),
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         Text(
           'CITRO',
           style: context.body(
@@ -432,7 +429,7 @@ class _AuthDialogState extends State<_AuthDialog> {
             child: Text(
               label,
               style: context.body(
-                size: 13.5,
+                size: 14,
                 weight: FontWeight.w700,
                 color: active ? const Color(0xFF2E2C22) : c.inkSoft,
               ),
@@ -464,7 +461,7 @@ class _AuthDialogState extends State<_AuthDialog> {
           error = null;
         });
       },
-child: AnimatedContainer(
+      child: AnimatedContainer(
         key: ValueKey('auth-method-$value'),
         duration: const Duration(milliseconds: 180),
         height: 40,
@@ -484,7 +481,7 @@ child: AnimatedContainer(
               child: Text(
                 label,
                 style: context.body(
-                  size: 12.5,
+                  size: 13,
                   weight: FontWeight.w700,
                   color: active ? c.ink : c.inkSoft,
                 ),

@@ -70,7 +70,7 @@ Future<void> openCitroResource(
                       Text(
                         v.name,
                         style: ctx.body(
-                          size: 12.5,
+                          size: 13,
                           weight: FontWeight.w700,
                           color: ctx.c.ink,
                         ),
@@ -78,7 +78,7 @@ Future<void> openCitroResource(
                       const SizedBox(height: 2),
                       Text(
                         v.desc,
-                        style: ctx.body(size: 10.5, color: ctx.c.inkSoft),
+                        style: ctx.body(size: 11, color: ctx.c.inkSoft),
                       ),
                     ],
                   ),

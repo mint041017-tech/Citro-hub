@@ -69,7 +69,7 @@ class _HistoryTodayCardState extends State<HistoryTodayCard> {
               const Spacer(),
               Text(
                 '${now.month}月${now.day}日',
-                style: context.body(size: 10.5, color: c.accentInk),
+                style: context.body(size: 11, color: c.accentInk),
               ),
             ],
           ),
@@ -85,7 +85,7 @@ class _HistoryTodayCardState extends State<HistoryTodayCard> {
                 Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: context.body(size: 11.5, color: c.inkSoft),
+                  style: context.body(size: 12, color: c.inkSoft),
                 ),
                 const SizedBox(height: 6),
                 TextButton(onPressed: _load, child: const Text('再试一次')),
@@ -94,7 +94,7 @@ class _HistoryTodayCardState extends State<HistoryTodayCard> {
           else
             for (final item in _items)
               Padding(
-                padding: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

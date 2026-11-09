@@ -1,4 +1,5 @@
 import 'package:citro/games/gliquid.dart';
+import 'package:citro/ledger/ledger_page.dart';
 import 'package:citro/pages/cook_page.dart';
 import 'package:citro/pages/me_page.dart';
 import 'package:citro/pages/play_page.dart';
@@ -35,6 +36,8 @@ void main() {
     expect(CitroRoutes.pageFor('/play'), isA<PlayPage>());
     expect(CitroRoutes.pageFor('/sens'), isA<SensPage>());
     expect(CitroRoutes.pageFor('/search'), isA<SearchPage>());
+    expect(CitroRoutes.pageFor('/ledger'), isA<LedgerPage>());
+    expect(CitroRoutes.normalize('/ledger'), '/ledger');
     expect(CitroRoutes.pageFor('/gliquid'), isA<GameLiquidPage>());
   });
 }

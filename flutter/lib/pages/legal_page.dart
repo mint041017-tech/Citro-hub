@@ -59,8 +59,8 @@ class LegalPage extends StatelessWidget {
                               Text(
                                 '返回',
                                 style: context.body(
-                                  size: 11.5,
-                                  weight: FontWeight.w600,
+                                  size: 12,
+                                  weight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -93,7 +93,7 @@ class LegalPage extends StatelessWidget {
                           ? '我们不出售你的个人信息，当前未接入广告或第三方统计 SDK。使用社区、AI、天气与语音功能前，请阅读本政策。'
                           : '注册或使用 Citro 即表示你同意本协议。社区内容零容忍违法违规与辱骂攻击；你可以随时举报、拉黑或注销账号。',
                       style: context.body(
-                        size: 11.5,
+                        size: 12,
                         color: c.ink2,
                         height: 1.75,
                       ),
@@ -115,7 +115,7 @@ class LegalPage extends StatelessWidget {
                     'Citro 运营者\nKOOK：25343821 · 微信：Tangerine-1017',
                     textAlign: TextAlign.center,
                     style: context.body(
-                      size: 10.5,
+                      size: 11,
                       color: c.inkSoft,
                       height: 1.7,
                     ),
@@ -124,7 +124,7 @@ class LegalPage extends StatelessWidget {
                   Text(
                     '如本页面与线上公布版本不一致，以最新公布版本为准。',
                     textAlign: TextAlign.center,
-                    style: context.body(size: 9.5, color: c.inkSoft),
+                    style: context.body(size: 10, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -174,8 +174,8 @@ class _SectionBlock extends StatelessWidget {
               child: Text(
                 '$index',
                 style: context.body(
-                  size: 10.5,
-                  weight: FontWeight.w800,
+                  size: 11,
+                  weight: FontWeight.w700,
                   color: c.accentInk,
                 ),
               ),
@@ -186,19 +186,19 @@ class _SectionBlock extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   title,
-                  style: context.heading(size: 17.5, color: c.ink),
+                  style: context.heading(size: 18, color: c.ink),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 8),
         for (final p in paragraphs)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               p,
-              style: context.body(size: 12.5, color: c.ink2, height: 1.85),
+              style: context.body(size: 13, color: c.ink2, height: 1.85),
             ),
           ),
       ],
@@ -217,6 +217,7 @@ const kPrivacySections = <_LegalSection>[
     '设备与本机数据：随机生成的访客 ID、主题、通知开关、天气城市、游戏最高分、本机黑名单，以及卡面收藏进度与抽卡机会。',
     '位置信息：仅在你授权定位后读取大致位置，用于获取天气；拒绝授权不会影响其他功能，你可以继续使用默认城市。',
     'AI 与星象：你主动发送给 AI 的对话文本、图片与食谱上下文会发送给第三方 AI 服务用于生成回复；每日星象只发送星座、日期等信息，不发送手机号。',
+    'CiCi 社区主动评论：CiCi 会读取当天公开的社区动态文字和用户对 CiCi 的回复，交由第三方 AI 判断情绪并生成评论；评论以 CiCi 身份公开可见，不会附带你的账号信息。',
     '游戏数据：昵称或访客 ID、成绩、排行榜信息、「正在玩」页面中你主动展示的游戏进度，以及玩法抽签的签面与时间。',
     '每日运签：当天抽到的签位、是否使用过转运；跟 CiCi 分享的好事会发送给 AI 生成回复，并在登录状态下以「今日好事：…」同步为一条社区动态（含所发图片，公开可见）。',
   ]),

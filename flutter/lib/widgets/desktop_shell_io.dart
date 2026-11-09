@@ -24,8 +24,7 @@ class CitroDesktopShell {
 
   /// 顶栏内容需要避让的窗控宽度：只有 Windows 悬浮窗控占位，手机/平板等
   /// 其他运行在 io 平台的端不应预留这段空白，否则右上角的控件会离屏幕边缘很远。
-  static double get windowControlsInset =>
-      enabled ? windowControlsWidth : 0;
+  static double get windowControlsInset => enabled ? windowControlsWidth : 0;
 
   static final _lifecycle = _WindowLifecycle();
   static bool _hooked = false;

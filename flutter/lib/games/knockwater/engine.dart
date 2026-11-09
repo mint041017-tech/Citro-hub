@@ -49,10 +49,7 @@ PondMetric pondMetric(double x, double y, [int variant = 0]) {
   final qx = (x - kPondCx) / kPondRx;
   final qy = (y - kPondCy) / kPondRy;
   final a = math.atan2(qy, qx);
-  return PondMetric(
-    math.sqrt(qx * qx + qy * qy),
-    pondLimitAtAngle(a, variant),
-  );
+  return PondMetric(math.sqrt(qx * qx + qy * qy), pondLimitAtAngle(a, variant));
 }
 
 bool inWater(double x, double y, [double margin = 0, int variant = 0]) {

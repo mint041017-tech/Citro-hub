@@ -112,7 +112,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '点头像换图片，改完点保存',
             textAlign: TextAlign.center,
-            style: context.body(size: 11.5, color: c.inkSoft),
+            style: context.body(size: 12, color: c.inkSoft),
           ),
           const SizedBox(height: 18),
           Center(
@@ -161,7 +161,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '点击更换头像',
             textAlign: TextAlign.center,
-            style: context.body(size: 10.5, color: c.inkSoft),
+            style: context.body(size: 11, color: c.inkSoft),
           ),
           const SizedBox(height: 16),
           CitroField(
@@ -174,13 +174,13 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '生日（公历）',
             style: context.body(
-              size: 11.5,
+              size: 12,
               weight: FontWeight.w700,
               color: c.inkSoft,
               letterSpacing: .46,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -194,7 +194,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           ),
           if (error != null) ...[
             const SizedBox(height: 10),
-            Text(error!, style: context.body(size: 11.5, color: c.stamp)),
+            Text(error!, style: context.body(size: 12, color: c.stamp)),
           ],
           const SizedBox(height: 20),
           Row(
@@ -213,7 +213,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                         '取消',
                         style: context.body(
                           size: 14,
-                          weight: FontWeight.w600,
+                          weight: FontWeight.w700,
                           color: c.ink2,
                         ),
                       ),
@@ -256,7 +256,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
         ),
         child: Row(
           children: [
-            Text(value, style: context.body(size: 13.5, color: c.ink)),
+            Text(value, style: context.body(size: 14, color: c.ink)),
             Text(suffix, style: context.body(size: 11, color: c.inkSoft)),
             const Spacer(),
             AppIcon(
@@ -301,7 +301,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                     children: [
                       Text(
                         isMonth ? '出生月份' : '出生日期',
-                        style: ctx.heading(size: 17),
+                        style: ctx.heading(size: 18),
                       ),
                       const Spacer(),
                       GestureDetector(
@@ -321,7 +321,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                           child: Text(
                             '确定',
                             style: ctx.body(
-                              size: 12.5,
+                              size: 13,
                               weight: FontWeight.w700,
                               color: cc.accentInk,
                             ),
