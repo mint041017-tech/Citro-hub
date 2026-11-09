@@ -89,6 +89,7 @@
 | Android | `APK/Citro-v2.1.0-release.apk`、`APK/update.json` |
 | Windows | `exe/Citro-v2.1.0-win64-setup.exe`、`exe/update.json` |
 | Web | `web/Citro-web-2.1.0.zip`、`web/latest.json` |
+| 下载站 | `web/Citro-downloads-2.1.0.zip`、`web/downloads.json` |
 | iOS | `docs/ios-预打包清单.md`（IPA 待 macOS 生成） |
 
 ## 部署注意

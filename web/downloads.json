@@ -1,13 +1,13 @@
 {
-    "schema":  1,
-    "app_name":  "citro-downloads",
-    "site":  "dl.chimu-claw.xyz",
-    "version":  "2.0.15",
-    "build_number":  "2015",
-    "file":  "Citro-downloads-2.0.15.zip",
-    "url":  "https://obs.chimu-claw.xyz/web/Citro-downloads-2.0.15.zip",
-    "size":  1088752,
-    "sha256":  "8e5ed3268936867d9cbbb1df1f7914c9c48d1b269cef90640eacb36a094ff744",
-    "published_at":  "2026-11-05T05:24:12Z",
-    "notes":  "Citro downloads static site 2.0.15：补充 iOS TestFlight 公测入口，Windows / Android 下载入口保持 v2.0.15"
+    "schema": 1,
+    "app_name": "citro-downloads",
+    "site": "dl.chimu-claw.xyz",
+    "version": "2.1.0",
+    "build_number": "2100",
+    "file": "Citro-downloads-2.1.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-2.1.0.zip",
+    "size": 1088719,
+    "sha256": "d89e8f8ffd2220bd78c1a9616b2197d6d098a9b03f2922edcb12b2f77c2ee6bd",
+    "published_at": "2026-11-09T09:56:20Z",
+    "notes": "Citro downloads 静态站 2.1.0：Windows / Android / iOS 入口更新到 2.1.0，补充新版更新日志。"
 }
