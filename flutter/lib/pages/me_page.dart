@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
@@ -108,8 +109,11 @@ class MePage extends StatelessWidget {
   const MePage({super.key, this.floating = false, this.embedded = false});
 
   static void _downloadApp() {
+    // 文件名跟着当前版本走，发新版不用再改这里。
     launchUrl(
-      Uri.parse('https://obs.chimu-claw.xyz/APK/Citro-v2.1.0-release.apk'),
+      Uri.parse(
+        'https://obs.chimu-claw.xyz/APK/Citro-v$kCitroVersion-release.apk',
+      ),
       mode: LaunchMode.externalApplication,
     );
   }
