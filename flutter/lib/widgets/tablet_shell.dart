@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../overlays/ai_chat.dart';
 import '../services/api.dart';
 import '../pages/me_page.dart';
 import '../services/orientation.dart';
@@ -15,6 +14,8 @@ import 'motion_widgets.dart';
 import 'app_image.dart';
 import 'paper.dart';
 import 'shared_element.dart';
+import '../state/custom_tab.dart';
+import 'tab_bar.dart';
 
 class CitroLayoutScope extends InheritedWidget {
   final double contentWidth;
@@ -45,13 +46,13 @@ class CitroLayoutScope extends InheritedWidget {
 class CitroTabletSidebar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
-  final bool showResources;
+  final CustomTabModule customModule;
 
   const CitroTabletSidebar({
     super.key,
     required this.index,
     required this.onChanged,
-    this.showResources = false,
+    this.customModule = CustomTabModule.todo,
   });
 
   @override
@@ -159,7 +160,6 @@ class CitroTabletSidebar extends StatelessWidget {
                         const SizedBox(height: AppSpacing.x1),
                         _SidebarNav(
                           index: index,
-                          showResources: showResources,
                           items: [
                             _SidebarItem(
                               label: '首页',
@@ -183,14 +183,14 @@ class CitroTabletSidebar extends StatelessWidget {
                               badge: app.unread,
                               onTap: () => onChanged(2),
                             ),
-                            if (showResources)
-                              _SidebarItem(
-                                label: '资源库',
-                                icon: AppIcons.library,
-                                active: index == 3,
-                                showHighlight: false,
-                                onTap: () => onChanged(3),
-                              ),
+                            _SidebarItem(
+                              label: customModule.label,
+                              icon: customModule.icon,
+                              active: index == 3,
+                              showHighlight: false,
+                              onTap: () => onChanged(3),
+                              onLongPress: () => showCustomTabPicker(context),
+                            ),
                           ],
                         ),
                         _SidebarItem(
@@ -212,16 +212,10 @@ class CitroTabletSidebar extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.x1),
                         _SidebarItem(
-                          label: '食谱日记',
-                          icon: AppIcons.fork,
+                          label: '我的',
+                          icon: AppIcons.user,
                           active: false,
-                          onTap: () => Navigator.of(context).pushNamed('/cook'),
-                        ),
-                        _SidebarItem(
-                          label: 'CiCi AI',
-                          icon: AppIcons.sparkle,
-                          active: false,
-                          onTap: () => showAiChat(context),
+                          onTap: () => openMePage(context),
                         ),
                       ],
                     ),
@@ -376,18 +370,12 @@ class CitroDuoRightRail extends StatelessWidget {
                         badge: app.unread,
                         onTap: () => onChanged(2),
                       ),
-                      const SizedBox(height: 6),
-                      CitroDivider(),
-                      const SizedBox(height: 6),
                       CitroDuoRailItem(
-                        label: '食谱',
-                        icon: AppIcons.fork,
-                        onTap: () => Navigator.of(context).pushNamed('/cook'),
-                      ),
-                      CitroDuoRailItem(
-                        label: 'CiCi',
-                        icon: AppIcons.sparkle,
-                        onTap: () => showAiChat(context),
+                        label: '自定义',
+                        icon: context.app.customTabModule.icon,
+                        active: index == 3,
+                        onTap: () => onChanged(3),
+                        onLongPress: () => showCustomTabPicker(context),
                       ),
                     ],
                   ),
@@ -590,6 +578,7 @@ class CitroDuoRailItem extends StatelessWidget {
   final bool active;
   final int badge;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const CitroDuoRailItem({
     super.key,
@@ -598,6 +587,7 @@ class CitroDuoRailItem extends StatelessWidget {
     this.active = false,
     this.badge = 0,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -608,6 +598,7 @@ class CitroDuoRailItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Pressable(
         onTap: onTap,
+        onLongPress: onLongPress,
         hoverLift: 0,
         child: SizedBox(
           height: 58,
@@ -700,24 +691,18 @@ class CitroDuoRailItem extends StatelessWidget {
 
 class _SidebarNav extends StatelessWidget {
   final int index;
-  final bool showResources;
   final List<Widget> items;
 
   /// 与 `_SidebarItem` 的高度一致：48 + 8 间距（8pt 栅格）。
   static const double _itemExtent = AppSpacing.x6 + AppSpacing.x1;
 
-  const _SidebarNav({
-    required this.index,
-    required this.showResources,
-    required this.items,
-  });
+  const _SidebarNav({required this.index, required this.items});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final count = showResources ? 4 : 3;
-    // 「我的」等不在侧栏里的 Tab：不高亮，而不是 clamp 到最后一项。
-    final active = index >= 0 && index < count ? index : -1;
+    // 侧栏没有「我的」入口（点头像进浮窗），所以不在侧栏里的 Tab 不高亮。
+    final active = index >= 0 && index < items.length ? index : -1;
     final reduce = CitroMotion.reduced(context);
     return Stack(
       children: [
@@ -756,6 +741,7 @@ class _SidebarItem extends StatelessWidget {
   final bool active;
   final int badge;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool showHighlight;
 
   const _SidebarItem({
@@ -763,6 +749,7 @@ class _SidebarItem extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
+    this.onLongPress,
     this.badge = 0,
     this.showHighlight = true,
   });
@@ -776,6 +763,7 @@ class _SidebarItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.x1),
       child: Pressable(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: AnimatedContainer(
           duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
           curve: CitroMotion.emphasized,

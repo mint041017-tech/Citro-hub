@@ -206,7 +206,9 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    for (final label in ['首页', '游戏', '社区', '食谱', 'CiCi']) {
+    // 4+1 导航：第四格是「自定义」（默认待办），CICI 只在手机/平板的
+    // 液态玻璃 Tab 栏里，Duo 侧栏不再重复放一个 AI 入口。
+    for (final label in ['首页', '游戏', '社区', '自定义']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('我的'), findsNothing);
@@ -331,7 +333,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    for (final label in ['首页', '游戏', '社区', '食谱', 'CiCi']) {
+    for (final label in ['首页', '游戏', '社区', '自定义']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('我的'), findsNothing);

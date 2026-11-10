@@ -19,13 +19,15 @@ import '../ledger/ledger_store.dart';
 import '../calendar/calendar_store.dart';
 import '../widgets/home_layout.dart';
 import '../widgets/tab_bar.dart';
+import '../state/custom_tab.dart';
+import '../state/negative_screen.dart';
 import '../games/gbrake_web.dart';
 import '../widgets/tablet_shell.dart';
+import '../overlays/ai_chat.dart';
+import 'custom_tab_page.dart';
 import 'home_page.dart';
 import 'games_page.dart';
 import 'community_page.dart';
-import 'me_page.dart';
-import 'res_page.dart';
 
 class RootShell extends StatefulWidget {
   final int initialIndex;
@@ -49,11 +51,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
   bool _wasLoggedIn = false;
+  CustomTabModule _lastCustomModule = AppState.instance.customTabModule;
   Size? _orientationSize;
 
-  /// 四格导航：首页、游戏、社区、我的，全平台一致。
-  /// 资源库不再占一个 Tab，收进「我的」与首页资源卡。
-  static bool get _showResources => false;
+  /// 四格导航：首页、游戏、社区、自定义（默认待办，长按可切模块）。
+  /// 资源库收进首页下拉负一屏与「我的」，不再占独立 Tab。
   static int get _tabCount => 4;
 
   @override
@@ -61,13 +63,17 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     super.initState();
     instance = this;
     index = widget.initialIndex.clamp(0, _tabCount - 1);
-    _visited = List<bool>.generate(5, (i) => i == index);
+    _visited = List<bool>.generate(_tabCount, (i) => i == index);
     // 页面 widget 只创建一次：切 Tab 时不再生成新的 HomePage/CommunityPage 实例，
     // 已挂载的页面不会因为父级 setState 而整棵 rebuild。
-    _pages = List<Widget>.generate(5, _pageAt);
+    _pages = List<Widget>.generate(_tabCount, _pageAt);
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
     _wasLoggedIn = AppState.instance.loggedIn;
     AppState.instance.addListener(_onAuthChanged);
+    // 自定义 Tab 的模块会被长按切换，页面实例需要跟着换。
+    AppState.instance.addListener(_onCustomTabChanged);
+    // 负一屏的展开信号：先回到首页，HomePage 自己会把负一屏展开。
+    negativeScreenSignal.addListener(_onNegativeScreenRequest);
     _tabAnim = AnimationController(
       vsync: this,
       duration: CitroMotion.tab,
@@ -89,7 +95,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 空闲时按顺序预挂载其余 Tab（Offstage），首次切过去不再整页构建。
     // 错开时间，避免同一次 setState 里连续挂载多个页面。
     _warmPage(1, 1200); // 游戏
-    _warmPage(3, 2000); // 我的
+    _warmPage(3, 2000); // 自定义
     _warmPage(2, 2800); // 社区（会顺带预取动态，游客不发请求）
     // 让启动路径先跑完，避免更新检查与首帧、权限申请抢带宽/主线程。
     _updateTimer = Timer(const Duration(seconds: 3), () {
@@ -157,6 +163,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
     AppState.instance.removeListener(_onAuthChanged);
+    AppState.instance.removeListener(_onCustomTabChanged);
+    negativeScreenSignal.removeListener(_onNegativeScreenRequest);
     _tabAnim.dispose();
     if (instance == this) instance = null;
     super.dispose();
@@ -175,6 +183,20 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       unawaited(LedgerStore.instance.clearLocal());
     }
     _wasLoggedIn = loggedIn;
+  }
+
+  /// 「资源库」的唯一落点是首页负一屏：收到信号先切回首页，
+  /// HomePage 自己监听同一个信号把负一屏展开。
+  void _onNegativeScreenRequest() {
+    if (mounted && index != 0) switchTo(0);
+  }
+
+  /// 长按自定义 Tab 改了模块：替换该页实例，让新模块立刻生效。
+  void _onCustomTabChanged() {    if (!mounted) return;
+    if (AppState.instance.customTabModule == _lastCustomModule) return;
+    _lastCustomModule = AppState.instance.customTabModule;
+    _pages[3] = const CustomTabPage();
+    setState(() {});
   }
 
   void _onCardPrompt() {
@@ -237,7 +259,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       index = i;
     });
     if (kIsWeb) {
-      syncWebRoute(const ['/home', '/games', '/trash', '/me'][i]);
+      const routes = ['/home', '/games', '/trash'];
+      syncWebRoute(i < routes.length ? routes[i] : AppState.instance.customTabModule.route);
     }
     if (reduce) {
       _tabAnim.value = 1;
@@ -265,7 +288,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       fit: StackFit.expand,
       clipBehavior: Clip.hardEdge,
       children: [
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < _tabCount; i++)
           _visited[i] ? _pageLayer(i) : const SizedBox.shrink(),
       ],
     );
@@ -322,11 +345,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       case 2:
         return const CommunityPage();
       case 3:
-        return _showResources
-            ? const ResPage(embedded: true)
-            : const MePage(embedded: true);
-      case 4:
-        return const MePage(embedded: true);
+        return const CustomTabPage();
       default:
         return HomePage(onSwitchTab: switchTo);
     }
@@ -399,7 +418,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     width: _sidebarWidth,
                     child: CitroTabletSidebar(
                       index: index,
-                      showResources: platform.isWindows,
+                      customModule: AppState.instance.customTabModule,
                       onChanged: switchTo,
                     ),
                   ),
@@ -427,7 +446,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                   ),
                 ),
                 if (!desktop && !keyboardOpen)
-                  CitroTabBar(index: index, onChanged: switchTo),
+                  CitroTabBar(
+                    index: index,
+                    onChanged: switchTo,
+                    customModule: AppState.instance.customTabModule,
+                    onCustomTabLongPress: () => showCustomTabPicker(context),
+                    onCiciTap: () => showAiChat(context),
+                  ),
               ],
             ),
           );

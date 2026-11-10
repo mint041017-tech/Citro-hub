@@ -3,6 +3,7 @@ import 'package:citro/pages/res_page.dart';
 import 'package:citro/services/platform.dart' as platform;
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
+import 'package:citro/state/custom_tab.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/paper.dart';
@@ -78,7 +79,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop sidebar exposes the resource library', (tester) async {
+  testWidgets('desktop sidebar exposes the four destinations', (tester) async {
     tester.view.physicalSize = const Size(208, 560);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -86,14 +87,18 @@ void main() {
       _host(
         CitroTabletSidebar(
           index: 3,
-          showResources: true,
-          onChanged: (_) {},
+          customModule: CustomTabModule.todo,
+          onChanged: _noop,
         ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('资源库'), findsOneWidget);
-    expect(find.text('全站搜索'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('游戏'), findsOneWidget);
+    expect(find.text('社区'), findsOneWidget);
+    expect(find.text('待办'), findsOneWidget);
+    // 资源库已收进首页下拉负一屏，不再占侧栏一格。
+    expect(find.text('资源库'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -117,7 +122,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop tab bar exposes four destinations', (tester) async {
+  testWidgets('desktop tab bar exposes four destinations plus CICI', (
+    tester,
+  ) async {
     if (!platform.isWindows) return;
     tester.view.physicalSize = const Size(800, 600);
     tester.view.devicePixelRatio = 1;
@@ -128,18 +135,26 @@ void main() {
           width: 800,
           height: 600,
           child: Stack(
-            children: [CitroTabBar(index: 3, onChanged: _noop)],
+            children: [
+              CitroTabBar(
+                index: 3,
+                customModule: CustomTabModule.todo,
+                onChanged: _noop,
+                onCustomTabLongPress: _noopVoid,
+                onCiciTap: _noopVoid,
+              ),
+            ],
           ),
         ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 300));
-    // 图标 Tab：界面上不显示文字，靠 Semantics 暴露目的地。
     final semantics = tester.ensureSemantics();
-    for (final label in ['首页', '游戏', '社区', '资源', '我的']) {
+    for (final label in ['首页', '游戏', '社区', '待办', 'CICI 智能助手']) {
       expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
-    expect(find.text('首页'), findsNothing);
+    // 文字直接画在玻璃条上，不再只靠 Semantics 暴露。
+    expect(find.text('首页'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(CitroTabBar),
@@ -153,3 +168,4 @@ void main() {
 }
 
 void _noop(int _) {}
+void _noopVoid() {}

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 
 import '../data/resources.dart';
 import '../games/game_registry.dart';
-import '../overlays/ai_chat.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/coin_sheet.dart';
 import '../overlays/extra_sheets.dart';
@@ -29,7 +28,6 @@ enum _SearchAction {
   weather,
   fish,
   pomodoro,
-  ai,
   coin,
   lantern,
   appreciate,
@@ -159,13 +157,6 @@ List<_SearchEntry> _buildSearchIndex() {
       desc: '专注计时与休息提醒',
       keys: 'pomodoro timer fanqie 番茄钟 专注 计时 时钟',
       action: _SearchAction.pomodoro,
-    ),
-    const _SearchEntry(
-      type: '功能',
-      name: 'Citro AI',
-      desc: '和橘子助手聊聊天',
-      keys: 'ai chat 聊天 助手 橘子 人工智能',
-      action: _SearchAction.ai,
     ),
     const _SearchEntry(
       type: '功能',
@@ -499,8 +490,6 @@ class _GlobalSearchState extends State<GlobalSearch> {
         showFishSheet(context);
       case _SearchAction.pomodoro:
         showPomodoroOverlay(context);
-      case _SearchAction.ai:
-        showAiChat(context);
       case _SearchAction.coin:
         showCoinSheet(context);
       case _SearchAction.lantern:

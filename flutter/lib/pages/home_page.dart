@@ -2,13 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/scheduler.dart';
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_page.dart';
 import '../calendar/calendar_store.dart';
 import '../services/fish.dart';
-import '../overlays/ai_chat.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/extra_sheets.dart';
 import '../overlays/lantern_sheet.dart';
@@ -16,6 +15,7 @@ import '../overlays/zodiac_modal.dart';
 import '../services/lantern_api.dart';
 import '../services/models.dart';
 import '../state/app_state.dart';
+import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
 import '../todo/todo_store.dart';
 import '../theme/motion.dart';
@@ -29,6 +29,7 @@ import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
 import '../widgets/motion_widgets.dart';
+import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
 import '../widgets/mood_home_card.dart';
@@ -50,13 +51,20 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final ScrollController _scroll = ScrollController();
-  bool _editing = false;
+
+  /// 负一屏展开进度（0..1）。
+  double _negProgress = 0;
+  static const double _negThreshold = 300;
+
+  /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
+  AnimationController? _negAuto;
 
   @override
   void initState() {
     super.initState();
+    negativeScreenSignal.addListener(_onNegativeSignal);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showLanternWelcomeIfNeeded(context);
       HomeLayoutStore.instance.syncFromAccount();
@@ -65,24 +73,39 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    negativeScreenSignal.removeListener(_onNegativeSignal);
+    _negAuto?.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  void _setEditing(bool value) {
-    if (!mounted || _editing == value) return;
-    setState(() => _editing = value);
-    if (value) {
-      HomeLayoutStore.instance.syncFromAccount(force: true);
-    }
-    if (value && _scroll.hasClients) {
-      _scroll.animateTo(
-        0,
-        duration: CitroMotion.pageTouch,
-        curve: CitroMotion.easeOut,
+  /// 平滑把负一屏推进 / 推回（外部入口与关闭按钮用）。
+  void _animateNegTo(double target) {
+    if (!mounted) return;
+    _negAuto?.dispose();
+    final from = _negProgress;
+    if ((target - from).abs() < 0.001) return;
+    final opening = target > from;
+    final controller = AnimationController(
+      vsync: this,
+      duration: opening ? CitroMotion.sheet : CitroMotion.sheetReverse,
+      value: 0,
+    );
+    final curve = opening ? CitroMotion.drawer : CitroMotion.exit;
+    controller.addListener(() {
+      _setNegProgress(
+        from + (target - from) * curve.transform(controller.value),
       );
-    }
+    });
+    _negAuto = controller;
+    controller.forward().whenComplete(() {
+      if (identical(_negAuto, controller)) _negAuto = null;
+      controller.dispose();
+    });
   }
+
+  /// 「我的 / 游戏页」的资源配置入口：平滑展开负一屏，而不是瞬间跳变。
+  void _onNegativeSignal() => _animateNegTo(1);
 
   @override
   Widget build(BuildContext context) {
@@ -105,95 +128,148 @@ class _HomePageState extends State<HomePage> {
     // 手机端状态栏已由 SafeArea 避开，额外的顶部留白压到 8px，
     // 让首屏更紧凑；平板 / 桌面仍保留原来的 48px 呼吸感。
     final topPadding = width < 700 ? 8.0 : AppSpacing.pageTop(width);
+    final screenHeight = media.height;
+
     return Stack(
       children: [
         Positioned.fill(
-          child: CitroBackground(
-            child: SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
-                controller: _scroll,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                padding: EdgeInsets.fromLTRB(
-                  side,
-                  topPadding,
-                  side,
-                  sideNav ? 32 : 100,
-                ),
-                child: CitroStagger(
-                  step: const Duration(milliseconds: 32),
-                  children: [
-                    ActiveListenableBuilder(
-                      listenable: NookController.instance,
-                      builder: (context, _) {
-                        final lantern = LanternApi.currentWindow() != null;
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            final compact = constraints.maxWidth < 460;
-                            return _HomeHero(
-                              showLantern: lantern && !compact,
-                              editing: _editing,
-                              compact: compact,
-                              onToggleEdit: () => _setEditing(!_editing),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.x2),
-                    AnimatedSize(
-                      duration: CitroMotion.reduced(context)
-                          ? Duration.zero
-                          : CitroMotion.size,
-                      curve: CitroMotion.easeOut,
-                      alignment: Alignment.topCenter,
-                      child: _editing
-                          ? Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _EditHintBar(
-                                onContent: () => showAddCardSheet(
-                                  context: context,
-                                  layoutKey: layoutKey,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    HomeBento(
-                      layoutKey: layoutKey,
-                      editing: _editing,
-                      scrollController: _scroll,
-                      builder: _cardFor,
-                    ),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: Pressable(
-                        onTap: () => showAppreciationSheet(context),
-                        child: Text(
-                          'Citro · 今天也要开心',
-                          style: context.body(
-                            size: CitroType.small,
-                            color: c.inkSoft,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: CitroBackground(
+              child: SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  controller: _scroll,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  padding: EdgeInsets.fromLTRB(
+                    side,
+                    topPadding,
+                    side,
+                    sideNav ? 32 : 100,
+                  ),
+                  child: CitroStagger(
+                    step: const Duration(milliseconds: 32),
+                    children: [
+                      ActiveListenableBuilder(
+                        listenable: NookController.instance,
+                        builder: (context, _) {
+                          final lantern = LanternApi.currentWindow() != null;
+                          return LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact = constraints.maxWidth < 460;
+                              return _HomeHero(
+                                showLantern: lantern && !compact,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.x2),
+                      // 固定布局：不再提供拖拽/缩放编辑。
+                      HomeBento(
+                        layoutKey: layoutKey,
+                        editing: false,
+                        scrollController: _scroll,
+                        builder: _cardFor,
+                      ),
+                      const SizedBox(height: 18),
+                      Center(
+                        child: Pressable(
+                          onTap: () => showAppreciationSheet(context),
+                          child: Text(
+                            'Citro · 今天也要开心',
+                            style: context.body(
+                              size: CitroType.small,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        if (!sideNav)
-          Positioned(
-            right: math.max(18.0, (width - maxWidth) / 2 + 18),
-            bottom: MediaQuery.paddingOf(context).bottom + 92,
-            child: const AiHomeButton(),
+        // 负一屏：从顶部下滑展开，覆盖在首页之上。
+        if (_negProgress > 0.001)
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: _negProgress < 0.95,
+              child: Transform.translate(
+                offset: Offset(0, -screenHeight * (1 - _negProgress)),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onNegativeScroll,
+                  child: NegativeScreen(
+                    onClose: () => _animateNegTo(0),
+                  ),
+                ),
+              ),
+            ),
           ),
       ],
     );
+  }
+
+  /// 滚动通知偶尔会在帧内（布局/动画回调）派发，那时直接 setState 会触发
+  /// 「Build scheduled during frame」。这种情况挂到帧末再更新。
+  void _setNegProgress(double value) {
+    if (_negProgress == value) return;
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      setState(() => _negProgress = value);
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _negProgress == value) return;
+      setState(() => _negProgress = value);
+    });
+  }
+
+  /// 顶部下拉驱动负一屏：只在列表已经滚到顶、且用户正在拖拽时响应。
+  ///
+  /// 必须看 [ScrollNotification.dragDetails]：松手后回弹动画也会产生
+  /// pixels < 0 的更新，不区分的话负一屏会在回弹途中自己关掉。
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is OverscrollNotification) {
+      if (n.dragDetails != null && n.metrics.pixels <= 0 && n.overscroll < 0) {
+        _setNegProgress(
+          (_negProgress + (-n.overscroll) / _negThreshold).clamp(0.0, 1.0),
+        );
+      }
+    } else if (n is ScrollUpdateNotification &&
+        n.dragDetails != null &&
+        n.metrics.pixels < 0) {
+      _setNegProgress(
+        ((-n.metrics.pixels) / _negThreshold).clamp(0.0, 1.0),
+      );
+    } else if (n is ScrollEndNotification && _negProgress > 0) {
+      _setNegProgress(_negProgress > 0.45 ? 1.0 : 0.0);
+    }
+    return false;
+  }
+
+  /// 负一屏自身上滑时把它推回顶部：列表已经滚到顶还继续往上拖，
+  /// 就把展开进度往回减，松手时按阈值吸附。
+  bool _onNegativeScroll(ScrollNotification n) {
+    if (n is OverscrollNotification) {
+      if (n.dragDetails != null && n.metrics.pixels <= 0 && n.overscroll > 0) {
+        _setNegProgress(
+          (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
+        );
+      }
+    } else if (n is ScrollUpdateNotification &&
+        n.dragDetails != null &&
+        n.metrics.pixels < 0) {
+      _setNegProgress(
+        ((-n.metrics.pixels) / _negThreshold).clamp(0.0, 1.0),
+      );
+    } else if (n is ScrollEndNotification && _negProgress > 0) {
+      _setNegProgress(_negProgress > 0.45 ? 1.0 : 0.0);
+    }
+    return false;
   }
 
   /// 首页卡片的内容映射：栅格只负责位置，卡片自身保持原来的交互与动效。
@@ -214,86 +290,10 @@ class _HomePageState extends State<HomePage> {
   };
 }
 
-class _LayoutEditButton extends StatelessWidget {
-  final bool editing;
-  final bool compact;
-  final VoidCallback onPressed;
-
-  const _LayoutEditButton({
-    required this.editing,
-    required this.compact,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final label = editing ? '完成' : '调整布局';
-    return Semantics(
-      key: const ValueKey('home-layout-edit'),
-      button: true,
-      label: label,
-      child: Pressable(
-        onTap: onPressed,
-        hoverLift: 0,
-        hoverShadow: false,
-        borderRadius: BorderRadius.circular(99),
-        child: AnimatedContainer(
-          duration: CitroMotion.hover,
-          curve: CitroMotion.easeOut,
-          height: 40,
-          padding: EdgeInsets.symmetric(
-            horizontal: !compact ? 14 : 10,
-          ),
-          decoration: BoxDecoration(
-            color: editing ? c.ink : c.surface,
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(color: editing ? c.ink : c.line),
-            boxShadow: editing ? null : CitroColors.shadows.sm(c),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon(
-                strokeSvg(editing ? AppIcons.check : _slidersIcon, width: 2),
-                size: 17,
-                color: editing ? c.bg : c.ink2,
-              ),
-              if (!compact) ...[
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: context.body(
-                    size: CitroType.label,
-                    weight: CitroType.medium,
-                    color: editing ? c.bg : c.ink,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static const _slidersIcon =
-      '<path d="M4 7h8M16 7h4M4 17h3M11 17h9"/><circle cx="14" cy="7" r="2.2"/><circle cx="7" cy="17" r="2.2"/>';
-}
-
-/// 首页英雄区：问候 + 今日三项状态，取代原来只有一行日期的页眉。
 class _HomeHero extends StatelessWidget {
   final bool showLantern;
-  final bool editing;
-  final bool compact;
-  final VoidCallback onToggleEdit;
 
-  const _HomeHero({
-    this.showLantern = false,
-    this.editing = false,
-    this.compact = false,
-    required this.onToggleEdit,
-  });
+  const _HomeHero({this.showLantern = false});
 
   @override
   Widget build(BuildContext context) {
@@ -337,15 +337,7 @@ class _HomeHero extends StatelessWidget {
                   ],
                 ),
               ),
-              if (showLantern) ...[
-                const LanternEntry(),
-                const SizedBox(width: AppSpacing.x1),
-              ],
-              _LayoutEditButton(
-                editing: editing,
-                compact: compact,
-                onPressed: onToggleEdit,
-              ),
+              if (showLantern) const LanternEntry(),
             ],
           ),
           const SizedBox(height: AppSpacing.x3),
@@ -403,80 +395,6 @@ class _HeroStat extends StatelessWidget {
       ),
     );
   }
-}
-
-class _EditHintBar extends StatelessWidget {
-  final VoidCallback onContent;
-
-  const _EditHintBar({required this.onContent});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 420;
-        return Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          decoration: BoxDecoration(
-            color: c.surface2,
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-            border: Border.all(color: c.line),
-          ),
-          child: Row(
-            children: [
-              AppIcon(
-                strokeSvg(_slidersIcon, width: 2),
-                size: 16,
-                color: c.inkSoft,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  compact ? '拖圆柄换位 · 右上角删除' : '拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(
-                    size: CitroType.caption,
-                    color: c.inkSoft,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Pressable(
-                key: const ValueKey('home-content-open'),
-                onTap: onContent,
-                hoverLift: 0,
-                hoverShadow: false,
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: c.ink,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '添加卡片',
-                      style: context.body(
-                        size: CitroType.caption,
-                        weight: CitroType.medium,
-                        color: c.bg,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  static const _slidersIcon =
-      '<path d="M4 7h8M16 7h4M4 17h3M11 17h9"/><circle cx="14" cy="7" r="2.2"/><circle cx="7" cy="17" r="2.2"/>';
 }
 
 class LanternEntry extends StatelessWidget {
@@ -581,25 +499,30 @@ class WeatherCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.x2),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      w.emoji,
-                      style: const TextStyle(fontSize: 36, height: 1),
-                    ),
-                    const SizedBox(width: AppSpacing.x1),
-                    Text(
-                      '${w.temp.round()}°',
-                      style: context.hand(
-                        size: 40,
-                        weight: CitroType.strong,
-                        color: c.ink,
-                        height: 1,
+                // 温度数字在窄格里可能比卡片宽，等比缩小而不是硬撑爆。
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        w.emoji,
+                        style: const TextStyle(fontSize: 36, height: 1),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.x1),
+                      Text(
+                        '${w.temp.round()}°',
+                        style: context.hand(
+                          size: 40,
+                          weight: CitroType.strong,
+                          color: c.ink,
+                          height: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.x1),
                 Text(

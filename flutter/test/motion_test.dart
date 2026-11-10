@@ -1,5 +1,6 @@
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
+import 'package:citro/state/custom_tab.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/motion.dart';
 import 'package:citro/theme/tokens.dart';
@@ -54,7 +55,7 @@ void main() {
     expect(find.byType(Opacity), findsNothing);
   });
 
-  testWidgets('tab bar shares one sliding highlight', (tester) async {
+  testWidgets('tab bar exposes four tabs and the CICI entry', (tester) async {
     var index = 0;
     await tester.pumpWidget(
       host(
@@ -64,7 +65,10 @@ void main() {
               children: [
                 CitroTabBar(
                   index: index,
+                  customModule: CustomTabModule.todo,
                   onChanged: (i) => setter(() => index = i),
+                  onCustomTabLongPress: () {},
+                  onCiciTap: () {},
                 ),
               ],
             );
@@ -74,22 +78,61 @@ void main() {
     );
     await tester.pump();
 
-    AnimatedPositioned indicator() => tester.widget<AnimatedPositioned>(
-      find.byType(AnimatedPositioned).first,
-    );
-    // 高亮胶囊按当前图标居中，初始位置是第一个 tab 内的少量留白。
-    final firstLeft = indicator().left!;
-    expect(firstLeft, lessThan(20));
+    // 四格目的地 + CICI 头像按钮，全部通过 Semantics 暴露。
+    for (final label in ['首页', '游戏', '社区', '待办', 'CICI 智能助手']) {
+      expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+    }
 
     await tester.tap(find.bySemanticsLabel('社区'));
     await tester.pump();
     expect(index, 2);
-    expect(indicator().left, greaterThan(firstLeft + 20));
-
-    // 高亮胶囊只有一个，避免切换时出现两个并存的高亮。
-    expect(find.byType(AnimatedPositioned), findsOneWidget);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long-press custom tab picks another module', (tester) async {
+    final app = AppState.instance;
+    await app.setCustomTabModule(CustomTabModule.todo);
+    var index = 0;
+    await tester.pumpWidget(
+      host(
+        StatefulBuilder(
+          builder: (context, setter) {
+            return ListenableBuilder(
+              listenable: app,
+              builder: (context, _) {
+                return Stack(
+                  children: [
+                    CitroTabBar(
+                      index: index,
+                      customModule: app.customTabModule,
+                      onChanged: (i) => setter(() => index = i),
+                      onCustomTabLongPress: () => showCustomTabPicker(context),
+                      onCiciTap: () {},
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('待办'), findsOneWidget);
+
+    await tester.longPress(find.text('待办'));
+    await tester.pumpAndSettle();
+    for (final label in ['待办', '听隅', '记账', '食谱']) {
+      expect(find.text(label), findsWidgets, reason: label);
+    }
+
+    await tester.tap(find.text('记账').last);
+    await tester.pumpAndSettle();
+    expect(app.customTabModule, CustomTabModule.ledger);
+    // 面板关掉后，Tab 名跟着模块走。
+    expect(find.text('记账'), findsOneWidget);
+    await app.setCustomTabModule(CustomTabModule.todo);
   });
 
   testWidgets('sheet motion is shared and honours reduced motion', (

@@ -14,6 +14,7 @@ import '../services/models.dart';
 import '../services/prefs.dart';
 import '../services/notifications.dart';
 import '../services/push_notifications.dart';
+import 'custom_tab.dart';
 
 class AppState extends ChangeNotifier {
   static final AppState instance = AppState._();
@@ -96,6 +97,12 @@ class AppState extends ChangeNotifier {
       gid = _randomId(20);
       unawaited(Prefs.setString(PrefKeys.gid, gid));
     }
+    // 第 4 格「自定义」Tab 当前展示的模块（默认待办）。
+    final savedTab = Prefs.getString(PrefKeys.customTab);
+    customTabModule = CustomTabModule.values.firstWhere(
+      (m) => m.name == savedTab,
+      orElse: () => CustomTabModule.todo,
+    );
     guestName = Prefs.getString(PrefKeys.guestName) ?? '';
     if (guestName.isEmpty) {
       const names = [
@@ -471,6 +478,16 @@ class AppState extends ChangeNotifier {
     themeMode = mode;
     Prefs.setString(PrefKeys.theme, themeModeKey);
     notifyListeners();
+  }
+
+  /// Tab 栏第 4 格展示的模块。
+  CustomTabModule customTabModule = CustomTabModule.todo;
+
+  Future<void> setCustomTabModule(CustomTabModule module) async {
+    if (module == customTabModule) return;
+    customTabModule = module;
+    notifyListeners();
+    await Prefs.setString(PrefKeys.customTab, module.name);
   }
 
   Future<bool> refreshWeatherWithLocation({bool force = false}) async {

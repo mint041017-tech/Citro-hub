@@ -6,6 +6,7 @@ import '../overlays/ai_chat.dart';
 import '../overlays/coin_sheet.dart';
 import '../overlays/lantern_sheet.dart';
 import '../overlays/pomodoro_sheet.dart';
+import '../services/api.dart';
 import '../services/lantern_api.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -15,6 +16,7 @@ import '../tingyu/tingyu_controller.dart';
 import '../tingyu/tingyu_play_chip.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import '../widgets/tab_bar.dart';
 import 'me_page.dart';
 
 /// Web 桌面（>=1025）的干净仪表盘：中性底 + 白色大圆角内容面。
@@ -246,7 +248,6 @@ class _Brand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return GestureDetector(
       onDoubleTap: () => showCoinSheet(context),
       child: Align(
@@ -277,39 +278,12 @@ class _Brand extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Pressable(
+              // 宽桌面没有 Tab 栏，CICI 由顶栏这颗头像按钮担当，
+              // 与手机 Tab 栏中央的按钮是同一个组件。
+              CiciAvatarButton(
+                avatarUrl: Api.imageUrl(context.app.user?.av),
+                size: 42,
                 onTap: () => showAiChat(context),
-                hoverLift: 0,
-                hoverShadow: false,
-                hoverColor: c.surface2,
-                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                child: Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: c.accentLt.withAlpha(c.dark ? 60 : 140),
-                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppIcon(
-                        strokeSvg(AppIcons.sparkle, width: 2),
-                        size: 18,
-                        color: c.accentInk,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'CiCi',
-                        style: context.body(
-                          size: CitroType.body,
-                          weight: CitroType.medium,
-                          color: c.accentInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),

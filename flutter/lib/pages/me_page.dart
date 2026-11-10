@@ -21,6 +21,7 @@ import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
 import '../services/updater.dart';
 import '../state/app_state.dart';
+import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/motion.dart';
@@ -402,7 +403,7 @@ class MePage extends StatelessWidget {
               size: 18,
               color: c.inkSoft,
             ),
-            onTap: () => Navigator.of(context).pushNamed('/res'),
+            onTap: () => openNegativeScreen(),
           ),
         ]),
         const SizedBox(height: AppSpacing.x3),

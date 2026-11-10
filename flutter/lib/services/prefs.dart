@@ -69,6 +69,7 @@ class Prefs {
 
 class PrefKeys {
   static const theme = 'cm-theme-mode';
+  static const customTab = 'citro_custom_tab';
   static const token = 'chimu_auth_token';
   static const authUser = 'chimu_auth_user';
   static const gid = 'citro_gid';

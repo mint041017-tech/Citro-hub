@@ -4,9 +4,9 @@ import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
-import 'package:citro/widgets/home_layout.dart';
 import 'package:citro/widgets/home_entries.dart';
-import 'package:citro/widgets/modal.dart';
+import 'package:citro/widgets/home_layout.dart';
+import 'package:citro/widgets/negative_screen.dart';
 import 'package:citro/widgets/tablet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -108,47 +108,9 @@ void main() {
     store.reset(key);
   });
 
-  testWidgets('add sheet filters cards by category', (tester) async {
-    tester.view.physicalSize = const Size(1032, 1366);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    const key = HomeLayoutKey.widePortrait;
-    final store = HomeLayoutStore.instance;
-    store.reset(key);
-    await tester.pumpWidget(
-      _host(
-        const CitroLayoutScope(
-          contentWidth: 824,
-          tabletNav: true,
-          child: HomePage(onSwitchTab: _noop),
-        ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('home-layout-edit')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('home-content-open')));
-    await tester.pumpAndSettle();
-
-    // 默认「全部」：小游戏与工具分组都在，只渲染当前可见的内容。
-    expect(find.text('全部'), findsWidgets);
-    expect(find.text('常驻卡片'), findsWidgets);
-    expect(find.text('小游戏'), findsWidgets);
-    expect(find.text('驱动'), findsWidgets);
-    expect(find.byKey(const ValueKey('add-game:g2048')), findsOneWidget);
-
-    // 切到「工具」分类后，只剩工具条目。
-    await tester.tap(find.text('工具').first);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('add-game:g2048')), findsNothing);
-    expect(find.byKey(const ValueKey('add-res:tool:灵敏度')), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    Navigator.of(tester.element(find.text('添加卡片').first)).pop();
-    await tester.pumpAndSettle();
-    store.reset(key);
-  });
-
-  testWidgets('edit mode shows drag and resize affordances', (tester) async {
+  testWidgets('home uses the fixed layout without edit affordances', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1032, 1366);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -162,137 +124,33 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byKey(const ValueKey('home-layout-edit')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('home-layout-edit')));
-    await tester.pump(const Duration(milliseconds: 350));
-    expect(tester.takeException(), isNull);
-    expect(find.text('拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小'), findsOneWidget);
-    expect(find.byIcon(Icons.open_in_full_rounded), findsWidgets);
-
-    // 删除钮在卡片内部右上角，不再压到卡片边线。
-    final cardRect = tester.getRect(find.byKey(const ValueKey('card-checkin')));
-    final deleteRect = tester.getRect(
-      find.byKey(const ValueKey('card-delete-checkin')),
-    );
-    expect(cardRect.contains(deleteRect.topLeft), isTrue);
-    expect(cardRect.contains(deleteRect.bottomRight), isTrue);
-    expect(deleteRect.right, greaterThan(cardRect.right - 48));
-    expect(deleteRect.top, lessThan(cardRect.top + 48));
-  });
-
-  testWidgets('drag repositions and handle resizes', (tester) async {
-    tester.view.physicalSize = const Size(1032, 1366);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    const form = HomeLayoutKey.widePortrait;
-    final store = HomeLayoutStore.instance;
-    store.reset(form);
-    // 清空右上角，给拖动留出明确的目标格。
-    for (final id in [
-      HomeCardId.tingyu,
-      HomeCardId.ledger,
-      HomeCardId.fish,
-      HomeCardId.quote,
-      HomeCardId.cook,
-      HomeCardId.weather,
-      HomeCardId.calendar,
-      HomeCardId.zodiac,
-    ]) {
-      store.setVisible(form, id, false);
-    }
-    await tester.pumpWidget(
-      _host(
-        const CitroLayoutScope(
-          contentWidth: 824,
-          tabletNav: true,
-          child: HomePage(onSwitchTab: _noop),
-        ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('home-layout-edit')));
-    await tester.pump(const Duration(milliseconds: 350));
-
-    const cell = (824 - 14 * 11) / 12 + 14;
-    final cardCenter = tester.getCenter(
-      find.byKey(const ValueKey('drag-checkin')),
-    );
-    final drag = await tester.startGesture(cardCenter);
-    for (var i = 0; i < 8; i++) {
-      await drag.moveBy(const Offset(cell, 0));
-      await tester.pump(const Duration(milliseconds: 20));
-    }
-    await drag.up();
-    await tester.pump(const Duration(milliseconds: 400));
-    final moved = store
-        .slots(form)
-        .firstWhere((s) => s.id == HomeCardId.checkin);
-    expect(moved.col, greaterThan(5));
-    expect(tester.takeException(), isNull);
-
-    final handle = find.byIcon(Icons.open_in_full_rounded).first;
-    final handleDrag = await tester.startGesture(tester.getCenter(handle));
-    for (var i = 0; i < 4; i++) {
-      await handleDrag.moveBy(const Offset(0, 32));
-      await tester.pump(const Duration(milliseconds: 20));
-    }
-    await handleDrag.up();
-    await tester.pump(const Duration(milliseconds: 400));
-    final resized = store
-        .slots(form)
-        .firstWhere((s) => s.id == HomeCardId.checkin);
-    expect(resized.h, greaterThan(moved.h));
-    expect(tester.takeException(), isNull);
-    store.reset(form);
-  });
-
-  testWidgets('edit delete button and add sheet work', (tester) async {
-    tester.view.physicalSize = const Size(1032, 1366);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    const key = HomeLayoutKey.widePortrait;
-    final store = HomeLayoutStore.instance;
-    store.reset(key);
-    await tester.pumpWidget(
-      _host(
-        const CitroLayoutScope(
-          contentWidth: 824,
-          tabletNav: true,
-          child: HomePage(onSwitchTab: _noop),
-        ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('home-layout-edit')));
-    await tester.pump(const Duration(milliseconds: 350));
-
-    await tester.tap(find.byKey(const ValueKey('card-delete-checkin')));
-    await tester.pump(const Duration(milliseconds: 400));
-    // 删除需要二次确认，确认前卡片仍然在。
-    expect(find.text('删除「打卡」卡片？'), findsOneWidget);
-    expect(store.slots(key).any((s) => s.id == HomeCardId.checkin), isTrue);
-    await tester.tap(find.widgetWithText(AccentButton, '删除'));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(store.slots(key).any((s) => s.id == HomeCardId.checkin), isFalse);
-
-    await tester.tap(find.byKey(const ValueKey('home-content-open')));
-    await tester.pumpAndSettle();
-    expect(find.text('添加卡片'), findsWidgets);
-    expect(find.byKey(const ValueKey('add-checkin')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('add-checkin')));
-    await tester.pumpAndSettle();
-    expect(store.slots(key).any((s) => s.id == HomeCardId.checkin), isTrue);
-
-    // 小游戏按条目出现在「添加卡片」里，点一下就能落到首页。
-    expect(find.byKey(const ValueKey('add-game:g2048')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('add-game:g2048')));
-    await tester.pumpAndSettle();
+    // 固定布局：不再有编辑入口、拖拽圆柄和添加卡片面板。
+    expect(find.byKey(const ValueKey('home-layout-edit')), findsNothing);
     expect(
-      store.slots(key).any((s) => s.id == HomeCardId.game && s.item == 'g2048'),
-      isTrue,
+      find.text('拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小'),
+      findsNothing,
     );
+    expect(find.byIcon(Icons.open_in_full_rounded), findsNothing);
     expect(tester.takeException(), isNull);
-    Navigator.of(tester.element(find.text('添加卡片').first)).pop();
+  });
+
+  testWidgets('pull-down reveals the negative screen', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(NegativeScreen), findsNothing);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, 320),
+    );
+    await tester.pump();
+    expect(find.byType(NegativeScreen), findsOneWidget);
+    expect(find.text('资源库 · 小工具'), findsOneWidget);
+    expect(find.text('游戏 Mod'), findsOneWidget);
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 }

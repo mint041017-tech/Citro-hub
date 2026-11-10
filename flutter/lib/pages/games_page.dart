@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../games/game_loader.dart';
 import '../games/game_registry.dart';
 import '../services/platform.dart' as platform;
+import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
@@ -258,9 +259,7 @@ class GamesPage extends StatelessWidget {
     );
   }
 
-  void _openRes(BuildContext context) {
-    Navigator.of(context).pushNamed('/res');
-  }
+  void _openRes(BuildContext context) => openNegativeScreen();
 }
 
 class _GameToolLink {

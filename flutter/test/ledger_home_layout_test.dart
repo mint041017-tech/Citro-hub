@@ -61,8 +61,8 @@ void main() {
   test('记账卡支持自由缩放，尺寸受 spec 约束', () {
     const key = HomeLayoutKey.widePortrait;
     final slot = store.slots(key).firstWhere((s) => s.id == HomeCardId.ledger);
-    // 先挪到下方空白区域，再扩到 6×6：高度上限为 5 行。
-    expect(store.move(key, HomeCardId.ledger, 0, 18), isTrue);
+    // 先挪到默认布局下方的空白行，再扩到 6×6：高度上限为 5 行。
+    expect(store.move(key, HomeCardId.ledger, 0, 19), isTrue);
     expect(store.resize(key, HomeCardId.ledger, 6, 6), isTrue);
     final resized = store
         .slots(key)
