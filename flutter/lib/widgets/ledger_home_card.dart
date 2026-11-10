@@ -199,8 +199,8 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               Expanded(
                 child: LedgerProgress(
                   value: summary.budgetProgress,
-                  color: ledgerWarm,
-                  secondColor: ledgerCoral,
+                  color: c.accent,
+                  secondColor: c.danger,
                   height: 4,
                   over: summary.overBudget,
                 ),
@@ -326,8 +326,8 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               Expanded(
                 child: LedgerProgress(
                   value: summary.budgetProgress,
-                  color: ledgerWarm,
-                  secondColor: ledgerCoral,
+                  color: c.accent,
+                  secondColor: c.danger,
                   height: 5,
                   over: summary.overBudget,
                 ),
@@ -612,8 +612,8 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               Expanded(
                 child: LedgerProgress(
                   value: summary.budgetProgress,
-                  color: ledgerWarm,
-                  secondColor: ledgerCoral,
+                  color: c.accent,
+                  secondColor: c.danger,
                   height: 4,
                   over: summary.overBudget,
                 ),

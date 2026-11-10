@@ -33,7 +33,7 @@ void main() {
   Widget app(Widget home) =>
       MaterialApp(theme: buildCitroTheme(CitroColors.light), home: home);
 
-  testWidgets('记账页三栏切换、手动记账与预算设置生效', (tester) async {
+  testWidgets('记账页两栏切换、手动记账与预算设置生效', (tester) async {
     tester.view.physicalSize = const Size(420, 920);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -94,13 +94,6 @@ void main() {
       100000,
     );
     expect(find.textContaining('预算'), findsWidgets);
-
-    // cici 栏可以正常打开，且切页动画后输入区仍在。
-    await tester.tap(find.byKey(const ValueKey('ledger-tab-2')));
-    await tester.pumpAndSettle();
-    expect(find.text('看账、分析、代记账'), findsNothing);
-    expect(find.text('可以这样问'), findsOneWidget);
-    expect(find.text('这个月花超了吗'), findsOneWidget);
   });
 
   testWidgets('首页记账卡三档尺寸均不溢出', (tester) async {

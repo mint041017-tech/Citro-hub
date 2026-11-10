@@ -8,7 +8,7 @@ import 'ledger_theme.dart';
 
 /// 记账模块的左侧导航，与待办 / 听隅同一套纸页侧栏。
 class LedgerRail extends StatelessWidget {
-  /// 'home' / 'add' / 'cici'
+  /// 'home' / 'add'
   final String active;
   final ValueChanged<String> onSelect;
   final VoidCallback onBack;
@@ -26,7 +26,6 @@ class LedgerRail extends StatelessWidget {
     const items = <(String, String, String)>[
       ('home', '首页', AppIcons.wallet),
       ('add', '记一笔', AppIcons.plus),
-      ('cici', 'CiCi', AppIcons.sparkle),
     ];
     final reduce = CitroMotion.reduced(context);
     return Container(

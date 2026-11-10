@@ -777,22 +777,6 @@ class _CommunityPageState extends State<CommunityPage>
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(
-                strokeSvg(AppIcons.sparkle, width: 2),
-                size: 12,
-                color: c.accent,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '在清爽的汽水里，与同频的灵魂相遇',
-                style: context.body(size: CitroType.caption, color: c.inkSoft),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -1129,7 +1113,8 @@ class _PostCardState extends State<_PostCard> {
   final comment = TextEditingController();
   final commentFocus = FocusNode();
   PostComment? replyTo;
-  bool showAllComments = false;
+  // 评论默认全部展开，不再需要「查看全部」那一跳。
+  bool showAllComments = true;
   bool showCommentInput = false;
   bool sending = false;
   String? image;

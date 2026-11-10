@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
 import '../games/game_loader.dart';
+import '../games/game_registry.dart';
 import '../overlays/extra_sheets.dart';
 import '../pages/in_app_web.dart';
 import '../state/app_state.dart';
@@ -395,63 +396,83 @@ class HomeGameCard extends StatelessWidget {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxHeight < 150;
-          return Column(
-            children: [
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.all(1),
-                  padding: EdgeInsets.all(compact ? 5 : 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: entry.gradient(c),
-                    ),
-                    borderRadius: BorderRadius.vertical(
-                      top: const Radius.circular(22),
-                      bottom: Radius.circular(compact ? 12 : 10),
-                    ),
-                  ),
+          // 够宽就横排：左边一块游戏渐变砖，右边标题 + 开局，
+          // 和听隅 / 食谱那些横向卡片同一套语言。
+          final wide = constraints.maxWidth >= 190 && constraints.maxHeight >= 120;
+          if (!wide) {
+            return Column(
+              children: [
+                Expanded(
                   child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: entry.art(context),
-                    ),
+                    child: _artTile(context, entry, c, size: 46),
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  10,
-                  compact ? 3 : 5,
-                  10,
-                  compact ? 4 : 6,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+                  child: Text(
+                    entry.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.heading(size: CitroType.body, color: c.ink),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
+              ],
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                _artTile(context, entry, c, size: 68),
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
                         entry.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: context.heading(
-                          size: compact ? CitroType.body : CitroType.titleLg,
+                          size: CitroType.titleLg,
                           color: c.ink,
+                          height: 1.2,
                         ),
                       ),
-                    ),
-                    if (!compact) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        '开局',
-                        style: context.body(size: 10, color: c.inkSoft),
+                      const SizedBox(height: AppSpacing.x1),
+                      Container(
+                        height: 26,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: c.ink,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '开局',
+                              style: context.body(
+                                size: CitroType.micro,
+                                weight: CitroType.medium,
+                                color: c.bg,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            AppIcon(
+                              strokeSvg(AppIcons.arrowRight, width: 2.2),
+                              size: 13,
+                              color: c.bg,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -460,6 +481,32 @@ class HomeGameCard extends StatelessWidget {
 }
 
 /// 首页资源卡片：小工具 / 驱动的一条快捷入口。
+/// 游戏卡的艺术砖：圆角渐变底 + 居中的小游戏插画。
+Widget _artTile(
+  BuildContext context,
+  GameCardData entry,
+  CitroColors c, {
+  required double size,
+}) {
+  return Container(
+    width: size,
+    height: size,
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: entry.gradient(c),
+      ),
+      borderRadius: BorderRadius.circular(size * .26),
+      border: Border.all(color: c.line),
+    ),
+    child: Center(
+      child: FittedBox(fit: BoxFit.scaleDown, child: entry.art(context)),
+    ),
+  );
+}
+
 class HomeResCard extends StatelessWidget {
   final String item;
 

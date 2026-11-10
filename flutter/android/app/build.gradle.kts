@@ -113,6 +113,18 @@ android {
     androidResources {
         noCompress += listOf("ttf", "png", "jpg", "jpeg", "webp")
     }
+
+    /* 只发 arm64：build.js 以 --target-platform android-arm64 调用时，Flutter
+       只会带 arm64 的 engine/app，但插件 AAR（MLKit、dartjni 等）仍可能把
+       armeabi-v7a / x86_64 的 .so 带进来。这里按 target-platform 属性做
+       兜底排除；debug/模拟器构建不传该属性，仍保留多 ABI。 */
+    packaging {
+        jniLibs {
+            if ((project.findProperty("target-platform") as String?) == "android-arm64") {
+                excludes += listOf("lib/armeabi-v7a/**", "lib/x86_64/**")
+            }
+        }
+    }
 }
 
 kotlin {

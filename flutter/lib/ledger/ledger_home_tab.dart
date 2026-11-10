@@ -18,14 +18,12 @@ class LedgerHomeTab extends StatefulWidget {
   final String monthKey;
   final ValueChanged<String> onMonthChanged;
   final VoidCallback onOpenAdd;
-  final VoidCallback onOpenCici;
 
   const LedgerHomeTab({
     super.key,
     required this.monthKey,
     required this.onMonthChanged,
     required this.onOpenAdd,
-    required this.onOpenCici,
   });
 
   @override
@@ -471,12 +469,6 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         children: [
           Row(
             children: [
-              AppIcon(
-                strokeSvg(AppIcons.sparkle, width: 2),
-                size: 16,
-                color: c.accentInk,
-              ),
-              const SizedBox(width: 6),
               Text(
                 'cici 的观察',
                 style: context.lheading(size: CitroType.title, color: c.ink),
@@ -557,14 +549,6 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                 ),
               ),
           const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: LedgerChip(
-              text: '找 cici 细聊',
-              icon: AppIcons.arrowRight,
-              onTap: widget.onOpenCici,
-            ),
-          ),
         ],
       ),
     );

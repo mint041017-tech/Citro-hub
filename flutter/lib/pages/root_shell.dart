@@ -58,6 +58,18 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   /// 资源库收进首页下拉负一屏与「我的」，不再占独立 Tab。
   static int get _tabCount => 4;
 
+  /// 当前页是否自己渲染左侧 rail（待办 / 记账 / 食谱）。
+  /// 是的话，平板的全局侧栏要让位给页面自己的 tab。
+  bool get _pageOwnsRail {
+    if (index != 3) return false;
+    return switch (AppState.instance.customTabModule) {
+      CustomTabModule.todo ||
+      CustomTabModule.ledger ||
+      CustomTabModule.cook => true,
+      CustomTabModule.tingyu => false,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -410,21 +422,27 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
           }
           final tablet = !desktop && !kIsWeb && CitroForm.tabletNav(size);
           if (tablet) {
+            // 待办 / 记账 / 食谱自己就带左侧 rail：这时全局侧栏让位，
+            // 由页面自己的 tab 接替左侧位置，右边的内容区保持不动。
+            final ownsRail = _pageOwnsRail;
             return Scaffold(
               body: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    width: _sidebarWidth,
-                    child: CitroTabletSidebar(
-                      index: index,
-                      customModule: AppState.instance.customTabModule,
-                      onChanged: switchTo,
+                  if (!ownsRail)
+                    SizedBox(
+                      width: _sidebarWidth,
+                      child: CitroTabletSidebar(
+                        index: index,
+                        customModule: AppState.instance.customTabModule,
+                        onChanged: switchTo,
+                      ),
                     ),
-                  ),
                   Expanded(
                     child: CitroLayoutScope(
-                      contentWidth: constraints.maxWidth - _sidebarWidth,
+                      contentWidth: ownsRail
+                          ? constraints.maxWidth
+                          : constraints.maxWidth - _sidebarWidth,
                       tabletNav: true,
                       duo: duo,
                       child: _pageStack(),

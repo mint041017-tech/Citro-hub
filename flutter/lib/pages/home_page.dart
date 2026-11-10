@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,18 +19,14 @@ import '../services/models.dart';
 import '../state/app_state.dart';
 import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
-import '../todo/todo_store.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import '../tingyu/tingyu_controller.dart';
 import '../utils/lunar.dart';
-import '../widgets/active_listenable.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
-import '../widgets/motion_widgets.dart';
 import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
@@ -36,6 +34,7 @@ import '../widgets/mood_home_card.dart';
 import '../widgets/ledger_home_card.dart';
 import '../widgets/tablet_shell.dart';
 import 'cook_page.dart';
+import 'me_page.dart';
 import 'web_home.dart';
 
 String _weekdayLabel(DateTime d) {
@@ -112,7 +111,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (kIsWeb && MediaQuery.sizeOf(context).width >= 1025) {
       return WebHomePage(onSwitchTab: widget.onSwitchTab);
     }
-    final c = context.c;
     final layout = CitroLayoutScope.maybeOf(context);
     final media = MediaQuery.sizeOf(context);
     final width = layout?.contentWidth ?? media.width;
@@ -125,82 +123,106 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(8.0, (width - maxWidth) / 2);
-    // 手机端状态栏已由 SafeArea 避开，额外的顶部留白压到 8px，
-    // 让首屏更紧凑；平板 / 桌面仍保留原来的 48px 呼吸感。
-    final topPadding = width < 700 ? 8.0 : AppSpacing.pageTop(width);
-    final screenHeight = media.height;
+    // 上半部分：随时间变化的背景图 + 打招呼 + 我的入口。
+    final heroHeight = wide
+        ? math.min(300.0, media.height * .38)
+        : (media.height * .42).clamp(250.0, 400.0);
 
     return Stack(
       children: [
-        Positioned.fill(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _onScrollNotification,
-            child: CitroBackground(
-              child: SafeArea(
-                bottom: false,
-                child: SingleChildScrollView(
-                  controller: _scroll,
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  padding: EdgeInsets.fromLTRB(
-                    side,
-                    topPadding,
-                    side,
-                    sideNav ? 32 : 100,
-                  ),
-                  child: CitroStagger(
-                    step: const Duration(milliseconds: 32),
-                    children: [
-                      ActiveListenableBuilder(
-                        listenable: NookController.instance,
-                        builder: (context, _) {
-                          final lantern = LanternApi.currentWindow() != null;
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              final compact = constraints.maxWidth < 460;
-                              return _HomeHero(
-                                showLantern: lantern && !compact,
-                              );
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.x2),
-                      // 固定布局：不再提供拖拽/缩放编辑。
-                      HomeBento(
-                        layoutKey: layoutKey,
-                        editing: false,
-                        scrollController: _scroll,
-                        builder: _cardFor,
-                      ),
-                      const SizedBox(height: 18),
-                      Center(
-                        child: Pressable(
-                          onTap: () => showAppreciationSheet(context),
-                          child: Text(
-                            'Citro · 今天也要开心',
-                            style: context.body(
-                              size: CitroType.small,
-                              color: c.inkSoft,
-                            ),
+        // ── 上半：时间背景图 ──────────────────────────────────────
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: heroHeight,
+          child: const _TimeBackground(),
+        ),
+        // 顶部压一层由深到浅的罩面，保证白色/墨色文字在背景图上可读。
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: heroHeight,
+          child: IgnorePointer(child: _TimeBackground.scrim(heroHeight)),
+        ),
+
+        // ── 上半：打招呼 + 我的入口 ──────────────────────────────
+        // 这块也接管下拉：上半屏是首页最大的可点区域，只让下半滚动区
+        // 响应下拉会让人以为负一屏坏了。
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: heroHeight,
+          child: SafeArea(
+            bottom: false,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onVerticalDragUpdate: (d) => _setNegProgress(
+                (_negProgress + d.primaryDelta! / _negThreshold).clamp(0.0, 1.0),
+              ),
+              onVerticalDragEnd: (_) => _setNegProgress(
+                _negProgress > 0.45 ? 1.0 : 0.0,
+              ),
+              child: _HomeHeader(side: side, heroHeight: heroHeight),
+            ),
+          ),
+        ),
+
+        // ── 下半：卡片区（圆角顶 + 模糊过渡）────────────────────
+        Positioned(
+          top: heroHeight - CitroColors.radii.card,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _CardsPanel(
+            side: side,
+            bottomInset: sideNav ? 32 : 100,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScrollNotification,
+              child: SingleChildScrollView(
+                controller: _scroll,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                padding: EdgeInsets.fromLTRB(side, 4, side, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    HomeBento(
+                      layoutKey: layoutKey,
+                      editing: false,
+                      scrollController: _scroll,
+                      builder: _cardFor,
+                    ),
+                    const SizedBox(height: 18),
+                    Center(
+                      child: Pressable(
+                        onTap: () => showAppreciationSheet(context),
+                        child: Text(
+                          'Citro · 今天也要开心',
+                          style: context.body(
+                            size: CitroType.small,
+                            color: context.c.inkSoft,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ),
+
         // 负一屏：从顶部下滑展开，覆盖在首页之上。
         if (_negProgress > 0.001)
           Positioned.fill(
             child: IgnorePointer(
               ignoring: _negProgress < 0.95,
               child: Transform.translate(
-                offset: Offset(0, -screenHeight * (1 - _negProgress)),
+                offset: Offset(0, -media.height * (1 - _negProgress)),
                 child: NotificationListener<ScrollNotification>(
                   onNotification: _onNegativeScroll,
                   child: NegativeScreen(
@@ -290,16 +312,106 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   };
 }
 
-class _HomeHero extends StatelessWidget {
-  final bool showLantern;
+/// 首页上半部分的背景：随时段变化的柔光背景图。
+///
+/// 清晨 / 白天 / 傍晚 / 夜晚四张，跨小时自动换。图很柔，
+/// 作用是给「打招呼」一块有情绪的地方，不是主角。
+class _TimeBackground extends StatefulWidget {
+  const _TimeBackground();
 
-  const _HomeHero({this.showLantern = false});
+  static String assetFor(DateTime now) {
+    final h = now.hour;
+    if (h >= 5 && h < 8) return 'assets/images/backgrounds/dawn.webp';
+    if (h >= 8 && h < 17) return 'assets/images/backgrounds/day.webp';
+    if (h >= 17 && h < 20) return 'assets/images/backgrounds/dusk.webp';
+    return 'assets/images/backgrounds/night.webp';
+  }
+
+  /// 夜晚那张是深色的，上面的文字要翻成浅色。
+  static bool get isDarkNow {
+    final h = DateTime.now().hour;
+    return h >= 20 || h < 5;
+  }
+
+  /// 顶部罩面：让压在背景图上的文字始终可读。
+  static Widget scrim(double height) {
+    final dark = isDarkNow;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: dark
+              ? [const Color(0x66000000), const Color(0x00000000)]
+              : [const Color(0x38FFFFFF), const Color(0x00FFFFFF)],
+          stops: const [0, .7],
+        ),
+      ),
+    );
+  }
+
+  /// 背景图还没解码出来时的底色，顺便保证任何主题下都不会闪黑。
+  static Color baseColor() {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 8) return const Color(0xFFFDE3C8);
+    if (h >= 8 && h < 17) return const Color(0xFFFAEEDC);
+    if (h >= 17 && h < 20) return const Color(0xFFF8C4A8);
+    return const Color(0xFF2A2E40);
+  }
+
+  @override
+  State<_TimeBackground> createState() => _TimeBackgroundState();
+}
+
+class _TimeBackgroundState extends State<_TimeBackground> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // 每分钟看一眼，跨小时就换图。
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: _TimeBackground.baseColor(),
+      child: Image.asset(
+        _TimeBackground.assetFor(DateTime.now()),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        cacheWidth: 512,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+/// 上半部分的文字层：账号入口 + 日期 + 打招呼。
+class _HomeHeader extends StatelessWidget {
+  final double side;
+  final double heroHeight;
+
+  const _HomeHeader({required this.side, required this.heroHeight});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final state = context.app;
+    final app = context.app;
     final now = DateTime.now();
+    final dark = _TimeBackground.isDarkNow;
+    final onBg = dark ? Colors.white : c.ink;
+    final onSoft = dark ? Colors.white70 : c.inkSoft;
     final greeting = now.hour < 6
         ? '夜深了'
         : now.hour < 11
@@ -309,88 +421,169 @@ class _HomeHero extends StatelessWidget {
         : now.hour < 18
         ? '下午好'
         : '晚上好';
-    final weather = state.weather;
-    final tasks = TodoStore.instance.todayTasks;
-    final done = tasks.where((t) => t.done).length;
-    return CitroCard(
-      color: c.tintYellow,
-      padding: const EdgeInsets.all(AppSpacing.x3),
+    final user = app.user;
+    final avatarUrl = user == null || user.av == null || user.av!.isEmpty
+        ? ''
+        : user.av!;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$greeting，今天也要开心',
-                      style: context.heading(size: CitroType.titleLg, color: c.ink),
+                child: Pressable(
+                  onTap: () => openMePage(context),
+                  hoverLift: 0,
+                  hoverShadow: false,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: dark ? Colors.white : c.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: dark ? Colors.white54 : c.line,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: avatarUrl.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    app.loggedIn && user!.name.isNotEmpty
+                                        ? user.name[0]
+                                        : '友',
+                                    style: context.heading(
+                                      size: CitroType.label,
+                                      color: onBg,
+                                    ),
+                                  ),
+                                )
+                              : Image.network(
+                                  avatarUrl,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 96,
+                                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                                ),
+                        ),
+                        const SizedBox(width: AppSpacing.x1),
+                        Flexible(
+                          child: Text(
+                            app.loggedIn && user != null && user.name.isNotEmpty
+                                ? user.name
+                                : '点击进入我的',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.body(
+                              size: CitroType.label,
+                              weight: CitroType.medium,
+                              color: onBg,
+                            ),
+                          ),
+                        ),
+                        AppIcon(
+                          strokeSvg(AppIcons.chevronRight, width: 2),
+                          size: 15,
+                          color: onSoft,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
-                      style: context.body(size: CitroType.meta, color: c.inkSoft),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              if (showLantern) const LanternEntry(),
+              const SizedBox(width: AppSpacing.x1),
+              if (LanternApi.currentWindow() != null) ...[
+                const LanternEntry(),
+                const SizedBox(width: AppSpacing.x1),
+              ],
+              Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: dark ? Colors.white.withAlpha(28) : Colors.white.withAlpha(150),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: dark ? Colors.white24 : Colors.white.withAlpha(200),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
+                    style: context.body(size: CitroType.micro, color: onBg),
+                  ),
+                ),
+              ),
             ],
+          ),
+          const Spacer(),
+          Text(
+            '$greeting，',
+            style: context.display(size: CitroType.hero, color: onBg, height: 1.12),
+          ),
+          Text(
+            '今天也要开心',
+            style: context.display(
+              size: CitroType.hero,
+              color: onBg,
+              height: 1.12,
+            ),
           ),
           const SizedBox(height: AppSpacing.x3),
-          Row(
-            children: [
-              _HeroStat(
-                icon: AppIcons.sun,
-                label: '天气',
-                value: '${weather.temp.round()}°',
-              ),
-              const SizedBox(width: AppSpacing.x3),
-              _HeroStat(
-                icon: AppIcons.list,
-                label: '待办',
-                value: '$done/${tasks.length}',
-              ),
-              const SizedBox(width: AppSpacing.x3),
-              _HeroStat(
-                icon: AppIcons.calendar,
-                label: '打卡',
-                value: '${state.checkinStreak} 天',
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String value;
+/// 下半部分的卡片面板：顶部圆角 + 一条模糊过渡带。
+///
+/// 过渡带是透明的，[BackdropFilter] 采到的是上半部分的背景图，
+/// 于是卡片区像是从背景里「长」出来的，而不是一刀切上去。
+class _CardsPanel extends StatelessWidget {
+  final double side;
+  final double bottomInset;
+  final Widget child;
 
-  const _HeroStat({required this.icon, required this.label, required this.value});
+  const _CardsPanel({
+    required this.side,
+    required this.bottomInset,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Expanded(
+    const double radius = 24;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
       child: Column(
         children: [
-          AppIcon(strokeSvg(icon, width: 2), size: 18, color: c.accent),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: context.hand(size: CitroType.titleLg, color: c.ink, height: 1),
+          SizedBox(
+            height: radius,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [c.bg.withAlpha(215), c.bg.withAlpha(0)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-          Text(
-            label,
-            style: context.body(size: CitroType.micro, color: c.inkSoft),
-          ),
+          Expanded(child: ColoredBox(color: c.bg, child: child)),
         ],
       ),
     );
@@ -1204,8 +1397,9 @@ class ZodiacCard extends StatelessWidget {
     return CitroCard(
       radius: CitroColors.radii.card,
       padding: EdgeInsets.zero,
-      color: tone.bottom,
-      border: Border.all(color: tone.border),
+      // 和全站卡片同一个表面，只留一层很淡的粉彩渐变交代「星象」的情绪。
+      color: c.surface,
+      border: Border.all(color: c.line),
       shadow: CitroColors.shadows.card(c),
       clip: Clip.antiAlias,
       onTap: () => showZodiacModal(context),
@@ -1224,25 +1418,18 @@ class ZodiacCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [tone.top, tone.mid, tone.bottom],
-                        stops: const [0, .55, 1],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
                   child: IgnorePointer(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: const Alignment(.78, -.92),
-                          radius: 1.15,
-                          colors: [tone.glow, tone.glow.withAlpha(0)],
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            c.tintYellow.withAlpha(80),
+                            c.surface,
+                            c.tintBlue.withAlpha(60),
+                          ],
+                          stops: const [0, .5, 1],
                         ),
                       ),
                     ),
@@ -1901,41 +2088,24 @@ class _ZodiacTone {
   final Color border;
   final Color error;
 
-  factory _ZodiacTone.of(CitroColors c) => c.dark
-      ? _ZodiacTone(
-          top: c.tintYellow,
-          mid: c.tintNeutral,
-          bottom: c.tintBlue,
-          accent: c.accent,
-          accentInk: c.accentInk,
-          ink: c.ink,
-          ink2: c.ink2,
-          inkSoft: c.inkSoft,
-          line: c.line2.withAlpha(120),
-          chipBg: c.accent.withAlpha(26),
-          chipLine: c.accent.withAlpha(65),
-          watermark: c.accent.withAlpha(20),
-          glow: c.accent.withAlpha(22),
-          border: c.accent.withAlpha(50),
-          error: c.stamp,
-        )
-      : _ZodiacTone(
-          top: c.tintYellow,
-          mid: Color.lerp(c.tintYellow, c.tintBlue, .5)!,
-          bottom: c.tintBlue,
-          accent: c.accent,
-          accentInk: c.accentInk,
-          ink: c.ink,
-          ink2: c.ink2,
-          inkSoft: c.inkSoft,
-          line: c.line2.withAlpha(90),
-          chipBg: c.accent.withAlpha(22),
-          chipLine: c.accent.withAlpha(55),
-          watermark: c.accent.withAlpha(18),
-          glow: c.accent.withAlpha(20),
-          border: c.accent.withAlpha(55),
-          error: c.stamp,
-        );
+  /// 星象卡不再自带一套彩色渐变，改为和全站卡片同表面 + 同 token。
+  factory _ZodiacTone.of(CitroColors c) => _ZodiacTone(
+    top: c.surface,
+    mid: c.surface,
+    bottom: c.surface,
+    accent: c.accent,
+    accentInk: c.accentInk,
+    ink: c.ink,
+    ink2: c.ink2,
+    inkSoft: c.inkSoft,
+    line: c.line,
+    chipBg: c.tintYellow,
+    chipLine: c.line,
+    watermark: c.accent.withAlpha(16),
+    glow: c.accent.withAlpha(18),
+    border: c.line,
+    error: c.stamp,
+  );
 }
 
 /// 金色刻度环：12 格刻度 + 进度弧 + 中心光面。
@@ -2038,51 +2208,86 @@ class QuoteCard extends StatelessWidget {
           copyText('${q.cn} — ${q.en}', context: context, tip: '已复制每日一言'),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 112),
+        // 宽卡片横排（引文占满），窄卡片竖排居中，左右不留大白边。
         child: LayoutBuilder(
-          builder: (context, constraints) => FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.center,
-            child: SizedBox(
-              width: constraints.maxWidth,
-              child: Column(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 250;
+            if (!wide) {
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    '每日一言',
-                    style: context.body(
-                      size: CitroType.meta,
-                      weight: CitroType.medium,
-                      color: c.accent,
-                    ),
-                  ),
+                  _quoteLabel(context, c),
                   const SizedBox(height: AppSpacing.x1),
-                  Text(
-                    '「${q.cn}」',
-                    textAlign: TextAlign.center,
-                    locale: const Locale('zh', 'CN'),
-                    style: context.heading(
-                      size: CitroType.titleLg,
-                      color: c.ink,
-                      height: 1.6,
-                    ),
-                  ),
+                  _quoteText(context, c, q),
                   const SizedBox(height: AppSpacing.x1),
-                  Text(
-                    '— ${q.en}',
-                    textAlign: TextAlign.center,
-                    style: context.body(
-                      size: CitroType.meta,
-                      color: c.inkSoft,
-                      height: 1.4,
-                    ),
-                  ),
+                  _quoteEn(context, c, q),
                 ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _quoteLabel(context, c),
+                const SizedBox(width: AppSpacing.x3),
+                Expanded(child: _quoteText(context, c, q)),
+                const SizedBox(width: AppSpacing.x2),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 左侧竖排的「每日一言」+ 引号，给右边的正文一个起点。
+  Widget _quoteLabel(BuildContext context, CitroColors c) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppIcon(
+          strokeSvg(AppIcons.book, width: 2),
+          size: 16,
+          color: c.accent,
+        ),
+        const SizedBox(height: AppSpacing.x1),
+        for (final ch in '每日一言'.split(''))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              ch,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.medium,
+                color: c.inkSoft,
+                height: 1.15,
               ),
             ),
           ),
-        ),
+      ],
+    );
+  }
+
+  Widget _quoteText(BuildContext context, CitroColors c, Quote q) {
+    return Text(
+      '「${q.cn}」',
+      textAlign: TextAlign.left,
+      locale: const Locale('zh', 'CN'),
+      style: context.heading(
+        size: CitroType.titleLg,
+        color: c.ink,
+        height: 1.55,
       ),
+    );
+  }
+
+  Widget _quoteEn(BuildContext context, CitroColors c, Quote q) {
+    return Text(
+      '— ${q.en}',
+      textAlign: TextAlign.left,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+      style: context.body(size: CitroType.meta, color: c.inkSoft, height: 1.45),
     );
   }
 }

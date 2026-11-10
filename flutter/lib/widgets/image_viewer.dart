@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import 'app_image.dart';
 import 'paper.dart';
@@ -72,6 +73,7 @@ class _CitroImageViewerState extends State<CitroImageViewer> {
     final bottom = media.padding.bottom + 18;
     final wide = media.size.width >= 720;
     final multi = widget.urls.length > 1;
+    final c = context.c;
     return Scaffold(
       backgroundColor: Colors.black,
       body: CallbackShortcuts(
@@ -175,7 +177,7 @@ class _CitroImageViewerState extends State<CitroImageViewer> {
                             height: 6,
                             decoration: BoxDecoration(
                               color: i == _current
-                                  ? const Color(0xFFFFC078)
+                                  ? c.accentLt
                                   : Colors.white.withAlpha(90),
                               borderRadius: BorderRadius.circular(99),
                             ),

@@ -7,8 +7,8 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
+import '../widgets/tablet_shell.dart';
 import 'ledger_add_tab.dart';
-import 'ledger_cici.dart';
 import 'ledger_home_tab.dart';
 import 'ledger_intake.dart';
 import 'ledger_models.dart';
@@ -17,7 +17,7 @@ import 'ledger_store.dart';
 import 'ledger_theme.dart';
 import 'ledger_widgets.dart';
 
-/// 记账模块一级页面：首页 / 记一笔 / cici。
+/// 记账模块一级页面：首页 / 记一笔。
 ///
 /// 宽屏用左侧纸页侧栏，窄屏用贴底图标栏；切换动画与待办、听隅一致。
 class LedgerPage extends StatefulWidget {
@@ -31,7 +31,7 @@ class LedgerPage extends StatefulWidget {
 
 class _LedgerPageState extends State<LedgerPage>
     with SingleTickerProviderStateMixin {
-  late int _tab = widget.initialTab.clamp(0, 2);
+  late int _tab = widget.initialTab.clamp(0, 1);
   late String _monthKey = LedgerDates.monthKey(DateTime.now());
   late final AnimationController _fade = AnimationController(
     vsync: this,
@@ -74,16 +74,16 @@ class _LedgerPageState extends State<LedgerPage>
     final top =
         (desktop ? AppSpacing.pageTop(media.size.width) : 4.0) +
         media.padding.top;
-    final wide = media.size.width >= 900;
+    final wide =
+        media.size.width >= 900 ||
+        (CitroLayoutScope.maybeOf(context)?.tabletNav ?? false);
     final pages = <Widget>[
       LedgerHomeTab(
         monthKey: _monthKey,
         onMonthChanged: (value) => setState(() => _monthKey = value),
         onOpenAdd: () => _switchTab(1),
-        onOpenCici: () => _switchTab(2),
       ),
       LedgerAddTab(onSaved: () => _switchTab(0)),
-      LedgerCiciTab(monthKey: _monthKey),
     ];
     return LedgerScope(
       child: Builder(
@@ -150,7 +150,6 @@ class _LedgerPageState extends State<LedgerPage>
   Widget _rail(BuildContext context) => LedgerRail(
     active: switch (_tab) {
       1 => 'add',
-      2 => 'cici',
       _ => 'home',
     },
     onBack: () => _back(context),
@@ -160,8 +159,6 @@ class _LedgerPageState extends State<LedgerPage>
           _switchTab(0);
         case 'add':
           _switchTab(1);
-        case 'cici':
-          _switchTab(2);
       }
     },
   );
@@ -170,7 +167,6 @@ class _LedgerPageState extends State<LedgerPage>
     final c = context.c;
     final title = switch (_tab) {
       1 => '记一笔',
-      2 => 'CiCi',
       _ => '账单',
     };
     return Padding(
@@ -269,7 +265,6 @@ class _LedgerPageState extends State<LedgerPage>
     const items = [
       (0, '首页', AppIcons.wallet),
       (1, '记一笔', AppIcons.plus),
-      (2, 'CiCi', AppIcons.sparkle),
     ];
     return Container(
       decoration: BoxDecoration(

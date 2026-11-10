@@ -155,12 +155,20 @@ void main() {
     }
     // 文字直接画在玻璃条上，不再只靠 Semantics 暴露。
     expect(find.text('首页'), findsOneWidget);
+    // 四格各一个图标；右侧 CICI 用的是头像图片，不是 AppIcon。
     expect(
       find.descendant(
         of: find.byType(CitroTabBar),
         matching: find.byType(AppIcon),
       ),
-      findsNWidgets(5),
+      findsNWidgets(4),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CitroTabBar),
+        matching: find.byType(Image),
+      ),
+      findsOneWidget,
     );
     semantics.dispose();
     expect(tester.takeException(), isNull);

@@ -8,7 +8,7 @@ import '../widgets/paper.dart';
 
 /// 待办模块的左侧导航（与听隅侧栏同款），待办页和专注页共用。
 class TodoRail extends StatelessWidget {
-  /// 'todo' / 'data' / 'focus' / 'cici'
+  /// 'todo' / 'data' / 'focus'
   final String active;
   final ValueChanged<String> onSelect;
   final VoidCallback onBack;
@@ -27,7 +27,6 @@ class TodoRail extends StatelessWidget {
       ('todo', '待办', AppIcons.check),
       ('data', '数据', AppIcons.board),
       ('focus', '专注', AppIcons.target),
-      ('cici', 'CiCi', AppIcons.sparkle),
     ];
     final reduce = CitroMotion.reduced(context);
     return Container(
@@ -69,7 +68,6 @@ class TodoRail extends StatelessWidget {
               switch (active) {
                 'data' => '数据',
                 'focus' => '专注',
-                'cici' => 'CiCi',
                 _ => '待办',
               },
               style: context.ui(

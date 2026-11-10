@@ -58,8 +58,11 @@ Future<void> main() async {
   runApp(
     // 玻璃材质要跟着 MaterialApp 的 ThemeMode 走，否则深色模式下
     // 阴影和描边会按系统亮度算，和 App 实际主题对不上。
+    // ios27() 是包按 Apple glassEffect(.regular) 校准好的材质，
+    // 亮 / 暗两套自动切换，全站玻璃共用。
     LiquidGlassWidgets.wrap(
       brightnessResolver: Theme.maybeBrightnessOf,
+      theme: const GlassThemeData.ios27(),
       child: const CitroApp(),
     ),
   );

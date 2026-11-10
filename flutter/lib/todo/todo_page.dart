@@ -7,9 +7,9 @@ import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/tablet_shell.dart';
 import 'todo_ai.dart';
 import 'todo_board.dart';
-import 'todo_cici.dart';
 import 'todo_editor.dart';
 import 'todo_focus.dart';
 import 'todo_models.dart';
@@ -19,7 +19,7 @@ import 'todo_rail.dart';
 import 'todo_theme.dart';
 import 'todo_ui.dart';
 
-/// 待办模块的一级页面：待办 / 看板 / 小c助手。
+/// 待办模块的一级页面：待办 / 数据 / 专注。
 class TodoPage extends StatefulWidget {
   final int initialTab;
 
@@ -31,7 +31,7 @@ class TodoPage extends StatefulWidget {
 
 class _TodoPageState extends State<TodoPage>
     with SingleTickerProviderStateMixin {
-  late int _tab = widget.initialTab.clamp(0, 3);
+  late int _tab = widget.initialTab.clamp(0, 2);
   int _sub = 0;
   late final AnimationController _fade = AnimationController(
     vsync: this,
@@ -205,7 +205,9 @@ class _TodoPageState extends State<TodoPage>
     final top =
         (desktop ? AppSpacing.pageTop(media.size.width) : 4.0) +
         media.padding.top;
-    final wide = media.size.width >= 900;
+    final wide =
+        media.size.width >= 900 ||
+        (CitroLayoutScope.maybeOf(context)?.tabletNav ?? false);
     final pages = <Widget>[
       _TodoTab(
         sub: _sub,
@@ -214,7 +216,6 @@ class _TodoPageState extends State<TodoPage>
         hideTabs: wide,
       ),
       TodoBoard(wide: wide),
-      const TodoCici(),
       // 专注也放进 tab 容器：切换时左侧栏完全不动，和待办/数据一致。
       const TodoFocusPage(embedded: true),
     ];
@@ -278,7 +279,7 @@ class _TodoPageState extends State<TodoPage>
   /// 曲线与时长跟听隅的切页保持一致，且页面状态不会丢。
   ///
   /// 这里始终保留同一层过渡外壳，切 tab 时不重建页面子树，
-  /// 所以 CiCi 这类有内部滚动/输入焦点的页面不会闪一下。
+  /// 所以专注这类有内部滚动/输入焦点的页面不会闪一下。
   Widget _pages(List<Widget> pages) {
     return Stack(
       children: [
@@ -305,8 +306,7 @@ class _TodoPageState extends State<TodoPage>
   Widget _rail(BuildContext context) => TodoRail(
     active: switch (_tab) {
       1 => 'data',
-      2 => 'cici',
-      3 => 'focus',
+      2 => 'focus',
       _ => 'todo',
     },
     onBack: () => _back(context),
@@ -316,10 +316,8 @@ class _TodoPageState extends State<TodoPage>
           _switchTab(0);
         case 'data':
           _switchTab(1);
-        case 'cici':
-          _switchTab(2);
         case 'focus':
-          _switchTab(3);
+          _switchTab(2);
       }
     },
   );
@@ -329,8 +327,7 @@ class _TodoPageState extends State<TodoPage>
     const items = [
       (0, '待办', AppIcons.check),
       (1, '数据', AppIcons.board),
-      (3, '专注', AppIcons.target),
-      (2, 'CiCi', AppIcons.sparkle),
+      (2, '专注', AppIcons.target),
     ];
     // 贴底导航：与食谱页一致，只留一条上边线，不做悬浮胶囊。
     return Container(
@@ -384,13 +381,11 @@ class _TodoPageState extends State<TodoPage>
     final c = context.c;
     final title = switch (_tab) {
       1 => '数据',
-      2 => 'CiCi',
-      3 => '专注',
+      2 => '专注',
       _ => '待办',
     };
     final subtitle = switch (_tab) {
-      2 => '拆解、提醒、总结',
-      3 => '专注与休息交替',
+      2 => '专注与休息交替',
       _ => _dateLine(DateTime.now()),
     };
     return Padding(
@@ -454,7 +449,7 @@ class _TodoPageState extends State<TodoPage>
             ),
           ],
           const Spacer(),
-          // 新建只在「待办」页出现；数据和 CiCi 页不需要。
+          // 新建只在「待办」页出现；数据页不需要。
           if (_tab == 0)
             Pressable(
               onTap: () => _openCreate(context),

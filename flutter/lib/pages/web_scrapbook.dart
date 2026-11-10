@@ -6,7 +6,6 @@ import '../overlays/ai_chat.dart';
 import '../overlays/coin_sheet.dart';
 import '../overlays/lantern_sheet.dart';
 import '../overlays/pomodoro_sheet.dart';
-import '../services/api.dart';
 import '../services/lantern_api.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -279,12 +278,8 @@ class _Brand extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               // 宽桌面没有 Tab 栏，CICI 由顶栏这颗头像按钮担当，
-              // 与手机 Tab 栏中央的按钮是同一个组件。
-              CiciAvatarButton(
-                avatarUrl: Api.imageUrl(context.app.user?.av),
-                size: 42,
-                onTap: () => showAiChat(context),
-              ),
+              // 与手机 Tab 栏右侧的按钮是同一个组件。
+              CiciAvatarButton(size: 42, onTap: () => showAiChat(context)),
             ],
           ),
         ),

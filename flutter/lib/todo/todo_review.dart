@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../services/pomodoro.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
-import 'todo_ai.dart';
 import 'todo_models.dart';
 import 'todo_store.dart';
 import 'todo_theme.dart';
@@ -35,43 +33,11 @@ class _ReviewSheetState extends State<_ReviewSheet> {
   late final TextEditingController _text = TextEditingController(
     text: TodoStore.instance.reviewFor(widget.day)?.text ?? '',
   );
-  bool _loading = false;
 
   @override
   void dispose() {
     _text.dispose();
     super.dispose();
-  }
-
-  int _focusMinutes() {
-    var total = 0;
-    for (final s in PomodoroState.instance.sessions) {
-      if (dayOf(s.at) == widget.day) total += s.minutes;
-    }
-    return total;
-  }
-
-  Future<void> _generate() async {
-    if (_loading) return;
-    setState(() => _loading = true);
-    try {
-      final store = TodoStore.instance;
-      final text = await TodoAi.summary(
-        day: widget.day,
-        tasks: store.tasksOn(widget.day),
-        moods: store.moodsOn(widget.day),
-        focusMinutes: _focusMinutes(),
-        streak: store.streak,
-      );
-      if (!mounted) return;
-      setState(() => _text.text = text);
-    } catch (e) {
-      if (mounted) {
-        AppToast.show(context, e.toString().replaceFirst('AiException: ', ''));
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
   }
 
   @override
@@ -125,58 +91,6 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                 maxLines: 7,
                 maxLength: 1200,
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Pressable(
-                    onTap: _loading ? null : _generate,
-                    scale: .97,
-                    child: Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: c.accent.withAlpha(36),
-                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                        border: Border.all(color: c.accent.withAlpha(110)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_loading)
-                            SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: c.accentInk,
-                              ),
-                            )
-                          else
-                            AppIcon(
-                              strokeSvg(AppIcons.sparkle, width: 1.8),
-                              size: 14,
-                              color: c.accentInk,
-                            ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _loading ? '正在写…' : 'CiCi 写一版',
-                            style: context.ui(
-                              size: CitroType.caption,
-                              weight: CitroType.strong,
-                              color: c.accentInk,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'AI 只依据任务与专注数据',
-                    style: context.ui(size: CitroType.small, color: c.inkSoft),
-                  ),
-                ],
-              ),
               const SizedBox(height: 16),
               _autoRow(context, store),
               const SizedBox(height: 16),
@@ -229,7 +143,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                 Text(
                   store.autoReviewEnabled
                       ? '到 ${store.autoReviewTime} 生成一版草稿'
-                      : '关闭时只在手动点击时生成',
+                      : '关闭后不再自动生成',
                   style: context.ui(size: CitroType.small, color: c.inkSoft),
                 ),
               ],

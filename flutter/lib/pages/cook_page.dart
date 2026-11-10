@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../overlays/ai_chat.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/cook_editor.dart';
 import '../overlays/ingredient_library.dart';
@@ -512,7 +511,9 @@ class _CookPageState extends State<CookPage> {
     }
     final media = MediaQuery.of(context);
     final duo = CitroForm.duoDevice(media.size);
-    final tablet = media.size.width >= 900;
+    final tablet =
+        media.size.width >= 900 ||
+        (CitroLayoutScope.maybeOf(context)?.tabletNav ?? false);
     final main = Column(
       children: [
         _topBar(context, app),
@@ -895,40 +896,6 @@ class _CookPageState extends State<CookPage> {
               ],
             ),
           ),
-          if (isDetail && logged) ...[
-            Pressable(
-              onTap: () => showAiChat(context, recipe: detail),
-              child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: c.ink,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  boxShadow: CitroColors.shadows.sm(c),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppIcon(
-                      strokeSvg(AppIcons.sparkle, width: 2),
-                      size: 16,
-                      color: c.bg,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'AI',
-                      style: context.body(
-                        size: CitroType.caption,
-                        weight: CitroType.strong,
-                        color: c.bg,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
           if (logged && !isDetail && (tab == 'recipes' || tab == 'square'))
             Pressable(
               onTap: _newRecipe,

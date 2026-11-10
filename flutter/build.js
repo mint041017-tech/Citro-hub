@@ -45,8 +45,13 @@ const env = Object.assign({}, process.env, {
   JAVA_TOOL_OPTIONS: '-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8',
 });
 
+// 只发 arm64：nuwa 等目标机型都是 arm64-v8a，x86_64 只用于模拟器，
+// armeabi-v7a 已无真实用户。debug 包保留默认多 ABI，方便模拟器调试。
 const buildArgs = ['build', 'apk', '--' + buildType, '--dart-define=APP_VERSION=' + version];
-console.log(`> flutter build apk --${buildType}  (v${version})`);
+if (buildType === 'release') {
+  buildArgs.push('--target-platform', 'android-arm64');
+}
+console.log(`> flutter build apk --${buildType}${buildType === 'release' ? ' --target-platform android-arm64' : ''}  (v${version})`);
 try {
   cp.execFileSync(flutterBin, buildArgs, {
     cwd: dir,

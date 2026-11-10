@@ -4,29 +4,12 @@ import '../theme/app_theme.dart';
 import '../theme/native.dart';
 import '../theme/tokens.dart';
 
-/// 记账模块的专用强调色（暖杏），只覆盖全局 accent 一个语义字段。
+/// 记账模块不再有专属强调色：全 App 统一用全局品牌橙（`context.c.accent`），
+/// 超支 / 预警用全局 danger。表面、描边、文字本来就继承全局。
 ///
-/// 表面 / 描边 / 文字 / 粉彩底全部继承全局：旧版给记账注入了一整套柠檬黄主题
-/// （bg/surface/line 都换掉），深色下 accent 还变成浅黄，与全局品牌橙脱节。
-const ledgerAccent = Color(0xFFE79A3C);
-const ledgerAccent2 = Color(0xFFD0832B);
-const ledgerAccentLt = Color(0xFFFFF3DE);
-const ledgerInkLight = Color(0xFF8A5312);
-const ledgerInkDark = Color(0xFFFFD9AE);
-
-/// 预算 / 提醒用的杏橙色。
-const ledgerWarm = Color(0xFFE79A3C);
-
-/// 超支、图表高亮用的杏红色。
-const ledgerCoral = Color(0xFFE28A5E);
-
-/// 收入、结余用的薄荷色。
-const ledgerCool = Color(0xFF6FA98E);
-
-/// 只改强调色；深色下连 accent 也保持全局品牌橙，保证同一 App 内一致。
-CitroColors ledgerColors(CitroColors base) => base.copyWith(
-  accent: base.dark ? base.accent : ledgerAccent,
-);
+/// 这里保留一个空的 [ledgerColors]，让既有的 `LedgerScope` 调用点不用改，
+/// 也留个位置给以后真需要「模块级微调」时再注入。
+CitroColors ledgerColors(CitroColors base) => base;
 
 /// 记账页统一放大一档字号、加一档字重。
 /// 不改全局 `context.ui`，避免影响首页和其它模块。

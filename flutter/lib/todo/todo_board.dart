@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../services/api.dart';
 import '../services/play_log.dart';
 import '../services/pomodoro.dart';
 import '../state/app_state.dart';
@@ -26,7 +25,6 @@ class TodoBoard extends StatefulWidget {
 
 class _TodoBoardState extends State<TodoBoard> {
   late DateTime _day = dayOf(DateTime.now());
-  bool _summarizing = false;
   bool _autoTried = false;
 
   @override
@@ -337,56 +335,12 @@ class _TodoBoardState extends State<TodoBoard> {
             ),
           ],
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Pressable(
-                onTap: _summarizing ? null : () => _summarize(context, tasks),
-                scale: .97,
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: c.accent.withAlpha(40),
-                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
-                    border: Border.all(color: c.accent.withAlpha(110)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_summarizing)
-                        SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: c.accentInk,
-                          ),
-                        )
-                      else
-                        AppIcon(
-                          strokeSvg(AppIcons.sparkle, width: 1.8),
-                          size: 14,
-                          color: c.accentInk,
-                        ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _summarizing ? '正在总结…' : 'CiCi 总结',
-                        style: context.ui(
-                          size: CitroType.caption,
-                          weight: CitroType.strong,
-                          color: c.accentInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                auto,
-                style: context.ui(size: CitroType.small, color: c.inkSoft),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              auto,
+              style: context.ui(size: CitroType.small, color: c.inkSoft),
+            ),
           ),
         ],
       ),
@@ -462,60 +416,8 @@ class _TodoBoardState extends State<TodoBoard> {
           Navigator.of(context).pop();
           showReviewEditor(context, day: _day);
         },
-        onSummarize: () {
-          Navigator.of(context).pop();
-          _summarize(context, tasks);
-        },
       ),
     );
-  }
-
-  Future<void> _summarize(BuildContext context, List<TodoTask> tasks) async {
-    if (_summarizing) return;
-    setState(() => _summarizing = true);
-    try {
-      final store = TodoStore.instance;
-      // 社区动态里往往能看出当天的心情，一起喂给 CiCi 作参考。
-      var extra = '';
-      try {
-        if (AppState.instance.loggedIn) {
-          final posts = await Api.posts();
-          final mine = posts
-              .where(
-                (p) =>
-                    p.mine &&
-                    dayOf(DateTime.fromMillisecondsSinceEpoch(p.ts)) ==
-                        dayOf(_day),
-              )
-              .toList();
-          if (mine.isNotEmpty) {
-            extra =
-                '今天发的社区动态（${mine.length} 条）：\n'
-                '${mine.map((p) => '- ${p.text.trim()}').join('\n')}';
-          }
-        }
-      } catch (_) {
-        // 社区拉取失败不影响复盘生成。
-      }
-      final text = await TodoAi.summary(
-        day: _day,
-        tasks: tasks,
-        moods: store.moodsOn(_day),
-        focusMinutes: _focusMinutesOn(_day),
-        streak: store.streak,
-        gameMinutes: PlayLog.minutesOn(_day),
-        extraContext: extra,
-      );
-      if (!mounted) return;
-      await store.saveReview(_day, text, ai: true);
-      if (mounted) AppToast.show(context, '复盘已生成，可以再编辑');
-    } catch (e) {
-      if (mounted) {
-        AppToast.show(context, e.toString().replaceFirst('AiException: ', ''));
-      }
-    } finally {
-      if (mounted) setState(() => _summarizing = false);
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -742,14 +644,13 @@ class _TodoBoardState extends State<TodoBoard> {
   // -------------------------------------------------------------------------
 }
 
-/// 复盘详情：完整的行为要点 + 复盘正文，可继续编辑或让 CiCi 重写。
+/// 复盘详情：完整的行为要点 + 复盘正文，可继续编辑。
 class _DayDetailSheet extends StatelessWidget {
   final DateTime day;
   final List<({String icon, String text})> highlights;
   final DailyReview? review;
   final String auto;
   final VoidCallback onEdit;
-  final VoidCallback onSummarize;
 
   const _DayDetailSheet({
     required this.day,
@@ -757,7 +658,6 @@ class _DayDetailSheet extends StatelessWidget {
     required this.review,
     required this.auto,
     required this.onEdit,
-    required this.onSummarize,
   });
 
   @override
@@ -873,7 +773,7 @@ class _DayDetailSheet extends StatelessWidget {
             Text(
               review?.text.trim().isNotEmpty == true
                   ? review!.text
-                  : '还没有写复盘。可以让 CiCi 根据这一天的记录总结一版。',
+                  : '还没有写复盘。',
               style: context.ui(
                 size: CitroType.bodyLg,
                 color: c.ink2,
@@ -881,25 +781,14 @@ class _DayDetailSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: AccentButton(
-                    text: '编辑复盘',
-                    outlined: true,
-                    height: 42,
-                    onTap: onEdit,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AccentButton(
-                    text: 'CiCi 总结',
-                    height: 42,
-                    onTap: onSummarize,
-                  ),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: AccentButton(
+                text: '编辑复盘',
+                outlined: true,
+                height: 42,
+                onTap: onEdit,
+              ),
             ),
             const SizedBox(height: 8),
           ],

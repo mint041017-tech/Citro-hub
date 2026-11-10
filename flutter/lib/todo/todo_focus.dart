@@ -91,9 +91,6 @@ class TodoFocusPage extends StatelessWidget {
                     case 'data':
                       Navigator.of(context)
                           .pushReplacementNamed('/todo', arguments: 1);
-                    case 'cici':
-                      Navigator.of(context)
-                          .pushReplacementNamed('/todo', arguments: 2);
                   }
                 },
               ),

@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.9.10）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 2.2.0+2200
+version: 2.2.1+2210
 
 environment:
   sdk: ^3.13.5
@@ -54,6 +54,8 @@ flutter:
     - assets/images/
     - assets/images/mods/
     - assets/images/cats/
+    # 首页上半部分的时间背景图（清晨 / 白天 / 傍晚 / 夜晚）
+    - assets/images/backgrounds/
     - assets/cards_index.json
     # 极限刹车原始版（shache.org，three.js 构建产物）——用 WebView 内嵌
     - assets/shache/

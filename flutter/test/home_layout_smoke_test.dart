@@ -148,8 +148,8 @@ void main() {
     );
     await tester.pump();
     expect(find.byType(NegativeScreen), findsOneWidget);
-    expect(find.text('资源库 · 小工具'), findsOneWidget);
-    expect(find.text('游戏 Mod'), findsOneWidget);
+    expect(find.text('快捷工具'), findsOneWidget);
+    expect(find.text('灵敏度'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
