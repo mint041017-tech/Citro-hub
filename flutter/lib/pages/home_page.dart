@@ -177,8 +177,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           right: 0,
           bottom: 0,
           child: _CardsPanel(
-            side: side,
-            bottomInset: sideNav ? 32 : 100,
             child: NotificationListener<ScrollNotification>(
               onNotification: _onScrollNotification,
               child: SingleChildScrollView(
@@ -186,7 +184,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
-                padding: EdgeInsets.fromLTRB(side, 4, side, 24),
+                // 底部多留一点，让最后一张卡片能滚到 Tab 栏上面。
+                padding: EdgeInsets.fromLTRB(side, 4, side, sideNav ? 92 : 108),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -548,15 +547,9 @@ class _HomeHeader extends StatelessWidget {
 /// 过渡带是透明的，[BackdropFilter] 采到的是上半部分的背景图，
 /// 于是卡片区像是从背景里「长」出来的，而不是一刀切上去。
 class _CardsPanel extends StatelessWidget {
-  final double side;
-  final double bottomInset;
   final Widget child;
 
-  const _CardsPanel({
-    required this.side,
-    required this.bottomInset,
-    required this.child,
-  });
+  const _CardsPanel({required this.child});
 
   @override
   Widget build(BuildContext context) {
