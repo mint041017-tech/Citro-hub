@@ -6,5 +6,7 @@
 	<array>
 		<string>group.com.chimu.crew</string>
 	</array>
+	<key>aps-environment</key>
+	<string>production</string>
 </dict>
 </plist>

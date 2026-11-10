@@ -1,4 +1,8 @@
 {
   "SHOWAPI_KEY": "在这里填万维易源 appKey（https://www.showapi.com）",
-  "GLM_API_KEY": "在这里填智谱 GLM API Key，仅供服务端 /api/ai 代理使用"
+  "GLM_API_KEY": "在这里填智谱 GLM API Key，仅供服务端 /api/ai 代理使用",
+  "APNS_TEAM_ID": "在这里填 Apple Developer Team ID",
+  "APNS_KEY_ID": "在这里填 APNs Auth Key ID",
+  "APNS_BUNDLE_ID": "com.chimu.crew",
+  "APNS_PRIVATE_KEY_FILE": "在这里填 AuthKey_xxx.p8 的服务器绝对路径"
 }

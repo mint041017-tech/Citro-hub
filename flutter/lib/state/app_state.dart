@@ -13,6 +13,7 @@ import '../services/location.dart';
 import '../services/models.dart';
 import '../services/prefs.dart';
 import '../services/notifications.dart';
+import '../services/push_notifications.dart';
 
 class AppState extends ChangeNotifier {
   static final AppState instance = AppState._();
@@ -76,6 +77,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() async {
     await Prefs.init();
+    PushNotifications.onToken = (_) => unawaited(_syncPushBinding());
     CardCatalog.onChanged = () => notifyListeners();
     unawaited(CardCatalog.ensureLoaded());
     notificationsEnabled = Prefs.getBool(PrefKeys.notificationsEnabled, true);
@@ -185,6 +187,15 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _clearAuth() async {
+    final previousAccount = user?.name;
+    if (previousAccount != null) {
+      try {
+        await PushNotifications.setActive(
+          account: previousAccount,
+          enabled: false,
+        );
+      } catch (_) {}
+    }
     _notifyTimer?.cancel();
     _postSeeded = false;
     _lastPostTs = null;
@@ -247,8 +258,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    final previousAccount = user?.name;
+    if (previousAccount != null) {
+      try {
+        await PushNotifications.setActive(
+          account: previousAccount,
+          enabled: false,
+        );
+      } catch (_) {}
+    }
     try {
-      await Api.logout();
+      final pushToken = await PushNotifications.currentToken();
+      await Api.logout(pushToken?.token);
     } catch (_) {}
     await _clearAuth();
   }
@@ -303,11 +324,19 @@ class AppState extends ChangeNotifier {
 
   void _startNotifyPolling() {
     _notifyTimer?.cancel();
+    unawaited(_syncPushBinding());
     _refreshUnread();
     _postSeeded = false;
     _lastPostTs = null;
     unawaited(_seedCommunityPosts());
     _armNotifyTimer();
+  }
+
+  Future<void> _syncPushBinding() {
+    return PushNotifications.setActive(
+      account: user?.name,
+      enabled: loggedIn && notificationsEnabled,
+    );
   }
 
   /// 60 秒一次的前台轮询；退到后台时由 [setForeground] 取消，
@@ -414,6 +443,7 @@ class AppState extends ChangeNotifier {
     notificationsEnabled = value;
     Notifications.enabled = value;
     await Prefs.setBool(PrefKeys.notificationsEnabled, value);
+    unawaited(_syncPushBinding());
     notifyListeners();
   }
 

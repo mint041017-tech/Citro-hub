@@ -10,6 +10,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const pushNotifications = require('./push-notifications');
+const { sendApns } = require('./apns');
 const { execFile } = require('child_process');
 
 /* ---------------- 本地敏感配置 ----------------
@@ -50,6 +52,13 @@ const MAX_IMGS = 3; // 单帖最多配图数
 /* Web AI 只通过本站代理访问 GLM，密钥不会下发到浏览器。 */
 const GLM_API_KEY = envCfg('GLM_API_KEY', '');
 const GLM_MODEL = 'glm-5.3-flash';
+const APNS_CONFIG = {
+  teamId: envCfg('APNS_TEAM_ID', ''),
+  keyId: envCfg('APNS_KEY_ID', ''),
+  bundleId: envCfg('APNS_BUNDLE_ID', 'com.chimu.crew'),
+  file: envCfg('APNS_PRIVATE_KEY_FILE', ''),
+  keyB64: envCfg('APNS_PRIVATE_KEY_B64', ''),
+};
 
 /* CiCi 社区：以「知心大姐姐」的口吻，只看当天动态，主动夸赞开心的事、
    安慰难过的事。每帖最多一条，全站每天限量，避免刷屏。 */
@@ -1176,7 +1185,7 @@ async function runCiciPass(trigger) {
       };
       p.comments = p.comments || [];
       p.comments.push(c);
-      made.push({ postId: p.id, comment: pubComment(c, null) });
+      made.push({ postId: p.id, owner: p.uid, text: text, comment: pubComment(c, null) });
       total++;
       if (total >= CICI_DAY_MAX) break;
     }
@@ -1186,6 +1195,15 @@ async function runCiciPass(trigger) {
     });
     savePosts();
     if (made.length) console.log('[cici] ' + trigger + ' 主动评论了 ' + made.length + ' 条动态');
+    made.forEach(function (item) {
+      queueCommunityPush({
+        type: 'comment',
+        actor: CICI_NAME,
+        owner: item.owner,
+        nick: CICI_NAME,
+        text: item.text,
+      });
+    });
     return { comments: made };
   } catch (e) {
     return { comments: [], err: 'CiCi 刚刚走神了' };
@@ -1279,6 +1297,14 @@ async function runCiciReply(postId, commentId, trigger) {
   };
   p.comments.push(c);
   savePosts();
+  queueCommunityPush({
+    type: 'comment',
+    actor: CICI_NAME,
+    owner: p.uid,
+    replyTo: cm.uid,
+    nick: CICI_NAME,
+    text: text,
+  });
   console.log('[cici] 回复了 ' + reply.nick);
 }
 function enqueueCiciReply(postId, commentId, trigger) {
@@ -1346,6 +1372,11 @@ const usersFile = path.join(DATA_DIR, 'users.json');
 const sessFile = path.join(DATA_DIR, 'sessions.json');
 let users = readJson(usersFile, { users: [] }).users || [];
 let sessions = readJson(sessFile, { tokens: {} }).tokens || {};
+const pushDevicesFile = path.join(DATA_DIR, 'push-devices.json');
+const pushRaw = readJson(pushDevicesFile, { devices: {} });
+let pushState = pushNotifications.normalizePushState({
+  devices: pushRaw && pushRaw.devices ? pushRaw.devices : {},
+});
 /* 扫码登录的一次性会话：id -> { exp, name }，服务重启自动失效。 */
 const qrLogins = {};
 function saveUsers() {
@@ -1353,6 +1384,67 @@ function saveUsers() {
 }
 function saveSessions() {
   writeAtomic(sessFile, { tokens: sessions });
+}
+function savePushDevices() {
+  writeAtomic(pushDevicesFile, pushState);
+}
+function hasActiveSession(uid) {
+  const now = Date.now();
+  return Object.values(sessions).some(function (session) {
+    return session && session.name === uid && session.exp >= now;
+  });
+}
+function removePushToken(uid, token) {
+  const value = String(token || '').trim().toLowerCase();
+  if (pushState.devices[value] && pushState.devices[value].uid === uid) {
+    delete pushState.devices[value];
+    savePushDevices();
+  }
+}
+function migratePushUser(oldName, newName) {
+  let changed = false;
+  Object.keys(pushState.devices).forEach(function (token) {
+    if (pushState.devices[token] && pushState.devices[token].uid === oldName) {
+      pushState.devices[token].uid = newName;
+      changed = true;
+    }
+  });
+  if (changed) savePushDevices();
+}
+function queueCommunityPush(options) {
+  const targets = pushNotifications.notificationTargets(options);
+  targets.forEach(function (target) {
+    if (!hasActiveSession(target)) return;
+    const isReply = Boolean(options.replyTo) && target === options.replyTo;
+    const type = options.type === 'like' ? 'like' : isReply ? 'reply' : 'comment';
+    const payload = pushNotifications.interactionPayload(type, options.nick || options.actor, options.text);
+    pushNotifications.devicesForUser(pushState, target).forEach(function (device) {
+      const sentDevice = pushState.devices[device.token];
+      sendApns(APNS_CONFIG, device.token, device.environment, payload)
+        .then(function (result) {
+          if (result && result.status === 410) {
+            pushState = pushNotifications.applyApnsStatus(
+              pushState,
+              device.token,
+              410,
+              sentDevice && sentDevice.uid,
+              sentDevice && sentDevice.environment,
+              sentDevice && sentDevice.updated,
+            );
+            savePushDevices();
+          } else if (result && result.skipped) {
+            console.error('[apns] skipped:', result.reason);
+          } else if (result && result.status && result.status >= 400) {
+            console.error('[apns] HTTP', result.status);
+          } else if (result && result.error) {
+            console.error('[apns]', result.error);
+          }
+        })
+        .catch(function (error) {
+          console.error('[apns]', error && error.message ? error.message : error);
+        });
+    });
+  });
 }
 function hashPw(pw, salt) {
   return crypto.scryptSync(pw, salt, 64).toString('hex');
@@ -2573,6 +2665,7 @@ const server = http.createServer(async function (req, res) {
       if (sessions[tok] && sessions[tok].name === oldName) sessions[tok].name = name;
     });
     saveSessions();
+    migratePushUser(oldName, name);
     notes.forEach(function (n) {
       if (n.uid === oldName) n.uid = name;
     });
@@ -2622,6 +2715,7 @@ const server = http.createServer(async function (req, res) {
           if (sessions[tok] && sessions[tok].name === oldName) sessions[tok].name = name;
         });
         saveSessions();
+        migratePushUser(oldName, name);
         notes.forEach(function (n) {
           if (n.uid === oldName) n.uid = name;
         });
@@ -2671,6 +2765,8 @@ const server = http.createServer(async function (req, res) {
   /* ===== 账号：登出 ===== */
   if (req.method === 'POST' && url === '/api/auth/logout') {
     if (me) {
+      const b = await body();
+      if (b && b.token) removePushToken(me.name, b.token);
       delete sessions[me.token];
       saveSessions();
     }
@@ -2693,6 +2789,8 @@ const server = http.createServer(async function (req, res) {
     if (!ok) return json(res, 403, { err: '密码不正确' });
 
     const name = u.name;
+    pushState = pushNotifications.removePushDevicesForUser(pushState, name);
+    savePushDevices();
     const deleted = { posts: 0, comments: 0, notes: 0, recipes: 0, scores: 0 };
 
     /* 头像 */
@@ -3055,6 +3153,14 @@ const server = http.createServer(async function (req, res) {
         if (p.likeTs) delete p.likeTs[me.name];
       }
       savePosts();
+      if (i === -1) {
+        queueCommunityPush({
+          type: 'like',
+          actor: me.name,
+          owner: p.uid,
+          nick: me.name,
+        });
+      }
       return json(res, 200, { id: p.id, likes: p.likes, liked: i === -1 });
     }
     if (act[2] === 'hug') {
@@ -3151,6 +3257,14 @@ const server = http.createServer(async function (req, res) {
       p.comments = p.comments || [];
       p.comments.push(c);
       savePosts();
+      queueCommunityPush({
+        type: 'comment',
+        actor: me.name,
+        owner: p.uid,
+        replyTo: replyTarget ? replyTarget.uid : null,
+        nick: c.nick,
+        text: text,
+      });
       /* 回复的是 CiCi 的评论，或明确 @CiCi：让 CiCi 接着回复。 */
       if (replyTarget && replyTarget.uid === CICI_NAME) {
         enqueueCiciReply(p.id, c.id, me.name);
@@ -3427,6 +3541,30 @@ const server = http.createServer(async function (req, res) {
   }
 
   /* ===== ★消息通知：列表（派生自帖子数据，无需额外写入） ===== */
+  if (req.method === 'POST' && url === '/api/push/devices') {
+    if (needAuth(res, me)) return;
+    const b = await body();
+    try {
+      pushState = pushNotifications.bindPushDevice(
+        pushState,
+        me.name,
+        b && b.token,
+        b && b.environment
+      );
+      savePushDevices();
+      return json(res, 200, { ok: true });
+    } catch (error) {
+      return json(res, 400, { err: error && error.message ? error.message : '推送设备绑定失败' });
+    }
+  }
+
+  if (req.method === 'DELETE' && url === '/api/push/devices') {
+    if (needAuth(res, me)) return;
+    const b = await body();
+    removePushToken(me.name, b && b.token);
+    return json(res, 200, { ok: true });
+  }
+
   if (req.method === 'GET' && url === '/api/notifications') {
     if (needAuth(res, me)) return;
     const lastRead = notifRead[me.name] || 0;

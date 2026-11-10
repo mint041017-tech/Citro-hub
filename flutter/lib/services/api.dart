@@ -198,7 +198,8 @@ class Api {
     'password': password,
   }, false);
 
-  static Future<Map<String, dynamic>> logout() => post('/api/auth/logout');
+  static Future<Map<String, dynamic>> logout([String? pushToken]) =>
+      post('/api/auth/logout', pushToken == null ? null : {'token': pushToken});
 
   static Future<Map<String, dynamic>> deleteAccount(String password) =>
       post('/api/auth/delete', {'password': password});

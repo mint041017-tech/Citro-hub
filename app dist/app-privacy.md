@@ -22,6 +22,7 @@
 | User Content → Other User Content | 是 | 是 | 否 | App Functionality | 帖子、评论、点赞/抱一抱、笔记、食谱、冰箱、购物清单、生日、星座、AI 对话、抽签/卡面、好事记录 |
 | User Content → Gameplay Content | 是 | 是 | 否 | App Functionality | 游戏成绩、排行榜、“正在玩”、抽卡/抽签记录 |
 | Identifiers → User ID | 是 | 是 | 否 | App Functionality | 账号 ID、昵称、游客 ID、排行榜身份 |
+| Identifiers → Device ID | 是 | 是 | 否 | App Functionality | iOS APNs 推送 token，登录后用于社区通知；退出登录、关闭通知或注销账号后删除绑定 |
 
 ## 明确不申报的项目
 
@@ -37,7 +38,7 @@
 | Usage Data | 暂不收集 | 无第三方统计 SDK；若服务端开始做行为分析/访问日志画像，补报 Product Interaction |
 | Diagnostics | 暂不收集 | 无崩溃/性能 SDK；Apple 自身的崩溃报告不由开发者直接收集 |
 | Advertising Data | 不收集 | 无广告 |
-| Device ID | 不收集 | 游客名是随机本地昵称，不是 IDFA/IDFV；不要把它误报成 Device ID |
+| Device ID | 收集（见上表） | 游客名是随机本地昵称，不是 IDFA/IDFV；APNs 推送 token 需申报 Device ID |
 | Surroundings | 不收集 | 相机仅用于用户主动拍照，不做 AR/环境扫描 |
 | Body | 不收集 | 无体感数据 |
 | Music/Contacts 等 | 不收集 | — |
@@ -59,7 +60,7 @@ App 隐私标签之外，隐私政策必须写清：
 | Open-Meteo | 经纬度 | 获取天气 |
 | 智谱 GLM | 用户主动提交的 AI 文本、图片、食谱上下文 | 生成 AI 回复 |
 | BigDataCloud | 经纬度（仅 Windows/Web 逆地理） | 城市名解析 |
-| Apple 系统服务 | 定位、相机、麦克风、相册、通知 | 系统权限与能力 |
+| Apple 系统服务 | 定位、相机、麦克风、相册、通知、APNs 推送 token | 系统权限、能力与社区推送送达 |
 
 - 智谱 GLM 由服务端代理调用，App 内不保存 GLM Key；这不改变“数据离开 App”的事实，隐私政策已披露。
 - 没有把数据卖给第三方，也没有用于广告画像。

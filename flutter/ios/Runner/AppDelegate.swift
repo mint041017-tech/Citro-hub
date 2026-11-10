@@ -14,6 +14,7 @@ import UserNotifications
       // 未设置时，App 在前台收到本地通知不会显示横幅。
       UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
     }
+    UIApplication.shared.registerForRemoteNotifications()
     return launched
   }
 
@@ -45,6 +46,7 @@ import UserNotifications
     let messenger = engineBridge.applicationRegistrar.messenger()
     CitroTimerChannel.shared.register(messenger: messenger)
     LedgerIntakeBridge.shared.register(messenger: messenger)
+    PushTokenBridge.shared.register(messenger: messenger)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "CitroLedgerIntake") {
       registrar.addSceneDelegate(LedgerIntakeBridge.shared)
     }
@@ -69,6 +71,78 @@ import UserNotifications
       default:
         result(FlutterMethodNotImplemented)
       }
+    }
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    PushTokenBridge.shared.deviceToken = deviceToken
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    PushTokenBridge.shared.deviceToken = nil
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    // 前台由现有轮询发一条本地通知，APNs 只负责后台/锁屏提醒，避免双重横幅。
+    if notification.request.trigger is UNPushNotificationTrigger {
+      completionHandler([])
+    } else {
+      super.userNotificationCenter(
+        center,
+        willPresent: notification,
+        withCompletionHandler: completionHandler
+      )
+    }
+  }
+}
+
+final class PushTokenBridge {
+  static let shared = PushTokenBridge()
+  private var channel: FlutterMethodChannel?
+  private var lastToken: String?
+
+  var deviceToken: Data? {
+    didSet {
+      let value = deviceToken.map { data in
+        data.map { String(format: "%02x", $0) }.joined()
+      }
+      lastToken = value
+      guard let value, let channel else { return }
+      channel.invokeMethod("token", arguments: ["token": value, "environment": "production"])
+    }
+  }
+
+  func register(messenger: FlutterBinaryMessenger) {
+    guard channel == nil else { return }
+    let channel = FlutterMethodChannel(name: "com.chimu.crew/push", binaryMessenger: messenger)
+    self.channel = channel
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(nil)
+        return
+      }
+      switch call.method {
+      case "getToken":
+        result(lastToken.map { ["token": $0, "environment": "production"] })
+      case "register":
+        UIApplication.shared.registerForRemoteNotifications()
+        result(true)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    if let lastToken {
+      channel.invokeMethod("token", arguments: ["token": lastToken, "environment": "production"])
     }
   }
 }
