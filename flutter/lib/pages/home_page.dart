@@ -649,6 +649,12 @@ class WeatherCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    AppIcon(
+                      strokeSvg(AppIcons.sun, width: 2),
+                      size: 15,
+                      color: c.accent,
+                    ),
+                    const SizedBox(width: 5),
                     Text(
                       '天气',
                       style: context.body(
@@ -875,13 +881,23 @@ class FishCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '摸鱼日历',
-            style: context.body(
-              size: CitroType.meta,
-              weight: CitroType.medium,
-              color: c.inkSoft,
-            ),
+          Row(
+            children: [
+              AppIcon(
+                strokeSvg(AppIcons.wave, width: 2),
+                size: 14,
+                color: c.accent,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '摸鱼日历',
+                style: context.body(
+                  size: CitroType.meta,
+                  weight: CitroType.medium,
+                  color: c.inkSoft,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.x1),
           FittedBox(
