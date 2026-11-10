@@ -32,7 +32,7 @@ final class PushNotifications {
     if (current != null) return current;
     _tokenWaiter ??= Completer<PushToken?>();
     final waiter = _tokenWaiter!;
-    unawaited(_channel.invokeMethod<void>('register'));
+    unawaited(_channel.invokeMethod<void>('register').catchError((_) {}));
     try {
       return await waiter.future.timeout(const Duration(seconds: 3));
     } on TimeoutException {

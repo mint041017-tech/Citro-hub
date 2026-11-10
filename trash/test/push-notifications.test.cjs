@@ -3,13 +3,18 @@ const test = require('node:test');
 
 const {
   applyApnsStatus,
-  bindPushDevice,
-  devicesForUser,
+  bindPushDevice: bindDevice,
+  devicesForUser: activeDevices,
   interactionPayload,
   normalizePushState,
   notificationTargets,
   removePushDevicesForUser,
 } = require('../push-notifications');
+
+const session = 'session-one';
+const sessions = { [session]: { name: 'alice', exp: Infinity }, other: { name: 'bob', exp: Infinity } };
+const bindPushDevice = (state, uid, token, env) => bindDevice(state, uid, token, env, uid === 'bob' ? 'other' : session);
+const devicesForUser = (state, uid, current = sessions) => activeDevices(state, uid, current);
 
 test('a device token is bound to only its latest account', () => {
   const token = 'a'.repeat(64);
@@ -50,8 +55,8 @@ test('device tokens are normalized to lowercase and duplicates merge', () => {
 
   const normalized = normalizePushState({
     devices: {
-      [upper]: { token: upper, uid: 'alice', environment: 'production', updated: 2 },
-      [lower]: { token: lower, uid: 'bob', environment: 'production', updated: 1 },
+      [upper]: { token: upper, uid: 'alice', environment: 'production', session: 'session-one', updated: 2 },
+      [lower]: { token: lower, uid: 'bob', environment: 'production', session: 'other', updated: 1 },
     },
   });
   assert.deepEqual(devicesForUser(normalized, 'alice'), [
@@ -66,21 +71,21 @@ test('community interactions build bounded alert payloads', () => {
     aps: {
       alert: { title: '小明 评论了你的动态', body: 'x'.repeat(60) + '…' },
       sound: 'default',
-      threadId: 'citro-community',
+      'thread-id': 'citro-community',
     },
   });
   assert.deepEqual(interactionPayload('reply', '阿珍', '你好'), {
     aps: {
       alert: { title: '阿珍 回复了你', body: '你好' },
       sound: 'default',
-      threadId: 'citro-community',
+      'thread-id': 'citro-community',
     },
   });
   assert.deepEqual(interactionPayload('like', '阿强', ''), {
     aps: {
       alert: { title: '阿强 赞了你的动态', body: '有人给你送了一个赞' },
       sound: 'default',
-      threadId: 'citro-community',
+      'thread-id': 'citro-community',
     },
   });
 });
@@ -152,4 +157,19 @@ test('account cleanup removes every bound device', () => {
   state = removePushDevicesForUser(state, 'alice');
   assert.deepEqual(devicesForUser(state, 'alice'), []);
   assert.equal(devicesForUser(state, 'bob').length, 1);
+});
+
+
+test('delivery requires the exact unexpired session that bound the device', () => {
+  const token = 'e'.repeat(64);
+  const state = bindDevice({ devices: {} }, 'alice', token, 'production', 'session-one');
+  const sessions = {
+    'session-one': { name: 'alice', exp: Date.now() - 1 },
+    'session-two': { name: 'alice', exp: Date.now() + 60000 },
+  };
+  assert.equal(devicesForUser(state, 'alice', sessions).length, 0);
+  sessions['session-one'].exp = Date.now() + 60000;
+  assert.equal(devicesForUser(state, 'alice', sessions).length, 1);
+  delete sessions['session-one'];
+  assert.equal(devicesForUser(state, 'alice', sessions).length, 0);
 });

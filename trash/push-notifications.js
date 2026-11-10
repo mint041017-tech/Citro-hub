@@ -13,6 +13,7 @@ function normalizePushState(state) {
     next.devices[token] = {
       token,
       uid: String(raw.uid),
+      session: String(raw.session || ''),
       environment: ENVIRONMENTS.has(raw.environment) ? raw.environment : 'production',
       updated,
     };
@@ -20,27 +21,33 @@ function normalizePushState(state) {
   return next;
 }
 
-function bindPushDevice(state, uid, token, environment) {
+function bindPushDevice(state, uid, token, environment, session) {
   const value = String(token || '').trim().toLowerCase();
   if (!TOKEN_RE.test(value)) throw new Error('invalid APNs token');
   if (!ENVIRONMENTS.has(environment)) throw new Error('invalid APNs environment');
   const owner = String(uid || '').trim();
   if (!owner) throw new Error('invalid push account');
+  if (!session) throw new Error('invalid push session');
 
   const next = normalizePushState(state);
   next.devices[value] = {
     token: value,
     uid: owner,
+    session,
     environment,
     updated: Date.now(),
   };
   return next;
 }
 
-function devicesForUser(state, uid) {
+function devicesForUser(state, uid, sessions) {
   const owner = String(uid || '');
   return Object.values(state && state.devices ? state.devices : {})
-    .filter((device) => device && device.uid === owner && TOKEN_RE.test(device.token))
+    .filter((device) => {
+      const session = device && device.session && sessions[device.session];
+      return device && device.uid === owner && TOKEN_RE.test(device.token) &&
+        session && session.name === owner && session.exp >= Date.now();
+    })
     .map(({ token, uid, environment }) => ({ token, uid, environment }))
     .sort((a, b) => a.token.localeCompare(b.token));
 }
@@ -105,7 +112,7 @@ function interactionPayload(type, nick, text) {
     aps: {
       alert: { title: title, body: body },
       sound: 'default',
-      threadId: 'citro-community',
+      'thread-id': 'citro-community',
     },
   };
 }

@@ -18,13 +18,14 @@ final class PushBindingCoordinator {
     required this.unbind,
   });
 
-  Future<void> setActive({
-    required String? account,
-    required bool enabled,
-  }) {
+  Future<void> setActive({required String? account, required bool enabled}) {
     final generation = ++_generation;
     final operation = _queue.then(
-      (_) => _setActive(generation: generation, account: account, enabled: enabled),
+      (_) => _setActive(
+        generation: generation,
+        account: account,
+        enabled: enabled,
+      ),
     );
     _queue = operation.then((_) {}, onError: (_) {});
     return operation;
@@ -39,27 +40,27 @@ final class PushBindingCoordinator {
     if (target == null || target.isEmpty || !enabled) {
       final previous = _activeAccount;
       final previousToken = _activeToken;
-      _activeAccount = null;
-      _activeToken = null;
-      if (generation != _generation || previous == null || previousToken == null) {
+      if (generation != _generation ||
+          previous == null ||
+          previousToken == null) {
         return;
       }
       await unbind(_call(previous, previousToken));
+      _activeAccount = null;
+      _activeToken = null;
       return;
     }
 
-    _activeAccount = target;
     final pushToken = await tokenProvider();
-    if (generation != _generation ||
-        _activeAccount != target ||
-        pushToken == null) {
-      return;
-    }
+    if (generation != _generation || pushToken == null) return;
     if (_activeToken != null && _activeToken != pushToken) {
-      await unbind(_call(target, _activeToken!));
-      if (generation != _generation || _activeAccount != target) return;
+      await unbind(_call(_activeAccount!, _activeToken!));
+      _activeAccount = null;
+      _activeToken = null;
+      if (generation != _generation) return;
     }
     await bind(_call(target, pushToken));
+    _activeAccount = target;
     _activeToken = pushToken;
   }
 

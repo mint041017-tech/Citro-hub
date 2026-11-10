@@ -1385,45 +1385,53 @@ function saveUsers() {
 function saveSessions() {
   writeAtomic(sessFile, { tokens: sessions });
 }
-function savePushDevices() {
-  writeAtomic(pushDevicesFile, pushState);
-}
-function hasActiveSession(uid) {
-  const now = Date.now();
-  return Object.values(sessions).some(function (session) {
-    return session && session.name === uid && session.exp >= now;
-  });
+function savePushDevices(next) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  const tmp = pushDevicesFile + '.tmp';
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(tmp, pushDevicesFile);
+  } catch (error) {
+    try {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], 'push persistence and cleanup failed');
+    }
+    throw error;
+  }
+  pushState = next;
 }
 function removePushToken(uid, token) {
   const value = String(token || '').trim().toLowerCase();
   if (pushState.devices[value] && pushState.devices[value].uid === uid) {
-    delete pushState.devices[value];
-    savePushDevices();
+    const next = pushNotifications.normalizePushState(pushState);
+    delete next.devices[value];
+    savePushDevices(next);
   }
 }
 function migratePushUser(oldName, newName) {
   let changed = false;
-  Object.keys(pushState.devices).forEach(function (token) {
-    if (pushState.devices[token] && pushState.devices[token].uid === oldName) {
-      pushState.devices[token].uid = newName;
+  const next = pushNotifications.normalizePushState(pushState);
+  Object.keys(next.devices).forEach(function (token) {
+    if (next.devices[token] && next.devices[token].uid === oldName) {
+      next.devices[token].uid = newName;
       changed = true;
     }
   });
-  if (changed) savePushDevices();
+  if (changed) savePushDevices(next);
 }
 function queueCommunityPush(options) {
   const targets = pushNotifications.notificationTargets(options);
   targets.forEach(function (target) {
-    if (!hasActiveSession(target)) return;
     const isReply = Boolean(options.replyTo) && target === options.replyTo;
     const type = options.type === 'like' ? 'like' : isReply ? 'reply' : 'comment';
     const payload = pushNotifications.interactionPayload(type, options.nick || options.actor, options.text);
-    pushNotifications.devicesForUser(pushState, target).forEach(function (device) {
+    pushNotifications.devicesForUser(pushState, target, sessions).forEach(function (device) {
       const sentDevice = pushState.devices[device.token];
       sendApns(APNS_CONFIG, device.token, device.environment, payload)
         .then(function (result) {
           if (result && result.status === 410) {
-            pushState = pushNotifications.applyApnsStatus(
+            const next = pushNotifications.applyApnsStatus(
               pushState,
               device.token,
               410,
@@ -1431,7 +1439,7 @@ function queueCommunityPush(options) {
               sentDevice && sentDevice.environment,
               sentDevice && sentDevice.updated,
             );
-            savePushDevices();
+            if (next !== pushState) savePushDevices(next);
           } else if (result && result.skipped) {
             console.error('[apns] skipped:', result.reason);
           } else if (result && result.status && result.status >= 400) {
@@ -2382,6 +2390,7 @@ async function runAstro(mode, payload) {
 
 /* ---------------- 路由 ---------------- */
 const server = http.createServer(async function (req, res) {
+  try {
   res._req = req;
   if (req.method === 'OPTIONS') {
     cors(res, 204, 'text/plain', '');
@@ -2766,9 +2775,9 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/auth/logout') {
     if (me) {
       const b = await body();
-      if (b && b.token) removePushToken(me.name, b.token);
       delete sessions[me.token];
       saveSessions();
+      if (b && b.token) removePushToken(me.name, b.token);
     }
     clearCookie(res, req);
     return json(res, 200, { ok: true });
@@ -2789,8 +2798,7 @@ const server = http.createServer(async function (req, res) {
     if (!ok) return json(res, 403, { err: '密码不正确' });
 
     const name = u.name;
-    pushState = pushNotifications.removePushDevicesForUser(pushState, name);
-    savePushDevices();
+    savePushDevices(pushNotifications.removePushDevicesForUser(pushState, name));
     const deleted = { posts: 0, comments: 0, notes: 0, recipes: 0, scores: 0 };
 
     /* 头像 */
@@ -3544,18 +3552,18 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/push/devices') {
     if (needAuth(res, me)) return;
     const b = await body();
+    const current = currentUser(req);
+    if (!current || current.token !== me.token || current.name !== me.name) return json(res, 401, { err: '请先登录' });
+    let next;
     try {
-      pushState = pushNotifications.bindPushDevice(
-        pushState,
-        me.name,
-        b && b.token,
-        b && b.environment
+      next = pushNotifications.bindPushDevice(
+        pushState, me.name, b && b.token, b && b.environment, me.token
       );
-      savePushDevices();
-      return json(res, 200, { ok: true });
     } catch (error) {
       return json(res, 400, { err: error && error.message ? error.message : '推送设备绑定失败' });
     }
+    savePushDevices(next);
+    return json(res, 200, { ok: true });
   }
 
   if (req.method === 'DELETE' && url === '/api/push/devices') {
@@ -4941,6 +4949,11 @@ const server = http.createServer(async function (req, res) {
     return json(res, 200, { ok: true, name: 'chimu-api', date: dayStr(), posts: posts.length, users: users.length });
   }
   cors(res, 404, 'text/plain', 'Not Found');
+  } catch (error) {
+    console.error('[request]', error);
+    if (!res.headersSent) return json(res, 500, { err: '服务器内部错误' });
+    res.destroy();
+  }
 });
 
 server.listen(PORT, HOST, function () {

@@ -40,6 +40,7 @@ class AppState extends ChangeNotifier {
   bool _locationAsked = false;
   int unread = 0;
   bool notificationsEnabled = true;
+  bool _pushBindingBlocked = false;
   bool reduceMotion = false;
   // HyperOS / MIUI 在后台会限制网络与 CPU；退到后台后暂停未读/动态轮询，
   // 回前台再补一次，避免每分钟醒来发请求。
@@ -144,6 +145,7 @@ class AppState extends ChangeNotifier {
   Future<void> _restoreUser() async {
     try {
       final j = await Api.me().timeout(const Duration(seconds: 8));
+      if (_pushBindingBlocked) return;
       final token = j['token']?.toString() ?? '';
       if (token.isNotEmpty) Api.token = token;
       final u = User.fromJson(j['user']);
@@ -187,15 +189,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _clearAuth() async {
-    final previousAccount = user?.name;
-    if (previousAccount != null) {
-      try {
-        await PushNotifications.setActive(
-          account: previousAccount,
-          enabled: false,
-        );
-      } catch (_) {}
-    }
+    _pushBindingBlocked = true;
+    try {
+      await PushNotifications.setActive(account: user?.name, enabled: false);
+    } catch (_) {}
     _notifyTimer?.cancel();
     _postSeeded = false;
     _lastPostTs = null;
@@ -215,6 +212,7 @@ class AppState extends ChangeNotifier {
     final j = await Api.login(account, password);
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
+    _pushBindingBlocked = false;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -227,6 +225,7 @@ class AppState extends ChangeNotifier {
   Future<void> applyQrLogin(String token, Map<String, dynamic> userJson) async {
     Api.token = token;
     user = User.fromJson(userJson);
+    _pushBindingBlocked = false;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -249,6 +248,7 @@ class AppState extends ChangeNotifier {
     );
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
+    _pushBindingBlocked = false;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -258,15 +258,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    final previousAccount = user?.name;
-    if (previousAccount != null) {
-      try {
-        await PushNotifications.setActive(
-          account: previousAccount,
-          enabled: false,
-        );
-      } catch (_) {}
-    }
+    _pushBindingBlocked = true;
+    try {
+      await PushNotifications.setActive(account: user?.name, enabled: false);
+    } catch (_) {}
     try {
       final pushToken = await PushNotifications.currentToken();
       await Api.logout(pushToken?.token);
@@ -332,11 +327,14 @@ class AppState extends ChangeNotifier {
     _armNotifyTimer();
   }
 
-  Future<void> _syncPushBinding() {
-    return PushNotifications.setActive(
-      account: user?.name,
-      enabled: loggedIn && notificationsEnabled,
-    );
+  Future<void> _syncPushBinding() async {
+    if (_pushBindingBlocked) return;
+    try {
+      await PushNotifications.setActive(
+        account: user?.name,
+        enabled: loggedIn && notificationsEnabled,
+      );
+    } catch (_) {}
   }
 
   /// 60 秒一次的前台轮询；退到后台时由 [setForeground] 取消，
