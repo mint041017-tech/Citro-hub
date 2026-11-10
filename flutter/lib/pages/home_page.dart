@@ -586,9 +586,11 @@ class CookCard extends StatelessWidget {
       },
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 96),
-        child: Row(
-          children: [
-            Container(
+        // 窄格子（小屏手机 / 双栏内屏）里图标 + 箭头会挤爆一行，
+        // 这时改成竖排：图标在上，两行文字在下。
+        child: LayoutBuilder(
+          builder: (context, cons) {
+            final icon = Container(
               width: 64,
               height: 64,
               decoration: BoxDecoration(
@@ -602,34 +604,67 @@ class CookCard extends StatelessWidget {
                   color: c.accentInk,
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.x2),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+            );
+            final text = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '食谱日记',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(size: CitroType.titleLg, color: c.ink),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '记录今天吃了什么',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(size: CitroType.meta, color: c.inkSoft),
+                ),
+              ],
+            );
+            if (cons.maxWidth < 150) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '食谱日记',
-                    style: context.heading(size: CitroType.titleLg, color: c.ink),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: c.tintYellow,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Center(
+                        child: AppIcon(
+                          strokeSvg(AppIcons.fork, width: 2),
+                          size: 20,
+                          color: c.accentInk,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '记录今天吃了什么',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: CitroType.meta, color: c.inkSoft),
-                  ),
+                  const SizedBox(height: AppSpacing.x1),
+                  text,
                 ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.x1),
-            AppIcon(
-              strokeSvg(AppIcons.arrowRight, width: 2),
-              size: 18,
-              color: c.inkSoft,
-            ),
-          ],
+              );
+            }
+            return Row(
+              children: [
+                icon,
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(child: text),
+                const SizedBox(width: AppSpacing.x1),
+                AppIcon(
+                  strokeSvg(AppIcons.arrowRight, width: 2),
+                  size: 18,
+                  color: c.inkSoft,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

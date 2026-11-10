@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app_keys.dart';
 import 'ledger/ledger_intake.dart';
@@ -34,6 +35,11 @@ Future<void> main() async {
   // 叠加在同一个计数器上，退出游戏后不会把全局请求释放掉。
   RefreshRate.acquire();
   await CitroDesktopShell.init();
+  // 预热液态玻璃的着色器：只在启动时做一次异步磁盘读取，
+  // 免得首帧才编译导致玻璃表面闪白。失败也不阻塞启动。
+  try {
+    await LiquidGlassWidgets.initialize().timeout(const Duration(seconds: 3));
+  } catch (_) {}
   // 图片缓存是这类图文 App 最容易吃满内存的地方：限制总量，低内存时整块清掉。
   // 桌面端内存更宽裕，放宽缓存避免大图反复解码，帧时间更稳定。
   final desktopCache = !kIsWeb && platform.isDesktop;
@@ -49,7 +55,14 @@ Future<void> main() async {
       ]);
     } catch (_) {}
   }
-  runApp(const CitroApp());
+  runApp(
+    // 玻璃材质要跟着 MaterialApp 的 ThemeMode 走，否则深色模式下
+    // 阴影和描边会按系统亮度算，和 App 实际主题对不上。
+    LiquidGlassWidgets.wrap(
+      brightnessResolver: Theme.maybeBrightnessOf,
+      child: const CitroApp(),
+    ),
+  );
   // 系统分享 / iOS 快捷指令可能冷启动 App：首帧后注册原生通道并消费待处理截图。
   LedgerIntake.instance.attach();
   // 方向同步不再阻塞首帧；RootShell 布局时也会按实际窗口再同步一次。

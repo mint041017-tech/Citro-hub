@@ -211,8 +211,19 @@ class PomodoroState extends ChangeNotifier {
       if (remain >= total || remain == 0) remain = total.toDouble();
     }
     _inited = true;
-    notifyListeners();
+    _notifyAfterFrame();
     unawaited(_refreshPermission());
+  }
+
+  /// init() 在赋值后立刻通知，但从 `initState` 里调进来时框架正在 build，
+  /// 监听者此时 setState 会抛 「markNeedsBuild() called during build」。
+  /// 字段这时已经就位，首帧照样读得到，把通知推到帧末再发。
+  void _notifyAfterFrame() {
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      notifyListeners();
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
   }
 
   Future<void> _refreshPermission() async {

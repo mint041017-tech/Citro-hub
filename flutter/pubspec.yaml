@@ -39,6 +39,7 @@ dependencies:
   speech_to_text: ^7.5.0
   qr_flutter: 4.1.0
   mobile_scanner: 5.2.3
+  liquid_glass_widgets: ^1.17.1
 
 dev_dependencies:
   flutter_test:

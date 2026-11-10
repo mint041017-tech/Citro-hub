@@ -5,9 +5,9 @@ import '../state/app_state.dart';
 import '../state/custom_tab.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
-import '../theme/native.dart';
 import '../theme/tokens.dart';
 import 'app_image.dart';
+import 'liquid_glass.dart';
 import 'modal.dart';
 import 'motion_widgets.dart';
 import 'paper.dart';
@@ -34,7 +34,6 @@ class CitroTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     final unread = context.app.unread;
     final avatarUrl = Api.imageUrl(context.app.user?.av);
     // 栏总高 = 头像凸起部分 + 玻璃条。
@@ -68,14 +67,10 @@ class CitroTabBar extends StatelessWidget {
                     right: 0,
                     bottom: 0,
                     height: barHeight,
-                    child: CitroGlass(
+                    child: CitroLiquidGlass(
                       height: barHeight,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                      tint: c.surface,
-                      borderColor: c.line,
-                      highlight: true,
-                      blur: true,
-                      shadow: CitroColors.shadows.float(c),
+                      radius: barHeight / 2,
+                      clipBehavior: Clip.antiAlias,
                       child: Row(
                         children: [
                           for (var i = 0; i < specs.length; i++) ...[
@@ -157,51 +152,44 @@ class _TabContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
-    final fg = active ? c.bg : c.inkSoft;
+    // 选中态只用颜色区分（和 iOS 26 玻璃导航一致）：
+    // 实色墨 vs 灰，不压瓷实底，玻璃的通透感才留得住。
+    final fg = active ? c.ink : c.inkSoft;
     return SizedBox(
       height: 44,
       child: Center(
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            AnimatedContainer(
+            AnimatedScale(
+              scale: active ? 1 : .94,
               duration: reduce ? Duration.zero : CitroMotion.press,
               curve: CitroMotion.easeOut,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: active ? c.ink : Colors.transparent,
-                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-              ),
-              child: AnimatedScale(
-                scale: active ? 1 : 0.94,
-                duration: reduce ? Duration.zero : CitroMotion.press,
-                curve: CitroMotion.easeOut,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppIcon(
-                      strokeSvg(icon, width: 2),
-                      size: 20,
-                      color: fg,
-                    ),
-                    const SizedBox(height: 2),
-                    // 文字不再自带语义：外面已经用 Semantics(label:) 报了 Tab 名，
-                    // 否则读屏会把「首页 首页」念两遍。
-                    ExcludeSemantics(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.body(
-                          size: CitroType.micro,
-                          weight: active ? CitroType.medium : CitroType.regular,
-                          color: fg,
-                          height: 1,
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(
+                    strokeSvg(icon, width: 2),
+                    size: 20,
+                    color: fg,
+                  ),
+                  const SizedBox(height: 2),
+                  // 文字不再自带语义：外面已经用 Semantics(label:) 报了 Tab 名，
+                  // 否则读屏会把「首页 首页」念两遍。
+                  ExcludeSemantics(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.body(
+                        size: CitroType.micro,
+                        weight: active ? CitroType.medium : CitroType.regular,
+                        color: fg,
+                        height: 1,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             if (badge > 0)
