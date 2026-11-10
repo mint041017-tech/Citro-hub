@@ -134,6 +134,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('hero pull-down reveals the negative screen', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(NegativeScreen), findsNothing);
+
+    // 在上半屏（背景图 + 打招呼）往下拖，同样要能唤出负一屏。
+    await tester.drag(
+      find.text('今天也要开心'),
+      const Offset(0, 260),
+    );
+    await tester.pump();
+    expect(find.byType(NegativeScreen), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pull-down reveals the negative screen', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
