@@ -25,16 +25,16 @@ class TingyuPlayChip extends StatelessWidget {
         onTap: () => Navigator.of(context).pushNamed('/tingyu'),
         hoverLift: 0,
         hoverShadow: false,
-        hoverColor: c.hl.withAlpha(55),
-        borderRadius: BorderRadius.circular(99),
+        hoverColor: c.accent.withAlpha(24),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         child: Container(
           height: height,
           padding: const EdgeInsets.only(left: 14, right: 5),
           decoration: BoxDecoration(
             color: c.surface2.withAlpha(220),
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
+            boxShadow: CitroColors.shadows.card(c),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -52,8 +52,8 @@ class TingyuPlayChip extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.body(
-                    size: 13,
-                    weight: FontWeight.w700,
+                    size: CitroType.meta,
+                    weight: CitroType.strong,
                     color: c.ink,
                   ),
                 ),
@@ -65,19 +65,19 @@ class TingyuPlayChip extends StatelessWidget {
                 child: Pressable(
                   onTap: () => unawaited(player.send('pause')),
                   scale: .9,
-                  hoverColor: c.hl.withAlpha(55),
-                  borderRadius: BorderRadius.circular(99),
+                  hoverColor: c.accent.withAlpha(24),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                   child: Container(
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: c.hl,
+                      color: c.accent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.pause_rounded,
                       size: 18,
-                      color: c.accentInk,
+                      color: c.onAccent,
                     ),
                   ),
                 ),

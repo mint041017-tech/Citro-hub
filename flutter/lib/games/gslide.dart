@@ -10,9 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_common.dart';
 import 'game_ui.dart';
-
-/// 结算卡数字高亮色（与淘气小球 _floatInk 同款金棕）。
-const Color _slideFloatInk = Color(0xFF35506E);
+import 'game_theme.dart';
 
 class GameSlidePage extends StatefulWidget {
   const GameSlidePage({super.key});
@@ -307,18 +305,16 @@ class GameSlideView extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: c.dark ? c.mint : c.mintInk,
+            color: c.accent,
             borderRadius: BorderRadius.circular(inner),
+            boxShadow: CitroColors.shadows.sm(c),
           ),
           child: Text(
             '$value',
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontFamilyFallback: AppFonts.fallback,
-              fontSize: cell * 0.315,
-              fontWeight: FontWeight.w700,
-              height: 1.65,
-              color: c.dark ? const Color(0xFF23211C) : c.surface2,
+            style: context.hand(
+              size: cell * 0.34,
+              weight: CitroType.strong,
+              color: c.accentText,
             ),
           ),
         ),
@@ -331,23 +327,12 @@ class GameSlideView extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              color: c.line,
+              color: c.surface,
               borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: c.line2, width: border),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _InsetShadowPainter(
-                color: const Color(0x175A4A2C),
-                blur: 6,
-                offset: const Offset(0, 2),
-                radius: radius,
-              ),
+              border: Border.all(color: c.line),
+              boxShadow: CitroColors.shadows.card(c),
             ),
           ),
         ),
@@ -359,20 +344,9 @@ class GameSlideView extends StatelessWidget {
           height: cell,
           child: Container(
             decoration: BoxDecoration(
-              color: c.bg2,
+              color: c.surface2,
               borderRadius: BorderRadius.circular(inner),
               border: Border.all(color: c.line2, width: 1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(inner),
-              child: CustomPaint(
-                painter: _InsetShadowPainter(
-                  color: const Color(0x1A5A4A2C),
-                  blur: 6,
-                  offset: const Offset(0, 2),
-                  radius: inner,
-                ),
-              ),
             ),
           ),
         ),
@@ -404,22 +378,16 @@ class GameSlideView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
-        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
-        borderRadius: BorderRadius.circular(22),
+        color: c.surface.withValues(alpha: 0.96),
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             '恭喜通关！',
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontSize: 22,
-              height: 36.3 / 22,
-              letterSpacing: 1.32,
-              color: c.ink,
-            ),
+            style: context.heading(size: CitroType.subtitle, color: c.ink),
           ),
           const SizedBox(height: 10),
           Padding(
@@ -431,7 +399,7 @@ class GameSlideView extends StatelessWidget {
                   TextSpan(
                     text: fmtDuration(seconds),
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : _slideFloatInk,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -439,20 +407,14 @@ class GameSlideView extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : _slideFloatInk,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 13,
-                height: 22.1 / 13,
-                color: c.ink2,
-              ),
+              style: context.body(size: CitroType.meta, color: c.ink2),
             ),
           ),
           const SizedBox(height: 10),
@@ -512,62 +474,19 @@ class _DiffTabs extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: on ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
             border: Border.all(color: Colors.transparent),
           ),
           child: Text(
             item.$2,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
-              color: on ? const Color(0xFF2E2C22) : c.ink2,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
+              color: on ? c.accentText : c.ink2,
             ),
           ),
         ),
       ),
     );
   }
-}
-
-/// CSS `inset 0 2px 6px`（内侧投影）的近似：裁到圆角矩形后画一圈模糊外环
-class _InsetShadowPainter extends CustomPainter {
-  const _InsetShadowPainter({
-    required this.color,
-    required this.blur,
-    required this.offset,
-    required this.radius,
-  });
-
-  final Color color;
-  final double blur;
-  final Offset offset;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-    canvas.save();
-    canvas.clipRRect(rrect);
-    final outer = Path()..addRect((Offset.zero & size).inflate(blur * 2 + 6));
-    final inner = Path()..addRRect(rrect.shift(offset).deflate(1 + blur * 0.5));
-    final ring = Path.combine(PathOperation.difference, outer, inner);
-    final paint = Paint()
-      ..color = color
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur * 0.5);
-    canvas.drawPath(ring, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _InsetShadowPainter old) =>
-      old.color != color ||
-      old.blur != blur ||
-      old.offset != offset ||
-      old.radius != radius;
 }

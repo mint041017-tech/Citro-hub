@@ -273,7 +273,7 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
                                   ? CitroType.strong
                                   : CitroType.regular,
                               color: selected
-                                  ? const Color(0xFF2E2C22)
+                                  ? c.onAccent
                                   : (dayNumber == 1 ? c.inkSoft : c.ink2),
                             ),
                           ),
@@ -326,9 +326,9 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
                       ':',
-                      style: context.ldisplay(
-                        size: 20,
-                        weight: FontWeight.w700,
+                      style: context.lhand(
+                        size: CitroType.titleLg,
+                        weight: CitroType.strong,
                         color: c.inkSoft,
                       ),
                     ),
@@ -421,7 +421,7 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
           height: 30,
           decoration: BoxDecoration(
             color: c.accent2.withAlpha(30),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           ),
         ),
         ListWheelScrollView.useDelegate(
@@ -447,9 +447,9 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
               return Center(
                 child: Text(
                   value.toString().padLeft(2, '0'),
-                  style: context.ldisplay(
-                    size: selected ? 18 : 16,
-                    weight: selected ? FontWeight.w700 : FontWeight.w400,
+                  style: context.lhand(
+                    size: selected ? CitroType.title : CitroType.bodyLg,
+                    weight: selected ? CitroType.strong : CitroType.regular,
                     color: selected ? c.ink : c.inkSoft,
                   ),
                 ),

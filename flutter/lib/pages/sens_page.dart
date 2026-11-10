@@ -67,7 +67,7 @@ class _SensPageState extends State<SensPage> {
     final d = double.tryParse(dpi.text.trim()) ?? 0;
     final eDpi = (d * target).round();
     return Scaffold(
-      body: PaperBackground(
+      body: CitroBackground(
         child: SafeArea(
           child: Stack(
             children: [
@@ -84,7 +84,7 @@ class _SensPageState extends State<SensPage> {
                           textAlign: TextAlign.center,
                           style: context.display(
                             size: 30,
-                            weight: FontWeight.w700,
+                            weight: CitroType.strong,
                             color: c.ink,
                           ),
                         ),
@@ -92,17 +92,14 @@ class _SensPageState extends State<SensPage> {
                         Text(
                           '同一套肌肉记忆，换到哪个游戏都不迷路。',
                           textAlign: TextAlign.center,
-                          style: context.body(size: 13, color: c.inkSoft),
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: c.surface2,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: c.line),
-                            boxShadow: CitroColors.shadows.paper(c),
+                          style: context.body(
+                            size: CitroType.meta,
+                            color: c.inkSoft,
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.x3),
+                        CitroCard(
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -118,34 +115,9 @@ class _SensPageState extends State<SensPage> {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
+                                      horizontal: AppSpacing.x1,
                                     ),
-                                    child: GestureDetector(
-                                      onTap: () => setState(() {
-                                        final t = src;
-                                        src = dst;
-                                        dst = t;
-                                      }),
-                                      child: Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: c.hl,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: c.line2),
-                                        ),
-                                        child: Center(
-                                          child: AppIcon(
-                                            strokeSvg(
-                                              '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
-                                              width: 2,
-                                            ),
-                                            size: 18,
-                                            color: c.accentInk,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                    child: _swapButton(c),
                                   ),
                                   Expanded(
                                     child: _gameField(
@@ -156,7 +128,7 @@ class _SensPageState extends State<SensPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: AppSpacing.x2),
                               Row(
                                 children: [
                                   Expanded(child: _numField('DPI', dpi)),
@@ -164,103 +136,19 @@ class _SensPageState extends State<SensPage> {
                                   Expanded(child: _numField('来源灵敏度', sens)),
                                 ],
                               ),
-                              const SizedBox(height: 18),
-                              Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0x6BFFC795),
-                                      Color(0x24E8964E),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: const Color(0x57E8964E),
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      '${dstGame.code} · 目标灵敏度',
-                                      style: context.body(
-                                        size: 12,
-                                        weight: FontWeight.w700,
-                                        color: c.accentInk,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      targetText,
-                                      style: context.display(
-                                        size: 44,
-                                        weight: FontWeight.w700,
-                                        color: c.ink,
-                                        height: 1.05,
-                                      ),
-                                    ),
-                                    Text(
-                                      eDpi > 0 ? '$eDpi eDPI' : '— eDPI',
-                                      style: context.body(
-                                        size: 11,
-                                        color: c.inkSoft,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Pressable(
-                                      onTap: () => copyText(
-                                        targetText,
-                                        context: context,
-                                        tip: '已复制目标灵敏度',
-                                      ),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: c.surface2,
-                                          borderRadius: BorderRadius.circular(
-                                            999,
-                                          ),
-                                          border: Border.all(color: c.line2),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            AppIcon(
-                                              strokeSvg(
-                                                AppIcons.copy,
-                                                width: 2,
-                                              ),
-                                              size: 13,
-                                              color: c.accentInk,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '复制',
-                                              style: context.body(
-                                                size: 12,
-                                                color: c.accentInk,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              const SizedBox(height: AppSpacing.x3),
+                              _resultCard(c, eDpi),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.x2),
                         Text(
                           '换算只取决于引擎 yaw 比；DPI 视为两边共用，仅用于展示 eDPI。',
                           textAlign: TextAlign.center,
-                          style: context.body(size: 11, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ],
                     ),
@@ -276,10 +164,10 @@ class _SensPageState extends State<SensPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: c.surface2,
+                      color: c.surface,
                       shape: BoxShape.circle,
                       border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.paper(c),
+                      boxShadow: CitroColors.shadows.card(c),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -298,6 +186,107 @@ class _SensPageState extends State<SensPage> {
     );
   }
 
+  Widget _swapButton(CitroColors c) {
+    return GestureDetector(
+      onTap: () => setState(() {
+        final t = src;
+        src = dst;
+        dst = t;
+      }),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: c.surface2,
+          shape: BoxShape.circle,
+          border: Border.all(color: c.line2),
+        ),
+        child: Center(
+          child: AppIcon(
+            strokeSvg(
+              '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+              width: 2,
+            ),
+            size: 18,
+            color: c.accentInk,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _resultCard(CitroColors c, int eDpi) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.accentLt.withAlpha(c.dark ? 90 : 220)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '${dstGame.code} · 目标灵敏度',
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.medium,
+              color: c.accentInk,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            targetText,
+            style: context.hand(
+              size: 44,
+              weight: CitroType.strong,
+              color: c.ink,
+              height: 1.05,
+            ),
+          ),
+          Text(
+            eDpi > 0 ? '$eDpi eDPI' : '— eDPI',
+            style: context.body(size: CitroType.small, color: c.inkSoft),
+          ),
+          const SizedBox(height: AppSpacing.x2),
+          Pressable(
+            onTap: () => copyText(
+              targetText,
+              context: context,
+              tip: '已复制目标灵敏度',
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                border: Border.all(color: c.line2),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(
+                    strokeSvg(AppIcons.copy, width: 2),
+                    size: 14,
+                    color: c.accentInk,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '复制',
+                    style: context.body(
+                      size: CitroType.caption,
+                      weight: CitroType.medium,
+                      color: c.accentInk,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _gameField(
     String label,
     String value,
@@ -310,8 +299,8 @@ class _SensPageState extends State<SensPage> {
         Text(
           label,
           style: context.body(
-            size: 11,
-            weight: FontWeight.w700,
+            size: CitroType.small,
+            weight: CitroType.medium,
             color: c.inkSoft,
             letterSpacing: .5,
           ),
@@ -322,7 +311,7 @@ class _SensPageState extends State<SensPage> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(CitroColors.radii.field),
             border: Border.all(color: c.line),
           ),
           child: DropdownButtonHideUnderline(
@@ -330,10 +319,10 @@ class _SensPageState extends State<SensPage> {
               value: value,
               isExpanded: true,
               dropdownColor: c.surface2,
-              style: context.body(size: 13, color: c.ink),
+              style: context.body(size: CitroType.meta, color: c.ink),
               icon: AppIcon(
                 strokeSvg(AppIcons.chevronDown, width: 2),
-                size: 13,
+                size: 14,
                 color: c.inkSoft,
               ),
               items: [
@@ -342,7 +331,7 @@ class _SensPageState extends State<SensPage> {
                     value: g.code,
                     child: Text(
                       '${g.code} · ${g.name}',
-                      style: context.body(size: 12, color: c.ink),
+                      style: context.body(size: CitroType.caption, color: c.ink),
                     ),
                   ),
               ],
@@ -364,8 +353,8 @@ class _SensPageState extends State<SensPage> {
         Text(
           label,
           style: context.body(
-            size: 11,
-            weight: FontWeight.w700,
+            size: CitroType.small,
+            weight: CitroType.medium,
             color: c.inkSoft,
             letterSpacing: .5,
           ),
@@ -375,18 +364,18 @@ class _SensPageState extends State<SensPage> {
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: (_) => setState(() {}),
-          style: context.body(size: 14, color: c.ink),
+          style: context.body(size: CitroType.body, color: c.ink),
           decoration: InputDecoration(
             filled: true,
             fillColor: c.surface2,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14),
             constraints: const BoxConstraints(minHeight: 44),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(CitroColors.radii.field),
               borderSide: BorderSide(color: c.line),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(CitroColors.radii.field),
               borderSide: BorderSide(color: c.accent),
             ),
           ),

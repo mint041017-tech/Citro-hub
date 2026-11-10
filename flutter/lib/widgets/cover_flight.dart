@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../theme/motion.dart';
+import '../theme/tokens.dart';
 
 /// 飞行替身在 Overlay 里的身份，测试用来确认它插入后会被干净地撤掉。
 const Key coverFlightKey = ValueKey('citro-cover-flight');
@@ -39,7 +40,7 @@ class CitroCoverFlight {
           builder: (_, _) {
             final t = curve.transform(controller.value);
             final r = Rect.lerp(from, target, t)!;
-            final radius = 8 + 4 * t;
+            final radius = CitroColors.radii.card - 4 * (1 - t);
             return Stack(
               key: coverFlightKey,
               children: [

@@ -135,7 +135,7 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: c.line2,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -212,9 +212,9 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
                             ),
                             Text(
                               ledgerMoney(_total),
-                              style: context.ldisplay(
-                                size: 24,
-                                weight: FontWeight.w700,
+                              style: context.lhand(
+                                size: CitroType.titleLg,
+                                weight: CitroType.strong,
                                 color: c.ink,
                               ),
                             ),
@@ -252,7 +252,7 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
           ? Duration.zero
           : CitroMotion.hover,
       opacity: edit.selected ? 1 : .55,
-      child: PaperCard(
+      child: CitroCard(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         color: c.surface2,
         child: Column(
@@ -268,18 +268,18 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
                     height: 22,
                     decoration: BoxDecoration(
                       color: edit.selected ? c.accent : Colors.transparent,
-                      borderRadius: BorderRadius.circular(7),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                       border: Border.all(
                         color: edit.selected ? c.accent : c.line2,
                         width: 1.4,
                       ),
                     ),
                     child: edit.selected
-                        ? const Center(
+                        ? Center(
                             child: Icon(
                               Icons.check_rounded,
                               size: 15,
-                              color: Color(0xFF2E2C22),
+                              color: c.onAccent,
                             ),
                           )
                         : null,
@@ -326,18 +326,18 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
                       decimal: true,
                     ),
                     onChanged: (_) => setState(() {}),
-                    style: context.ldisplay(
-                      size: 28,
-                      weight: FontWeight.w700,
+                    style: context.lhand(
+                      size: CitroType.heading,
+                      weight: CitroType.strong,
                       color: c.ink,
                     ),
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       prefixText: '¥ ',
-                      prefixStyle: context.ldisplay(
-                        size: 18,
-                        weight: FontWeight.w700,
+                      prefixStyle: context.lhand(
+                        size: CitroType.title,
+                        weight: CitroType.strong,
                         color: c.inkSoft,
                       ),
                       contentPadding: EdgeInsets.zero,

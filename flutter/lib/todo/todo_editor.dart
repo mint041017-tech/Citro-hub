@@ -22,7 +22,7 @@ Future<TodoTask?> showTodoEditor(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x8A23211C),
+    barrierColor: context.c.scrim,
     builder: (ctx) => TodoScope(
       child: _TodoEditorSheet(initial: initial, kind: kind, day: day),
     ),
@@ -297,7 +297,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
           margin: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
             border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.lg(c),
           ),
@@ -326,7 +326,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                           child: AppIcon(
                             strokeSvg(AppIcons.trash, width: 2),
                             size: 18,
-                            color: c.stamp,
+                            color: c.danger,
                           ),
                         ),
                       ),
@@ -419,7 +419,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                           _error!,
                           style: context.ui(
                             size: CitroType.meta,
-                            color: c.stamp,
+                            color: c.danger,
                           ),
                         ),
                       ),
@@ -451,7 +451,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
       height: 4,
       decoration: BoxDecoration(
         color: c.line2,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
       ),
     ),
   );
@@ -475,7 +475,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: c.bg2.withAlpha(c.dark ? 120 : 90),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: c.line),
         ),
         child: Row(
@@ -604,7 +604,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: active ? c.accent.withAlpha(190) : c.bg2.withAlpha(110),
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           border: Border.all(color: active ? c.accent : c.line),
         ),
         child: Text(
@@ -612,7 +612,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
           style: context.ui(
             size: CitroType.meta,
             weight: active ? CitroType.strong : CitroType.regular,
-            color: active ? const Color(0xFF2E2C22) : c.ink2,
+            color: active ? c.onAccent : c.ink2,
             height: 1,
           ),
         ),
@@ -635,7 +635,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: c.line),
         ),
         child: Row(
@@ -679,7 +679,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                   color: _priority == i
                       ? c.accent.withAlpha(190)
                       : c.bg2.withAlpha(90),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(color: _priority == i ? c.accent : c.line),
                 ),
                 child: Text(
@@ -689,7 +689,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                     weight: _priority == i
                         ? CitroType.strong
                         : CitroType.regular,
-                    color: _priority == i ? const Color(0xFF2E2C22) : c.ink2,
+                    color: _priority == i ? c.onAccent : c.ink2,
                   ),
                 ),
               ),
@@ -721,7 +721,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                     color: _categoryId == cat.id
                         ? context.c.accent.withAlpha(38)
                         : context.c.bg2.withAlpha(80),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(
                       color: _categoryId == cat.id
                           ? context.c.accent.withAlpha(150)
@@ -764,7 +764,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: context.c.bg2.withAlpha(70),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(color: context.c.line),
                 ),
                 child: Row(
@@ -831,7 +831,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                     color: _listId == list.id
                         ? context.c.accent.withAlpha(38)
                         : context.c.bg2.withAlpha(80),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(
                       color: _listId == list.id
                           ? context.c.accent.withAlpha(150)
@@ -873,7 +873,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: context.c.bg2.withAlpha(70),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(color: context.c.line),
                 ),
                 child: Row(
@@ -915,20 +915,20 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                 Pressable(
                   onTap: () => setState(() => _subtasks.removeAt(i)),
                   scale: .9,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                   child: Container(
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: c.stamp.withAlpha(24),
+                      color: c.danger.withAlpha(24),
                       shape: BoxShape.circle,
-                      border: Border.all(color: c.stamp.withAlpha(130)),
+                      border: Border.all(color: c.danger.withAlpha(130)),
                     ),
                     child: Center(
                       child: AppIcon(
                         strokeSvg(AppIcons.close, width: 2.2),
                         size: 13,
-                        color: c.stamp,
+                        color: c.danger,
                       ),
                     ),
                   ),
@@ -951,7 +951,7 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
           padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(CitroColors.radii.small),
             border: Border.all(color: c.line),
           ),
           child: Row(
@@ -982,13 +982,13 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                   height: 34,
                   decoration: BoxDecoration(
                     color: c.accent,
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   ),
                   child: Center(
                     child: AppIcon(
                       strokeSvg(AppIcons.plus, width: 2.4),
                       size: 18,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                   ),
                 ),
@@ -1080,7 +1080,7 @@ class _LeadPickerState extends State<_LeadPicker> {
       ),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
         border: Border(top: BorderSide(color: c.line2)),
       ),
       child: Column(
@@ -1093,7 +1093,7 @@ class _LeadPickerState extends State<_LeadPicker> {
               height: 4,
               decoration: BoxDecoration(
                 color: c.line2,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
             ),
           ),
@@ -1137,7 +1137,7 @@ class _LeadPickerState extends State<_LeadPicker> {
                           color: _selected.contains(e.key)
                               ? c.accent.withAlpha(28)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                           border: Border.all(
                             color: _selected.contains(e.key)
                                 ? c.accent.withAlpha(130)
@@ -1174,7 +1174,7 @@ class _LeadPickerState extends State<_LeadPicker> {
                                       child: AppIcon(
                                         strokeSvg(AppIcons.check, width: 3),
                                         size: 11,
-                                        color: const Color(0xFF2E2C22),
+                                        color: c.onAccent,
                                       ),
                                     )
                                   : null,
@@ -1230,7 +1230,7 @@ class _ConfirmCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line2),
         boxShadow: CitroColors.shadows.lg(c),
       ),
@@ -1313,7 +1313,7 @@ class _ManagerSheet extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
         border: Border.all(color: c.line),
       ),
       child: Column(
@@ -1370,7 +1370,7 @@ class _ManagerSheet extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
                         decoration: BoxDecoration(
                           color: c.surface2,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                           border: Border.all(color: c.line),
                         ),
                         child: Row(
@@ -1380,7 +1380,7 @@ class _ManagerSheet extends StatelessWidget {
                               height: 26,
                               decoration: BoxDecoration(
                                 color: item.color.withAlpha(36),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                               ),
                               child: Center(
                                 child: AppIcon(
@@ -1422,7 +1422,7 @@ class _ManagerSheet extends StatelessWidget {
                                   child: AppIcon(
                                     strokeSvg(AppIcons.trash, width: 2),
                                     size: 16,
-                                    color: c.stamp,
+                                    color: c.danger,
                                   ),
                                 ),
                               ),
@@ -1616,7 +1616,7 @@ class _EditManageDialogState extends State<_EditManageDialog> {
                     height: 34,
                     decoration: BoxDecoration(
                       color: _icon == key ? _color.withAlpha(40) : c.bg2,
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                       border: Border.all(color: _icon == key ? _color : c.line),
                     ),
                     child: Center(

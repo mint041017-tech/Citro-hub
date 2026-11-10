@@ -5,6 +5,10 @@
 // 排行榜、正在玩条、宽屏侧栏），把水面与局内 HUD 放进 board 槽位。
 //
 // 源版：C:\webflu\Citro\lipper game\lib\main.dart
+//
+// 铃渡是沉浸式深色水景：宋体字 + 金/珊瑚色 + 近黑水面是这款游戏的品牌资产，
+// 不并入全局 token（全局深色水面也已在 painter.dart 内自持）。这里只把外壳、
+// 圆角与数字字体对齐 nosh。
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -17,6 +21,8 @@ import 'package:flutter/services.dart';
 import '../../services/game_sfx.dart';
 import '../../services/platform.dart' as platform;
 import '../../state/app_state.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/tokens.dart';
 import '../game_ui.dart';
 import 'engine.dart';
 import 'hud_snapshot.dart';
@@ -859,21 +865,11 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               key: const ValueKey('kw-board'),
               width: size.width,
               height: size.height,
-              child: CssShadowLayer(
-                radius: 18,
-                shadows: const <CssShadowSpec>[
-                  CssShadowSpec(
-                    color: Color(0x3D14201D),
-                    offset: Offset(0, 12),
-                    blur: 30,
-                    spread: -14,
-                  ),
-                  CssShadowSpec(
-                    color: Color(0x1F5A4A2C),
-                    offset: Offset(0, 2),
-                    blur: 6,
-                  ),
-                ],
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                  boxShadow: CitroColors.shadows.card(context.c),
+                ),
                 child: _buildBoard(hud, size.width, size.height),
               ),
             ),
@@ -1120,14 +1116,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         SizedBox(width: 4 * s),
                         Text(
                           '${hud.petalsInBay}/${hud.petalCount}',
-                          style: TextStyle(
-                            fontSize: 13 * s,
-                            letterSpacing: 1 * s,
-                            color: kCoral,
-                            fontFeatures: const <FontFeature>[
-                              FontFeature.tabularFigures(),
-                            ],
-                          ),
+                          style: context.hand(size: 13 * s, color: kCoral),
                         ),
                       ],
                     ),
@@ -1135,13 +1124,9 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                     Text(
                       '星数 $_starTotal/$_maxStars',
                       key: const ValueKey('kw-hud-stars'),
-                      style: TextStyle(
-                        fontSize: 9 * s,
-                        letterSpacing: 0.6 * s,
+                      style: context.hand(
+                        size: 9 * s,
                         color: kGold.withValues(alpha: 0.55),
-                        fontFeatures: const <FontFeature>[
-                          FontFeature.tabularFigures(),
-                        ],
                       ),
                     ),
                   ],
@@ -1610,6 +1595,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       height: (compact ? 34 : 42) * s,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         border: Border.all(color: kGold.withValues(alpha: 0.5)),
                       ),
                       child: Text(
@@ -2108,6 +2094,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
       padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 6 * s),
       decoration: BoxDecoration(
         color: unlocked ? const Color(0xCC0A1D1F) : const Color(0x99071113),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: border),
       ),
       child: Column(
@@ -2394,7 +2381,7 @@ class _PrimaryButton extends StatelessWidget {
             vertical: 12 * scale,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(40),
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -2445,7 +2432,7 @@ class _ActionButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 12 * scale),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
+          borderRadius: BorderRadius.circular(CitroColors.radii.button),
           gradient: primary
               ? const LinearGradient(
                   colors: <Color>[Color(0x8C34584F), Color(0xBF0C2222)],

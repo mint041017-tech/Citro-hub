@@ -125,7 +125,7 @@ class _TodoPageState extends State<TodoPage>
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: primary ? c.accent.withAlpha(190) : c.bg2.withAlpha(90),
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(CitroColors.radii.small),
             border: Border.all(color: primary ? c.accent : c.line),
           ),
           child: Text(
@@ -133,7 +133,7 @@ class _TodoPageState extends State<TodoPage>
             style: context.body(
               size: CitroType.label,
               weight: CitroType.strong,
-              color: primary ? const Color(0xFF2E2C22) : c.ink2,
+              color: primary ? c.onAccent : c.ink2,
             ),
           ),
         ),
@@ -148,7 +148,7 @@ class _TodoPageState extends State<TodoPage>
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: c.line2),
           ),
           child: Column(
@@ -224,51 +224,49 @@ class _TodoPageState extends State<TodoPage>
           final c = context.c;
           return Scaffold(
             backgroundColor: c.bg,
-            body: PaperBackground(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (wide) _rail(context),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 0),
-                      child: Column(
-                        children: [
-                          SizedBox(height: top),
-                          Center(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (wide) _rail(context),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 0),
+                    child: Column(
+                      children: [
+                        SizedBox(height: top),
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1120),
+                            child: _header(context, wide: wide),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: Center(
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 1120),
-                              child: _header(context, wide: wide),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Expanded(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 1120,
-                                ),
-                                child: _pages(pages),
+                              constraints: const BoxConstraints(
+                                maxWidth: 1120,
                               ),
+                              child: _pages(pages),
                             ),
                           ),
-                          // 键盘弹起时收起底栏，用高度动画过渡，避免突然消失/出现。
-                          if (!wide)
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 180),
-                              curve: CitroMotion.easeOut,
-                              alignment: Alignment.bottomCenter,
-                              child:
-                                  MediaQuery.viewInsetsOf(context).bottom == 0
-                                  ? _bottomBar(context)
-                                  : const SizedBox(width: double.infinity),
-                            ),
-                        ],
-                      ),
+                        ),
+                        // 键盘弹起时收起底栏，用高度动画过渡，避免突然消失/出现。
+                        if (!wide)
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 180),
+                            curve: CitroMotion.easeOut,
+                            alignment: Alignment.bottomCenter,
+                            child:
+                                MediaQuery.viewInsetsOf(context).bottom == 0
+                                ? _bottomBar(context)
+                                : const SizedBox(width: double.infinity),
+                          ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -330,8 +328,8 @@ class _TodoPageState extends State<TodoPage>
     final c = context.c;
     const items = [
       (0, '待办', AppIcons.check),
-      (3, '专注', AppIcons.target),
       (1, '数据', AppIcons.board),
+      (3, '专注', AppIcons.target),
       (2, 'CiCi', AppIcons.sparkle),
     ];
     // 贴底导航：与食谱页一致，只留一条上边线，不做悬浮胶囊。
@@ -343,7 +341,7 @@ class _TodoPageState extends State<TodoPage>
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: AppSpacing.navBar,
           child: Row(
             children: [
               for (final item in items)
@@ -364,10 +362,10 @@ class _TodoPageState extends State<TodoPage>
                           item.$2,
                           maxLines: 1,
                           style: context.ui(
-                            size: 12,
+                            size: CitroType.caption,
                             weight: _tab == item.$1
                                 ? CitroType.strong
-                                : FontWeight.w400,
+                                : CitroType.regular,
                             color: _tab == item.$1 ? c.accentInk : c.inkSoft,
                           ),
                         ),
@@ -392,7 +390,7 @@ class _TodoPageState extends State<TodoPage>
     };
     final subtitle = switch (_tab) {
       2 => '拆解、提醒、总结',
-      3 => '一段一段地做',
+      3 => '专注与休息交替',
       _ => _dateLine(DateTime.now()),
     };
     return Padding(
@@ -405,7 +403,7 @@ class _TodoPageState extends State<TodoPage>
             Pressable(
               onTap: () => _back(context),
               scale: .92,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
               child: Container(
                 width: 38,
                 height: 38,
@@ -413,7 +411,7 @@ class _TodoPageState extends State<TodoPage>
                   color: c.surface2,
                   shape: BoxShape.circle,
                   border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: Center(
                   child: AppIcon(
@@ -462,11 +460,11 @@ class _TodoPageState extends State<TodoPage>
               onTap: () => _openCreate(context),
               scale: .94,
               child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: c.accent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   boxShadow: [
                     BoxShadow(
                       color: c.accent.withAlpha(40),
@@ -479,9 +477,9 @@ class _TodoPageState extends State<TodoPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     AppIcon(
-                      strokeSvg(AppIcons.plus, width: 2.2, color: '#2E2C22'),
+                      strokeSvg(AppIcons.plus, width: 2.2),
                       size: 16,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -489,7 +487,7 @@ class _TodoPageState extends State<TodoPage>
                       style: context.ui(
                         size: CitroType.label,
                         weight: CitroType.strong,
-                        color: const Color(0xFF2E2C22),
+                        color: c.onAccent,
                       ),
                     ),
                   ],
@@ -627,7 +625,7 @@ class _DraftPreviewDialogState extends State<_DraftPreviewDialog> {
                     color: _selected[i]
                         ? c.accent.withAlpha(22)
                         : c.bg2.withAlpha(70),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(
                       color: _selected[i] ? c.accent.withAlpha(120) : c.line,
                     ),
@@ -639,17 +637,17 @@ class _DraftPreviewDialogState extends State<_DraftPreviewDialog> {
                         height: 16,
                         decoration: BoxDecoration(
                           color: _selected[i] ? c.accent : Colors.transparent,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                           border: Border.all(
                             color: _selected[i] ? c.accent : c.line2,
                           ),
                         ),
                         child: _selected[i]
-                            ? const Center(
+                            ? Center(
                                 child: AppIcon(
                                   '<path d="M20 6 9 17l-5-5"/>',
                                   size: 10,
-                                  color: Color(0xFF2E2C22),
+                                  color: c.onAccent,
                                 ),
                               )
                             : null,
@@ -841,7 +839,7 @@ class _TodayFoot extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            '一步一步，也是向前。',
+            '今天做的事都已保存在本机',
             style: context.ui(size: CitroType.caption, color: c.inkSoft),
           ),
         ],
@@ -900,10 +898,10 @@ class _StatePanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Column(
         mainAxisSize: scrollable ? MainAxisSize.max : MainAxisSize.min,
@@ -967,7 +965,7 @@ class _TodaySummary extends StatelessWidget {
     final rate = total == 0 ? 0.0 : done / total;
     final focus = PomodoroState.instance.todayMinutes;
     final bar = ClipRRect(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
       child: LinearProgressIndicator(
         value: rate.clamp(0.0, 1.0),
         minHeight: 8,
@@ -1018,10 +1016,10 @@ class _TodaySummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: horizontal
           ? Row(
@@ -1099,7 +1097,7 @@ class _TaskStateSelect extends StatelessWidget {
       color: c.surface2,
       elevation: 12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         side: BorderSide(color: c.line),
       ),
       onSelected: (v) => TodoStore.instance.setTaskState(task, v),
@@ -1115,7 +1113,7 @@ class _TaskStateSelect extends StatelessWidget {
                   height: 26,
                   decoration: BoxDecoration(
                     color: _color(c, s).withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   ),
                   child: Center(
                     child: Container(
@@ -1146,7 +1144,7 @@ class _TaskStateSelect extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: color.withAlpha(22),
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: color.withAlpha(90)),
         ),
         child: Row(
@@ -1198,7 +1196,7 @@ Future<void> _showTaskMenu(
     color: c.surface2,
     elevation: 12,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
       side: BorderSide(color: c.line),
     ),
     items: [
@@ -1220,7 +1218,7 @@ Future<void> _showTaskMenu(
       PopupMenuItem<String>(
         value: 'delete',
         height: 44,
-        child: _menuRow(context, AppIcons.trash, '删除', c.stamp),
+        child: _menuRow(context, AppIcons.trash, '删除', c.danger),
       ),
     ],
   );
@@ -1276,7 +1274,7 @@ Widget _menuRow(BuildContext context, String icon, String label, Color color) {
         height: 26,
         decoration: BoxDecoration(
           color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
         ),
         child: Center(
           child: AppIcon(strokeSvg(icon, width: 1.9), size: 14, color: color),
@@ -1363,8 +1361,8 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                 compact ? 9 : 10,
               ),
               decoration: BoxDecoration(
-                color: c.surface2.withAlpha(task.done ? 165 : 245),
-                borderRadius: BorderRadius.circular(12),
+                color: task.done ? c.surface2.withAlpha(150) : c.surface2,
+                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                 border: Border.all(
                   color: task.overdue
                       ? c.stamp.withAlpha(120)
@@ -1372,7 +1370,7 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                             ? c.accent.withAlpha(90)
                             : c.line),
                 ),
-                boxShadow: task.done ? null : CitroColors.shadows.paper(c),
+                boxShadow: task.done ? null : CitroColors.shadows.sm(c),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1425,7 +1423,7 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                         const SizedBox(width: 5),
                         Text(
                           time,
-                          style: context.ui(
+                          style: context.hand(
                             size: CitroType.title,
                             weight: CitroType.strong,
                             color: task.overdue ? c.stamp : c.ink,
@@ -1463,7 +1461,7 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                               padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
                               decoration: BoxDecoration(
                                 color: category.tint.withAlpha(24),
-                                borderRadius: BorderRadius.circular(99),
+                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                 border: Border.all(
                                   color: category.tint.withAlpha(70),
                                 ),
@@ -1497,7 +1495,7 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                               padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
                               decoration: BoxDecoration(
                                 color: c.bg2.withAlpha(c.dark ? 150 : 110),
-                                borderRadius: BorderRadius.circular(99),
+                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                 border: Border.all(color: c.line),
                               ),
                               child: Row(
@@ -1569,8 +1567,8 @@ class _SubtaskCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
         decoration: BoxDecoration(
-          color: c.surface2.withAlpha(sub.done ? 150 : 230),
-          borderRadius: BorderRadius.circular(10),
+          color: sub.done ? c.surface2.withAlpha(120) : c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: sub.done ? c.line : c.line2),
         ),
         child: Row(
@@ -1761,8 +1759,8 @@ class _ScheduleViewState extends State<_ScheduleView> {
             decoration: BoxDecoration(
               color: selected
                   ? c.accent.withAlpha(30)
-                  : (today ? c.hl.withAlpha(90) : Colors.transparent),
-              borderRadius: BorderRadius.circular(8),
+                  : (today ? c.accent.withAlpha(24) : Colors.transparent),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               border: Border.all(
                 color: selected
                     ? c.accent.withAlpha(160)
@@ -1784,12 +1782,12 @@ class _ScheduleViewState extends State<_ScheduleView> {
                       ),
                       child: Text(
                         '$d',
-                        style: context.ui(
+                        style: context.hand(
                           size: CitroType.caption,
                           weight: selected || today
                               ? CitroType.strong
                               : CitroType.regular,
-                          color: selected ? const Color(0xFF2E2C22) : c.ink,
+                          color: selected ? c.onAccent : c.ink,
                           height: 1,
                         ),
                       ),
@@ -1857,10 +1855,10 @@ class _ScheduleViewState extends State<_ScheduleView> {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Column(
         children: [
@@ -1928,7 +1926,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: c.bg2.withAlpha(c.dark ? 150 : 110),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
             child: Row(
               children: [
@@ -1984,7 +1982,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: active ? c.accent.withAlpha(190) : c.bg2.withAlpha(90),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           border: Border.all(color: active ? c.accent : c.line),
         ),
         child: Text(
@@ -1992,7 +1990,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
           style: context.ui(
             size: CitroType.caption,
             weight: active ? CitroType.strong : CitroType.regular,
-            color: active ? const Color(0xFF2E2C22) : c.ink2,
+            color: active ? c.onAccent : c.ink2,
           ),
         ),
       ),
@@ -2033,9 +2031,10 @@ class _Timeline extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 26),
         decoration: BoxDecoration(
-          color: c.surface2.withAlpha(160),
-          borderRadius: BorderRadius.circular(14),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
           border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Text(
           '这一天还没有安排',

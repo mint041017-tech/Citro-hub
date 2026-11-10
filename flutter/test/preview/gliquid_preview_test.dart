@@ -52,17 +52,13 @@ LiquidGame _midGame(double width, double height, {int seed = 42}) {
 }
 
 void main() {
-  setUpAll(() async {
-    await _loadFont('Kalam', [
-      'assets/fonts/kalam-400-app.ttf',
-      'assets/fonts/kalam-700-app.ttf',
+    setUpAll(() async {
+    await _loadFont('RoundedCN', [
+      'assets/fonts/rounded-400-app.ttf',
+      'assets/fonts/rounded-500-app.ttf',
+      'assets/fonts/rounded-700-app.ttf',
     ]);
-    await _loadFont('ZCOOL', ['assets/fonts/zcool-app.ttf']);
-    await _loadFont('Caveat', ['assets/fonts/caveat-app.ttf']);
-    await _loadFont('NotoSC', [
-      'assets/fonts/noto-sc-400-app.ttf',
-      'assets/fonts/noto-sc-700-app.ttf',
-    ]);
+    await _loadFont('XiaolaiMono', ['assets/fonts/mono-app.ttf']);
   });
 
   testWidgets('gliquid phone', (tester) async {

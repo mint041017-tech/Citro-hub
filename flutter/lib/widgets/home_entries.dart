@@ -36,30 +36,27 @@ class CheckinCard extends StatelessWidget {
     final streak = state.checkinStreak;
     final done = state.checkedInToday;
     if (compact) {
-      return PaperCard(
-        tapeColor: c.tape,
-        tapeAngle: 2.4,
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      return CitroCard(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         onTap: () => showCheckinOverlay(context),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: c.hl,
+                color: c.tintYellow,
                 shape: BoxShape.circle,
-                border: Border.all(color: c.line),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.calendar, width: 2),
-                  size: 18,
+                  size: 19,
                   color: c.accentInk,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.x2),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -67,28 +64,26 @@ class CheckinCard extends StatelessWidget {
                 children: [
                   Text(
                     '打卡',
-                    style: context.heading(size: 13, color: c.accentInk),
+                    style: context.heading(size: CitroType.label, color: c.ink),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     done ? '今天已完成 · 连续 $streak 天' : '连续 $streak 天 · 轻轻一点记录今天',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 11, color: c.inkSoft),
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.x1),
             _StatePill(done: done),
           ],
         ),
       );
     }
-    return PaperCard(
-      tapeColor: c.tape,
-      tapeAngle: 2.4,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       onTap: () => showCheckinOverlay(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,16 +93,12 @@ class CheckinCard extends StatelessWidget {
               AppIcon(
                 strokeSvg(AppIcons.calendar, width: 2),
                 size: 18,
-                color: c.accentInk,
+                color: c.accent,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               Text(
                 '打卡',
-                style: context.heading(
-                  size: 13,
-                  color: c.accentInk,
-                  letterSpacing: .3,
-                ),
+                style: context.heading(size: CitroType.label, color: c.ink),
               ),
               const Spacer(),
               _StatePill(done: done),
@@ -119,21 +110,21 @@ class CheckinCard extends StatelessWidget {
             children: [
               Text(
                 '$streak',
-                style: context.display(
-                  size: 32,
-                  weight: FontWeight.w700,
+                style: context.hand(
+                  size: CitroType.display,
+                  weight: CitroType.strong,
                   color: c.ink,
                   height: .9,
                 ),
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 4),
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
                   '天',
                   style: context.body(
-                    size: 11,
-                    weight: FontWeight.w700,
+                    size: CitroType.small,
+                    weight: CitroType.medium,
                     color: c.inkSoft,
                   ),
                 ),
@@ -141,17 +132,17 @@ class CheckinCard extends StatelessWidget {
               const Spacer(),
               _ArrowBadge(
                 icon: AppIcons.arrowUpRight,
-                tint: c.hl,
+                tint: c.tintYellow,
                 ink: c.accentInk,
               ),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
             done ? '今天已完成，明天继续' : '轻轻一点，记录今天',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           ),
         ],
       ),
@@ -188,10 +179,8 @@ class TingyuCard extends StatelessWidget {
           );
         }
 
-        return PaperCard(
-          tapeColor: c.tape2,
-          tapeAngle: -2.2,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        return CitroCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           onTap: openPage,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,16 +190,12 @@ class TingyuCard extends StatelessWidget {
                   AppIcon(
                     strokeSvg(AppIcons.wave, width: 2),
                     size: 18,
-                    color: c.accentInk,
+                    color: c.accent,
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 6),
                   Text(
                     '听隅',
-                    style: context.heading(
-                      size: 13,
-                      color: c.accentInk,
-                      letterSpacing: .3,
-                    ),
+                    style: context.heading(size: CitroType.label, color: c.ink),
                   ),
                   const Spacer(),
                   AnimatedSwitcher(
@@ -244,9 +229,7 @@ class TingyuCard extends StatelessWidget {
                 playing ? player.title : '白噪音 · 混音',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context
-                    .heading(size: 18, color: c.ink, height: 1.2)
-                    .copyWith(fontWeight: FontWeight.w700),
+                style: context.heading(size: CitroType.title, color: c.ink),
               ),
               const SizedBox(height: 3),
               Text(
@@ -255,7 +238,7 @@ class TingyuCard extends StatelessWidget {
                     : (player.tracks.isEmpty ? '给自己，留一小片安静' : '已就绪，点右上角开始'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.body(size: 11, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
@@ -295,12 +278,11 @@ class _NookToggleButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: playing ? c.accent : c.mintSoft,
             shape: BoxShape.circle,
-            border: Border.all(color: c.line),
           ),
           child: Icon(
             playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
             size: 20,
-            color: playing ? const Color(0xFF2E2C34) : c.mintInk,
+            color: playing ? c.onAccent : c.mintInk,
           ),
         ),
       ),
@@ -316,10 +298,10 @@ class _StatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final bg = done ? c.mintSoft : c.hl;
-    final fg = done ? c.mintInk : c.accentInk;
+    final bg = done ? c.mintSoft : c.surface2;
+    final fg = done ? c.mintInk : c.inkSoft;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
@@ -331,8 +313,8 @@ class _StatePill extends StatelessWidget {
             Text(
               '✓',
               style: context.body(
-                size: 9,
-                weight: FontWeight.w700,
+                size: CitroType.micro,
+                weight: CitroType.strong,
                 color: fg,
                 height: 1,
               ),
@@ -341,11 +323,10 @@ class _StatePill extends StatelessWidget {
           Text(
             done ? '已完成' : '待打卡',
             style: context.body(
-              size: 10,
-              weight: FontWeight.w700,
+              size: CitroType.small,
+              weight: CitroType.medium,
               color: fg,
               height: 1,
-              letterSpacing: .2,
             ),
           ),
         ],
@@ -394,9 +375,7 @@ class HomeGameCard extends StatelessWidget {
     final c = context.c;
     final entry = gameCardByKey(gameKey);
     if (entry == null) return const SizedBox.shrink();
-    return PaperCard(
-      tapeColor: c.tape,
-      tapeAngle: -1.6,
+    return CitroCard(
       padding: EdgeInsets.zero,
       onTap: () {
         // 和听隅入口一致：纸页轻沉淡入，进入与退出都复用同一套软转场。
@@ -430,8 +409,8 @@ class HomeGameCard extends StatelessWidget {
                       colors: entry.gradient(c),
                     ),
                     borderRadius: BorderRadius.vertical(
-                      top: const Radius.circular(12),
-                      bottom: Radius.circular(compact ? 10 : 9),
+                      top: const Radius.circular(22),
+                      bottom: Radius.circular(compact ? 12 : 10),
                     ),
                   ),
                   child: Center(
@@ -457,7 +436,7 @@ class HomeGameCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.heading(
-                          size: compact ? 12.5 : 15,
+                          size: compact ? CitroType.body : CitroType.titleLg,
                           color: c.ink,
                         ),
                       ),
@@ -493,7 +472,7 @@ class HomeResCard extends StatelessWidget {
     final driver = driverByItem(item);
     if (tool == null && driver == null) return const SizedBox.shrink();
     final isTool = tool != null;
-    final accentBg = isTool ? c.mintSoft : c.noteB;
+    final accentBg = isTool ? c.mintSoft : c.tintBlue;
     final accentInk = isTool ? c.mintInk : c.accentInk;
     final label = isTool ? tool.name : driver!.name;
     final kind = isTool ? '工具' : (driver!.client ? '客户端' : '驱动');
@@ -503,9 +482,7 @@ class HomeResCard extends StatelessWidget {
     final action = isTool
         ? (tool.url != null ? '打开页面' : '打开')
         : (driver!.client ? '下载客户端' : '下载驱动');
-    return PaperCard(
-      tapeColor: isTool ? c.tape2 : c.tape,
-      tapeAngle: isTool ? 1.8 : -1.6,
+    return CitroCard(
       padding: EdgeInsets.zero,
       onTap: () => _open(context, tool, driver),
       child: LayoutBuilder(
@@ -691,16 +668,8 @@ class _ResIconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            background,
-            Color.alphaBlend(Colors.white.withAlpha(70), background),
-          ],
-        ),
+        color: background,
         borderRadius: BorderRadius.circular(size * .3),
-        border: Border.all(color: foreground.withAlpha(42)),
         boxShadow: [
           BoxShadow(
             color: foreground.withAlpha(26),
@@ -735,17 +704,16 @@ class _ResKindChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: foreground.withAlpha(38)),
       ),
       child: Text(
         text,
         style: context.body(
-          size: 10,
-          weight: FontWeight.w700,
+          size: CitroType.micro,
+          weight: CitroType.medium,
           color: foreground,
           height: 1,
         ),

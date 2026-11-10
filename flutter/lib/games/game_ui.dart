@@ -12,7 +12,6 @@
 //   g-live      底部横条：margin 0 14 12，padding 8/10，圆角 14，纸底 + line 描边
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 
@@ -28,6 +27,7 @@ import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'game_common.dart'
     show GameTabletRankRail, sameLiveList, showGameAccount, showGameLeaderboard;
+import 'game_theme.dart';
 
 /// 版式常量（web 游戏页 390×844 实测）
 class GameMetrics {
@@ -225,27 +225,14 @@ class _GameScaffoldState extends State<GameScaffold> {
     final mq = MediaQuery.of(context);
     final screen = mq.size;
     final landscape = screen.width > screen.height;
-    Widget page = Stack(
-      children: [
-        Positioned.fill(
-          child: CustomPaint(
-            isComplex: true,
-            willChange: false,
-            painter: _PageBgPainter(c),
-          ),
-        ),
-        landscape && widget.showSidePanels
-            ? _landscapeBody(context)
-            : _portraitBody(context),
-      ],
+    Widget page = DecoratedBox(
+      decoration: BoxDecoration(color: c.bg),
+      child: landscape && widget.showSidePanels
+          ? _landscapeBody(context)
+          : _portraitBody(context),
     );
-    if (mq.textScaler.scale(10) != 10) {
-      page = MediaQuery(
-        data: mq.copyWith(textScaler: TextScaler.noScaling),
-        child: page,
-      );
-    }
-    return Scaffold(backgroundColor: c.surface, body: page);
+    // 字体缩放交给各游戏自己处理（棋盘按宽度自适应，文字随系统设置放大）。
+    return Scaffold(backgroundColor: c.bg, body: page);
   }
 
   Widget _portraitBody(BuildContext context) {
@@ -293,12 +280,8 @@ class _GameScaffoldState extends State<GameScaffold> {
                   widget.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppFonts.zcool,
-                    fontFamilyFallback: AppFonts.fallback,
-                    fontSize: widget.titleSize ?? 18,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 0.6,
+                  style: context.heading(
+                    size: widget.titleSize ?? CitroType.bodyLg,
                     color: c.ink,
                   ),
                 ),
@@ -524,18 +507,14 @@ class _GameScaffoldState extends State<GameScaffold> {
                       widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppFonts.zcool,
-                        fontFamilyFallback: AppFonts.fallback,
-                        fontSize: widget.titleSize ?? 18,
-                        height: 1.25,
-                        letterSpacing: 0.6,
+                      style: context.heading(
+                        size: widget.titleSize ?? CitroType.bodyLg,
                         color: c.ink,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('数据看板', style: context.body(size: 10, color: c.inkSoft)),
+                  Text('数据看板', style: context.body(size: CitroType.micro, color: c.inkSoft)),
                 ],
               ),
             ),
@@ -609,14 +588,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                   const SizedBox(width: 6),
                   Text(
                     '正在玩',
-                    style: TextStyle(
-                      fontFamily: AppFonts.zcool,
-                      fontFamilyFallback: AppFonts.fallback,
-                      fontSize: 16,
-                      height: 1.4,
-                      letterSpacing: 0.4,
-                      color: c.ink,
-                    ),
+                    style: context.heading(size: CitroType.body, color: c.ink),
                   ),
                 ],
               ),
@@ -626,12 +598,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                     ? Center(
                         child: Text(
                           '还没有人在玩',
-                          style: TextStyle(
-                            fontFamily: AppFonts.noto,
-                            fontFamilyFallback: AppFonts.bodyFallback,
-                            fontSize: 11,
-                            color: c.inkSoft,
-                          ),
+                          style: context.body(size: CitroType.small, color: c.inkSoft),
                         ),
                       )
                     : ListView.separated(
@@ -659,8 +626,8 @@ class _GameScaffoldState extends State<GameScaffold> {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.line.withAlpha(160)),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
       ),
       child: Row(
         children: [
@@ -686,12 +653,10 @@ class _GameScaffoldState extends State<GameScaffold> {
                 ? null
                 : Text(
                     name.isEmpty ? '游' : name.substring(name.length - 1),
-                    style: const TextStyle(
-                      fontFamily: AppFonts.kalam,
-                      fontFamilyFallback: AppFonts.fallback,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2E2C22),
+                    style: context.body(
+                      size: CitroType.small,
+                      weight: CitroType.strong,
+                      color: c.accentText,
                     ),
                   ),
           ),
@@ -704,11 +669,9 @@ class _GameScaffoldState extends State<GameScaffold> {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  style: context.body(
+                    size: CitroType.small,
+                    weight: CitroType.strong,
                     color: c.ink,
                   ),
                 ),
@@ -717,12 +680,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                     progress,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 10,
-                      color: c.inkSoft,
-                    ),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
               ],
             ),
@@ -731,38 +689,6 @@ class _GameScaffoldState extends State<GameScaffold> {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// 背景：.page-g 纸面 + 24px 方格（光斑在 web 侧已被 background:none 关掉）
-//   横向线来源 repeating-linear-gradient(0deg, ...) 从**底边**起算，
-//   所以相位 = (height - 1) % 24；纵向线来自 90deg 渐变，从左边起算 = 0。
-// ---------------------------------------------------------------------------
-
-class _PageBgPainter extends CustomPainter {
-  _PageBgPainter(this.c);
-  final CitroColors c;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = c.surface);
-
-    final grid = Paint()
-      ..color = c.grid
-      ..strokeWidth = 1
-      ..isAntiAlias = false;
-    for (double x = 0; x <= size.width; x += 24) {
-      canvas.drawLine(Offset(x + .5, 0), Offset(x + .5, size.height), grid);
-    }
-    final double phase = (size.height - 1) % 24;
-    for (double y = phase; y <= size.height; y += 24) {
-      canvas.drawLine(Offset(0, y + .5), Offset(size.width, y + .5), grid);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PageBgPainter old) =>
-      old.c.surface != c.surface || old.c.grid != c.grid;
 }
 
 // ---------------------------------------------------------------------------
@@ -810,12 +736,9 @@ class GameHead extends StatelessWidget {
             offset: const Offset(-1, -1),
             child: Text(
               '游戏空间',
-              style: TextStyle(
-                fontFamily: AppFonts.zcool,
-                fontFamilyFallback: AppFonts.fallback,
-                fontSize: 15,
-                height: 1.65,
-                letterSpacing: 0.9,
+              style: context.body(
+                size: CitroType.label,
+                weight: CitroType.medium,
                 color: c.ink,
               ),
             ),
@@ -835,33 +758,13 @@ class GameHead extends StatelessWidget {
       decoration: BoxDecoration(color: c.surface),
       child: Stack(
         children: [
-          // web .g-head::before 的 inset 0 -1px line
+          // 底部发丝分隔线
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             height: 1,
             child: ColoredBox(color: c.line),
-          ),
-          // web .g-head::after 的 16%..84% 渐隐线
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    c.line2.withValues(alpha: 0),
-                    c.line2,
-                    c.line2,
-                    c.line2.withValues(alpha: 0),
-                  ],
-                  stops: const [0, 0.16, 0.84, 1],
-                ),
-              ),
-            ),
           ),
           if (centerBrand)
             Positioned.fill(
@@ -977,13 +880,11 @@ class _MeButton extends StatelessWidget {
                 ? null
                 : Text(
                     initial,
-                    style: const TextStyle(
-                      fontFamily: AppFonts.kalam,
-                      fontFamilyFallback: AppFonts.fallback,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: context.body(
+                      size: CitroType.body,
+                      weight: CitroType.strong,
+                      color: c.accentText,
                       height: 1.2,
-                      color: Color(0xFF2E2C22),
                     ),
                   ),
           ),
@@ -1017,11 +918,12 @@ class GameScorePill extends StatelessWidget {
     final c = context.c;
     return Container(
       constraints: BoxConstraints(minWidth: minWidth, minHeight: 56.64),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent, width: 1),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
+        boxShadow: CitroColors.shadows.sm(c),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1031,28 +933,20 @@ class GameScorePill extends StatelessWidget {
             label,
             maxLines: 1,
             softWrap: false,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.65,
-              letterSpacing: 1.68,
-              color: c.accentInk,
+            style: context.body(
+              size: CitroType.small,
+              weight: CitroType.medium,
+              color: c.inkSoft,
+              letterSpacing: .4,
             ),
           ),
-          const SizedBox(height: 1),
+          const SizedBox(height: 2),
           Text(
             value,
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontFamilyFallback: AppFonts.fallback,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-              letterSpacing: 0.38,
+            style: context.hand(
+              size: CitroType.titleLg,
+              weight: CitroType.strong,
               color: bump ? c.accentInk : c.ink,
-              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
@@ -1129,6 +1023,7 @@ class GameActionButton extends StatelessWidget {
     required this.label,
     this.onTap,
     this.icon,
+    this.width,
     this.primary = false,
     this.enabled = true,
     this.height = 42,
@@ -1138,6 +1033,9 @@ class GameActionButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final String? icon;
+
+  /// 固定宽度（「接」「对」这类短按钮用）；[expand] 优先。
+  final double? width;
   final bool primary;
   final bool enabled;
 
@@ -1150,128 +1048,48 @@ class GameActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
-    final body = Stack(
-      children: [
-        // web 的 box-shadow 会被裁剪在 border-box 之外；Flutter 里半透明底色会让
-        // 底层阴影透上来（button 变灰）。这里把阴影画在裁剪掉圆角矩形之外的层。
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _OuterShadowPainter(
-                color: primary
-                    ? const Color(0xA694530A)
-                    : const Color(0x803C301A),
-                blur: primary ? 22 : 12,
-                spread: primary ? -12 : -8,
-                offset: Offset(0, primary ? 11 : 4),
-                radius: 999,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          width: expand ? double.infinity : null,
+    final bg = primary ? c.accent : c.surface;
+    final fg = primary ? c.accentText : c.ink2;
+    final border = primary ? c.accent : c.line2;
+    return Opacity(
+      opacity: enabled ? 1 : 0.34,
+      child: Pressable(
+        onTap: enabled ? onTap : null,
+        scale: .97,
+        hoverLift: 1.5,
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        child: Container(
+          width: expand ? double.infinity : (width ?? null),
           height: height,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          alignment: expand ? Alignment.center : null,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: primary
-                ? null
-                : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
-            gradient: primary
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: primary
-                  ? const Color(0x2E94530A)
-                  : (c.dark ? c.line2 : const Color(0x294A3A22)),
-            ),
+            color: bg,
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
+            border: Border.all(color: border),
+            boxShadow: primary ? CitroColors.shadows.float(c) : CitroColors.shadows.sm(c),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                gameIcon(icon!, size: 14, color: fg),
+                gameIcon(icon!, size: 15, color: fg),
                 const SizedBox(width: 8),
               ],
               Text(
                 label,
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.24,
+                style: context.body(
+                  size: CitroType.label,
+                  weight: CitroType.strong,
                   color: fg,
                 ),
               ),
             ],
           ),
         ),
-      ],
-    );
-    return Opacity(
-      opacity: enabled ? 1 : 0.34,
-      child: Pressable(onTap: enabled ? onTap : null, child: body),
-    );
-  }
-}
-
-/// 把投影画在「圆角矩形之外」（模拟 CSS 外阴影不被半透明背景透出的效果）
-class _OuterShadowPainter extends CustomPainter {
-  const _OuterShadowPainter({
-    required this.color,
-    required this.blur,
-    required this.spread,
-    required this.offset,
-    required this.radius,
-  });
-
-  final Color color;
-  final double blur;
-  final double spread;
-  final Offset offset;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outer = Offset.zero & size;
-    final inner = RRect.fromRectAndRadius(outer, Radius.circular(radius));
-    canvas.save();
-    canvas.clipPath(
-      Path.combine(
-        PathOperation.difference,
-        Path()..addRect(outer.inflate(blur * 2 + 40)),
-        Path()..addRRect(inner),
       ),
     );
-    final shadowRect = outer.inflate(spread).shift(offset);
-    final shadowPath = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(shadowRect, Radius.circular(radius + spread)),
-      );
-    canvas.drawPath(
-      shadowPath,
-      Paint()
-        ..color = color
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur * 0.5),
-    );
-    canvas.restore();
   }
-
-  @override
-  bool shouldRepaint(covariant _OuterShadowPainter old) =>
-      old.color != color ||
-      old.blur != blur ||
-      old.spread != spread ||
-      old.offset != offset ||
-      old.radius != radius;
 }
 
 /// 难度 / 榜单分段切换（web .gmem-diff / .gs-tabs）
@@ -1298,8 +1116,8 @@ class GameSegTabs<T> extends StatelessWidget {
         vertical: dense ? 3 : 4,
       ),
       decoration: BoxDecoration(
-        color: c.bg2,
-        borderRadius: BorderRadius.circular(999),
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -1315,17 +1133,14 @@ class GameSegTabs<T> extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: it.$1 == value ? c.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.button),
                 ),
                 child: Text(
                   it.$2,
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: dense ? 11 : 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                    color: it.$1 == value ? const Color(0xFF2E2C22) : c.ink2,
+                  style: context.body(
+                    size: dense ? CitroType.small : CitroType.caption,
+                    weight: CitroType.strong,
+                    color: it.$1 == value ? c.accentText : c.ink2,
                   ),
                 ),
               ),
@@ -1334,62 +1149,6 @@ class GameSegTabs<T> extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 纸胶带（web 棋盘 ::before）
-class GameTape extends StatelessWidget {
-  const GameTape({
-    super.key,
-    this.width = 82,
-    this.height = 24,
-    this.color,
-    this.angle = -2,
-  });
-
-  final double width;
-  final double height;
-  final Color? color;
-  final double angle;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Transform.rotate(
-      angle: angle * math.pi / 180,
-      child: CustomPaint(
-        size: Size(width, height),
-        painter: _TapePainter(color ?? c.tape),
-      ),
-    );
-  }
-}
-
-class _TapePainter extends CustomPainter {
-  _TapePainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(size.width * 0.02, 0)
-      ..lineTo(size.width * 0.98, size.height * 0.03)
-      ..lineTo(size.width, size.height * 0.95)
-      ..lineTo(size.width * 0.04, size.height)
-      ..close();
-    canvas.drawShadow(path, const Color(0x1A786040), 1, false);
-    canvas.drawPath(path, Paint()..color = color);
-    final edge = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
-      ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(size.width * 0.06, size.height * 0.12),
-      Offset(size.width * 0.94, size.height * 0.16),
-      edge,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _TapePainter old) => old.color != color;
 }
 
 /// 底部「正在玩」条（web .g-live.on）
@@ -1410,10 +1169,10 @@ class GameLiveBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1426,35 +1185,20 @@ class GameLiveBar extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '正在玩',
-            style: TextStyle(
-              fontFamily: AppFonts.zcool,
-              fontFamilyFallback: AppFonts.fallback,
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              height: 1.65,
-              letterSpacing: 0.25,
-              color: c.ink,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.medium,
+              color: c.ink2,
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: list.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.only(
-                      top: 2,
-                      right: 2,
-                      bottom: 3,
-                      left: 8,
-                    ),
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 8),
                     child: Text(
                       '还没有人在玩',
-                      style: TextStyle(
-                        fontFamily: AppFonts.noto,
-                        fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 12,
-                        height: 1.8,
-                        color: Color(0xFF575446),
-                      ),
+                      style: context.body(size: CitroType.caption, color: c.inkSoft),
                     ),
                   )
                 : SingleChildScrollView(
@@ -1494,9 +1238,9 @@ class _LiveChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
       decoration: BoxDecoration(
-        color: you ? const Color(0x29FE923B) : c.line,
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: you ? const Color(0x66FE923B) : c.line2),
+        color: you ? c.accentLt.withAlpha(120) : c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: you ? c.accent : c.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1523,23 +1267,19 @@ class _LiveChip extends StatelessWidget {
                 ? null
                 : Text(
                     initial,
-                    style: const TextStyle(
-                      fontFamily: AppFonts.kalam,
-                      fontFamilyFallback: AppFonts.fallback,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2E2C22),
+                    style: context.body(
+                      size: CitroType.small,
+                      weight: CitroType.strong,
+                      color: c.accentText,
                     ),
                   ),
           ),
           const SizedBox(width: 5),
           Text(
             name,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
               color: c.ink,
             ),
           ),
@@ -1549,17 +1289,14 @@ class _LiveChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: c.accent,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               ),
-              child: const Text(
+              child: Text(
                 '你',
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 10,
-                  height: 1.4,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF35506E),
+                style: context.body(
+                  size: CitroType.micro,
+                  weight: CitroType.strong,
+                  color: c.accentText,
                 ),
               ),
             ),
@@ -1568,12 +1305,7 @@ class _LiveChip extends StatelessWidget {
             const SizedBox(width: 5),
             Text(
               progress,
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 11,
-                color: c.inkSoft,
-              ),
+              style: context.body(size: CitroType.small, color: c.inkSoft),
             ),
           ],
         ],

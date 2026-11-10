@@ -647,7 +647,7 @@ class _DragPill extends StatelessWidget {
                 width: 2,
                 height: 2,
                 decoration: BoxDecoration(
-                  color: active ? Colors.white : c.inkSoft,
+                  color: active ? c.onAccent : c.inkSoft,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -721,12 +721,12 @@ class _ResizeHandle extends StatelessWidget {
                 color: c.accent,
                 shape: BoxShape.circle,
                 border: Border.all(color: c.surface, width: 2),
-                boxShadow: CitroColors.shadows.paper(c),
+                boxShadow: CitroColors.shadows.card(c),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.open_in_full_rounded,
                 size: 16,
-                color: Colors.white,
+                color: c.onAccent,
               ),
             ),
           ),
@@ -744,7 +744,7 @@ class _Ghost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final color = free ? c.accent : c.stamp;
+    final color = free ? c.accent : c.danger;
     return Positioned(
       left: rect.left,
       top: rect.top,
@@ -754,7 +754,7 @@ class _Ghost extends StatelessWidget {
         child: CustomPaint(
           painter: _DashedBorderPainter(
             color: color.withAlpha(190),
-            radius: 16,
+            radius: 24,
             fill: color.withAlpha(18),
           ),
         ),
@@ -820,12 +820,12 @@ class _DeleteHandle extends StatelessWidget {
         hoverLift: 0,
         hoverShadow: false,
         borderRadius: BorderRadius.circular(99),
-        hoverColor: c.stamp.withAlpha(40),
+        hoverColor: c.danger.withAlpha(50),
         child: Container(
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: c.surface.withAlpha(235),
+            color: c.surface,
             shape: BoxShape.circle,
             border: Border.all(color: c.line),
           ),
@@ -833,7 +833,7 @@ class _DeleteHandle extends StatelessWidget {
             child: AppIcon(
               strokeSvg(AppIcons.trash, width: 2),
               size: 13,
-              color: c.stamp,
+              color: c.danger,
             ),
           ),
         ),
@@ -854,17 +854,20 @@ class _EmptyBoard extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('首页空空的', style: context.heading(size: 18, color: c.ink)),
+          Text(
+            '首页空空的',
+            style: context.heading(size: CitroType.title, color: c.ink),
+          ),
           const SizedBox(height: 6),
           Text(
             '右上角「添加卡片」可以找回，删除后也能随时加回来',
-            style: context.body(size: 12, color: c.inkSoft),
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
           const SizedBox(height: 12),
           Pressable(
@@ -873,12 +876,11 @@ class _EmptyBoard extends StatelessWidget {
             hoverShadow: false,
             borderRadius: BorderRadius.circular(99),
             child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
-                color: c.hl,
+                color: c.ink,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: c.line),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -886,15 +888,15 @@ class _EmptyBoard extends StatelessWidget {
                   AppIcon(
                     strokeSvg(AppIcons.plus, width: 2.2),
                     size: 15,
-                    color: c.accentInk,
+                    color: c.bg,
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 6),
                   Text(
                     '添加卡片',
                     style: context.body(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: c.accentInk,
+                      size: CitroType.caption,
+                      weight: CitroType.medium,
+                      color: c.bg,
                     ),
                   ),
                 ],
@@ -1129,9 +1131,9 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                               child: Text(
                                 '完成',
                                 style: context.body(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: const Color(0xFF2E2C34),
+                                  size: CitroType.label,
+                                  weight: CitroType.medium,
+                                  color: c.onAccent,
                                 ),
                               ),
                             ),
@@ -1206,7 +1208,7 @@ class _AddCardTile extends StatelessWidget {
         color: c.surface2,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
         children: [
@@ -1214,9 +1216,8 @@ class _AddCardTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: c.hl,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c.line.withAlpha(140)),
+              color: c.tintYellow,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
               child: AppIcon(
@@ -1280,11 +1281,11 @@ class _AddCardTile extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: c.accentInk.withAlpha(40)),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.add_rounded,
                         size: 18,
-                        color: Color(0xFF2E2C34),
+                        color: c.onAccent,
                       ),
                     ),
                   ),
@@ -1326,8 +1327,8 @@ class _CategoryFilter extends StatelessWidget {
               label: '全部',
               count: available.length,
               selected: selected == null,
-              background: c.hl,
-              foreground: c.accentInk,
+              background: c.ink,
+              foreground: c.bg,
               onTap: () => onSelect(null),
             ),
           ),
@@ -1439,14 +1440,17 @@ class _CategoryHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(category.label, style: context.heading(size: 14, color: c.ink)),
+          Text(
+            category.label,
+            style: context.heading(size: CitroType.label, color: c.ink),
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               '${category.hint} · $count',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.body(size: 10, color: c.inkSoft),
+              style: context.body(size: CitroType.micro, color: c.inkSoft),
             ),
           ),
         ],
@@ -1457,10 +1461,10 @@ class _CategoryHeader extends StatelessWidget {
 
 Color _categoryTint(CitroColors c, HomeCardCategory category) =>
     switch (category) {
-      HomeCardCategory.core => c.noteG,
-      HomeCardCategory.game => c.hl,
+      HomeCardCategory.core => c.tintGreen,
+      HomeCardCategory.game => c.tintYellow,
       HomeCardCategory.tool => c.mintSoft,
-      HomeCardCategory.driver => c.noteB,
+      HomeCardCategory.driver => c.tintBlue,
     };
 
 Color _categoryInk(CitroColors c, HomeCardCategory category) =>

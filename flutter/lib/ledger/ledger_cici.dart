@@ -129,9 +129,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
       children: [
-        PaperCard(
-          tapeColor: c.tape2,
-          tapeAngle: 2.2,
+        CitroCard(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +141,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                     height: 34,
                     decoration: BoxDecoration(
                       color: c.accent.withAlpha(45),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -213,7 +211,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
                   color: c.bg2.withAlpha(c.dark ? 120 : 80),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(color: c.line),
                 ),
                 child: Row(
@@ -456,11 +454,11 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
             padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
             decoration: BoxDecoration(
               color: c.accent.withAlpha(c.dark ? 60 : 46),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(4),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(CitroColors.radii.small),
+                topRight: Radius.circular(CitroColors.radii.small),
+                bottomLeft: Radius.circular(CitroColors.radii.small),
+                bottomRight: Radius.circular(CitroColors.radii.xs),
               ),
               border: Border.all(color: c.accent.withAlpha(90)),
             ),
@@ -469,7 +467,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
               children: [
                 if (m.image != null) ...[
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     child: Image.memory(
                       base64Decode(m.image!.split(',').last),
                       width: 150,
@@ -505,7 +503,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
             margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: c.accent.withAlpha(40),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
             child: Center(
               child: AppIcon(
@@ -521,11 +519,11 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
               padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(CitroColors.radii.xs),
+                  topRight: Radius.circular(CitroColors.radii.small),
+                  bottomLeft: Radius.circular(CitroColors.radii.small),
+                  bottomRight: Radius.circular(CitroColors.radii.small),
                 ),
                 border: Border.all(color: c.line),
               ),
@@ -543,7 +541,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '正在翻账本…',
+                          '正在看账本…',
                           style: context.lui(
                             size: CitroType.meta,
                             color: c.inkSoft,
@@ -586,7 +584,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
-        color: c.noteG,
+        color: c.tintGreen,
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.mintLine),
       ),
@@ -612,7 +610,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
               const Spacer(),
               Text(
                 ledgerMoney(total),
-                style: context.lui(
+                style: context.lhand(
                   size: CitroType.caption,
                   weight: CitroType.strong,
                   color: c.mintInk,
@@ -638,7 +636,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                   ),
                   Text(
                     ledgerMoney(draft.amountCents),
-                    style: context.lui(
+                    style: context.lhand(
                       size: CitroType.small,
                       weight: CitroType.strong,
                       color: c.ink,
@@ -684,7 +682,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                     style: context.lui(
                       size: CitroType.caption,
                       weight: CitroType.strong,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                   ),
                 ),
@@ -766,7 +764,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     child: Image.memory(
                       base64Decode(_pendingImage!.split(',').last),
                       width: 42,
@@ -861,7 +859,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     child: Image.memory(
                       base64Decode(_pendingImage!.split(',').last),
                       width: 52,
@@ -926,7 +924,7 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                   ),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(color: c.line),
                   ),
                   child: TextField(
@@ -956,13 +954,13 @@ class _LedgerCiciTabState extends State<LedgerCiciTab>
                   height: 44,
                   decoration: BoxDecoration(
                     color: _sending ? c.line2 : c.accent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   ),
                   child: Center(
                     child: AppIcon(
-                      strokeSvg(AppIcons.send, width: 1.8, color: '#2E2C22'),
+                      strokeSvg(AppIcons.send, width: 1.8),
                       size: 18,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                   ),
                 ),

@@ -26,8 +26,8 @@ class LegalPage extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final side = math.max(14.0, (width - 720) / 2);
     return Scaffold(
-      backgroundColor: c.surface,
-      body: PaperBackground(
+      backgroundColor: c.bg,
+      body: CitroBackground(
         child: SafeArea(
           child: SelectionArea(
             child: SingleChildScrollView(
@@ -40,27 +40,29 @@ class LegalPage extends StatelessWidget {
                       Pressable(
                         onTap: () => Navigator.of(context).pop(),
                         child: Container(
-                          height: 32,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
-                            color: c.surface2,
-                            borderRadius: BorderRadius.circular(999),
+                            color: c.surface,
+                            borderRadius:
+                                BorderRadius.circular(CitroColors.radii.chip),
                             border: Border.all(color: c.line),
-                            boxShadow: CitroColors.shadows.paper(c),
+                            boxShadow: CitroColors.shadows.card(c),
                           ),
                           child: Row(
                             children: [
                               AppIcon(
                                 strokeSvg(AppIcons.arrowLeft, width: 2.2),
-                                size: 15,
+                                size: 16,
                                 color: c.ink2,
                               ),
-                              const SizedBox(width: 3),
+                              const SizedBox(width: 6),
                               Text(
                                 '返回',
                                 style: context.body(
-                                  size: 12,
-                                  weight: FontWeight.w700,
+                                  size: CitroType.label,
+                                  weight: CitroType.medium,
+                                  color: c.ink,
                                 ),
                               ),
                             ],
@@ -70,7 +72,7 @@ class LegalPage extends StatelessWidget {
                       const Spacer(),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: AppSpacing.x3),
                   Text(
                     isPrivacy ? '隐私政策' : '用户协议',
                     style: context.heading(size: 30, color: c.ink),
@@ -78,53 +80,68 @@ class LegalPage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '生效日期：2026 年 10 月 24 日 · 版本 v1.0',
-                    style: context.body(size: 11, color: c.inkSoft),
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.x2),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                     decoration: BoxDecoration(
-                      color: c.noteY.withAlpha(c.dark ? 110 : 180),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: c.line),
+                      color: c.surface2,
+                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                     ),
-                    child: Text(
-                      isPrivacy
-                          ? '我们不出售你的个人信息，当前未接入广告或第三方统计 SDK。使用社区、AI、天气与语音功能前，请阅读本政策。'
-                          : '注册或使用 Citro 即表示你同意本协议。社区内容零容忍违法违规与辱骂攻击；你可以随时举报、拉黑或注销账号。',
-                      style: context.body(
-                        size: 12,
-                        color: c.ink2,
-                        height: 1.75,
-                      ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 3,
+                          margin: const EdgeInsets.only(top: 3, bottom: 3),
+                          decoration: BoxDecoration(
+                            color: c.accent,
+                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isPrivacy
+                                ? '我们不出售你的个人信息，当前未接入广告或第三方统计 SDK。使用社区、AI、天气与语音功能前，请阅读本政策。'
+                                : '注册或使用 Citro 即表示你同意本协议。社区内容零容忍违法违规与辱骂攻击；你可以随时举报、拉黑或注销账号。',
+                            style: context.body(
+                              size: CitroType.caption,
+                              color: c.ink2,
+                              height: 1.75,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
                   for (var i = 0; i < sections.length; i++) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppSpacing.x3),
                     _SectionBlock(
                       index: i + 1,
                       title: sections[i].title,
                       paragraphs: sections[i].paragraphs,
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  DashedLine(color: c.line2.withAlpha(150)),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.x3),
+                  CitroDivider(color: c.line),
+                  const SizedBox(height: AppSpacing.x2),
                   Text(
                     'Citro 运营者\nKOOK：25343821 · 微信：Tangerine-1017',
                     textAlign: TextAlign.center,
                     style: context.body(
-                      size: 11,
+                      size: CitroType.small,
                       color: c.inkSoft,
                       height: 1.7,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.x1),
                   Text(
                     '如本页面与线上公布版本不一致，以最新公布版本为准。',
                     textAlign: TextAlign.center,
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -163,24 +180,24 @@ class _SectionBlock extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 22,
-              height: 22,
+              width: 26,
+              height: 26,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: c.hl,
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(color: c.accent.withAlpha(90)),
+                color: c.surface2,
+                shape: BoxShape.circle,
+                border: Border.all(color: c.line2),
               ),
               child: Text(
                 '$index',
-                style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
-                  color: c.accentInk,
+                style: context.hand(
+                  size: CitroType.caption,
+                  weight: CitroType.medium,
+                  color: c.ink2,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.x2),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(top: 2),
@@ -192,13 +209,13 @@ class _SectionBlock extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x2),
         for (final p in paragraphs)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               p,
-              style: context.body(size: 13, color: c.ink2, height: 1.85),
+              style: context.body(size: CitroType.meta, color: c.ink2, height: 1.85),
             ),
           ),
       ],

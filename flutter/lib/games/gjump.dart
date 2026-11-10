@@ -41,7 +41,7 @@ const double _maxD = 322; // GJUMP_MAX_D
 const double _chargeMs = 1350; // GJUMP_CHARGE_MS
 
 class _JumpStyle {
-  const _JumpStyle({
+  _JumpStyle({
     required this.shape,
     required this.top,
     required this.left,
@@ -117,129 +117,75 @@ class _JumpParticle {
 
 double _clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
 
-/// web GJUMP_STYLES（顺序与 index.html 19761-19774 完全一致）
-const List<_JumpStyle> _jumpStyles = [
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFF7EFDD),
-    left: Color(0xFFD8C7A5),
-    right: Color(0xFFC9B48C),
-    pat: 'inset',
-  ),
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFF3E6C9),
-    left: Color(0xFFD3BB92),
-    right: Color(0xFFC3AA7F),
-    pat: 'checker',
-    ac: Color(0xFFB04E00),
-  ),
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFE8B98A),
-    left: Color(0xFFC68F5C),
-    right: Color(0xFFB57F4C),
-    pat: 'rubik',
-  ),
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFF6D9D0),
-    left: Color(0xFFD8AC9E),
-    right: Color(0xFFC79A8B),
-    pat: 'ribbon',
-    ac: Color(0xFFFE923B),
-  ),
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFE2C195),
-    left: Color(0xFFBC9768),
-    right: Color(0xFFAA8557),
-    pat: 'wood',
-  ),
-  _JumpStyle(
-    shape: 'box',
-    top: Color(0xFFEFD9B8),
-    left: Color(0xFFCEAE82),
-    right: Color(0xFFBD9C6F),
-    pat: 'grid',
-  ),
-  _JumpStyle(
-    shape: 'cyl',
-    top: Color(0xFFF6E7D6),
-    left: Color(0xFFDBC2A7),
-    right: Color(0xFFCAB092),
-    pat: 'dots',
-    ac: Color(0xFFB04E00),
-  ),
-  _JumpStyle(
-    shape: 'cyl',
-    top: Color(0xFFEAD2C2),
-    left: Color(0xFFC8AB96),
-    right: Color(0xFFB79B85),
-    pat: 'ring',
-  ),
-  _JumpStyle(
-    shape: 'cyl',
-    top: Color(0xFFF4C467),
-    left: Color(0xFFB84A1C),
-    right: Color(0xFFC5531F),
-    pat: 'lantern',
-    ac: Color(0xFFF4C467),
-  ),
-  _JumpStyle(
-    shape: 'cyl',
-    top: Color(0xFFE3ECE6),
-    left: Color(0xFFB4C6BD),
-    right: Color(0xFFA3B7AC),
-    pat: 'floral',
-    ac: Color(0xFF4A7A6A),
-  ),
-  _JumpStyle(
-    shape: 'cone',
-    top: Color(0xFFF0DFC0),
-    left: Color(0xFFCFB287),
-    right: Color(0xFFBFA276),
-    pat: 'ring',
-  ),
-  _JumpStyle(
-    shape: 'hex',
-    top: Color(0xFFEFE3CF),
-    left: Color(0xFFCDBB97),
-    right: Color(0xFFBCA883),
-    pat: 'inset',
-  ),
-];
+/// web GJUMP_STYLES 的 nosh 重绘：亮色暖纸 / 深色冷灰，全部由 token 派生。
+List<_JumpStyle> _jumpStyles(CitroColors c) {
+  if (!c.dark) {
+    return [
+      _JumpStyle(shape: 'box', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'inset'),
+      _JumpStyle(shape: 'box', top: c.surface, left: c.surface2, right: c.surface2, pat: 'checker', ac: c.accent2),
+      _JumpStyle(shape: 'box', top: c.accentLt, left: c.accent, right: c.accent2, pat: 'rubik'),
+      _JumpStyle(shape: 'box', top: c.tintPink, left: c.accentLt, right: c.accentLt, pat: 'ribbon', ac: c.accent),
+      _JumpStyle(shape: 'box', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'wood'),
+      _JumpStyle(shape: 'box', top: c.surface, left: c.surface2, right: c.surface2, pat: 'grid'),
+      _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'dots', ac: c.accent2),
+      _JumpStyle(shape: 'cyl', top: c.tintPink, left: c.accentLt, right: c.accentLt, pat: 'ring'),
+      _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accent2, right: c.accent2, pat: 'lantern', ac: c.tintYellow),
+      _JumpStyle(shape: 'cyl', top: c.tintGreen, left: c.mintSoft, right: c.mintSoft, pat: 'floral', ac: c.mintInk),
+      _JumpStyle(shape: 'cone', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'ring'),
+      _JumpStyle(shape: 'hex', top: c.surface, left: c.surface2, right: c.surface2, pat: 'inset'),
+    ];
+  }
+  return [
+    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'inset'),
+    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'checker', ac: c.accent),
+    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'rubik'),
+    _JumpStyle(shape: 'box', top: c.tintPink, left: c.bg2, right: c.bg2, pat: 'ribbon', ac: c.accent),
+    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'wood'),
+    _JumpStyle(shape: 'box', top: c.tintBlue, left: c.bg2, right: c.bg2, pat: 'grid'),
+    _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.bg2, right: c.bg2, pat: 'dots', ac: c.accent),
+    _JumpStyle(shape: 'cyl', top: c.tintPink, left: c.bg2, right: c.bg2, pat: 'ring'),
+    _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accent2, right: c.accent2, pat: 'lantern', ac: c.tintYellow),
+    _JumpStyle(shape: 'cyl', top: c.tintGreen, left: c.bg2, right: c.bg2, pat: 'floral', ac: c.mint),
+    _JumpStyle(shape: 'cone', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'ring'),
+    _JumpStyle(shape: 'hex', top: c.tintBlue, left: c.bg2, right: c.bg2, pat: 'inset'),
+  ];
+}
 
-const _JumpStyle _musicStyle = _JumpStyle(
+_JumpStyle _musicStyle(CitroColors c) => _JumpStyle(
   shape: 'cyl',
-  top: Color(0xFF6B4A38),
-  left: Color(0xFF543A2B),
-  right: Color(0xFF5E4130),
+  top: c.surface2,
+  left: c.bg2,
+  right: c.bg2,
   pat: 'none',
+  ac: c.accent,
 );
-const _JumpStyle _manholeStyle = _JumpStyle(
+
+_JumpStyle _manholeStyle(CitroColors c) => _JumpStyle(
   shape: 'cyl',
-  top: Color(0xFF8C8578),
-  left: Color(0xFF6E695E),
-  right: Color(0xFF7B7568),
+  top: c.surface2,
+  left: c.bg2,
+  right: c.bg2,
   pat: 'none',
 );
 
-// 花纹用色（web 里是 rgba 字符串）
-const Color _dk = Color(0x292A211C); // rgba(42,33,28,.16)
-const Color _edge2 = Color(0x332A211C); // rgba(42,33,28,.2)
-const Color _dark18 = Color(0x2E2A211C); // rgba(42,33,28,.18)
-const Color _dotDark15 = Color(0x262A211C); // rgba(42,33,28,.15)
-const Color _white55 = Color(0x8CF4F1ED); // rgba(244,241,237,.55)
-const Color _white25 = Color(0x40F4F1ED);
-const Color _white20 = Color(0x33F4F1ED);
+// 花纹用色（亮色用深棕、深色用亮面）
+Color _dk(CitroColors c) => c.ink.withAlpha(42);
+Color _edge2(CitroColors c) => c.ink.withAlpha(54);
+Color _dark18(CitroColors c) => c.ink.withAlpha(46);
+Color _dotDark15(CitroColors c) => c.ink.withAlpha(38);
+Color _white55(CitroColors c) => c.dark ? c.ink.withAlpha(140) : c.surface.withAlpha(140);
+Color _white25(CitroColors c) => c.dark ? c.ink.withAlpha(80) : c.surface.withAlpha(80);
+Color _white20(CitroColors c) => c.dark ? c.ink.withAlpha(60) : c.surface.withAlpha(60);
 
 /// 首屏参考图反解出的初始台面（唯一目标截图 _tmp/ref/games/gjump-m-l.png）
-List<_JumpBlock> _previewBlocks() => [
-  _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: _jumpStyles[5]), // 窗格
-  _JumpBlock(x: 132, y: 0, w: 46, h: 35, style: _jumpStyles[0]), // 素纸
-  _JumpBlock(x: 132, y: 120, w: 34, h: 40, style: _jumpStyles[4]), // 木箱
-];
+List<_JumpBlock> _previewBlocks(CitroColors c) {
+  final styles = _jumpStyles(c);
+  return [
+    _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: styles[5]), // 窗格
+    _JumpBlock(x: 132, y: 0, w: 46, h: 35, style: styles[0]), // 素纸
+    _JumpBlock(x: 132, y: 120, w: 34, h: 40, style: styles[4]), // 木箱
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // 页面逻辑（玩法 / 计分 / 最高分 / 提交分数，保留原有接口）
@@ -336,6 +282,9 @@ class _GameJumpPageState extends State<GameJumpPage>
   bool get _keyboardEnabled => platform.isWindows || kIsWeb;
   bool _spaceDown = false;
 
+  /// 当前主题色，供画布快照与样式选择使用。
+  CitroColors _colors = CitroColors.light;
+
   double get _now => _clock.elapsedMilliseconds.toDouble();
 
   @override
@@ -356,6 +305,25 @@ class _GameJumpPageState extends State<GameJumpPage>
     }
   }
 
+  bool _themeSynced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _colors = context.c;
+    // initState 里生成的初始台面用的是默认浅色样式；拿到真实主题后重铺一次。
+    if (!_themeSynced) {
+      _themeSynced = true;
+      if (_blocks.isNotEmpty && !_over) {
+        _blocks = [
+          _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: _jumpStyles(_colors)[5]),
+        ];
+        _genNext();
+        _genNext();
+      }
+    }
+  }
+
   @override
   void dispose() {
     _ticker.dispose();
@@ -368,10 +336,13 @@ class _GameJumpPageState extends State<GameJumpPage>
   }
 
   _JumpStyle _pickStyle() {
+    final styles = _jumpStyles(_colors);
     _JumpStyle s;
     do {
-      s = _jumpStyles[_rnd.nextInt(_jumpStyles.length)];
-    } while (_lastStyle != null && identical(s, _lastStyle));
+      s = styles[_rnd.nextInt(styles.length)];
+    } while (_lastStyle != null &&
+        _lastStyle!.top == s.top &&
+        _lastStyle!.pat == s.pat);
     _lastStyle = s;
     return s;
   }
@@ -483,11 +454,11 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   void _burst(int n) {
     final p = _proj(_px, _py, _z + 8);
-    const cols = [
-      Color(0xFFFE923B),
-      Color(0xFFFFC46B),
-      Color(0xFFF4F1ED),
-      Color(0xFFE8B98A),
+    final cols = [
+      _colors.accent,
+      _colors.accentLt,
+      _colors.surface,
+      _colors.tintYellow,
     ];
     for (var i = 0; i < n; i++) {
       final a = _rnd.nextDouble() * math.pi * 2;
@@ -763,6 +734,7 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   @override
   Widget build(BuildContext context) {
+    _colors = context.c;
     final best = math.max(_best, context.app.localBest('jump'));
     _syncScene(_now);
     final view = GameJumpView(
@@ -840,7 +812,7 @@ class GameJumpView extends StatelessWidget {
   factory GameJumpView.preview() => GameJumpView(
     score: 0,
     best: 0,
-    blocks: _previewBlocks(),
+    blocks: _previewBlocks(CitroColors.light),
     cur: 0,
     playerZ: 35.5,
     groundH: 34,
@@ -893,24 +865,18 @@ class GameJumpView extends StatelessWidget {
       ],
     );
 
-    final board = CssShadowLayer(
-      radius: 14,
-      shadows: const [
-        CssShadowSpec(color: Color(0x0E5A4A2C), offset: Offset(0, 1), blur: 2),
-        CssShadowSpec(
-          color: Color(0x4D5A4A2C),
-          offset: Offset(0, 8),
-          blur: 20,
-          spread: -12,
-        ),
-      ],
+    final board = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        boxShadow: CitroColors.shadows.card(c),
+      ),
       child: Container(
         width: double.infinity,
         height: 568,
         decoration: BoxDecoration(
-          color: c.surface2,
+          color: c.bg,
           border: Border.all(color: c.line),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
         ),
         clipBehavior: Clip.hardEdge,
         child: Stack(
@@ -948,6 +914,9 @@ class GameJumpView extends StatelessWidget {
                             ..floats = floats
                             ..particles = particles),
                       repaint: sceneRepaint,
+                      colors: c,
+                      musicStyle: _musicStyle(c),
+                      manholeStyle: _manholeStyle(c),
                     ),
                   ),
                 ),
@@ -1003,26 +972,16 @@ class _JumpHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CssShadowLayer(
-      radius: 99,
-      shadows: const [
-        CssShadowSpec(color: Color(0x0E5A4A2C), offset: Offset(0, 1), blur: 2),
-        CssShadowSpec(
-          color: Color(0x4D5A4A2C),
-          offset: Offset(0, 8),
-          blur: 20,
-          spread: -12,
-        ),
-      ],
-      child: Container(
-        width: 163.062,
-        height: 33.797,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          border: Border.all(color: c.line2),
-          borderRadius: BorderRadius.circular(99),
-        ),
+    return Container(
+      width: 163.062,
+      height: 33.797,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        boxShadow: CitroColors.shadows.card(c),
+      ),
         child: Row(
           children: [
             Container(
@@ -1042,21 +1001,16 @@ class _JumpHint extends StatelessWidget {
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.visible,
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1.65,
-                  letterSpacing: .6,
+                style: context.body(
+                  size: CitroType.caption,
+                  weight: CitroType.strong,
                   color: c.ink2,
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -1079,24 +1033,16 @@ class _JumpOverlay extends StatelessWidget {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xEDF6EFDF),
-        border: Border.all(color: c.dark ? c.line2 : const Color(0x262E2C22)),
-        borderRadius: BorderRadius.circular(22),
+        color: c.surface.withValues(alpha: 0.96),
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             '游戏结束',
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontFamilyFallback: AppFonts.fallback,
-              fontSize: 22,
-              fontWeight: FontWeight.w400,
-              height: 36.3 / 22,
-              letterSpacing: 1.32,
-              color: c.ink,
-            ),
+            style: context.heading(size: CitroType.subtitle, color: c.ink),
           ),
           const SizedBox(height: 10),
           Padding(
@@ -1104,30 +1050,22 @@ class _JumpOverlay extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
-                    text: '本局得分 ',
-                    style: TextStyle(color: c.ink2, fontSize: 13, height: 1.7),
-                  ),
+                  const TextSpan(text: '本局得分 '),
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : const Color(0xFFE8C87E),
-                      fontSize: 13,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
-                      height: 1.7,
                     ),
                   ),
                   TextSpan(
-                    text: ' · 最高连击 ×$maxCombo${improved ? '\n新纪录诞生！' : ''}',
-                    style: TextStyle(color: c.ink2, fontSize: 13, height: 1.7),
+                    text:
+                        ' · 最高连击 ×$maxCombo${improved ? '· 新纪录诞生！' : ''}',
                   ),
                 ],
               ),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: AppFonts.noto,
-                fontFamilyFallback: AppFonts.bodyFallback,
-              ),
+              style: context.body(size: CitroType.meta, color: c.ink2),
             ),
           ),
           const SizedBox(height: 10),
@@ -1143,9 +1081,18 @@ class _JumpOverlay extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _JumpPainter extends CustomPainter {
-  _JumpPainter(this.data, {Listenable? repaint}) : super(repaint: repaint);
+  _JumpPainter(
+    this.data, {
+    Listenable? repaint,
+    required this.colors,
+    required this.musicStyle,
+    required this.manholeStyle,
+  }) : super(repaint: repaint);
 
   final _JumpFrameData data;
+  final CitroColors colors;
+  final _JumpStyle musicStyle;
+  final _JumpStyle manholeStyle;
 
   List<_JumpBlock> get blocks => data.blocks;
   int get cur => data.cur;
@@ -1427,7 +1374,7 @@ class _JumpPainter extends CustomPainter {
 
   void _drawPattern(Canvas canvas, _JumpBlock b, _JumpStyle st) {
     final x = b.x, y = b.y, w = b.w, h = b.h;
-    final ac = st.ac ?? const Color(0x402A211C);
+    final ac = st.ac ?? _dk(colors);
     switch (st.pat) {
       case 'inset':
         if (st.shape == 'box') {
@@ -1442,7 +1389,7 @@ class _JumpPainter extends CustomPainter {
             x - w * .68,
             y + w * .68,
             h,
-            _dk,
+            _dk(colors),
             2,
           );
         } else if (st.shape == 'hex') {
@@ -1451,10 +1398,10 @@ class _JumpPainter extends CustomPainter {
             Paint()
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2
-              ..color = _dk,
+              ..color = _dk(colors),
           );
         } else {
-          _isoRing(canvas, x, y, h, w * .66, _dk, 2);
+          _isoRing(canvas, x, y, h, w * .66, _dk(colors), 2);
         }
         break;
       case 'checker':
@@ -1492,8 +1439,8 @@ class _JumpPainter extends CustomPainter {
         for (var i = -1; i <= 1; i++) {
           for (var j = -1; j <= 1; j++) {
             final f = (i == 0 && j == 0)
-                ? const Color(0xFFFE923B)
-                : (((i + j) % 2 == 0) ? _white55 : _dark18);
+                ? colors.accent
+                : (((i + j) % 2 == 0) ? _white55(colors) : _dark18(colors));
             _quadFill(
               canvas,
               x + i * off - cs,
@@ -1537,7 +1484,7 @@ class _JumpPainter extends CustomPainter {
           h,
           ac,
         );
-        _isoDot(canvas, x, y, h, w * .10, const Color(0xFFF4F1ED));
+        _isoDot(canvas, x, y, h, w * .10, colors.surface);
         break;
       case 'wood':
         _quadFill(
@@ -1551,7 +1498,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .36,
           y + w,
           h,
-          _dk,
+          _dk(colors),
         );
         _quadFill(
           canvas,
@@ -1564,7 +1511,7 @@ class _JumpPainter extends CustomPainter {
           x + w * .28,
           y + w,
           h,
-          _dk,
+          _dk(colors),
         );
         _quadStroke(
           canvas,
@@ -1577,7 +1524,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .82,
           y + w * .82,
           h,
-          _edge2,
+          _edge2(colors),
           2,
         );
         break;
@@ -1593,7 +1540,7 @@ class _JumpPainter extends CustomPainter {
           x - w,
           y - w * .47,
           h,
-          _dk,
+          _dk(colors),
         );
         _quadFill(
           canvas,
@@ -1606,7 +1553,7 @@ class _JumpPainter extends CustomPainter {
           x - w,
           y + w * .55,
           h,
-          _dk,
+          _dk(colors),
         );
         _quadFill(
           canvas,
@@ -1619,7 +1566,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .55,
           y + w,
           h,
-          _dk,
+          _dk(colors),
         );
         _quadFill(
           canvas,
@@ -1632,7 +1579,7 @@ class _JumpPainter extends CustomPainter {
           x + w * .47,
           y + w,
           h,
-          _dk,
+          _dk(colors),
         );
         break;
       case 'dots':
@@ -1644,8 +1591,8 @@ class _JumpPainter extends CustomPainter {
         break;
       case 'ring':
         final k = st.shape == 'cone' ? .58 : 1.0;
-        _isoRing(canvas, x, y, h, w * .62 * k, _dark18, 2.5);
-        _isoRing(canvas, x, y, h, w * .30 * k, _dotDark15, 2);
+        _isoRing(canvas, x, y, h, w * .62 * k, _dark18(colors), 2.5);
+        _isoRing(canvas, x, y, h, w * .30 * k, _dotDark15(colors), 2);
         break;
       case 'lantern':
         _isoArc(canvas, x, y, h * .66, w * 1.01, st.ac!, 3);
@@ -1664,16 +1611,16 @@ class _JumpPainter extends CustomPainter {
 
   void _drawBlock(Canvas canvas, _JumpBlock b) {
     if (b.special == 'music') {
-      _drawCyl(canvas, b, _musicStyle, 1);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .62, _white25, 2);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .34, _white20, 2);
-      _isoDot(canvas, b.x, b.y, b.h, b.w * .13, const Color(0xFFFE923B));
+      _drawCyl(canvas, b, musicStyle, 1);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .62, _white25(colors), 2);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .34, _white20(colors), 2);
+      _isoDot(canvas, b.x, b.y, b.h, b.w * .13, colors.accent);
       return;
     }
     if (b.special == 'manhole') {
-      _drawCyl(canvas, b, _manholeStyle, 1);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .66, const Color(0x592A211C), 2.5);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .30, const Color(0x4D2A211C), 2);
+      _drawCyl(canvas, b, manholeStyle, 1);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .66, colors.ink.withAlpha(90), 2.5);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .30, colors.ink.withAlpha(80), 2);
       return;
     }
     final st = b.style;
@@ -1707,7 +1654,7 @@ class _JumpPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFFFE923B),
+        ..color = colors.accent,
     );
   }
 
@@ -1723,11 +1670,11 @@ class _JumpPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = Color.fromRGBO(254, 146, 59, .30 + .45 * power),
+        ..color = colors.accent.withValues(alpha: .30 + .45 * power),
     );
     canvas.drawOval(
       Rect.fromCenter(center: p, width: rr * 2 * .72, height: rr2 * 2 * .72),
-      Paint()..color = const Color(0x14FE923B),
+      Paint()..color = colors.accent.withAlpha(24),
     );
   }
 
@@ -1741,7 +1688,7 @@ class _JumpPainter extends CustomPainter {
         width: 17 * _sc * e * 2,
         height: 6.5 * _sc * e * 2,
       ),
-      Paint()..color = Color.fromRGBO(15, 9, 6, .30 * shK),
+      Paint()..color = (colors.dark ? colors.bg : colors.ink).withValues(alpha: .30 * shK),
     );
 
     final p = _proj(playerX, playerY, playerZ);
@@ -1749,7 +1696,7 @@ class _JumpPainter extends CustomPainter {
     canvas.translate(p.dx, p.dy);
     if (pieceRot != 0) canvas.rotate(pieceRot);
     canvas.scale(pieceScaleX * _sc, pieceScaleY * _sc);
-    final body = Paint()..color = const Color(0xFF453154);
+    final body = Paint()..color = colors.ink;
     canvas.drawPath(
       Path()
         ..moveTo(-11, 1)
@@ -1766,7 +1713,7 @@ class _JumpPainter extends CustomPainter {
     canvas.rotate(-.5);
     canvas.drawOval(
       Rect.fromCenter(center: Offset.zero, width: 6.4, height: 4.2),
-      Paint()..color = const Color(0x21FFFFFF),
+      Paint()..color = colors.surface.withAlpha(60),
     );
     canvas.restore();
     canvas.save();
@@ -1774,7 +1721,7 @@ class _JumpPainter extends CustomPainter {
     canvas.rotate(.12);
     canvas.drawOval(
       Rect.fromCenter(center: Offset.zero, width: 6, height: 14),
-      Paint()..color = const Color(0x0FFFFFFF),
+      Paint()..color = colors.surface.withAlpha(30),
     );
     canvas.restore();
     canvas.restore();
@@ -1795,12 +1742,11 @@ class _JumpPainter extends CustomPainter {
         text: TextSpan(
           text: f.text,
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: f.big ? 18 : 14,
             fontWeight: FontWeight.w700,
-            color: (f.big ? const Color(0xFFE8C87E) : const Color(0xFFF4F1ED))
-                .withValues(alpha: a),
+            color: (f.big ? colors.accentInk : colors.ink).withValues(alpha: a),
           ),
         ),
         textDirection: TextDirection.ltr,

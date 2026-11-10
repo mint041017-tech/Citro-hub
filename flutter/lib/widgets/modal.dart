@@ -22,7 +22,7 @@ Future<T?> showCitroDialog<T>(
     _CitroDialogRoute<T>(
       page: builder,
       dismissible: dismissible,
-      barrierColor: barrier ?? const Color(0xB223211C),
+      barrierColor: barrier ?? context.c.scrim,
       reduce: reduce,
     ),
   );
@@ -135,7 +135,6 @@ class PaperDialog extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double maxWidth;
-  final Color? tapeColor;
   final bool showClose;
   final VoidCallback? onClose;
   final bool scrollable;
@@ -146,7 +145,6 @@ class PaperDialog extends StatefulWidget {
     required this.child,
     this.padding = const EdgeInsets.fromLTRB(24, 40, 24, 24),
     this.maxWidth = 376,
-    this.tapeColor,
     this.showClose = true,
     this.onClose,
     this.scrollable = true,
@@ -191,33 +189,6 @@ class _PaperDialogState extends State<PaperDialog> {
       clipBehavior: Clip.none,
       children: [
         card,
-        Positioned(
-          top: -11,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Transform.rotate(
-              angle: -2 * math.pi / 180,
-              child: ClipPath(
-                clipper: _TapeClip(),
-                child: Container(
-                  width: 86,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: widget.tapeColor ?? c.tape,
-                    boxShadow: [
-                      BoxShadow(
-                        color: c.tapeLine,
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
         if (widget.showClose)
           Positioned(
             top: AppSpacing.x1,
@@ -284,19 +255,6 @@ class _PaperDialogState extends State<PaperDialog> {
       ),
     );
   }
-}
-
-class _TapeClip extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(size.width * .02, 0)
-    ..lineTo(size.width * .98, size.height * .03)
-    ..lineTo(size.width, size.height * .95)
-    ..lineTo(size.width * .04, size.height)
-    ..close();
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> old) => false;
 }
 
 class CitroField extends StatelessWidget {
@@ -409,10 +367,11 @@ class AccentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fill = danger ? c.stamp : c.accent;
+    // 主操作是近黑（深色主题近白）胶囊，品牌橙只做强调；危险操作保持红色。
+    final fill = danger ? c.danger : c.ink;
     final fg = outlined
-        ? (danger ? c.stamp : c.ink2)
-        : (danger ? Colors.white : const Color(0xFF2E2C22));
+        ? (danger ? c.danger : c.ink)
+        : (danger ? c.onAccent : c.bg);
     return Pressable(
       onTap: (loading || onTap == null)
           ? null
@@ -431,9 +390,9 @@ class AccentButton extends StatelessWidget {
               : (onTap == null ? fill.withAlpha(120) : fill),
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: outlined
-              ? Border.all(color: danger ? c.stamp : c.line2)
+              ? Border.all(color: danger ? c.danger : c.line2)
               : null,
-          boxShadow: outlined ? null : CitroColors.shadows.note(c),
+          boxShadow: outlined ? null : CitroColors.shadows.float(c),
         ),
         child: Center(
           child: loading

@@ -115,11 +115,13 @@ class _CitroWindowControlsState extends State<CitroWindowControls>
               icon: AppIcons.minus,
               onTap: () => windowManager.minimize(),
             ),
+            const SizedBox(width: 11),
             _WindowControl(
               label: _maximized ? '还原' : '最大化',
               icon: _maximized ? AppIcons.restore : AppIcons.maximize,
               onTap: _toggleMaximize,
             ),
+            const SizedBox(width: 11),
             _WindowControl(
               label: '关闭',
               icon: AppIcons.close,
@@ -158,12 +160,15 @@ class _WindowControlState extends State<_WindowControl> {
   Widget build(BuildContext context) {
     final c = context.c;
     final close = widget.destructive;
+    // 中性 hover：关闭钮用系统红，其余用半透明白/黑；不再用手账色（印章红/荧光黄）。
     final restColor = close
-        ? c.stamp.withAlpha(c.dark ? 92 : 30)
+        ? c.danger.withAlpha(c.dark ? 92 : 30)
         : c.surface.withAlpha(c.dark ? 190 : 220);
-    final restBorder = close ? c.stamp.withAlpha(60) : c.line;
-    final hoverColor = close ? c.stamp : c.hl.withAlpha(c.dark ? 42 : 145);
-    final hoverBorder = close ? c.stamp : c.accent.withAlpha(110);
+    final restBorder = close ? c.danger.withAlpha(60) : c.line;
+    final hoverColor = close
+        ? c.danger
+        : (c.dark ? Colors.white.withAlpha(28) : Colors.black.withAlpha(16));
+    final hoverBorder = close ? c.danger : c.line2;
     return Semantics(
       button: true,
       label: widget.label,
@@ -214,8 +219,8 @@ class _WindowControlState extends State<_WindowControl> {
                         strokeSvg(widget.icon, width: 2),
                         size: 13,
                         color: Color.lerp(
-                          close ? c.stamp : c.ink2,
-                          close ? Colors.white : c.accentInk,
+                          close ? c.danger : c.ink2,
+                          close ? Colors.white : c.ink,
                           t,
                         )!,
                       ),

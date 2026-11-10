@@ -9,7 +9,9 @@ import '../services/api.dart';
 import '../services/refresh_rate.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import 'game_ui.dart';
+import 'game_theme.dart';
 
 /// 极限刹车：内嵌原始版（three.js 构建产物），完全离线、不依赖任何 URL。
 ///
@@ -265,7 +267,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: const Color(0xFF120D10),
+        systemNavigationBarColor: context.c.bg,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: PopScope(
@@ -382,7 +384,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                     if (_bootError != null)
                       Positioned.fill(
                         child: ColoredBox(
-                          color: const Color(0xFF120D10),
+                          color: context.c.surface,
                           child: Center(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -391,22 +393,21 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
+                                  Text(
                                     '游戏加载失败',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFFF1DCAE),
+                                    style: context.heading(
+                                      size: CitroType.titleLg,
+                                      color: context.c.ink,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     _bootError!,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 12,
+                                    style: context.body(
+                                      size: CitroType.caption,
+                                      color: context.c.inkSoft,
                                       height: 1.5,
-                                      color: Color(0xB3F5EFE6),
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -419,23 +420,18 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                                         horizontal: 26,
                                       ),
                                       alignment: Alignment.center,
-                                      decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Color(0xFFF6E5BF),
-                                            Color(0xFFC9A86C),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(14),
+                                      decoration: BoxDecoration(
+                                        color: context.c.accent,
+                                        borderRadius: BorderRadius.circular(
+                                          CitroColors.radii.button,
                                         ),
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         '重新加载',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF20170C),
+                                        style: context.body(
+                                          size: CitroType.label,
+                                          weight: CitroType.strong,
+                                          color: context.c.accentText,
                                         ),
                                       ),
                                     ),
@@ -491,8 +487,9 @@ class _BrakeLoadingState extends State<_BrakeLoading>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return ColoredBox(
-      color: const Color(0xFF120D10),
+      color: c.bg,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -503,15 +500,16 @@ class _BrakeLoadingState extends State<_BrakeLoading>
               child: AnimatedBuilder(
                 animation: _c,
                 builder: (ctx, _) => CustomPaint(
-                  painter: _LoadingArcPainter(t: _c.value),
+                  painter: _LoadingArcPainter(
+                    t: _c.value,
+                    base: c.line,
+                    arc: c.accent,
+                    tick: c.accentInk,
+                  ),
                   child: Center(
                     child: Opacity(
                       opacity: 0.75 + 0.25 * (1 - (_c.value - 0.5).abs() * 2),
-                      child: const Icon(
-                        Icons.speed_rounded,
-                        size: 36,
-                        color: Color(0xFFF1DCAE),
-                      ),
+                      child: Icon(Icons.speed_rounded, size: 36, color: c.accent),
                     ),
                   ),
                 ),
@@ -520,23 +518,16 @@ class _BrakeLoadingState extends State<_BrakeLoading>
             const SizedBox(height: 18),
             Text(
               _label,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.4,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-                color: Color(0xE6F5EFE6),
+              style: context.body(
+                size: CitroType.body,
+                weight: CitroType.strong,
+                color: c.ink,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               '极限刹车 · 原版赛道',
-              style: TextStyle(
-                fontSize: 11,
-                height: 1.4,
-                letterSpacing: 0.6,
-                color: Color(0x73F5EFE6),
-              ),
+              style: context.body(size: CitroType.small, color: c.inkSoft),
             ),
           ],
         ),
@@ -546,9 +537,12 @@ class _BrakeLoadingState extends State<_BrakeLoading>
 }
 
 class _LoadingArcPainter extends CustomPainter {
-  const _LoadingArcPainter({required this.t});
+  const _LoadingArcPainter({required this.t, required this.base, required this.arc, required this.tick});
 
   final double t;
+  final Color base;
+  final Color arc;
+  final Color tick;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -563,19 +557,14 @@ class _LoadingArcPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.4
-        ..color = const Color(0x26D8C39A),
+        ..color = base,
     );
 
-    // 旋转的进度弧（金色渐变 + 圆头）
+    // 旋转的进度弧（圆头）
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(t * 6.28318);
     canvas.translate(-center.dx, -center.dy);
-    final shader = const SweepGradient(
-      startAngle: 0,
-      endAngle: 3.14159,
-      colors: [Color(0x00F1DCAE), Color(0xFFF1DCAE)],
-    ).createShader(rect);
     canvas.drawArc(
       rect,
       -1.5708,
@@ -585,7 +574,7 @@ class _LoadingArcPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.8
         ..strokeCap = StrokeCap.round
-        ..shader = shader,
+        ..color = arc,
     );
     canvas.restore();
 
@@ -599,15 +588,12 @@ class _LoadingArcPainter extends CustomPainter {
         p2,
         Paint()
           ..strokeWidth = 1.4
-          ..color = Color.lerp(
-            const Color(0x1FD8C39A),
-            const Color(0x8CF1DCAE),
-            ((i / 12) + t) % 1,
-          )!,
+          ..color = tick.withValues(alpha: .35 + .65 * (((i / 12) + t) % 1)),
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _LoadingArcPainter old) => old.t != t;
+  bool shouldRepaint(covariant _LoadingArcPainter old) =>
+      old.t != t || old.base != base || old.arc != arc || old.tick != tick;
 }

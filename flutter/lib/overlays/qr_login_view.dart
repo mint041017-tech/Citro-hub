@@ -146,18 +146,11 @@ class _QrLoginViewState extends State<QrLoginView> {
           height: 184,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
+            // 二维码是图片内容，必须纯白底 + 深色模块才能被扫。
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             border: Border.all(color: c.line2),
-            boxShadow: c.dark
-                ? null
-                : const [
-                    BoxShadow(
-                      color: Color(0x1A5A4A2C),
-                      blurRadius: 16,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
+            boxShadow: c.dark ? null : CitroColors.shadows.card(c),
           ),
           child: _id == null
               ? Center(
@@ -181,7 +174,7 @@ class _QrLoginViewState extends State<QrLoginView> {
                   version: QrVersions.auto,
                   size: 160,
                   gapless: true,
-                  backgroundColor: Colors.white,
+                  backgroundColor: Colors.white, // 二维码图片底，保证扫码对比
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.square,
                     color: Colors.black,
@@ -193,7 +186,7 @@ class _QrLoginViewState extends State<QrLoginView> {
                   errorStateBuilder: (context, error) => Center(
                     child: Text(
                       '二维码生成失败',
-                      style: context.body(size: 12, color: c.stamp),
+                      style: context.body(size: CitroType.caption, color: c.stamp),
                     ),
                   ),
                 ),
@@ -213,7 +206,7 @@ class _QrLoginViewState extends State<QrLoginView> {
               const SizedBox(width: 5),
               Text(
                 '打开 Citro App →「我的」→「扫一扫」',
-                style: context.body(size: 11, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
@@ -221,7 +214,7 @@ class _QrLoginViewState extends State<QrLoginView> {
           const SizedBox(height: 6),
           Text(
             '有效期 $_countdown',
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           ),
         ],
         if (_status == 'expired' || _status == 'error') ...[
@@ -232,7 +225,7 @@ class _QrLoginViewState extends State<QrLoginView> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(color: c.line2),
               ),
               child: Row(

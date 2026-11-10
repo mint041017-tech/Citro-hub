@@ -132,7 +132,7 @@ class ZodiacRing extends StatelessWidget {
         painter: _RingPainter(
           score.clamp(0, 100) / 100,
           c.accent,
-          c.dark ? const Color(0x2294530A) : const Color(0x2194530A),
+          c.line,
         ),
         child: Center(
           child: Container(
@@ -141,7 +141,6 @@ class ZodiacRing extends StatelessWidget {
             decoration: BoxDecoration(
               color: c.surface2,
               shape: BoxShape.circle,
-              border: Border.all(color: c.line),
             ),
             child: Center(
               child: RichText(
@@ -149,7 +148,7 @@ class ZodiacRing extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: '$score',
-                      style: context.display(
+                      style: context.hand(
                         size: math.max(14, size * .33),
                         color: c.ink,
                         height: 1,

@@ -17,7 +17,9 @@ import '../utils/navigation.dart';
 import '../widgets/paper.dart';
 import 'me_page.dart';
 
-/// The desktop page is a 12-column sheet on a warm desk, matching index.html.
+/// Web 桌面（>=1025）的干净仪表盘：中性底 + 白色大圆角内容面。
+///
+/// 旧版的暖色桌面渐变与纸质内框已删除，只保留 12 栏网格算法。
 class WebDesktopPaper extends StatelessWidget {
   final Widget child;
 
@@ -27,36 +29,21 @@ class WebDesktopPaper extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: c.dark
-              ? const [Color(0xFF111113), Color(0xFF08080A)]
-              : const [Color(0xFFE9DCC6), Color(0xFFDCCAB0)],
-        ),
-      ),
+      color: c.bg2,
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           child: Container(
             decoration: BoxDecoration(
               color: c.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: c.dark ? Colors.black54 : const Color(0x553C301A),
-                  blurRadius: 42,
-                  offset: const Offset(0, 20),
-                  spreadRadius: -20,
-                ),
-              ],
+              borderRadius: BorderRadius.circular(CitroColors.radii.page),
+              boxShadow: CitroColors.shadows.card(c),
             ),
             clipBehavior: Clip.antiAlias,
-            child: PaperBackground(
+            child: CitroBackground(
               color: c.surface,
-              child: Padding(padding: const EdgeInsets.all(4), child: child),
+              child: child,
             ),
           ),
         ),
@@ -91,7 +78,7 @@ class WebDesktopGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const gap = 12.0;
+        const gap = 16.0;
         const headerHeight = 64.0;
         final bodyRows = rows - 1;
         final bodyHeight = constraints.maxHeight - headerHeight - gap * rows;
@@ -127,9 +114,7 @@ class WebDesktopHeader extends StatelessWidget {
   const WebDesktopHeader({super.key, required this.onHome});
 
   @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 
   List<WebGridCell> cells(BuildContext context) => [
     WebGridCell(1, 1, 3, 1, _Brand(onTap: onHome)),
@@ -223,7 +208,7 @@ class _HeaderAvatar extends StatelessWidget {
         scale: .94,
         hoverLift: 0,
         hoverShadow: false,
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
         child: Container(
           width: 36,
           height: 36,
@@ -231,7 +216,6 @@ class _HeaderAvatar extends StatelessWidget {
             color: c.surface2,
             shape: BoxShape.circle,
             border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
           ),
           clipBehavior: Clip.antiAlias,
           child: Center(
@@ -243,9 +227,8 @@ class _HeaderAvatar extends StatelessWidget {
                   )
                 : Text(
                     user.name[0],
-                    style: context.display(
-                      size: 15,
-                      weight: FontWeight.w700,
+                    style: context.heading(
+                      size: CitroType.meta,
                       color: c.ink,
                     ),
                   ),
@@ -283,17 +266,13 @@ class _Brand extends StatelessWidget {
                   children: [
                     Image.asset(
                       'assets/images/logo.webp',
-                      width: 56,
-                      height: 56,
+                      width: 40,
+                      height: 40,
                       fit: BoxFit.contain,
-                      cacheWidth: 168,
+                      cacheWidth: 120,
                     ),
                     const SizedBox(width: 10),
-                    HighlightedText(
-                      'Citro',
-                      style: context.display(size: 36, color: c.ink),
-                      highlight: c.hl,
-                    ),
+                    Text('Citro', style: context.heading(size: 28)),
                   ],
                 ),
               ),
@@ -302,16 +281,14 @@ class _Brand extends StatelessWidget {
                 onTap: () => showAiChat(context),
                 hoverLift: 0,
                 hoverShadow: false,
-                hoverColor: c.hl.withAlpha(55),
-                borderRadius: BorderRadius.circular(999),
+                hoverColor: c.surface2,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 child: Container(
                   height: 42,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: c.surface2.withAlpha(210),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.line),
-                    boxShadow: CitroColors.shadows.paper(c),
+                    color: c.accentLt.withAlpha(c.dark ? 60 : 140),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -321,12 +298,12 @@ class _Brand extends StatelessWidget {
                         size: 18,
                         color: c.accentInk,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 6),
                       Text(
                         'CiCi',
                         style: context.body(
-                          size: 15,
-                          weight: FontWeight.w700,
+                          size: CitroType.body,
+                          weight: CitroType.medium,
                           color: c.accentInk,
                         ),
                       ),
@@ -356,10 +333,9 @@ class _LanternNavButton extends StatelessWidget {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: c.surface2.withAlpha(220),
-          borderRadius: BorderRadius.circular(99),
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -370,7 +346,7 @@ class _LanternNavButton extends StatelessWidget {
               color: c.accentInk,
             ),
             const SizedBox(width: 6),
-            Text('灯谜', style: context.heading(size: 15, color: c.ink)),
+            Text('灯谜', style: context.heading(size: CitroType.bodyLg)),
           ],
         ),
       ),
@@ -394,17 +370,17 @@ class WebThemeMenu extends StatelessWidget {
       tooltip: '主题模式',
       initialValue: state.themeMode,
       onSelected: state.setThemeMode,
-      color: c.surface2,
+      color: c.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 16,
-      shadowColor: c.ink.withAlpha(50),
+      shadowColor: c.scrim,
       position: PopupMenuPosition.under,
       offset: const Offset(0, 8),
       menuPadding: const EdgeInsets.all(8),
       constraints: const BoxConstraints(minWidth: 224, maxWidth: 250),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         side: BorderSide(color: c.line),
       ),
       itemBuilder: (context) => [
@@ -417,8 +393,8 @@ class WebThemeMenu extends StatelessWidget {
               Text(
                 '外观主题',
                 style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
+                  size: CitroType.small,
+                  weight: CitroType.medium,
                   color: c.inkSoft,
                   letterSpacing: 1.4,
                 ),
@@ -426,7 +402,12 @@ class WebThemeMenu extends StatelessWidget {
               const Spacer(),
               Text(
                 'APPEARANCE',
-                style: context.hand(size: 11, color: c.inkSoft),
+                style: context.body(
+                  size: CitroType.micro,
+                  weight: CitroType.medium,
+                  color: c.inkSoft,
+                  letterSpacing: 1.2,
+                ),
               ),
             ],
           ),
@@ -440,17 +421,22 @@ class WebThemeMenu extends StatelessWidget {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: c.surface2.withAlpha(220),
-          borderRadius: BorderRadius.circular(99),
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('主题', style: context.display(size: 13, color: c.inkSoft)),
-            const SizedBox(width: 8),
-            AppIcon(strokeSvg(icon), size: 24, color: c.accentInk),
+            Text(
+              '主题',
+              style: context.body(
+                size: CitroType.meta,
+                color: c.inkSoft,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x1),
+            AppIcon(strokeSvg(icon), size: 22, color: c.accentInk),
           ],
         ),
       ),
@@ -473,11 +459,8 @@ class WebThemeMenu extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: selected ? c.hl.withAlpha(105) : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: selected ? c.accent.withAlpha(110) : Colors.transparent,
-          ),
+          color: selected ? c.accentLt.withAlpha(140) : Colors.transparent,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         ),
         child: Row(
           children: [
@@ -485,24 +468,24 @@ class WebThemeMenu extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: selected ? c.accent : c.hl.withAlpha(90),
+                color: selected ? c.accent : c.surface2,
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(icon),
                   size: 16,
-                  color: selected ? const Color(0xFF2E2C22) : c.accentInk,
+                  color: selected ? c.onAccent : c.ink2,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.x2),
             Expanded(
               child: Text(
                 label,
                 style: context.body(
-                  size: 14,
-                  weight: selected ? FontWeight.w700 : FontWeight.w400,
+                  size: CitroType.body,
+                  weight: selected ? CitroType.medium : CitroType.regular,
                   color: selected ? c.accentInk : c.ink,
                 ),
               ),
@@ -562,19 +545,19 @@ class _WebDesktopClockState extends State<WebDesktopClock> {
             children: [
               Text(
                 '${_now.month}.${two(_now.day)}',
-                style: context.body(size: 14, color: c.inkSoft),
+                style: context.body(size: CitroType.meta, color: c.inkSoft),
               ),
               const SizedBox(width: 10),
               Text(
                 weeks[_now.weekday % 7],
-                style: context.body(size: 15, color: c.inkSoft),
+                style: context.body(size: CitroType.body, color: c.inkSoft),
               ),
               const SizedBox(width: 10),
               Text(
                 '${two(_now.hour)}:${two(_now.minute)}',
-                style: context.display(
-                  size: 48,
-                  weight: FontWeight.w700,
+                style: context.hand(
+                  size: 40,
+                  weight: CitroType.strong,
                   color: c.ink,
                   height: 1,
                 ),
@@ -582,7 +565,11 @@ class _WebDesktopClockState extends State<WebDesktopClock> {
               const SizedBox(width: 5),
               Text(
                 two(_now.second),
-                style: context.display(size: 24, color: c.accentInk),
+                style: context.hand(
+                  size: CitroType.titleLg,
+                  weight: CitroType.medium,
+                  color: c.accentInk,
+                ),
               ),
             ],
           ),
@@ -600,15 +587,11 @@ class WebSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HighlightedText(
-      text,
-      style: context.heading(size: size, color: context.c.ink),
-      highlight: context.c.hl,
-    );
+    return Text(text, style: context.heading(size: size, color: context.c.ink));
   }
 }
 
-/// 网页宽屏的「返回首页」纸质胶囊。
+/// 网页宽屏的「返回首页」胶囊。
 class WebHomeBackPill extends StatelessWidget {
   final String label;
 
@@ -621,16 +604,15 @@ class WebHomeBackPill extends StatelessWidget {
       onTap: () => popOrHome(context),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(55),
-      borderRadius: BorderRadius.circular(999),
+      hoverColor: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       child: Container(
         height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: c.surface2.withAlpha(235),
-          borderRadius: BorderRadius.circular(999),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -644,8 +626,8 @@ class WebHomeBackPill extends StatelessWidget {
             Text(
               label,
               style: context.body(
-                size: 13,
-                weight: FontWeight.w700,
+                size: CitroType.meta,
+                weight: CitroType.medium,
                 color: c.ink2,
               ),
             ),

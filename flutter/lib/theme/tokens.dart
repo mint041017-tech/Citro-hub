@@ -1,38 +1,79 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens — 1:1 port of styles/citro-core.css (:root / dark).
+/// 设计令牌 —— nosh 风格重设计（2026-11）。
+///
+/// 方向：干净、圆润、留白充足。圆角无衬线字体 + 大圆角卡片 + 粉彩分区底 +
+/// 近黑胶囊主按钮 + 品牌橙强调。手账风（网格纸 / 胶带 / 便签 / 印章 / 手写体）全部退役。
+///
+/// 浅色与深色是两套完整值，不是「浅色 + 滤镜」：深色的表面抬升、描边、
+/// 阴影都按暗色下的实际观感单独调过，新增颜色时两边都要给。
 class CitroColors {
+  /// 页面底。
   final Color bg;
+
+  /// 比 [bg] 更深一档的底，用于大面积分区/桌底。
   final Color bg2;
+
+  /// 卡片/浮层表面。
   final Color surface;
+
+  /// 卡内内嵌区域（输入框底、次级块）。
   final Color surface2;
-  final Color paperLine;
+
+  /// 主文字。
   final Color ink;
+
+  /// 次级文字。
   final Color ink2;
+
+  /// 弱文字/占位/时间戳。
   final Color inkSoft;
+
+  /// 描边。
   final Color line;
+
+  /// 分割线/更强的描边。
   final Color line2;
-  final Color grid;
+
+  /// 品牌橙：主行动、选中、图标、链接。
   final Color accent;
+
+  /// 按压/更深的橙。
   final Color accent2;
+
+  /// 浅橙：标签底、软强调。
   final Color accentLt;
+
+  /// 浅底上的橙字（过 AA）。
   final Color accentInk;
+
+  /// 橙底上的文字/图标。
+  final Color onAccent;
+
+  /// 薄荷绿：成功、收藏、次要语义。
   final Color mint;
   final Color mintInk;
   final Color mintSoft;
   final Color mintLine;
-  final Color tape;
-  final Color tape2;
-  final Color tape3;
-  final Color tapeLine;
+
+  /// 朱砂红：日历「宜」、提醒、游戏强调。
+  final Color stamp;
+
+  /// 危险/删除。
+  final Color danger;
+  final Color dangerSoft;
+
+  /// 荧光黄：标记重点。
   final Color hl;
   final Color hlInk;
-  final Color noteY;
-  final Color noteP;
-  final Color noteB;
-  final Color noteG;
-  final Color stamp;
-  final Color mask;
+
+  /// 粉彩分区底（nosh 的按场景换色）。
+  final Color tintYellow;
+  final Color tintPink;
+  final Color tintBlue;
+  final Color tintGreen;
+  final Color tintNeutral;
+
   final bool dark;
 
   const CitroColors({
@@ -40,33 +81,30 @@ class CitroColors {
     required this.bg2,
     required this.surface,
     required this.surface2,
-    required this.paperLine,
     required this.ink,
     required this.ink2,
     required this.inkSoft,
     required this.line,
     required this.line2,
-    required this.grid,
     required this.accent,
     required this.accent2,
     required this.accentLt,
     required this.accentInk,
+    required this.onAccent,
     required this.mint,
     required this.mintInk,
     required this.mintSoft,
     required this.mintLine,
-    required this.tape,
-    required this.tape2,
-    required this.tape3,
-    required this.tapeLine,
+    required this.stamp,
+    required this.danger,
+    required this.dangerSoft,
     required this.hl,
     required this.hlInk,
-    required this.noteY,
-    required this.noteP,
-    required this.noteB,
-    required this.noteG,
-    required this.stamp,
-    required this.mask,
+    required this.tintYellow,
+    required this.tintPink,
+    required this.tintBlue,
+    required this.tintGreen,
+    required this.tintNeutral,
     required this.dark,
   });
 
@@ -75,136 +113,143 @@ class CitroColors {
     Color? bg2,
     Color? surface,
     Color? surface2,
-    Color? paperLine,
     Color? ink,
     Color? ink2,
     Color? inkSoft,
     Color? line,
     Color? line2,
-    Color? grid,
     Color? accent,
     Color? accent2,
     Color? accentLt,
     Color? accentInk,
+    Color? onAccent,
     Color? mint,
     Color? mintInk,
     Color? mintSoft,
     Color? mintLine,
-    Color? tape,
-    Color? tape2,
-    Color? tape3,
-    Color? tapeLine,
+    Color? stamp,
+    Color? danger,
+    Color? dangerSoft,
     Color? hl,
     Color? hlInk,
-    Color? noteY,
-    Color? noteP,
-    Color? noteB,
-    Color? noteG,
-    Color? stamp,
-    Color? mask,
+    Color? tintYellow,
+    Color? tintPink,
+    Color? tintBlue,
+    Color? tintGreen,
+    Color? tintNeutral,
     bool? dark,
   }) => CitroColors(
     bg: bg ?? this.bg,
     bg2: bg2 ?? this.bg2,
     surface: surface ?? this.surface,
     surface2: surface2 ?? this.surface2,
-    paperLine: paperLine ?? this.paperLine,
     ink: ink ?? this.ink,
     ink2: ink2 ?? this.ink2,
     inkSoft: inkSoft ?? this.inkSoft,
     line: line ?? this.line,
     line2: line2 ?? this.line2,
-    grid: grid ?? this.grid,
     accent: accent ?? this.accent,
     accent2: accent2 ?? this.accent2,
     accentLt: accentLt ?? this.accentLt,
     accentInk: accentInk ?? this.accentInk,
+    onAccent: onAccent ?? this.onAccent,
     mint: mint ?? this.mint,
     mintInk: mintInk ?? this.mintInk,
     mintSoft: mintSoft ?? this.mintSoft,
     mintLine: mintLine ?? this.mintLine,
-    tape: tape ?? this.tape,
-    tape2: tape2 ?? this.tape2,
-    tape3: tape3 ?? this.tape3,
-    tapeLine: tapeLine ?? this.tapeLine,
+    stamp: stamp ?? this.stamp,
+    danger: danger ?? this.danger,
+    dangerSoft: dangerSoft ?? this.dangerSoft,
     hl: hl ?? this.hl,
     hlInk: hlInk ?? this.hlInk,
-    noteY: noteY ?? this.noteY,
-    noteP: noteP ?? this.noteP,
-    noteB: noteB ?? this.noteB,
-    noteG: noteG ?? this.noteG,
-    stamp: stamp ?? this.stamp,
-    mask: mask ?? this.mask,
+    tintYellow: tintYellow ?? this.tintYellow,
+    tintPink: tintPink ?? this.tintPink,
+    tintBlue: tintBlue ?? this.tintBlue,
+    tintGreen: tintGreen ?? this.tintGreen,
+    tintNeutral: tintNeutral ?? this.tintNeutral,
     dark: dark ?? this.dark,
   );
 
+  /// 按场景取粉彩分区底。
+  Color tint(CitroTint kind) => switch (kind) {
+    CitroTint.neutral => tintNeutral,
+    CitroTint.yellow => tintYellow,
+    CitroTint.pink => tintPink,
+    CitroTint.blue => tintBlue,
+    CitroTint.green => tintGreen,
+  };
+
+  /// 浅色（默认）。
+  ///
+  /// 底是暖白偏灰（nosh 的 App 内底），卡片纯白，文字近黑，
+  /// 强调只用品牌橙 + 朱砂红两个暖色，薄荷绿做小面积语义。
   static const light = CitroColors(
-    bg: Color(0xFFE7E0D0),
-    bg2: Color(0xFFDFD7C4),
-    surface: Color(0xFFFBF7EC),
-    surface2: Color(0xFFFFFDF8),
-    paperLine: Color(0xFFEDE4D2),
-    ink: Color(0xFF23211C),
-    ink2: Color(0xFF4E4A40),
-    inkSoft: Color(0xFF6E6858),
-    line: Color(0xFFE4DCC9),
-    line2: Color(0xFFD2C8B0),
-    grid: Color(0x1660523A),
-    accent: Color(0xFFE9932F),
-    accent2: Color(0xFFD07C1F),
-    accentLt: Color(0xFFF7D8A9),
-    accentInk: Color(0xFF7C4A12),
-    mint: Color(0xFF8FC7A0),
-    mintInk: Color(0xFF2C6B50),
-    mintSoft: Color(0xFFEAF2E3),
-    mintLine: Color(0xFFCFE2C9),
-    tape: Color(0x9EF0B0B8),
-    tape2: Color(0x9496C4E2),
-    tape3: Color(0x99F4D678),
-    tapeLine: Color(0x1A786040),
-    hl: Color(0x9EFFE15C),
-    hlInk: Color(0xEBFFE15C),
-    noteY: Color(0xFFFBF1C4),
-    noteP: Color(0xFFF8E4E4),
-    noteB: Color(0xFFE2EDF6),
-    noteG: Color(0xFFE7F1DF),
-    stamp: Color(0xFFB3402A),
-    mask: Color(0x4723211C),
+    bg: Color(0xFFF4F3EF),
+    bg2: Color(0xFFE9E7E1),
+    surface: Color(0xFFFFFFFF),
+    surface2: Color(0xFFF4F3EF),
+    ink: Color(0xFF171614),
+    ink2: Color(0xFF57544D),
+    // 11-13px 的元信息用墨：对白底 4.6:1，过 AA（再浅就只剩 3.5:1）。
+    inkSoft: Color(0xFF78756C),
+    line: Color(0xFFECEAE4),
+    line2: Color(0xFFDDD9D0),
+    accent: Color(0xFFFF8A1F),
+    accent2: Color(0xFFE5730F),
+    accentLt: Color(0xFFFFD9AE),
+    accentInk: Color(0xFF8A4A0B),
+    // 品牌橙足够亮，橙底上的文字/图标用深墨（对比度 4.4:1，白字只有 2.4:1）。
+    onAccent: Color(0xFF2E2C22),
+    mint: Color(0xFF2F9E6B),
+    mintInk: Color(0xFF1F7A50),
+    mintSoft: Color(0xFFE6F5EC),
+    mintLine: Color(0xFFCBE7D8),
+    stamp: Color(0xFFC4452C),
+    danger: Color(0xFFDE3B40),
+    dangerSoft: Color(0xFFFDECEC),
+    hl: Color(0x66FFD166),
+    hlInk: Color(0xCCFFB43A),
+    tintYellow: Color(0xFFFEF3D5),
+    tintPink: Color(0xFFFDECEF),
+    tintBlue: Color(0xFFE9F2F9),
+    tintGreen: Color(0xFFF0F8EA),
+    tintNeutral: Color(0xFFF1F1F1),
     dark: false,
   );
 
+  /// 深色（近黑表面 + 同强调色）。
+  ///
+  /// 三级表面：底 #0E0F11 → 卡 #17181B → 内嵌 #1F2125；
+  /// 描边用白透明而非灰，避免暗面上发脏；阴影一律纯黑。
   static const darkColors = CitroColors(
-    bg: Color(0xFF0E0E11),
-    bg2: Color(0xFF141418),
-    surface: Color(0xFF191920),
-    surface2: Color(0xFF202028),
-    paperLine: Color(0x14FFF6E4),
-    ink: Color(0xFFF1EEE5),
-    ink2: Color(0xFFCFC9BC),
-    inkSoft: Color(0xFFA49E90),
-    line: Color(0x1AFFF6E4),
-    line2: Color(0x2BFFF6E4),
-    grid: Color(0x0DFFF0D6),
-    accent: Color(0xFFF0AC55),
-    accent2: Color(0xFFDE9636),
-    accentLt: Color(0xFFF7DDB4),
-    accentInk: Color(0xFFF6D9AE),
-    mint: Color(0xFFC9D3B2),
-    mintInk: Color(0xFFD8DFC4),
-    mintSoft: Color(0x1AC9D3B2),
-    mintLine: Color(0x38C9D3B2),
-    tape: Color(0x33E2A0AA),
-    tape2: Color(0x2E96BEDC),
-    tape3: Color(0x2EE2C878),
-    tapeLine: Color(0x1AFFF6E4),
-    hl: Color(0x38FFD65A),
-    hlInk: Color(0x57FFD65A),
-    noteY: Color(0xFF332E1E),
-    noteP: Color(0xFF332528),
-    noteB: Color(0xFF222C34),
-    noteG: Color(0xFF242E1E),
+    bg: Color(0xFF0E0F11),
+    bg2: Color(0xFF090A0C),
+    surface: Color(0xFF17181B),
+    surface2: Color(0xFF1F2125),
+    ink: Color(0xFFF2F1EC),
+    ink2: Color(0xFFC7C5BD),
+    inkSoft: Color(0xFF8E8C84),
+    line: Color(0x1AFFFFFF),
+    line2: Color(0x29FFFFFF),
+    accent: Color(0xFFFF9E45),
+    accent2: Color(0xFFFF8A1F),
+    accentLt: Color(0xFFFFC890),
+    accentInk: Color(0xFFFFB877),
+    onAccent: Color(0xFF1A1206),
+    mint: Color(0xFF5CC98E),
+    mintInk: Color(0xFF8FE0B4),
+    mintSoft: Color(0xFF17281F),
+    mintLine: Color(0xFF2A4034),
     stamp: Color(0xFFE0796A),
-    mask: Color(0x9E000000),
+    danger: Color(0xFFFF6E73),
+    dangerSoft: Color(0xFF2A1718),
+    hl: Color(0x40FFD166),
+    hlInk: Color(0x66FFD166),
+    tintYellow: Color(0xFF241F11),
+    tintPink: Color(0xFF251719),
+    tintBlue: Color(0xFF152029),
+    tintGreen: Color(0xFF16211A),
+    tintNeutral: Color(0xFF17181B),
     dark: true,
   );
 
@@ -212,17 +257,45 @@ class CitroColors {
   static const shadows = AppShadows();
 }
 
-/// 圆角统一走 8pt / Apple 组件规范：
-/// 按钮 12、卡片 16、弹层 20、小元素 8。
+/// 粉彩分区底的种类。
+enum CitroTint { neutral, yellow, pink, blue, green }
+
+/// 圆角锁：卡片 24 / 浮层 28 / 内嵌 16 / 小件 12 / 胶囊与头像 999。
+///
+/// 比旧体系（16/14/10）整体放大一档，接近 nosh 的观感：
+/// 所有可见容器都带明显圆角，没有任何直角。
 class AppRadii {
   const AppRadii();
-  double get page => 24;
-  double get card => 16;
-  double get inner => 12;
-  double get field => 12;
-  double get button => 12;
-  double get modal => 20;
+
+  /// 页面级大卡 / 浮层。
+  double get page => 28;
+
+  /// 常规卡片。
+  double get card => 24;
+
+  /// 卡内内嵌块。
+  double get inner => 16;
+
+  /// 输入框。
+  double get field => 16;
+
+  /// 按钮（胶囊，固定 999）。
+  double get button => 999;
+
+  /// 弹层。
+  double get modal => 28;
+
+  /// 胶囊/标签。
   double get chip => 999;
+
+  /// 小元素（角标、小图标底）。
+  double get small => 12;
+
+  /// 极小元素。
+  double get xs => 8;
+
+  /// 头像/圆形按钮。
+  double get avatar => 999;
 }
 
 /// 8pt 栅格标尺。所有新增间距从这里取，避免出现 10/14/18 这类半格值。
@@ -245,160 +318,126 @@ class AppSpacing {
   static const double navBar = 64;
 }
 
+/// 阴影：纯黑低透明 + 大模糊，浅色下也不偏色（不再用暖棕投影）。
 class AppShadows {
   const AppShadows();
-  List<BoxShadow> paper(CitroColors c) => c.dark
-      ? const [
-          BoxShadow(
-            color: Color(0x6B000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0xFF000000),
-            blurRadius: 24,
-            spreadRadius: -14,
-            offset: Offset(0, 10),
-          ),
-        ]
-      : const [
-          BoxShadow(
-            color: Color(0x0E5A4A2C),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0x4D5A4A2C),
-            blurRadius: 20,
-            spreadRadius: -12,
-            offset: Offset(0, 8),
-          ),
-        ];
 
-  List<BoxShadow> lg(CitroColors c) => c.dark
-      ? const [
-          BoxShadow(
-            color: Color(0x75000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color(0xFF000000),
-            blurRadius: 56,
-            spreadRadius: -26,
-            offset: Offset(0, 26),
-          ),
-        ]
-      : const [
-          BoxShadow(
-            color: Color(0x0F5A4A2C),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color(0x6B5A4A2C),
-            blurRadius: 48,
-            spreadRadius: -24,
-            offset: Offset(0, 22),
-          ),
-        ];
+  List<BoxShadow> sm(CitroColors c) => [
+    BoxShadow(
+      color: const Color(0x12000000),
+      blurRadius: 10,
+      offset: const Offset(0, 3),
+    ),
+  ];
 
-  List<BoxShadow> note(CitroColors c) => c.dark
-      ? const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0xFF000000),
-            blurRadius: 22,
-            spreadRadius: -14,
-            offset: Offset(0, 10),
-          ),
-        ]
-      : const [
-          BoxShadow(
-            color: Color(0x0F5A4A2C),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0x575A4A2C),
-            blurRadius: 22,
-            spreadRadius: -12,
-            offset: Offset(0, 10),
-          ),
-        ];
+  List<BoxShadow> card(CitroColors c) => [
+    BoxShadow(
+      color: c.dark ? const Color(0x73000000) : const Color(0x14000000),
+      blurRadius: c.dark ? 20 : 16,
+      offset: const Offset(0, 6),
+    ),
+  ];
+
+  List<BoxShadow> lg(CitroColors c) => [
+    BoxShadow(
+      color: c.dark ? const Color(0xCC000000) : const Color(0x1F000000),
+      blurRadius: c.dark ? 40 : 32,
+      offset: const Offset(0, 16),
+    ),
+  ];
+
+  /// 悬浮控件（按钮、FAB、底部操作条）。
+  List<BoxShadow> float(CitroColors c) => [
+    BoxShadow(
+      color: c.dark ? const Color(0x99000000) : const Color(0x26000000),
+      blurRadius: 18,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }
 
 /// 字号刻度。界面只从这里取值，避免同一层级的文字在 2 到 3 个
-/// 相邻字号之间摇摆。内容里的贴纸、邮票可以继续用小字，但要落在
-/// [small] 与 [micro] 两档上。
+/// 相邻字号之间摇摆。
+///
+/// 圆体在小号下比旧的手写体更清楚，因此整体比旧刻度略大一号。
 class CitroType {
   const CitroType._();
 
-  /// 邮票、胶带上的装饰小字。
-  static const double micro = 8;
+  /// 角标、极紧凑的标签。
+  static const double micro = 9;
 
-  /// 角标、计数、极紧凑的标签。
-  static const double small = 10;
+  /// 计数、辅助信息。
+  static const double small = 11;
 
   /// 说明文字、次级标签。
-  static const double caption = 11;
+  static const double caption = 12;
 
   /// 元信息、时间、来源。
-  static const double meta = 12;
+  static const double meta = 13;
 
   /// 紧凑标签、按钮副标题。
-  static const double label = 13;
+  static const double label = 14;
 
   /// 正文、导航项。
-  static const double body = 14;
+  static const double body = 15;
 
   /// 稍大的正文、列表主行。
-  static const double bodyLg = 15;
+  static const double bodyLg = 16;
 
   /// 小节标题、卡片标题。
-  static const double title = 16;
+  static const double title = 18;
 
   /// 卡片主标题。
-  static const double titleLg = 18;
+  static const double titleLg = 20;
 
   /// 页面副标题、弹层标题。
-  static const double subtitle = 20;
+  static const double subtitle = 22;
 
   /// 页面标题。
-  static const double heading = 24;
+  static const double heading = 26;
 
   /// 大标题、封面字。
-  static const double display = 28;
+  static const double display = 32;
 
   /// 首屏标题。
-  static const double hero = 36;
+  static const double hero = 40;
 
   /// 海报字、艺术字。
-  static const double poster = 48;
+  static const double poster = 56;
 
-  /// 手账里两档字重足够：正文 400，强调与标题 700（字体文件实际只提供这两档）。
+  /// 圆体三档字重足够：正文 400、标签 500、标题/强调 700。
   static const FontWeight regular = FontWeight.w400;
+  static const FontWeight medium = FontWeight.w500;
   static const FontWeight strong = FontWeight.w700;
 }
 
 class AppFonts {
-  static const kalam = 'Kalam';
-  static const zcool = 'ZCOOL';
-  static const caveat = 'Caveat';
-  static const noto = 'NotoSC';
+  /// UI / 标题：Resource Han Rounded CN（思源圆体，OFL）。
+  static const rounded = 'RoundedCN';
+
+  /// 数字 / 数据读出：Xiaolai Mono（OFL）。
+  static const mono = 'XiaolaiMono';
+
+  /// 兼容旧名：正文字体。
+  static const noto = rounded;
+
+  /// 兼容旧名：展示字体。
+  static const kalam = rounded;
+
+  /// 兼容旧名：标题字体。
+  static const zcool = rounded;
+
+  /// 兼容旧名：数字/注释字体。
+  static const caveat = mono;
+
   static const fallback = <String>[
-    'ZCOOL',
-    'NotoSC',
+    rounded,
     'Noto Sans SC',
     'PingFang SC',
     'Microsoft YaHei',
   ];
   static const bodyFallback = <String>[
-    'NotoSC',
+    rounded,
     'Noto Sans SC',
     'PingFang SC',
     'Microsoft YaHei',
@@ -408,5 +447,6 @@ class AppFonts {
 
 /// Convenience accessors used across the app.
 extension CitroColorX on CitroColors {
-  Color get tapeLike => tape;
+  /// 半透蒙层（图片上的文字底、模态背后）。
+  Color get scrim => dark ? const Color(0x99000000) : const Color(0x66000000);
 }

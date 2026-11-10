@@ -60,15 +60,15 @@ class CitroTabletSidebar extends StatelessWidget {
     final app = context.app;
     final avatarUrl = Api.imageUrl(app.user?.av);
     Widget avatarFallback({Color? background}) => ColoredBox(
-      color: background ?? (app.loggedIn ? c.hl : c.surface),
+      color: background ?? c.surface2,
       child: Center(
         child: app.loggedIn
             ? Text(
                 app.user!.name.isEmpty ? '友' : app.user!.name[0],
-                style: context.display(
+                style: context.heading(
                   size: 16,
                   weight: FontWeight.w700,
-                  color: c.accentInk,
+                  color: c.ink2,
                 ),
               )
             : AppIcon(
@@ -88,7 +88,7 @@ class CitroTabletSidebar extends StatelessWidget {
           ),
         ),
       ),
-      child: PaperBackground(
+      child: CitroBackground(
         child: SafeArea(
           right: false,
           child: Padding(
@@ -118,7 +118,7 @@ class CitroTabletSidebar extends StatelessWidget {
                             children: [
                               Text(
                                 'Citro',
-                                style: context.display(
+                                style: context.heading(
                                   size: 24,
                                   weight: FontWeight.w700,
                                   color: c.ink,
@@ -128,7 +128,7 @@ class CitroTabletSidebar extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 '今天也要开心',
-                                style: context.hand(size: 13, color: c.inkSoft),
+                                style: context.body(size: 13, color: c.inkSoft),
                               ),
                             ],
                           ),
@@ -137,7 +137,7 @@ class CitroTabletSidebar extends StatelessWidget {
                     ),
                   ),
                 ),
-                DashedLine(color: c.line2.withAlpha(150)),
+                CitroDivider(),
                 const SizedBox(height: 14),
                 Expanded(
                   child: SingleChildScrollView(
@@ -238,7 +238,7 @@ class CitroTabletSidebar extends StatelessWidget {
                         CitroColors.radii.card,
                       ),
                       border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.paper(c),
+                      boxShadow: CitroColors.shadows.card(c),
                     ),
                     child: Row(
                       children: [
@@ -321,10 +321,10 @@ class CitroDuoRightRail extends StatelessWidget {
       child: app.loggedIn
           ? Text(
               app.user!.name.isNotEmpty ? app.user!.name[0] : '友',
-              style: context.display(
+              style: context.heading(
                 size: 18,
                 weight: FontWeight.w700,
-                color: c.accentInk,
+                color: c.ink2,
               ),
             )
           : AppIcon(
@@ -337,7 +337,7 @@ class CitroDuoRightRail extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: c.line)),
       ),
-      child: PaperBackground(
+      child: CitroBackground(
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 24),
           child: Column(
@@ -377,7 +377,7 @@ class CitroDuoRightRail extends StatelessWidget {
                         onTap: () => onChanged(2),
                       ),
                       const SizedBox(height: 6),
-                      DashedLine(color: c.line2.withAlpha(150)),
+                      CitroDivider(),
                       const SizedBox(height: 6),
                       CitroDuoRailItem(
                         label: '食谱',
@@ -404,7 +404,7 @@ class CitroDuoRightRail extends StatelessWidget {
                     height: 44,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: app.loggedIn ? c.hl : c.surface2,
+                      color: c.surface2,
                       shape: BoxShape.circle,
                       border: Border.all(color: c.line),
                     ),
@@ -453,7 +453,7 @@ class CitroDuoCookRail extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: c.line)),
       ),
-      child: PaperBackground(
+      child: CitroBackground(
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 24),
           child: SingleChildScrollView(
@@ -466,7 +466,7 @@ class CitroDuoCookRail extends StatelessWidget {
                   onTap: onBack,
                 ),
                 const SizedBox(height: 6),
-                DashedLine(color: c.line2.withAlpha(150)),
+                CitroDivider(),
                 const SizedBox(height: 6),
                 for (final item in items)
                   CitroDuoRailItem(
@@ -503,7 +503,7 @@ class CitroDuoBackRail extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: c.line)),
       ),
-      child: PaperBackground(
+      child: CitroBackground(
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 8),
           child: Column(
@@ -625,12 +625,10 @@ class CitroDuoRailItem extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: active ? c.hl : Colors.transparent,
+                      color: active ? c.accent : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: active
-                            ? c.accent.withAlpha(110)
-                            : Colors.transparent,
+                        color: active ? c.accent : Colors.transparent,
                       ),
                     ),
                     child: Center(
@@ -641,7 +639,7 @@ class CitroDuoRailItem extends StatelessWidget {
                         child: AppIcon(
                           strokeSvg(icon, width: 2),
                           size: 22,
-                          color: active ? c.accentInk : c.ink2,
+                          color: active ? c.onAccent : c.inkSoft,
                         ),
                       ),
                     ),
@@ -667,7 +665,7 @@ class CitroDuoRailItem extends StatelessWidget {
                               style: context.body(
                                 size: 9,
                                 weight: FontWeight.w700,
-                                color: const Color(0xFF2E2C22),
+                                color: c.onAccent,
                                 height: 1,
                               ),
                             ),
@@ -681,9 +679,9 @@ class CitroDuoRailItem extends StatelessWidget {
               AnimatedDefaultTextStyle(
                 duration: reduce ? Duration.zero : CitroMotion.hover,
                 curve: CitroMotion.easeColor,
-                style: context.hand(
+                style: context.body(
                   size: 12,
-                  color: active ? c.accentInk : c.ink2,
+                  color: active ? c.accent : c.inkSoft,
                   height: 1.1,
                 ),
                 child: Text(
@@ -718,24 +716,30 @@ class _SidebarNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final count = showResources ? 4 : 3;
-    final active = index.clamp(0, count - 1);
+    // 「我的」等不在侧栏里的 Tab：不高亮，而不是 clamp 到最后一项。
+    final active = index >= 0 && index < count ? index : -1;
     final reduce = CitroMotion.reduced(context);
     return Stack(
       children: [
-        // 共享高亮：整块纸片在导航项之间滑动，取代逐项背景渐变。
+        // 共享高亮：整块胶囊在导航项之间滑动，取代逐项背景渐变。
         AnimatedPositioned(
           left: 0,
           right: 0,
-          top: active * _itemExtent,
+          top: (active < 0 ? 0 : active) * _itemExtent,
           height: AppSpacing.x6,
           duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
           curve: CitroMotion.emphasized,
           child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: c.hl,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.accent.withAlpha(110)),
+            child: AnimatedOpacity(
+              opacity: active < 0 ? 0 : 1,
+              duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
+              curve: CitroMotion.emphasized,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: c.accent.withAlpha(46),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                  border: Border.all(color: c.accent),
+                ),
               ),
             ),
           ),
@@ -779,12 +783,10 @@ class _SidebarItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x1 + 4),
           decoration: showHighlight
               ? BoxDecoration(
-                  color: active ? c.hl : Colors.transparent,
+                  color: active ? c.accent.withAlpha(46) : Colors.transparent,
                   borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                   border: Border.all(
-                    color: active
-                        ? c.accent.withAlpha(110)
-                        : Colors.transparent,
+                    color: active ? c.accent : Colors.transparent,
                   ),
                 )
               : null,
@@ -810,7 +812,7 @@ class _SidebarItem extends StatelessWidget {
                     child: AppIcon(
                       strokeSvg(icon, width: 2),
                       size: 18,
-                      color: active ? const Color(0xFF2E2C22) : c.ink2,
+                      color: active ? c.onAccent : c.inkSoft,
                     ),
                   ),
                 ),
@@ -820,9 +822,9 @@ class _SidebarItem extends StatelessWidget {
                 child: AnimatedDefaultTextStyle(
                   duration: reduce ? Duration.zero : CitroMotion.hover,
                   curve: CitroMotion.easeColor,
-                  style: context.hand(
+                  style: context.body(
                     size: large ? 17 : 16,
-                    color: active ? c.accentInk : c.ink,
+                    color: active ? c.accent : c.ink,
                   ),
                   child: Text(label),
                 ),
@@ -845,7 +847,7 @@ class _SidebarItem extends StatelessWidget {
                       style: context.ui(
                         size: 10,
                         weight: FontWeight.w700,
-                        color: const Color(0xFF2E2C22),
+                        color: c.onAccent,
                         letterSpacing: 0,
                       ),
                     ),

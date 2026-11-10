@@ -7,7 +7,7 @@ import '../widgets/paper.dart';
 import 'ledger_models.dart';
 import 'ledger_theme.dart';
 
-/// 分类 iconKey → 手绘线条图标。分类数据只存 key，换图标不用改模型。
+/// 分类 iconKey → 线条图标。分类数据只存 key，换图标不用改模型。
 String ledgerCategoryIcon(String key) => switch (key) {
   'fork' => AppIcons.fork,
   'location' => AppIcons.location,
@@ -52,7 +52,7 @@ class LedgerIconTile extends StatelessWidget {
         color: filled
             ? tint.withAlpha(active ? 54 : 28)
             : (active ? tint.withAlpha(48) : c.surface2),
-        borderRadius: BorderRadius.circular(size * .3),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(
           color: active ? tint.withAlpha(150) : c.line,
           width: active ? 1.3 : 1,
@@ -69,7 +69,7 @@ class LedgerIconTile extends StatelessWidget {
   }
 }
 
-/// 支出 / 收入分段选择。选中块用纸胶带色，和手帐里的标签一致。
+/// 支出 / 收入分段选择。选中块用语义色软底，和全局标签语言一致。
 class LedgerKindToggle extends StatelessWidget {
   final LedgerKind value;
   final ValueChanged<LedgerKind> onChanged;
@@ -90,7 +90,7 @@ class LedgerKindToggle extends StatelessWidget {
         ? c.stamp.withAlpha(c.dark ? 70 : 34)
         : c.mintSoft;
     return Container(
-      height: compact ? 34 : 40,
+      height: compact ? 38 : AppSpacing.touch,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: c.surface,
@@ -120,7 +120,7 @@ class LedgerKindToggle extends StatelessWidget {
                       kind.label,
                       style: context.lui(
                         size: compact ? CitroType.label : CitroType.body,
-                        weight: FontWeight.w700,
+                        weight: CitroType.strong,
                         color: value == kind
                             ? (kind == LedgerKind.expense ? c.stamp : c.mintInk)
                             : c.inkSoft,
@@ -152,6 +152,7 @@ class LedgerMonthSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final nowKey = LedgerDates.monthKey(DateTime.now());
+    final isNow = monthKey == nowKey;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -162,28 +163,17 @@ class LedgerMonthSwitcher extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Pressable(
-          onTap: showBackToNow && monthKey != nowKey
-              ? () => onChanged(nowKey)
-              : null,
+          onTap: showBackToNow && !isNow ? () => onChanged(nowKey) : null,
           scale: .96,
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: monthKey == nowKey ? null : c.surface2,
-              gradient: monthKey == nowKey
-                  ? LinearGradient(
-                      colors: [
-                        c.accentLt,
-                        ledgerWarm.withAlpha(c.dark ? 60 : 42),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
-                  : null,
+              // 当前月用 accent 软底，深浅色下都保持同一套语义。
+              color: isNow ? c.accent.withAlpha(24) : c.surface2,
               borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               border: Border.all(
-                color: monthKey == nowKey ? c.accent.withAlpha(120) : c.line,
+                color: isNow ? c.accent.withAlpha(90) : c.line,
               ),
             ),
             child: Row(
@@ -199,7 +189,7 @@ class LedgerMonthSwitcher extends StatelessWidget {
                   LedgerDates.monthLabel(monthKey),
                   style: context.lui(
                     size: CitroType.meta,
-                    weight: FontWeight.w700,
+                    weight: CitroType.strong,
                     color: c.ink,
                   ),
                 ),
@@ -239,7 +229,7 @@ class _MonthArrow extends StatelessWidget {
         onTap: onTap,
         scale: .9,
         hoverLift: 0,
-        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
         child: Container(
           width: 30,
           height: 30,
@@ -257,7 +247,7 @@ class _MonthArrow extends StatelessWidget {
   }
 }
 
-/// 手帐里的进度条：细线 + 斜纹填充，超支变成印章红。
+/// 预算进度条：胶囊轨道 + 纯色填充，超支变成朱砂红。
 class LedgerProgress extends StatelessWidget {
   final double value;
   final Color color;
@@ -305,7 +295,7 @@ class LedgerProgress extends StatelessWidget {
   }
 }
 
-/// 概览里的一个数字块。
+/// 概览里的一个数字块：小标签 + 等宽大数字。
 class LedgerStat extends StatelessWidget {
   final String label;
   final String value;
@@ -342,9 +332,9 @@ class LedgerStat extends StatelessWidget {
           child: Text(
             value,
             maxLines: 1,
-            style: context.ldisplay(
-              size: 24,
-              weight: FontWeight.w700,
+            style: context.lhand(
+              size: CitroType.titleLg,
+              weight: CitroType.strong,
               color: color ?? c.ink,
               height: 1,
             ),
@@ -391,11 +381,11 @@ class LedgerSectionTitle extends StatelessWidget {
                 children: [
                   Container(
                     width: 4,
-                    height: 14,
-                    margin: const EdgeInsets.only(right: 7),
+                    height: CitroType.title * .72,
+                    margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: c.accent2,
-                      borderRadius: BorderRadius.circular(2),
+                      color: c.accent,
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     ),
                   ),
                   Text(
@@ -410,7 +400,7 @@ class LedgerSectionTitle extends StatelessWidget {
               if (hint != null) ...[
                 const SizedBox(height: 2),
                 Padding(
-                  padding: const EdgeInsets.only(left: 11),
+                  padding: const EdgeInsets.only(left: 12),
                   child: Text(
                     hint!,
                     style: context.lui(
@@ -429,7 +419,7 @@ class LedgerSectionTitle extends StatelessWidget {
   }
 }
 
-/// 账单行：左侧分类色块，右侧金额与时间。
+/// 账单行：左侧分类色块，右侧等宽金额与时间。
 class LedgerEntryRow extends StatelessWidget {
   final LedgerEntry entry;
   final LedgerCategory category;
@@ -448,7 +438,8 @@ class LedgerEntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final expense = entry.kind == LedgerKind.expense;
-    final amountColor = expense ? c.stamp : c.mintInk;
+    // 支出用近黑，红色只留给删除 / 逾期 / 错误；收入继续用薄荷绿。
+    final amountColor = expense ? c.ink : c.mintInk;
     final title = entry.note.trim().isEmpty ? category.name : entry.note.trim();
     return Pressable(
       onTap: onTap,
@@ -477,7 +468,7 @@ class LedgerEntryRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.lui(
                       size: dense ? CitroType.meta : CitroType.body,
-                      weight: FontWeight.w700,
+                      weight: CitroType.strong,
                       color: c.ink,
                     ),
                   ),
@@ -495,9 +486,9 @@ class LedgerEntryRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${expense ? '-' : '+'}${ledgerMoney(entry.amountCents)}',
-              style: context.lui(
+              style: context.lhand(
                 size: dense ? CitroType.meta : CitroType.bodyLg,
-                weight: FontWeight.w700,
+                weight: CitroType.strong,
                 color: amountColor,
               ),
             ),
@@ -508,7 +499,7 @@ class LedgerEntryRow extends StatelessWidget {
   }
 }
 
-/// 空状态：留一张便签和一句引导。
+/// 空状态：图标 + 一句引导，保持留白。
 class LedgerEmptyState extends StatelessWidget {
   final String title;
   final String hint;
@@ -528,9 +519,7 @@ class LedgerEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return PaperCard(
-      tapeColor: c.tape3,
-      tapeAngle: 2.2,
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,8 +552,8 @@ class LedgerEmptyState extends StatelessWidget {
               onTap: onAction,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
+                  horizontal: 16,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
                   color: c.accent,
@@ -574,8 +563,8 @@ class LedgerEmptyState extends StatelessWidget {
                   action!,
                   style: context.lui(
                     size: CitroType.meta,
-                    weight: FontWeight.w700,
-                    color: const Color(0xFF2E2C22),
+                    weight: CitroType.strong,
+                    color: c.onAccent,
                   ),
                 ),
               ),
@@ -587,7 +576,7 @@ class LedgerEmptyState extends StatelessWidget {
   }
 }
 
-/// 手帐风数字键盘：没有系统键盘的阴影和圆角，按键直接印在纸面上。
+/// 数字键盘：大圆角按键，等宽数字。
 class LedgerNumberPad extends StatelessWidget {
   final ValueChanged<String> onDigit;
   final VoidCallback onBackspace;
@@ -614,7 +603,7 @@ class LedgerNumberPad extends StatelessWidget {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final gap = constraints.maxWidth < 340 ? 6.0 : 8.0;
+        final gap = constraints.maxWidth < 340 ? 6.0 : AppSpacing.x1;
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -642,7 +631,7 @@ class LedgerNumberPad extends StatelessWidget {
             if (onDone != null)
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: AppSpacing.touch,
                 child: Pressable(
                   onTap: enabled ? onDone : null,
                   borderRadius: BorderRadius.circular(CitroColors.radii.button),
@@ -658,8 +647,8 @@ class LedgerNumberPad extends StatelessWidget {
                         doneLabel,
                         style: context.lui(
                           size: CitroType.bodyLg,
-                          weight: FontWeight.w700,
-                          color: const Color(0xFF2E2C22),
+                          weight: CitroType.strong,
+                          color: context.c.onAccent,
                         ),
                       ),
                     ),
@@ -695,7 +684,7 @@ class _PadKey extends StatelessWidget {
       hoverLift: 0,
       borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       child: Container(
-        height: 50,
+        height: AppSpacing.touch + 8,
         decoration: BoxDecoration(
           color: isBackspace ? c.surface : c.surface2,
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
@@ -710,9 +699,9 @@ class _PadKey extends StatelessWidget {
                 )
               : Text(
                   label,
-                  style: context.ldisplay(
-                    size: 22,
-                    weight: FontWeight.w700,
+                  style: context.lhand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
                     color: c.ink,
                   ),
                 ),
@@ -744,7 +733,7 @@ class LedgerCategoryPicker extends StatelessWidget {
         final columns = constraints.maxWidth >= 520
             ? 6
             : (constraints.maxWidth >= 360 ? 4 : 3);
-        final gap = compact ? 6.0 : 8.0;
+        final gap = compact ? 6.0 : AppSpacing.x1;
         final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
         return Wrap(
           spacing: gap,
@@ -816,7 +805,7 @@ class _CategoryCell extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: context.lui(
                 size: CitroType.caption,
-                weight: selected ? FontWeight.w700 : FontWeight.w400,
+                weight: selected ? CitroType.strong : CitroType.regular,
                 color: selected ? category.tint : c.ink2,
               ),
             ),
@@ -866,7 +855,7 @@ class LedgerChip extends StatelessWidget {
             text,
             style: context.lui(
               size: CitroType.small,
-              weight: FontWeight.w700,
+              weight: CitroType.strong,
               color: tint,
             ),
           ),
@@ -878,7 +867,7 @@ class LedgerChip extends StatelessWidget {
   }
 }
 
-/// 账本绿的小圆点 + 同步状态，避免用户误以为数据只存在本机。
+/// 同步状态小圆点：已登录用薄荷绿，避免用户误以为数据只存在本机。
 class LedgerSyncBadge extends StatelessWidget {
   final bool signedIn;
   final bool syncing;
@@ -892,7 +881,7 @@ class LedgerSyncBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final color = signedIn ? ledgerAccent2 : c.inkSoft;
+    final color = signedIn ? c.mint : c.inkSoft;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -918,7 +907,7 @@ class LedgerSyncBadge extends StatelessWidget {
   }
 }
 
-/// 金额输入展示：¥ 符号固定，数字用大号手写字体。
+/// 金额输入展示：¥ 符号固定，数字用大号等宽字体。
 class LedgerAmountDisplay extends StatelessWidget {
   final String value;
   final String hint;
@@ -942,9 +931,9 @@ class LedgerAmountDisplay extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(
             '¥',
-            style: context.ldisplay(
-              size: 26,
-              weight: FontWeight.w700,
+            style: context.lhand(
+              size: CitroType.titleLg,
+              weight: CitroType.strong,
               color: c.inkSoft,
             ),
           ),
@@ -960,9 +949,9 @@ class LedgerAmountDisplay extends StatelessWidget {
                 Text(
                   text,
                   maxLines: 1,
-                  style: context.ldisplay(
-                    size: 46,
-                    weight: FontWeight.w700,
+                  style: context.lhand(
+                    size: CitroType.poster,
+                    weight: CitroType.strong,
                     color: value.isEmpty ? c.inkSoft.withAlpha(120) : c.ink,
                     height: 1,
                   ),

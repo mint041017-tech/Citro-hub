@@ -194,12 +194,7 @@ const cookLibrary = <String, List<String>>{
   ],
 };
 
-/// 扁平索引，用于搜索。
-final List<({String name, String category})> cookLibraryFlat = [
-  for (final entry in cookLibrary.entries)
-    for (final name in entry.value) (name: name, category: entry.key),
-];
-
+/// 归一化食材名：去掉空白、括号注释并转小写，用于搜索匹配。
 String cookNormName(String s) => s
     .replaceAll(RegExp(r'[\s　]'), '')
     .replaceAll(RegExp(r'[（(].*?[)）]'), '')

@@ -181,7 +181,7 @@ class _ComposerState extends State<_Composer> {
         height: h * .82,
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.lg(c),
         ),
@@ -195,7 +195,7 @@ class _ComposerState extends State<_Composer> {
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
                   color: c.line2,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 ),
               ),
               Padding(
@@ -228,7 +228,7 @@ class _ComposerState extends State<_Composer> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: c.surface2,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                           border: Border.all(color: c.line),
                         ),
                         child: TextField(
@@ -238,16 +238,16 @@ class _ComposerState extends State<_Composer> {
                           maxLines: 6,
                           onChanged: (_) => setState(() {}),
                           onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                          style: context.body(size: 14, height: 1.7),
+                          style: context.body(size: CitroType.body, height: 1.7),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             counterText: '',
                             counterStyle: context.body(
-                              size: 10,
+                              size: CitroType.micro,
                               color: c.inkSoft,
                             ),
                             hintText: '说点什么，和队友们聊聊…',
-                            hintStyle: context.body(size: 14, color: c.inkSoft),
+                            hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
                           ),
                         ),
                       ),
@@ -264,7 +264,7 @@ class _ComposerState extends State<_Composer> {
                               return Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(9),
+                                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                                     child: Image(
                                       image: images[i].provider,
                                       width: 82,
@@ -286,10 +286,10 @@ class _ComposerState extends State<_Composer> {
                                           color: c.ink.withAlpha(180),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.close,
                                           size: 12,
-                                          color: Colors.white,
+                                          color: c.bg,
                                         ),
                                       ),
                                     ),
@@ -308,10 +308,8 @@ class _ComposerState extends State<_Composer> {
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: c.dark
-                                ? const Color(0x22E0796A)
-                                : const Color(0x1FB3402A),
-                            borderRadius: BorderRadius.circular(10),
+                            color: c.dangerSoft,
+                            borderRadius: BorderRadius.circular(CitroColors.radii.small),
                             border: Border.all(color: c.stamp.withAlpha(80)),
                           ),
                           child: Row(
@@ -327,7 +325,7 @@ class _ComposerState extends State<_Composer> {
                               const SizedBox(width: 8),
                               Text(
                                 '录音中 ${recordSeconds}s / 60s',
-                                style: context.body(size: 12, color: c.stamp),
+                                style: context.body(size: CitroType.caption, color: c.stamp),
                               ),
                               const Spacer(),
                               GestureDetector(
@@ -340,7 +338,7 @@ class _ComposerState extends State<_Composer> {
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     color: c.surface2,
-                                    borderRadius: BorderRadius.circular(999),
+                                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                     border: Border.all(
                                       color: c.stamp.withAlpha(90),
                                     ),
@@ -348,8 +346,8 @@ class _ComposerState extends State<_Composer> {
                                   child: Text(
                                     '结束',
                                     style: context.body(
-                                      size: 12,
-                                      weight: FontWeight.w700,
+                                      size: CitroType.caption,
+                                      weight: CitroType.medium,
                                       color: c.stamp,
                                     ),
                                   ),
@@ -371,7 +369,7 @@ class _ComposerState extends State<_Composer> {
                             const SizedBox(width: 8),
                             Text(
                               '点击试听',
-                              style: context.body(size: 11, color: c.inkSoft),
+                              style: context.body(size: CitroType.small, color: c.inkSoft),
                             ),
                             const Spacer(),
                             GestureDetector(
@@ -384,7 +382,7 @@ class _ComposerState extends State<_Composer> {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: c.surface2,
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                   border: Border.all(
                                     color: c.stamp.withAlpha(90),
                                   ),
@@ -392,8 +390,8 @@ class _ComposerState extends State<_Composer> {
                                 child: Text(
                                   '删除',
                                   style: context.body(
-                                    size: 12,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.caption,
+                                    weight: CitroType.medium,
                                     color: c.stamp,
                                   ),
                                 ),
@@ -407,14 +405,14 @@ class _ComposerState extends State<_Composer> {
                         alignment: Alignment.centerRight,
                         child: Text(
                           '${text.text.length}/200',
-                          style: context.body(size: 10, color: c.inkSoft),
+                          style: context.body(size: CitroType.micro, color: c.inkSoft),
                         ),
                       ),
                       if (error != null) ...[
                         const SizedBox(height: 8),
                         Text(
                           error!,
-                          style: context.body(size: 12, color: c.stamp),
+                          style: context.body(size: CitroType.caption, color: c.stamp),
                         ),
                       ],
                     ],
@@ -441,8 +439,8 @@ class _ComposerState extends State<_Composer> {
                         padding: const EdgeInsets.symmetric(horizontal: 22),
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius: BorderRadius.circular(999),
-                          boxShadow: CitroColors.shadows.note(c),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                          boxShadow: CitroColors.shadows.sm(c),
                         ),
                         child: Center(
                           child: loading
@@ -457,9 +455,9 @@ class _ComposerState extends State<_Composer> {
                               : Text(
                                   '发布',
                                   style: context.body(
-                                    size: 14,
-                                    weight: FontWeight.w700,
-                                    color: const Color(0xFF2E2C22),
+                                    size: CitroType.body,
+                                    weight: CitroType.medium,
+                                    color: c.onAccent,
                                   ),
                                 ),
                         ),
@@ -487,8 +485,8 @@ class _ComposerState extends State<_Composer> {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: active ? c.hl : c.surface2,
-          borderRadius: BorderRadius.circular(10),
+          color: active ? c.dangerSoft : c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: active ? c.accent : c.line),
         ),
         child: Center(

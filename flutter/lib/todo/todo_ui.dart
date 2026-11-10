@@ -73,7 +73,10 @@ const todoIconKeys = <String>[
   'sparkle',
 ];
 
-/// 分类/清单可选色，全部低饱和，能落在暖纸底上。
+/// 分类 / 清单可选色，全部低饱和。
+///
+/// 这些是「数据值」：分类颜色以 int 存在任务数据里（[TodoCategory.color]），
+/// 换主题不应改动已保存的分类颜色，因此有意保留固定色值，不走 context.c。
 const todoPalette = <int>[
   0xFFE8935A,
   0xFFC08A4A,
@@ -118,7 +121,7 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: c.bg2.withAlpha(c.dark ? 180 : 150),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -148,17 +151,9 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
                             : (_hover == i
                                   ? c.accent.withAlpha(c.dark ? 34 : 26)
                                   : Colors.transparent),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         boxShadow: widget.items[i].$1 == widget.value
-                            ? [
-                                BoxShadow(
-                                  color: c.dark
-                                      ? const Color(0x33000000)
-                                      : const Color(0x1A5A4A2C),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
+                            ? CitroColors.shadows.sm(c)
                             : null,
                       ),
                       child: Text(
@@ -169,7 +164,7 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
                               ? CitroType.strong
                               : CitroType.regular,
                           color: widget.items[i].$1 == widget.value
-                              ? const Color(0xFF2E2C22)
+                              ? c.onAccent
                               : c.ink2,
                           height: 1,
                         ),
@@ -217,7 +212,7 @@ Future<int?> showTodoWheel({
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: c.accent.withAlpha(28),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.accent.withAlpha(70)),
             ),
           ),
@@ -265,7 +260,7 @@ class _WheelShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
         border: Border(top: BorderSide(color: c.line)),
       ),
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
@@ -346,7 +341,7 @@ class _TodoCalendarState extends State<_TodoCalendar> {
   bool _inRange(DateTime d) =>
       !d.isBefore(widget.start) && !d.isAfter(widget.end);
 
-  /// 日历弹层同理：整张纸都用待办蓝。
+  /// 日历弹层同理：整张弹层都用待办蓝。
   @override
   Widget build(BuildContext context) =>
       TodoScope(child: Builder(builder: _build));
@@ -412,7 +407,7 @@ class _TodoCalendarState extends State<_TodoCalendar> {
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: c.bg2.withAlpha(c.dark ? 150 : 110),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
             child: Row(
               children: [
@@ -474,7 +469,7 @@ class _TodoCalendarState extends State<_TodoCalendar> {
                               : CitroType.regular,
                           color: !enabled
                               ? c.inkSoft.withAlpha(120)
-                              : (selected ? const Color(0xFF2E2C22) : c.ink),
+                              : (selected ? c.onAccent : c.ink),
                         ),
                       ),
                     ),
@@ -617,7 +612,7 @@ Widget _wheelOverlay(CitroColors c, EdgeInsets margin) => Container(
   margin: margin,
   decoration: BoxDecoration(
     color: c.accent.withAlpha(28),
-    borderRadius: BorderRadius.circular(10),
+    borderRadius: BorderRadius.circular(CitroColors.radii.small),
     border: Border.all(color: c.accent.withAlpha(70)),
   ),
 );
@@ -652,7 +647,7 @@ class TodoMiniAction extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: c.line),
         ),
         child: Row(
@@ -745,7 +740,7 @@ class TodoStepper extends StatelessWidget {
       height: 36,
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -818,24 +813,20 @@ class MoodFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final tint = kind.colorFor(c.dark);
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: kind.color.withAlpha(selected ? 54 : 32),
+        color: tint.withAlpha(selected ? 54 : 32),
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected
-              ? kind.color.withAlpha(220)
-              : kind.color.withAlpha(90),
+          color: selected ? tint.withAlpha(220) : tint.withAlpha(90),
           width: selected ? 1.6 : 1,
         ),
       ),
       child: CustomPaint(
-        painter: _MoodPainter(
-          kind: kind,
-          color: c.dark ? c.ink : const Color(0xFF3B3428),
-        ),
+        painter: _MoodPainter(kind: kind, color: c.ink),
       ),
     );
   }
@@ -1048,7 +1039,7 @@ class MiniBars extends StatelessWidget {
                                 : (i == values.length - 1
                                       ? color
                                       : color.withAlpha(130)),
-                            borderRadius: BorderRadius.circular(5),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                           ),
                         ),
                         if (showValues && values[i] > 0)

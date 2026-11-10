@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 
 Future<void> showAppreciationSheet(BuildContext context) async {
@@ -15,7 +16,6 @@ class _AppreciationDialog extends StatelessWidget {
     final c = context.c;
     return PaperDialog(
       maxWidth: 380,
-      tapeColor: c.tape3,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -27,8 +27,9 @@ class _AppreciationDialog extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             child: ColoredBox(
+              // 赞赏码是图片内容，需要纯白底保证扫码识别。
               color: Colors.white,
               child: AspectRatio(
                 aspectRatio: 1,

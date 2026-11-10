@@ -8,6 +8,7 @@ import '../../widgets/paper.dart';
 import '../game_ui.dart';
 import 'sudoku_modes.dart';
 import 'sudoku_resume.dart';
+import '../game_theme.dart';
 
 /// 统一数独入口的模式选择：经典 / 异形 / 高级阶数。
 class SudokuModeSelect extends StatelessWidget {
@@ -170,7 +171,7 @@ class SudokuModeSelect extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
         color: c.bg2,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -263,10 +264,10 @@ class _ResumeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: c.hl,
-        borderRadius: BorderRadius.circular(16),
+        color: c.accentLt.withAlpha(150),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.accent.withValues(alpha: .5)),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
         children: [
@@ -278,7 +279,7 @@ class _ResumeCard extends StatelessWidget {
               color: c.accent.withValues(alpha: .18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: gameIcon(GameIcons.play, size: 14, color: c.accentInk),
+            child: gameIcon(GameIcons.play, size: 14, color: c.accentText),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -299,7 +300,7 @@ class _ResumeCard extends StatelessWidget {
                   '${resume.remainingLabel(DateTime.now())}',
                   style: context.body(
                     size: 11,
-                    color: c.accentInk,
+                    color: c.accentText,
                     height: 1.4,
                   ),
                 ),
@@ -334,10 +335,10 @@ class _Hero extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           decoration: BoxDecoration(
-            color: c.surface2,
-            borderRadius: BorderRadius.circular(18),
+            color: c.surface,
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
+            boxShadow: CitroColors.shadows.card(c),
           ),
           child: Row(
             children: [
@@ -370,17 +371,6 @@ class _Hero extends StatelessWidget {
             ],
           ),
         ),
-        Positioned(
-          top: -8,
-          left: 24,
-          child: IgnorePointer(
-            child: GameTape(
-              width: 64,
-              height: 18,
-              color: c.accentLt.withValues(alpha: c.dark ? .35 : .75),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -411,16 +401,14 @@ class _GroupHeader extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: c.accent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
               child: Text(
                 index,
-                style: const TextStyle(
-                  fontFamily: AppFonts.kalam,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2E2C22),
-                  height: 1,
+                style: context.hand(
+                  size: CitroType.small,
+                  weight: CitroType.strong,
+                  color: c.accentText,
                 ),
               ),
             ),
@@ -488,10 +476,10 @@ class _ModeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.line2),
-        boxShadow: CitroColors.shadows.paper(c),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        border: Border.all(color: c.line),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,10 +561,10 @@ class _CompactModeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: c.line2),
-        boxShadow: CitroColors.shadows.paper(c),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,7 +621,7 @@ class _CompactModeCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: c.bg2,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     border: Border.all(color: c.line),
                   ),
                   child: Text(
@@ -661,14 +649,14 @@ class _Tag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: c.accentLt.withValues(alpha: c.dark ? .24 : .55),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Text(
         text,
         style: context.body(
           size: 9,
           weight: FontWeight.w700,
-          color: c.accentInk,
+          color: c.accentText,
           height: 1.2,
         ),
       ),
@@ -692,14 +680,14 @@ class _StartChip extends StatelessWidget {
     final c = context.c;
     return Pressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       scale: .96,
       child: Container(
         height: compact ? 25 : 28,
         padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
         decoration: BoxDecoration(
-          color: c.hl,
-          borderRadius: BorderRadius.circular(999),
+          color: c.accentLt.withAlpha(150),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.accent.withValues(alpha: .55)),
         ),
         child: Row(
@@ -710,7 +698,7 @@ class _StartChip extends StatelessWidget {
               style: context.body(
                 size: compact ? 10 : 11,
                 weight: FontWeight.w700,
-                color: c.accentInk,
+                color: c.accentText,
                 height: 1,
               ),
             ),
@@ -718,7 +706,7 @@ class _StartChip extends StatelessWidget {
             gameIcon(
               GameIcons.arrowRightSolid,
               size: compact ? 8 : 9,
-              color: c.accentInk,
+              color: c.accentText,
             ),
           ],
         ),

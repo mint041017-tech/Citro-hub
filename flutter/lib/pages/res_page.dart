@@ -5,13 +5,11 @@ import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
-import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import 'in_app_web.dart';
-import 'play_page.dart';
-import 'sens_page.dart';
+import 'web_resource_actions.dart';
 
 class ResPage extends StatefulWidget {
   final bool embedded;
@@ -68,7 +66,7 @@ class _ResPageState extends State<ResPage> {
             ...kDriversClient,
           ].where((d) => d.name.toLowerCase().contains(q)).toList();
     return Scaffold(
-      body: PaperBackground(
+      body: CitroBackground(
         child: SafeArea(
           bottom: false,
           child: Center(
@@ -90,12 +88,13 @@ class _ResPageState extends State<ResPage> {
                           onTap: () => popOrHome(context),
                           child: Container(
                             height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
-                              color: c.surface2,
-                              borderRadius: BorderRadius.circular(999),
+                              color: c.surface,
+                              borderRadius:
+                                  BorderRadius.circular(CitroColors.radii.chip),
                               border: Border.all(color: c.line),
-                              boxShadow: CitroColors.shadows.paper(c),
+                              boxShadow: CitroColors.shadows.card(c),
                             ),
                             child: Row(
                               children: [
@@ -104,108 +103,99 @@ class _ResPageState extends State<ResPage> {
                                   size: 16,
                                   color: c.ink2,
                                 ),
-                                const SizedBox(width: 3),
+                                const SizedBox(width: 6),
                                 Text(
                                   widget.embedded ? '首页' : '返回',
                                   style: context.body(
-                                    size: 12,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.label,
+                                    weight: CitroType.medium,
+                                    color: c.ink,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.x2),
                         Text('资源库', style: context.heading(size: 28)),
                         const Spacer(),
                         Text(
                           '全部资源',
-                          style: context.body(size: 11, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    PaperCard(
-                      padding: const EdgeInsets.all(8),
-                      child: Container(
-                        height: 46,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: c.dark
-                                ? [
-                                    const Color(0xBF382A1D),
-                                    const Color(0x8B2C2318),
-                                  ]
-                                : [
-                                    const Color(0xA8FFFFFF),
-                                    const Color(0x73FFF7EA),
-                                  ],
+                    const SizedBox(height: AppSpacing.x2),
+                    Container(
+                      height: 52,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius:
+                            BorderRadius.circular(CitroColors.radii.field),
+                        border: Border.all(color: c.line2),
+                      ),
+                      child: Row(
+                        children: [
+                          AppIcon(
+                            strokeSvg(AppIcons.search, width: 2),
+                            size: 20,
+                            color: c.inkSoft,
                           ),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: c.line.withAlpha(160)),
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 14),
-                            AppIcon(
-                              strokeSvg(AppIcons.search, width: 2),
-                              size: 18,
-                              color: c.accentInk,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: search,
-                                textAlign: TextAlign.center,
-                                onChanged: (v) => setState(() => query = v),
-                                onSubmitted: (v) async {
-                                  if (v.trim().isEmpty) return;
-                                  final hasLocal =
-                                      mods.isNotEmpty ||
-                                      tools.isNotEmpty ||
-                                      drivers.isNotEmpty;
-                                  if (!hasLocal) {
-                                    await openCitroPage(
-                                      context,
-                                      'https://www.bing.com/search?q=${Uri.encodeQueryComponent(v)}',
-                                      title: '必应 · $v',
-                                    );
-                                  }
-                                },
-                                style: context.body(size: 14, color: c.ink),
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  hintText: '搜索功能 / Mod / 工具，回车必应',
-                                  hintStyle: context.body(
-                                    size: 13,
-                                    color: c.inkSoft.withAlpha(220),
-                                  ),
+                          const SizedBox(width: AppSpacing.x2),
+                          Expanded(
+                            child: TextField(
+                              controller: search,
+                              textAlign: TextAlign.left,
+                              onChanged: (v) => setState(() => query = v),
+                              onSubmitted: (v) async {
+                                if (v.trim().isEmpty) return;
+                                final hasLocal =
+                                    mods.isNotEmpty ||
+                                    tools.isNotEmpty ||
+                                    drivers.isNotEmpty;
+                                if (!hasLocal) {
+                                  await openCitroPage(
+                                    context,
+                                    'https://www.bing.com/search?q=${Uri.encodeQueryComponent(v)}',
+                                    title: '必应 · $v',
+                                  );
+                                }
+                              },
+                              style: context.body(
+                                size: CitroType.body,
+                                color: c.ink,
+                              ),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                isDense: true,
+                                hintText: '搜索功能 / Mod / 工具，回车必应',
+                                hintStyle: context.body(
+                                  size: CitroType.meta,
+                                  color: c.inkSoft,
                                 ),
                               ),
                             ),
-                            if (query.isNotEmpty)
-                              GestureDetector(
-                                onTap: () {
-                                  search.clear();
-                                  setState(() => query = '');
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: AppIcon(
-                                    strokeSvg(AppIcons.close, width: 2),
-                                    size: 14,
-                                    color: c.inkSoft,
-                                  ),
+                          ),
+                          if (query.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                search.clear();
+                                setState(() => query = '');
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: AppIcon(
+                                  strokeSvg(AppIcons.close, width: 2),
+                                  size: 16,
+                                  color: c.inkSoft,
                                 ),
-                              )
-                            else
-                              const SizedBox(width: 40),
-                          ],
-                        ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if (query.isNotEmpty &&
@@ -220,22 +210,23 @@ class _ResPageState extends State<ResPage> {
                             const SizedBox(height: 5),
                             Text(
                               '按回车去必应搜索「${query.trim()}」',
-                              style: context.body(size: 12, color: c.inkSoft),
+                              style: context.body(
+                                size: CitroType.caption,
+                                color: c.inkSoft,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     if (mods.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      PaperCard(
-                        tapeColor: c.tape,
-                        tapeAngle: -3,
-                        padding: const EdgeInsets.all(12),
+                      const SizedBox(height: AppSpacing.x2),
+                      CitroCard(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SectionTitle('游戏 Mod', size: 26),
-                            const SizedBox(height: 10),
+                            const CitroSectionHeader('游戏 Mod', size: 20),
+                            const SizedBox(height: AppSpacing.x2),
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 final columns = wide ? 3 : 2;
@@ -266,18 +257,14 @@ class _ResPageState extends State<ResPage> {
                       ),
                     ],
                     if (tools.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      PaperCard(
-                        tapeColor: c.tape2,
-                        tapeAngle: 2.5,
-                        padding: const EdgeInsets.all(12),
+                      const SizedBox(height: AppSpacing.x2),
+                      CitroCard(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SectionTitle('小工具', size: 26),
-                            const SizedBox(height: 10),
-                            DashedLine(color: c.line2.withAlpha(150)),
-                            const SizedBox(height: 4),
+                            const CitroSectionHeader('小工具', size: 20),
+                            const SizedBox(height: AppSpacing.x2),
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -298,39 +285,35 @@ class _ResPageState extends State<ResPage> {
                       ),
                     ],
                     if (drivers.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      PaperCard(
-                        tapeColor: c.tape3,
-                        tapeAngle: -2.5,
-                        padding: const EdgeInsets.all(12),
+                      const SizedBox(height: AppSpacing.x2),
+                      CitroCard(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SectionTitle('外设驱动', size: 26),
-                            const SizedBox(height: 10),
+                            const CitroSectionHeader('外设驱动', size: 20),
+                            const SizedBox(height: AppSpacing.x2),
                             Text(
                               '网页驱动',
                               style: context.heading(
-                                size: 16,
-                                color: c.accentInk,
-                                letterSpacing: 1.3,
+                                size: CitroType.bodyLg,
+                                color: c.ink2,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: AppSpacing.x1),
                             _driverList(
                               context,
                               kDriversWeb.where((d) => drivers.contains(d)),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: AppSpacing.x2),
                             Text(
                               '客户端驱动',
                               style: context.heading(
-                                size: 16,
-                                color: c.accentInk,
-                                letterSpacing: 1.3,
+                                size: CitroType.bodyLg,
+                                color: c.ink2,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: AppSpacing.x1),
                             _driverList(
                               context,
                               kDriversClient.where((d) => drivers.contains(d)),
@@ -340,39 +323,41 @@ class _ResPageState extends State<ResPage> {
                       ),
                     ],
                     if (!platform.isWindows) ...[
-                      const SizedBox(height: 12),
-                      PaperCard(
-                        padding: const EdgeInsets.all(12),
+                      const SizedBox(height: AppSpacing.x2),
+                      CitroCard(
+                        padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
                             Container(
-                              width: 38,
-                              height: 38,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
-                                color: c.hl,
-                                borderRadius: BorderRadius.circular(10),
+                                color: c.surface2,
+                                shape: BoxShape.circle,
                               ),
                               child: Center(
                                 child: AppIcon(
                                   strokeSvg(AppIcons.monitor, width: 2),
                                   size: 20,
-                                  color: c.accentInk,
+                                  color: c.ink2,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.x2),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     '更多资源请移步 PC 版',
-                                    style: context.heading(size: 15),
+                                    style: context.heading(
+                                      size: CitroType.bodyLg,
+                                    ),
                                   ),
                                   Text(
                                     'chimu-claw.xyz',
                                     style: context.body(
-                                      size: 12,
+                                      size: CitroType.caption,
                                       color: c.accentInk,
                                     ),
                                   ),
@@ -381,7 +366,7 @@ class _ResPageState extends State<ResPage> {
                             ),
                             AppIcon(
                               strokeSvg(AppIcons.arrowUpRight, width: 2.2),
-                              size: 15,
+                              size: 16,
                               color: c.accentInk,
                             ),
                           ],
@@ -401,13 +386,12 @@ class _ResPageState extends State<ResPage> {
   Widget _modCard(BuildContext context, ModItem m) {
     final c = context.c;
     return Pressable(
-      onTap: () => _confirmOpen(context, '《${m.name}》Mod', m.url),
+      onTap: () => openCitroResource(context, '《${m.name}》Mod', m.url),
       child: Container(
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
         ),
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         child: Column(
@@ -416,7 +400,7 @@ class _ResPageState extends State<ResPage> {
             AspectRatio(
               aspectRatio: 16 / 8,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -424,7 +408,8 @@ class _ResPageState extends State<ResPage> {
                       m.image,
                       fit: BoxFit.cover,
                       cacheWidth: 600,
-                      errorBuilder: (_, __, ___) => Container(color: c.noteG),
+                      errorBuilder: (_, __, ___) =>
+                          Container(color: c.tintGreen),
                     ),
                     Positioned(
                       left: 6,
@@ -435,15 +420,16 @@ class _ResPageState extends State<ResPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: c.surface2,
-                          borderRadius: BorderRadius.circular(999),
+                          color: c.surface,
+                          borderRadius:
+                              BorderRadius.circular(CitroColors.radii.chip),
                           border: Border.all(color: c.line2),
                         ),
                         child: Text(
                           m.tag,
                           style: context.body(
-                            size: 10,
-                            weight: FontWeight.w700,
+                            size: CitroType.micro,
+                            weight: CitroType.medium,
                             color: c.accentInk,
                           ),
                         ),
@@ -453,42 +439,28 @@ class _ResPageState extends State<ResPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    m.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: 18),
-                  ),
-                ),
-              ],
+            const SizedBox(height: AppSpacing.x1),
+            Expanded(
+              child: Text(
+                m.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.heading(size: CitroType.bodyLg),
+              ),
             ),
             const SizedBox(height: 3),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: c.hl.withAlpha(120),
-                border: Border.all(color: c.accentInk.withAlpha(75)),
-                borderRadius: BorderRadius.circular(999),
+                color: c.accentLt.withAlpha(c.dark ? 60 : 160),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppIcon(
                     strokeSvg(AppIcons.download, width: 2),
-                    size: 10,
+                    size: 11,
                     color: c.accentInk,
                   ),
                   const SizedBox(width: 4),
@@ -496,8 +468,8 @@ class _ResPageState extends State<ResPage> {
                     child: Text(
                       '网盘下载',
                       style: context.body(
-                        size: 11,
-                        weight: FontWeight.w700,
+                        size: CitroType.small,
+                        weight: CitroType.medium,
                         color: c.accentInk,
                       ),
                     ),
@@ -505,7 +477,7 @@ class _ResPageState extends State<ResPage> {
                   const SizedBox(width: 2),
                   AppIcon(
                     strokeSvg(AppIcons.arrowUpRight, width: 2),
-                    size: 9,
+                    size: 10,
                     color: c.accentInk,
                   ),
                 ],
@@ -520,82 +492,56 @@ class _ResPageState extends State<ResPage> {
   Widget _toolCard(BuildContext context, ToolItem tool) {
     final c = context.c;
     return Pressable(
-      onTap: () {
-        if (tool.name == '灵敏度') {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const SensPage()));
-        } else if (tool.name == '玩法抽签') {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const PlayPage()));
-        } else if (tool.url != null) {
-          _confirmOpen(
-            context,
-            tool.name,
-            tool.url!,
-            warn: tool.warn,
-            versions: tool.versions,
-          );
-        }
-      },
+      onTap: () => openCitroTool(context, tool),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(c.dark ? 22 : 60),
-      borderRadius: BorderRadius.circular(10),
+      hoverColor: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: c.line2.withAlpha(120))),
+          border: Border(
+            bottom: BorderSide(color: c.line),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: c.hl,
-                borderRadius: BorderRadius.circular(10),
+                color: c.surface2,
+                shape: BoxShape.circle,
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(tool.icon, width: 2),
                   size: 18,
-                  color: c.accentInk,
+                  color: c.ink2,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    tool.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: 15,
-                      weight: FontWeight.w700,
-                      color: c.ink,
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: AppSpacing.x1),
+            Text(
+              tool.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.body,
+                weight: CitroType.medium,
+                color: c.ink,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               tool.desc,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.body(size: 12, color: c.inkSoft),
+              style: context.body(
+                size: CitroType.small,
+                color: c.inkSoft,
+              ),
             ),
           ],
         ),
@@ -630,178 +576,58 @@ class _ResPageState extends State<ResPage> {
   Widget _driverRow(BuildContext context, DriverItem d) {
     final c = context.c;
     return Pressable(
-      onTap: () => _confirmOpen(context, d.name, d.url, download: d.client),
+      onTap: () => openCitroResource(
+        context,
+        d.name,
+        d.url,
+        download: d.client,
+      ),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(c.dark ? 18 : 48),
-      borderRadius: BorderRadius.circular(8),
+      hoverColor: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: c.line2.withAlpha(100))),
+          border: Border(bottom: BorderSide(color: c.line)),
         ),
         child: Row(
           children: [
-            Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: c.accent,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 d.name,
                 style: context.body(
-                  size: 14,
-                  weight: FontWeight.w700,
+                  size: CitroType.body,
+                  weight: CitroType.medium,
                   color: c.ink,
                 ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: c.hl,
-                borderRadius: BorderRadius.circular(999),
+                color: c.surface2,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                border: Border.all(color: c.line2),
               ),
               child: Text(
                 d.client ? '客户端' : '网页',
                 style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
-                  color: c.accentInk,
+                  size: CitroType.micro,
+                  weight: CitroType.medium,
+                  color: c.ink2,
                 ),
               ),
             ),
-            const SizedBox(width: 5),
+            const SizedBox(width: AppSpacing.x1),
             AppIcon(
               strokeSvg(AppIcons.arrowUpRight, width: 2),
-              size: 13,
+              size: 14,
               color: c.accentInk,
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Future<void> _confirmOpen(
-    BuildContext context,
-    String title,
-    String url, {
-    String? warn,
-    List<ResourceVersion> versions = const [],
-    bool download = false,
-  }) async {
-    ResourceVersion? chosen;
-    final isDownload =
-        download ||
-        RegExp(
-          r'\.(exe|zip|7z|apk|msi)(\?|$)',
-          caseSensitive: false,
-        ).hasMatch(url);
-    final ok = await showCitroDialog<bool>(
-      context,
-      builder: (ctx) => PaperDialog(
-        showClose: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '打开页面'),
-              style: context.heading(size: 20),
-            ),
-            const SizedBox(height: 8),
-            if (warn != null) ...[
-              Text(
-                '⚠ $warn',
-                textAlign: TextAlign.center,
-                style: context.body(size: 11, color: context.c.stamp),
-              ),
-              const SizedBox(height: 6),
-            ],
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: context.body(size: 12, color: ctx.c.inkSoft),
-            ),
-            if (versions.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              for (final v in versions)
-                GestureDetector(
-                  onTap: () {
-                    chosen = v;
-                    Navigator.pop(ctx, true);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: ctx.c.surface2,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: ctx.c.line),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v.name,
-                          style: context.body(
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: ctx.c.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          v.desc,
-                          style: context.body(size: 11, color: ctx.c.inkSoft),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ] else
-              Text(
-                url,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(size: 10, color: ctx.c.inkSoft),
-              ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: AccentButton(
-                    text: '取消',
-                    outlined: true,
-                    onTap: () => Navigator.pop(ctx, false),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AccentButton(
-                    text: isDownload || versions.isNotEmpty ? '下载' : '打开',
-                    onTap: () => Navigator.pop(ctx, true),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    await openCitroPage(
-      context,
-      chosen?.url ?? url,
-      title: title,
-      download: isDownload,
     );
   }
 }

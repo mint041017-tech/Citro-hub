@@ -318,7 +318,7 @@ class _SudokuBoardPainter extends CustomPainter {
               ? cover[index][0]
               : cover[index][1];
           color = Color.alphaBlend(
-            (pair.isEven ? colors.noteY : colors.noteP).withValues(
+            (pair.isEven ? colors.tintYellow : colors.tintPink).withValues(
               alpha: colors.dark ? .16 : .38,
             ),
             color,
@@ -438,9 +438,9 @@ class _SudokuBoardPainter extends CustomPainter {
     return [
       tint(colors.accentLt, warm),
       tint(colors.mint, warm),
-      tint(colors.noteB, pastel),
-      tint(colors.noteP, pastel),
-      tint(colors.noteY, pastel),
+      tint(colors.tintBlue, pastel),
+      tint(colors.tintPink, pastel),
+      tint(colors.tintYellow, pastel),
       tint(colors.line2, colors.dark ? .30 : .50),
     ];
   }
@@ -507,10 +507,10 @@ class _SudokuBoardPainter extends CustomPainter {
       text: TextSpan(
         text: '$value',
         style: TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.mono,
           fontFamilyFallback: AppFonts.fallback,
           fontSize: fontSize,
-          fontWeight: given ? FontWeight.w700 : FontWeight.w700,
+          fontWeight: FontWeight.w700,
           color: conflict
               ? colors.stamp
               : (given ? colors.ink : colors.accentInk),
@@ -534,7 +534,7 @@ class _SudokuBoardPainter extends CustomPainter {
         text: TextSpan(
           text: '$n',
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.mono,
             fontSize: fontSize,
             fontWeight: FontWeight.w700,
             color: colors.ink2,
@@ -773,7 +773,7 @@ class _SudokuBoardPainter extends CustomPainter {
         text: TextSpan(
           text: '${cage.sum}',
           style: TextStyle(
-            fontFamily: AppFonts.kalam,
+            fontFamily: AppFonts.mono,
             fontSize: math.max(10, math.min(cell * .42, 16)),
             fontWeight: FontWeight.w700,
             color: colors.ink,

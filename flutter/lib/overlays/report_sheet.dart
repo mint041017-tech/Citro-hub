@@ -103,7 +103,7 @@ class _ReportSheetState extends State<_ReportSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.lg(c),
         ),
@@ -121,7 +121,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                     height: 4,
                     decoration: BoxDecoration(
                       color: c.line2,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     ),
                   ),
                 ),
@@ -155,7 +155,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                     padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       border: Border.all(color: c.line),
                     ),
                     child: Text(
@@ -200,8 +200,8 @@ class _ReportSheetState extends State<_ReportSheet> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: _reason == reason ? c.hl : c.surface2,
-                            borderRadius: BorderRadius.circular(999),
+                            color: _reason == reason ? c.accentLt.withAlpha(c.dark ? 70 : 170) : c.surface2,
+                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                             border: Border.all(
                               color: _reason == reason ? c.accent : c.line2,
                             ),
@@ -239,11 +239,11 @@ class _ReportSheetState extends State<_ReportSheet> {
                     fillColor: c.surface2,
                     contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       borderSide: BorderSide(color: c.line2),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       borderSide: BorderSide(color: c.accent),
                     ),
                   ),

@@ -76,49 +76,47 @@ class _CalendarPageState extends State<CalendarPage> {
     final c = context.c;
     return Scaffold(
       backgroundColor: c.bg,
-      body: PaperBackground(
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(side, top, side, 0),
-            child: Column(
-              children: [
-                _header(context),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: CalendarStore.instance,
-                    builder: (context, _) {
-                      if (!wide) {
-                        return _scroll(
-                          Column(
-                            children: [
-                              _monthCard(context),
-                              const SizedBox(height: 12),
-                              _marksCard(context),
-                            ],
-                          ),
-                        );
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 6,
-                            child: _scroll(_monthCard(context)),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 5,
-                            child: _scroll(_marksCard(context)),
-                          ),
-                        ],
+      body: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(side, top, side, 0),
+          child: Column(
+            children: [
+              _header(context),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: CalendarStore.instance,
+                  builder: (context, _) {
+                    if (!wide) {
+                      return _scroll(
+                        Column(
+                          children: [
+                            _monthCard(context),
+                            const SizedBox(height: 12),
+                            _marksCard(context),
+                          ],
+                        ),
                       );
-                    },
-                  ),
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 6,
+                          child: _scroll(_monthCard(context)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 5,
+                          child: _scroll(_marksCard(context)),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -140,7 +138,7 @@ class _CalendarPageState extends State<CalendarPage> {
       children: [
         _roundButton(icon: AppIcons.arrowLeft, onTap: _back, tooltip: '返回首页'),
         const SizedBox(width: 10),
-        Text('日历', style: context.heading(size: AppSpacing.x3)),
+        Text('日历', style: context.heading(size: CitroType.heading)),
         const Spacer(),
         _CalendarSyncBadge(
           signedIn: AppState.instance.loggedIn,
@@ -152,19 +150,19 @@ class _CalendarPageState extends State<CalendarPage> {
             onTap: _goToday,
             scale: .94,
             child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 border: Border.all(color: c.line2),
               ),
               child: Center(
                 child: Text(
                   '回到今天',
                   style: context.body(
-                    size: 12,
-                    weight: FontWeight.w700,
+                    size: CitroType.caption,
+                    weight: CitroType.strong,
                     color: c.accentInk,
                   ),
                 ),
@@ -193,7 +191,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final button = Pressable(
       onTap: onTap,
       scale: .92,
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       child: Container(
         width: 38,
         height: 38,
@@ -201,13 +199,13 @@ class _CalendarPageState extends State<CalendarPage> {
           color: filled ? c.accent : c.surface2,
           shape: BoxShape.circle,
           border: Border.all(color: filled ? c.accent2 : c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Center(
           child: AppIcon(
             strokeSvg(icon, width: 2.2),
             size: 18,
-            color: filled ? const Color(0xFF2E2C22) : c.ink2,
+            color: filled ? c.onAccent : c.ink2,
           ),
         ),
       ),
@@ -254,10 +252,8 @@ class _CalendarPageState extends State<CalendarPage> {
     const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
     final today = CalendarDates.dayOnly(DateTime.now());
     final selected = CalendarDates.dayOnly(_selected);
-    return PaperCard(
-      tapeColor: c.tape2,
-      tapeAngle: 2.2,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -266,30 +262,30 @@ class _CalendarPageState extends State<CalendarPage> {
               Pressable(
                 onTap: () => _shiftMonth(-1),
                 scale: .9,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Icon(
                     Icons.chevron_left_rounded,
                     size: 22,
-                    color: c.accentInk,
+                    color: c.accent,
                   ),
                 ),
               ),
               Text(
                 CalendarDates.monthLabel(_month),
-                style: context.display(size: 20, color: c.accentInk),
+                style: context.heading(size: CitroType.titleLg, color: c.ink),
               ),
               Pressable(
                 onTap: () => _shiftMonth(1),
                 scale: .9,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Icon(
                     Icons.chevron_right_rounded,
                     size: 22,
-                    color: c.accentInk,
+                    color: c.accent,
                   ),
                 ),
               ),
@@ -300,15 +296,15 @@ class _CalendarPageState extends State<CalendarPage> {
                 child: Text(
                   '今天',
                   style: context.body(
-                    size: 12,
-                    weight: FontWeight.w700,
+                    size: CitroType.caption,
+                    weight: CitroType.strong,
                     color: c.accentInk,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               for (var i = 0; i < 7; i++) ...[
@@ -320,8 +316,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       weekdays[i],
                       textAlign: TextAlign.center,
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
+                        size: CitroType.caption,
+                        weight: CitroType.strong,
                         color: (i == 0 || i == 6) ? c.accentInk : c.inkSoft,
                       ),
                     ),
@@ -392,8 +388,10 @@ class _CalendarPageState extends State<CalendarPage> {
         }
       }
     }
-    final fg = isSelected
-        ? const Color(0xFF2E2C22)
+    // 「今天」和选中态一样用 accent 实底 + onAccent 字，深浅色下都过对比。
+    final highlighted = isSelected || isToday;
+    final fg = highlighted
+        ? c.onAccent
         : (data.dim ? c.inkSoft.withAlpha(150) : c.ink);
     return Pressable(
       onTap: () => setState(() {
@@ -405,12 +403,12 @@ class _CalendarPageState extends State<CalendarPage> {
       }),
       scale: .94,
       hoverLift: 0,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
       child: Container(
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: isSelected ? c.accent : (isToday ? c.accentLt : null),
-          borderRadius: BorderRadius.circular(9),
+          color: highlighted ? c.accent : null,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: isSelected ? Border.all(color: c.accent2, width: 1.1) : null,
         ),
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -424,7 +422,11 @@ class _CalendarPageState extends State<CalendarPage> {
                 children: [
                   Text(
                     '${data.day}',
-                    style: context.display(size: 16, color: fg, height: 1.05),
+                    style: context.hand(
+                      size: CitroType.bodyLg,
+                      color: fg,
+                      height: 1.05,
+                    ),
                   ),
                   if (marks.isNotEmpty)
                     Padding(
@@ -433,8 +435,8 @@ class _CalendarPageState extends State<CalendarPage> {
                         width: 4,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF2E2C22)
+                          color: highlighted
+                              ? c.onAccent
                               : (marks.first.kind == CalendarMarkKind.countdown
                                     ? c.accent2
                                     : c.stamp),
@@ -452,10 +454,8 @@ class _CalendarPageState extends State<CalendarPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 8.5,
-                      color: isSelected
-                          ? const Color(0xFF2E2C22)
-                          : (labelColor ?? c.inkSoft),
+                      size: CitroType.micro,
+                      color: highlighted ? c.onAccent : (labelColor ?? c.inkSoft),
                     ),
                   ),
                 ),
@@ -482,10 +482,10 @@ class _CalendarPageState extends State<CalendarPage> {
         .toList();
     final today = CalendarDates.dayOnly(DateTime.now());
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 8, 11, 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -498,12 +498,12 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     Text(
                       '${selected.month}月${selected.day}日',
-                      style: context.display(size: 17, color: c.ink),
+                      style: context.hand(size: CitroType.bodyLg, color: c.ink),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       CalendarDates.weekday(selected),
-                      style: context.body(size: 11.5, color: c.inkSoft),
+                      style: context.body(size: CitroType.small, color: c.inkSoft),
                     ),
                     if (selected == today)
                       Padding(
@@ -511,8 +511,8 @@ class _CalendarPageState extends State<CalendarPage> {
                         child: Text(
                           '今天',
                           style: context.body(
-                            size: 10,
-                            weight: FontWeight.w700,
+                            size: CitroType.micro,
+                            weight: CitroType.strong,
                             color: c.accentInk,
                           ),
                         ),
@@ -524,7 +524,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     extras.join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.hand(size: 12, color: c.mintInk),
+                    style: context.body(size: CitroType.caption, color: c.mintInk),
                   ),
               ],
             ),
@@ -536,7 +536,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
-                style: context.body(size: 10.5, color: c.stamp),
+                style: context.body(size: CitroType.small, color: c.stamp),
               ),
             ),
         ],
@@ -552,29 +552,25 @@ class _CalendarPageState extends State<CalendarPage> {
     final c = context.c;
     final today = DateTime.now();
     final marks = CalendarStore.instance.sorted(today);
-    return PaperCard(
-      tapeColor: c.tape3,
-      tapeAngle: -1.6,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text(
-                '倒数日 & 纪念日',
-                style: context.heading(size: 17, color: c.accentInk),
-              ),
-              const Spacer(),
-              if (marks.isNotEmpty)
-                Text(
-                  '${marks.length} 个日子',
-                  style: context.body(size: 10.5, color: c.inkSoft),
-                ),
-            ],
+          CitroSectionHeader(
+            '倒数日 & 纪念日',
+            action: marks.isEmpty
+                ? null
+                : Text(
+                    '${marks.length} 个日子',
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
+                  ),
           ),
-          const SizedBox(height: 2),
-          Text('把期待和珍惜都写在这里', style: context.hand(size: 12, color: c.inkSoft)),
+          const SizedBox(height: 4),
+          Text(
+            '生日、纪念日、倒计时，到点提醒你',
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
+          ),
           const SizedBox(height: 10),
           if (marks.isEmpty)
             _emptyMarks(context)
@@ -596,7 +592,7 @@ class _CalendarPageState extends State<CalendarPage> {
       padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Column(
@@ -610,8 +606,8 @@ class _CalendarPageState extends State<CalendarPage> {
           Text(
             '还没有记录的日子',
             style: context.body(
-              size: 13,
-              weight: FontWeight.w700,
+              size: CitroType.meta,
+              weight: CitroType.strong,
               color: c.ink2,
             ),
           ),
@@ -619,7 +615,7 @@ class _CalendarPageState extends State<CalendarPage> {
           Text(
             '点右上角的 + 记一个生日、旅行或倒计时',
             textAlign: TextAlign.center,
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           ),
         ],
       ),
@@ -658,13 +654,13 @@ class _MarkTile extends StatelessWidget {
       onTap: onTap,
       scale: .98,
       hoverLift: 1,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
           color: color.withAlpha(14),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: color.withAlpha(70)),
         ),
         child: Row(
@@ -674,7 +670,7 @@ class _MarkTile extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               ),
             ),
             const SizedBox(width: 10),
@@ -690,8 +686,8 @@ class _MarkTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: context.body(
-                            size: 14,
-                            weight: FontWeight.w700,
+                            size: CitroType.label,
+                            weight: CitroType.strong,
                             color: c.ink,
                           ),
                         ),
@@ -699,18 +695,18 @@ class _MarkTile extends StatelessWidget {
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: color.withAlpha(28),
-                          borderRadius: BorderRadius.circular(99),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                         ),
                         child: Text(
                           mark.kind.label,
                           style: context.body(
-                            size: 8.5,
-                            weight: FontWeight.w700,
+                            size: CitroType.micro,
+                            weight: CitroType.strong,
                             color: color,
                           ),
                         ),
@@ -723,14 +719,14 @@ class _MarkTile extends StatelessWidget {
                     '${mark.yearly ? ' · 每年' : ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 10.5, color: c.inkSoft),
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
                   if (mark.note.isNotEmpty)
                     Text(
                       mark.note,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.hand(size: 11, color: c.inkSoft),
+                      style: context.body(size: CitroType.small, color: c.inkSoft),
                     ),
                 ],
               ),
@@ -741,8 +737,8 @@ class _MarkTile extends StatelessWidget {
               children: [
                 Text(
                   days == 0 ? '今天' : '${days.abs()}',
-                  style: context.display(
-                    size: days == 0 ? 16 : 22,
+                  style: context.hand(
+                    size: days == 0 ? CitroType.bodyLg : CitroType.subtitle,
                     color: color,
                     height: 1,
                   ),
@@ -750,12 +746,12 @@ class _MarkTile extends StatelessWidget {
                 if (days != 0)
                   Text(
                     CalendarDates.unitFor(mark, today),
-                    style: context.body(size: 9, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                 if (years != null)
                   Text(
                     '第 $years 年',
-                    style: context.body(size: 8.5, color: color),
+                    style: context.body(size: CitroType.micro, color: color),
                   ),
               ],
             ),
@@ -791,13 +787,13 @@ class _CalendarSyncBadge extends StatelessWidget {
       children: [
         dot,
         const SizedBox(width: 4),
-        Text(label, style: context.body(size: 10, color: c.inkSoft)),
+        Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
       ],
     );
   }
 }
 
-/// 新增 / 编辑倒数日与纪念日的手账底部弹层。
+/// 新增 / 编辑倒数日与纪念日的底部弹层。
 Future<void> showCalendarMarkSheet(BuildContext context, {CalendarMark? mark}) {
   return showCitroSheet<void>(
     context: context,
@@ -875,12 +871,12 @@ class _MarkSheetState extends State<_MarkSheet> {
           children: [
             Text(
               '删除「${current.title}」？',
-              style: ctx.heading(size: 18, color: ctx.c.ink),
+              style: ctx.heading(size: CitroType.title, color: ctx.c.ink),
             ),
             const SizedBox(height: 8),
             Text(
               '删除后不会从云端恢复，但可以重新添加。',
-              style: ctx.body(size: 13, color: ctx.c.inkSoft, height: 1.5),
+              style: ctx.body(size: CitroType.meta, color: ctx.c.inkSoft, height: 1.5),
             ),
             const SizedBox(height: 16),
             Row(
@@ -931,7 +927,7 @@ class _MarkSheetState extends State<_MarkSheet> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: c.line2,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                 ),
               ),
@@ -941,7 +937,7 @@ class _MarkSheetState extends State<_MarkSheet> {
                   Expanded(
                     child: Text(
                       widget.mark == null ? '记录一个日子' : '编辑这个日子',
-                      style: context.heading(size: 20, color: c.ink),
+                      style: context.heading(size: CitroType.titleLg, color: c.ink),
                     ),
                   ),
                   if (widget.mark != null)
@@ -1016,7 +1012,7 @@ class _MarkSheetState extends State<_MarkSheet> {
               child: AnimatedContainer(
                 duration: CitroMotion.size,
                 curve: CitroMotion.easeOut,
-                height: 40,
+                height: AppSpacing.touch,
                 decoration: BoxDecoration(
                   color: _kind == kind
                       ? (kind == CalendarMarkKind.countdown
@@ -1024,7 +1020,7 @@ class _MarkSheetState extends State<_MarkSheet> {
                                 : c.stamp)
                             .withAlpha(24)
                       : c.surface2,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(
                     color: _kind == kind
                         ? (kind == CalendarMarkKind.countdown
@@ -1037,8 +1033,10 @@ class _MarkSheetState extends State<_MarkSheet> {
                   child: Text(
                     kind.label,
                     style: context.body(
-                      size: 13,
-                      weight: _kind == kind ? FontWeight.w700 : FontWeight.w400,
+                      size: CitroType.meta,
+                      weight: _kind == kind
+                          ? CitroType.strong
+                          : CitroType.regular,
                       color: _kind == kind
                           ? (kind == CalendarMarkKind.countdown
                                 ? c.accentInk
@@ -1063,8 +1061,8 @@ class _MarkSheetState extends State<_MarkSheet> {
         Text(
           '日期',
           style: context.body(
-            size: 12,
-            weight: FontWeight.w700,
+            size: CitroType.caption,
+            weight: CitroType.strong,
             color: c.inkSoft,
           ),
         ),
@@ -1073,13 +1071,13 @@ class _MarkSheetState extends State<_MarkSheet> {
           onTap: _pickDate,
           scale: .98,
           hoverLift: 0,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           child: Container(
-            height: 46,
+            height: AppSpacing.touch + 2,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: c.surface2,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.line2),
             ),
             child: Row(
@@ -1094,10 +1092,13 @@ class _MarkSheetState extends State<_MarkSheet> {
                   child: Text(
                     '${CalendarDates.fullDate(_date)} '
                     '${CalendarDates.weekday(_date)}',
-                    style: context.body(size: 14, color: c.ink),
+                    style: context.body(size: CitroType.label, color: c.ink),
                   ),
                 ),
-                Text('更换', style: context.body(size: 11, color: c.inkSoft)),
+                Text(
+                  '更换',
+                  style: context.body(size: CitroType.small, color: c.inkSoft),
+                ),
               ],
             ),
           ),
@@ -1117,15 +1118,15 @@ class _MarkSheetState extends State<_MarkSheet> {
               Text(
                 '每年重复',
                 style: context.body(
-                  size: 13,
-                  weight: FontWeight.w700,
+                  size: CitroType.meta,
+                  weight: CitroType.strong,
                   color: c.ink,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 '生日、周年纪念会每年提醒一次',
-                style: context.body(size: 10.5, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
@@ -1134,7 +1135,7 @@ class _MarkSheetState extends State<_MarkSheet> {
           onTap: () => setState(() => _yearly = !_yearly),
           scale: .94,
           hoverLift: 0,
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           child: AnimatedContainer(
             duration: CitroMotion.size,
             curve: CitroMotion.easeOut,
@@ -1143,7 +1144,7 @@ class _MarkSheetState extends State<_MarkSheet> {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: _yearly ? c.mint : c.line,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             ),
             child: AnimatedAlign(
               duration: CitroMotion.size,
@@ -1155,7 +1156,7 @@ class _MarkSheetState extends State<_MarkSheet> {
                 decoration: BoxDecoration(
                   color: c.surface2,
                   shape: BoxShape.circle,
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: _yearly
                     ? Icon(Icons.check_rounded, size: 13, color: c.mintInk)

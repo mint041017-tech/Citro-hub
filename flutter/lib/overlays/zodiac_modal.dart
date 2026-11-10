@@ -52,7 +52,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
           Text(
             '星象',
             textAlign: TextAlign.center,
-            style: context.heading(size: 24),
+            style: context.heading(size: CitroType.heading),
           ),
           const SizedBox(height: 12),
           if (sign == null)
@@ -71,7 +71,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         Text(
           '选择你的本命星座，选定后不可更改',
           textAlign: TextAlign.center,
-          style: context.body(size: 12, color: c.inkSoft),
+          style: context.body(size: CitroType.caption, color: c.inkSoft),
         ),
         const SizedBox(height: 12),
         GridView.count(
@@ -89,9 +89,9 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                   duration: const Duration(milliseconds: 160),
                   decoration: BoxDecoration(
                     color: selectedSign == z.id
-                        ? (c.dark ? c.hl : const Color(0x4DF2A43C))
+                        ? c.accentLt.withAlpha(c.dark ? 70 : 170)
                         : c.surface2,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(
                       color: selectedSign == z.id ? c.accent : c.line,
                       width: selectedSign == z.id ? 1.5 : 1,
@@ -102,14 +102,14 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                     children: [
                       Text(
                         z.symbol,
-                        style: context.display(size: 24, color: c.accentInk),
+                        style: context.heading(size: CitroType.heading, color: c.accentInk),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         z.name,
                         style: context.body(
-                          size: 11,
-                          weight: FontWeight.w700,
+                          size: CitroType.small,
+                          weight: CitroType.medium,
                           color: c.ink2,
                         ),
                       ),
@@ -133,7 +133,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         Text(
           '登录后随账号同步；未登录将绑定当前设备',
           textAlign: TextAlign.center,
-          style: context.body(size: 10, color: c.inkSoft),
+          style: context.body(size: CitroType.micro, color: c.inkSoft),
         ),
       ],
     );
@@ -153,14 +153,14 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         Text(
           '${now.year}年${now.month}月${now.day}日 · 今日星语',
           textAlign: TextAlign.center,
-          style: context.body(size: 11, color: c.inkSoft),
+          style: context.body(size: CitroType.small, color: c.inkSoft),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: c.dark ? const Color(0x0DFFFFFF) : const Color(0x0D23211C),
-            borderRadius: BorderRadius.circular(14),
+            color: c.surface2,
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             border: Border.all(color: c.line),
           ),
           child: Column(
@@ -171,13 +171,13 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: c.dark ? c.hl : const Color(0x47F7BC78),
-                      borderRadius: BorderRadius.circular(14),
+                      color: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                     ),
                     child: Center(
                       child: Text(
                         sign.symbol,
-                        style: context.display(size: 28, color: c.accentInk),
+                        style: context.heading(size: CitroType.heading, color: c.accentInk),
                       ),
                     ),
                   ),
@@ -186,16 +186,16 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(sign.name, style: context.heading(size: 22)),
+                        Text(sign.name, style: context.heading(size: CitroType.subtitle)),
                         Text(
                           '${sign.range} · ${sign.element}象星座',
-                          style: context.body(size: 11, color: c.inkSoft),
+                          style: context.body(size: CitroType.small, color: c.inkSoft),
                         ),
                         const SizedBox(height: 3),
                         if (f != null)
                           Text(
                             '✦ ${f.tag}',
-                            style: context.body(size: 12, color: c.accentInk),
+                            style: context.body(size: CitroType.caption, color: c.accentInk),
                           )
                         else
                           Text(
@@ -205,7 +205,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                                       ? '星语生成失败'
                                       : '等待生成今日星语'),
                             style: context.body(
-                              size: 12,
+                              size: CitroType.caption,
                               color: state.zodiacError != null
                                   ? c.stamp
                                   : c.inkSoft,
@@ -231,8 +231,8 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                               )
                             : Text(
                                 '✦',
-                                style: context.display(
-                                  size: 22,
+                                style: context.heading(
+                                  size: CitroType.subtitle,
                                   color: c.inkSoft.withAlpha(120),
                                 ),
                               ),
@@ -241,12 +241,12 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                 ],
               ),
               const SizedBox(height: 10),
-              DashedLine(color: c.line2),
+              CitroDivider(color: c.line2),
               const SizedBox(height: 10),
               if (f != null) ...[
                 Text(
                   f.text,
-                  style: context.body(size: 13, color: c.ink2, height: 1.7),
+                  style: context.body(size: CitroType.meta, color: c.ink2, height: 1.7),
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -270,7 +270,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                       Expanded(
                         child: Text(
                           'AI 正在写今天的星语…',
-                          style: context.body(size: 13, color: c.ink2),
+                          style: context.body(size: CitroType.meta, color: c.ink2),
                         ),
                       ),
                     ],
@@ -280,7 +280,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                 Text(
                   state.zodiacError ?? '今日星语还没有生成。',
                   style: context.body(
-                    size: 13,
+                    size: CitroType.meta,
                     color: state.zodiacError != null ? c.stamp : c.ink2,
                     height: 1.6,
                   ),
@@ -302,21 +302,21 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: c.dark ? const Color(0x0DFFFFFF) : const Color(0x0A23211C),
-              borderRadius: BorderRadius.circular(14),
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               border: Border.all(color: c.line),
             ),
             child: Column(
               children: [
                 Text(
                   '今日指数',
-                  style: context.heading(size: 14, color: c.accentInk),
+                  style: context.heading(size: CitroType.body, color: c.accentInk),
                 ),
                 const SizedBox(height: 10),
-                _bar(context, c, '爱情', f.love, const Color(0xFF7A9BBE)),
-                _bar(context, c, '事业', f.work, const Color(0xFF8FC7A0)),
-                _bar(context, c, '财运', f.wealth, const Color(0xFFE8C25A)),
-                _bar(context, c, '健康', f.health, const Color(0xFF8CBEDC)),
+                _bar(context, c, '爱情', f.love, c.accent),
+                _bar(context, c, '事业', f.work, c.mint),
+                _bar(context, c, '财运', f.wealth, c.accent2),
+                _bar(context, c, '健康', f.health, c.mintInk),
               ],
             ),
           ),
@@ -341,7 +341,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
                 Text(
                   state.zodiacLoading ? '生成中…' : '刷新运势',
                   style: context.body(
-                    size: 11,
+                    size: CitroType.small,
                     color: state.zodiacLoading
                         ? c.inkSoft.withAlpha(100)
                         : c.accentInk,
@@ -355,7 +355,7 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         Text(
           '星座运势由 AI 生成，仅供娱乐，开心最重要。',
           textAlign: TextAlign.center,
-          style: context.body(size: 10, color: c.inkSoft),
+          style: context.body(size: CitroType.micro, color: c.inkSoft),
         ),
       ],
     );
@@ -370,15 +370,15 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
     return Expanded(
       child: Column(
         children: [
-          Text(label, style: context.body(size: 10, color: c.inkSoft)),
+          Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
           const SizedBox(height: 2),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.body(
-              size: 12,
-              weight: FontWeight.w700,
+              size: CitroType.caption,
+              weight: CitroType.medium,
               color: c.ink2,
             ),
           ),
@@ -400,17 +400,15 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
         children: [
           SizedBox(
             width: 34,
-            child: Text(label, style: context.body(size: 11, color: c.inkSoft)),
+            child: Text(label, style: context.body(size: CitroType.small, color: c.inkSoft)),
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               child: LinearProgressIndicator(
                 value: value.clamp(0, 100) / 100,
                 minHeight: 6,
-                backgroundColor: c.dark
-                    ? const Color(0x14FFFFFF)
-                    : const Color(0x1223211C),
+                backgroundColor: c.surface2,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -421,7 +419,11 @@ class _ZodiacDialogState extends State<_ZodiacDialog> {
             child: Text(
               '$value',
               textAlign: TextAlign.right,
-              style: context.display(size: 13, color: c.accentInk),
+              style: context.hand(
+                size: CitroType.meta,
+                weight: CitroType.medium,
+                color: c.accentInk,
+              ),
             ),
           ),
         ],

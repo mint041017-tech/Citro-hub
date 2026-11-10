@@ -7,7 +7,6 @@ import '../theme/tokens.dart';
 import '../utils/links.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
-
 Future<void> openInAppPage(BuildContext context, String url, {String? title}) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -170,11 +169,13 @@ class _InAppWebPageState extends State<InAppWebPage> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius:
+                        BorderRadius.circular(CitroColors.radii.card),
                     border: Border.all(color: c.line),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
+                    borderRadius:
+                        BorderRadius.circular(CitroColors.radii.card - 1),
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -275,14 +276,22 @@ class _InAppWebPageState extends State<InAppWebPage> {
                                 );
                                 return NavigationActionPolicy.CANCEL;
                               }
-                              // 站外网页交给系统浏览器：WebView 只浏览自家域，
+                              // 站外网页交给系统浏览器：WebView 只浏览自家域与合作工具站，
                               // 避免被外部页面借内置浏览器做钓鱼/注入。
                               final host = uri.host.toLowerCase();
                               final ownSite =
                                   host == 'chimu-claw.xyz' ||
                                   host.endsWith('.chimu-claw.xyz') ||
                                   host == 'localhost' ||
-                                  host == '127.0.0.1';
+                                  host == '127.0.0.1' ||
+                                  // 合作工具站：这些页面自身会再跳外链，
+                                  // 交给系统浏览器会让内嵌页变成死胡同。
+                                  host == 'shuntou.top' ||
+                                  host.endsWith('.shuntou.top') ||
+                                  host == 'demo.piik.tv' ||
+                                  host == 'shijiao.xingpaste.com' ||
+                                  host == 'mslab.gg' ||
+                                  host.endsWith('.mslab.gg');
                               if ((scheme == 'http' || scheme == 'https') &&
                                   !ownSite) {
                                 await launchUrl(
@@ -407,9 +416,9 @@ class _PageButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: c.surface2,
             shape: circle ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius: circle ? null : BorderRadius.circular(999),
+            borderRadius: circle ? null : BorderRadius.circular(CitroColors.radii.chip),
             border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
+            boxShadow: CitroColors.shadows.card(c),
           ),
           child: circle
               ? Center(child: glyph)

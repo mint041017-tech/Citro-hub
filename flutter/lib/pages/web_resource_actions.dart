@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/modal.dart';
+import '../widgets/paper.dart';
 import 'in_app_web.dart';
 
 /// Shared by the original mobile resource list, desktop scrapbook and search.
@@ -33,22 +35,40 @@ Future<void> openCitroResource(
             versions.isNotEmpty ? '选择版本' : (isDownload ? '确认下载' : '打开页面'),
             style: ctx.heading(size: 20),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.x1),
           if (warn != null) ...[
-            Text(
-              '⚠ $warn',
-              textAlign: TextAlign.center,
-              style: ctx.body(size: 11, color: ctx.c.stamp),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: ctx.c.dangerSoft,
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
+              ),
+              child: Row(
+                children: [
+                  AppIcon(
+                    strokeSvg(AppIcons.info, width: 2),
+                    size: 14,
+                    color: ctx.c.danger,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      warn,
+                      style: ctx.body(size: CitroType.caption, color: ctx.c.danger),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.x1),
           ],
           Text(
             title,
             textAlign: TextAlign.center,
-            style: ctx.body(size: 12, color: ctx.c.inkSoft),
+            style: ctx.body(size: CitroType.meta, color: ctx.c.inkSoft),
           ),
           if (versions.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.x2),
             for (final v in versions)
               GestureDetector(
                 onTap: () {
@@ -57,28 +77,72 @@ Future<void> openCitroResource(
                 },
                 child: Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x1),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: ctx.c.surface2,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                     border: Border.all(color: ctx.c.line),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        v.name,
-                        style: ctx.body(
-                          size: 13,
-                          weight: FontWeight.w700,
-                          color: ctx.c.ink,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    v.name,
+                                    style: ctx.body(
+                                      size: CitroType.body,
+                                      weight: CitroType.medium,
+                                      color: ctx.c.ink,
+                                    ),
+                                  ),
+                                ),
+                                if (v.recommended) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: ctx.c.accentLt,
+                                      borderRadius: BorderRadius.circular(
+                                        CitroColors.radii.chip,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '推荐',
+                                      style: ctx.body(
+                                        size: CitroType.micro,
+                                        weight: CitroType.medium,
+                                        color: ctx.c.accentInk,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              v.desc,
+                              style: ctx.body(
+                                size: CitroType.small,
+                                color: ctx.c.inkSoft,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        v.desc,
-                        style: ctx.body(size: 11, color: ctx.c.inkSoft),
+                      const SizedBox(width: AppSpacing.x1),
+                      AppIcon(
+                        strokeSvg(AppIcons.arrowUpRight, width: 2),
+                        size: 14,
+                        color: ctx.c.inkSoft,
                       ),
                     ],
                   ),
@@ -90,9 +154,9 @@ Future<void> openCitroResource(
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: ctx.body(size: 10, color: ctx.c.inkSoft),
+              style: ctx.body(size: CitroType.micro, color: ctx.c.inkSoft),
             ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.x2),
           Row(
             children: [
               Expanded(
@@ -102,7 +166,7 @@ Future<void> openCitroResource(
                   onTap: () => Navigator.pop(ctx, false),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.x1),
               Expanded(
                 child: AccentButton(
                   text: isDownload || versions.isNotEmpty ? '下载' : '打开',

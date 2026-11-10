@@ -110,11 +110,11 @@ class _ScanDialogState extends State<_ScanDialog> {
           Text(
             '扫描电脑端登录二维码，确认后电脑立即登录',
             textAlign: TextAlign.center,
-            style: context.body(size: 11, color: c.inkSoft, height: 1.45),
+            style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.45),
           ),
           const SizedBox(height: 14),
           ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             child: SizedBox(
               height: 300,
               child: Stack(
@@ -124,7 +124,8 @@ class _ScanDialogState extends State<_ScanDialog> {
                     controller: _controller,
                     onDetect: _onDetect,
                     errorBuilder: (context, error, child) => ColoredBox(
-                      color: Colors.black,
+                      // 相机不可用时的占位：用页面底而非纯黑，深色下不刺眼。
+                      color: c.bg2,
                       child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(18),
@@ -132,8 +133,8 @@ class _ScanDialogState extends State<_ScanDialog> {
                             '相机不可用\n${error.errorCode}',
                             textAlign: TextAlign.center,
                             style: context.body(
-                              size: 12,
-                              color: Colors.white70,
+                              size: CitroType.caption,
+                              color: c.inkSoft,
                               height: 1.5,
                             ),
                           ),
@@ -147,9 +148,9 @@ class _ScanDialogState extends State<_ScanDialog> {
                         width: 208,
                         height: 208,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                           border: Border.all(
-                            color: Colors.white.withAlpha(210),
+                            color: c.surface.withAlpha(230),
                             width: 2,
                           ),
                         ),
@@ -169,16 +170,14 @@ class _ScanDialogState extends State<_ScanDialog> {
                             width: 34,
                             height: 34,
                             decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(110),
+                              color: c.scrim,
                               shape: BoxShape.circle,
                             ),
                             child: Center(
                               child: AppIcon(
                                 strokeSvg(AppIcons.flash, width: 2),
                                 size: 18,
-                                color: torchOn
-                                    ? const Color(0xFFFFD166)
-                                    : Colors.white,
+                                color: torchOn ? c.accent : c.surface,
                               ),
                             ),
                           ),
@@ -188,7 +187,7 @@ class _ScanDialogState extends State<_ScanDialog> {
                   ),
                   if (_busy)
                     ColoredBox(
-                      color: Colors.black.withAlpha(120),
+                      color: c.scrim,
                       child: Center(
                         child: SizedBox(
                           width: 26,
@@ -210,8 +209,8 @@ class _ScanDialogState extends State<_ScanDialog> {
               _error!,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 12,
-                weight: FontWeight.w700,
+                size: CitroType.caption,
+                weight: CitroType.medium,
                 color: c.stamp,
                 height: 1.45,
               ),
@@ -259,7 +258,7 @@ class _ScanDialogState extends State<_ScanDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line2),
         ),
         child: Text(

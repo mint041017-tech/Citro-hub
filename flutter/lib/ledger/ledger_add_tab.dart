@@ -155,7 +155,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: ctx.c.line2,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                   ),
                 ),
               ),
@@ -349,7 +349,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
                               onTap: () => showLedgerCategorySheet(context),
                               scale: .92,
                               hoverLift: 0,
-                              borderRadius: BorderRadius.circular(99),
+                              borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                               child: Container(
                                 width: 40,
                                 height: 40,
@@ -429,9 +429,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
 
   Widget _amountCard(BuildContext context) {
     final c = context.c;
-    return PaperCard(
-      tapeColor: c.tape3,
-      tapeAngle: -1.8,
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,9 +446,9 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
             controller: _amount,
             autofocus: false,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: context.ldisplay(
-              size: 40,
-              weight: FontWeight.w700,
+            style: context.lhand(
+              size: CitroType.hero,
+              weight: CitroType.strong,
               color: c.ink,
               height: 1.2,
             ),
@@ -458,15 +456,15 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
               isDense: true,
               border: InputBorder.none,
               prefixText: '¥ ',
-              prefixStyle: context.ldisplay(
-                size: 24,
-                weight: FontWeight.w700,
+              prefixStyle: context.lhand(
+                size: CitroType.titleLg,
+                weight: CitroType.strong,
                 color: c.inkSoft,
               ),
               hintText: '0.00',
-              hintStyle: context.ldisplay(
-                size: 40,
-                weight: FontWeight.w700,
+              hintStyle: context.lhand(
+                size: CitroType.hero,
+                weight: CitroType.strong,
                 color: c.inkSoft.withAlpha(90),
               ),
               contentPadding: const EdgeInsets.only(top: 6),
@@ -603,10 +601,10 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: c.noteB,
+          color: c.tintBlue,
           borderRadius: BorderRadius.circular(CitroColors.radii.card),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Row(
           children: [
@@ -615,7 +613,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
               height: 40,
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 border: Border.all(color: c.line),
               ),
               child: Center(

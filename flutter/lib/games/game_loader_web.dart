@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'g2048.dart' deferred as g2048;
 import 'gbrake_web.dart' deferred as gbrake;
@@ -16,6 +17,7 @@ import 'gslide.dart' deferred as gslide;
 import 'gsnake.dart' deferred as gsnake;
 import 'gsudoku.dart' deferred as gsudoku;
 import 'knockwater/knockwater_page.dart' deferred as knockwater;
+import 'game_theme.dart';
 
 Future<Widget> _loadPage(String key) async {
   switch (key) {
@@ -106,7 +108,7 @@ class _GameLoading extends StatelessWidget {
     final c = context.c;
     return Scaffold(
       backgroundColor: c.surface,
-      body: PaperBackground(
+      body: CitroBackground(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -146,7 +148,7 @@ class _GameLoadError extends StatelessWidget {
     final c = context.c;
     return Scaffold(
       backgroundColor: c.surface,
-      body: PaperBackground(
+      body: CitroBackground(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -167,7 +169,7 @@ class _GameLoadError extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
                     color: c.accent,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.button),
                   ),
                   child: Center(
                     child: Text(
@@ -175,7 +177,7 @@ class _GameLoadError extends StatelessWidget {
                       style: context.body(
                         size: 13,
                         weight: FontWeight.w700,
-                        color: const Color(0xFF2E2C22),
+                        color: c.accentText,
                       ),
                     ),
                   ),
@@ -197,7 +199,7 @@ class _MissingGame extends StatelessWidget {
     final c = context.c;
     return Scaffold(
       backgroundColor: c.surface,
-      body: PaperBackground(
+      body: CitroBackground(
         child: Center(child: Text('敬请期待', style: context.heading(size: 22))),
       ),
     );

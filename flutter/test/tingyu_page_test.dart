@@ -17,20 +17,23 @@ void main() {
       ..gid = 'tingyu-test-device'
       ..guestName = '游客·听隅'
       ..user = const User(name: '听隅测试', profileDone: true);
-    final loader = FontLoader('NookUI')
-      ..addFont(rootBundle.load('assets/tingyu/fonts/nook-ui.ttf'));
-    await loader.load();
-    for (final font in const [
-      ('Kalam', ['assets/fonts/kalam-400-app.ttf', 'assets/fonts/kalam-700-app.ttf']),
-      ('ZCOOL', ['assets/fonts/zcool-app.ttf']),
-      ('NotoSC', ['assets/fonts/noto-sc-400-app.ttf', 'assets/fonts/noto-sc-700-app.ttf']),
-    ]) {
-      final l = FontLoader(font.$1);
-      for (final path in font.$2) {
-        l.addFont(rootBundle.load(path));
+    Future<void> loadFont(String family, List<String> paths) async {
+      final loader = FontLoader(family);
+      for (final p in paths) {
+        loader.addFont(rootBundle.load(p));
       }
-      await l.load();
+      await loader.load();
     }
+
+    final nook = FontLoader('NookUI')
+      ..addFont(rootBundle.load('assets/tingyu/fonts/nook-ui.ttf'));
+    await nook.load();
+    await loadFont('RoundedCN', [
+      'assets/fonts/rounded-400-app.ttf',
+      'assets/fonts/rounded-500-app.ttf',
+      'assets/fonts/rounded-700-app.ttf',
+    ]);
+    await loadFont('XiaolaiMono', ['assets/fonts/mono-app.ttf']);
   });
 
   Widget host() => MaterialApp(

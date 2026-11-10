@@ -52,7 +52,6 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
     return LedgerScope(
       child: Builder(
         builder: (context) {
-          final c = context.c;
           return ListenableBuilder(
             listenable: LedgerStore.instance,
             builder: (context, _) {
@@ -61,10 +60,8 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               final summary = store.summaryFor(month);
               final plan = store.planFor(month);
               final today = store.todayExpense();
-              return PaperCard(
-                tapeColor: c.tape3,
-                tapeAngle: -1.7,
-                padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+              return CitroCard(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                 onTap: () => _open(context),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -137,7 +134,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                   style: context.lui(
                     size: CitroType.small,
                     weight: CitroType.strong,
-                    color: today > 0 ? c.stamp : c.inkSoft,
+                    color: today > 0 ? c.danger : c.inkSoft,
                   ),
                 ),
               ),
@@ -219,7 +216,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                   maxLines: 1,
                   style: context.lui(
                     size: CitroType.small,
-                    color: summary.overBudget ? c.stamp : c.inkSoft,
+                    color: summary.overBudget ? c.danger : c.inkSoft,
                   ),
                 ),
               ),
@@ -261,7 +258,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               style: context.lui(
                 size: CitroType.small,
                 weight: CitroType.strong,
-                color: today > 0 ? c.stamp : c.inkSoft,
+                color: today > 0 ? c.danger : c.inkSoft,
               ),
             ),
           ],
@@ -315,7 +312,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                   '结余 ${ledgerMoney(summary.balanceCents, compact: true)}',
                   style: context.lui(
                     size: CitroType.small,
-                    color: summary.balanceCents < 0 ? c.stamp : c.inkSoft,
+                    color: summary.balanceCents < 0 ? c.danger : c.inkSoft,
                   ),
                 ),
               ],
@@ -341,7 +338,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                 maxLines: 1,
                 style: context.lui(
                   size: CitroType.small,
-                  color: summary.overBudget ? c.stamp : c.inkSoft,
+                  color: summary.overBudget ? c.danger : c.inkSoft,
                 ),
               ),
             ],
@@ -367,7 +364,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                             compact: true,
                           ))
                   : '未设置',
-              color: summary.overBudget ? c.stamp : c.ink,
+              color: summary.overBudget ? c.danger : c.ink,
             ),
             const SizedBox(width: 6),
             _stat(context, '日均', ledgerMoney(avg, compact: true)),
@@ -466,7 +463,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
               style: context.lui(
                 size: CitroType.small,
                 weight: CitroType.strong,
-                color: today > 0 ? c.stamp : c.inkSoft,
+                color: today > 0 ? c.danger : c.inkSoft,
               ),
             ),
           ],
@@ -502,7 +499,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                   '结余 ${ledgerMoney(summary.balanceCents, compact: true)}',
                   style: context.lui(
                     size: CitroType.small,
-                    color: summary.balanceCents < 0 ? c.stamp : c.inkSoft,
+                    color: summary.balanceCents < 0 ? c.danger : c.inkSoft,
                   ),
                 ),
               ],
@@ -627,7 +624,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                 maxLines: 1,
                 style: context.lui(
                   size: CitroType.small,
-                  color: summary.overBudget ? c.stamp : c.inkSoft,
+                  color: summary.overBudget ? c.danger : c.inkSoft,
                 ),
               ),
               const SizedBox(width: 6),
@@ -638,7 +635,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                 maxLines: 1,
                 style: context.lui(
                   size: CitroType.small,
-                  color: summary.overBudget ? c.stamp : c.inkSoft,
+                  color: summary.overBudget ? c.danger : c.inkSoft,
                 ),
               ),
             ],
@@ -654,7 +651,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                 context,
                 '结余',
                 ledgerMoney(summary.balanceCents, compact: true),
-                color: summary.balanceCents < 0 ? c.stamp : c.ink,
+                color: summary.balanceCents < 0 ? c.danger : c.ink,
               ),
             const SizedBox(width: 6),
             _stat(context, '日均', ledgerMoney(avg, compact: true)),

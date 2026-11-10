@@ -18,7 +18,7 @@ Future<void> showCardCollection(BuildContext context) {
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭卡面收藏',
-    barrierColor: const Color(0xCC1B1712),
+    barrierColor: context.c.scrim,
     transitionDuration: CitroMotion.modal,
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, __) {
@@ -61,7 +61,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
     final wide = size.width >= 760;
     final width = math.min(980.0, size.width - (wide ? 64 : 0));
     final height = size.height * (wide ? .88 : 1);
-    final radius = wide ? 24.0 : 0.0;
+    final radius = wide ? CitroColors.radii.card : 0.0;
     return Center(
       child: SizedBox(
         width: width,
@@ -70,7 +70,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
           color: Colors.transparent,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(radius),
-            child: PaperBackground(
+            child: CitroBackground(
               child: SafeArea(
                 child: FutureBuilder<void>(
                   future: _loading,
@@ -121,7 +121,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       color: c.surface2,
                       shape: BoxShape.circle,
                       border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.paper(c),
+                      boxShadow: CitroColors.shadows.card(c),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -144,7 +144,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       const SizedBox(height: 2),
                       Text(
                         '已收集 $unlocked / $total · 抽到才会点亮',
-                        style: context.body(size: 11, color: c.inkSoft),
+                        style: context.body(size: CitroType.small, color: c.inkSoft),
                       ),
                     ],
                   ),
@@ -157,8 +157,8 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(colors: [c.accent, c.accent2]),
-                        borderRadius: BorderRadius.circular(999),
-                        boxShadow: CitroColors.shadows.note(c),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                        boxShadow: CitroColors.shadows.sm(c),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -166,15 +166,15 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                           AppIcon(
                             strokeSvg(AppIcons.sparkle, width: 2),
                             size: 14,
-                            color: const Color(0xFF2E2C22),
+                            color: c.onAccent,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             '抽卡 ${state.cardCredits}',
                             style: context.body(
-                              size: 12,
-                              weight: FontWeight.w700,
-                              color: const Color(0xFF2E2C22),
+                              size: CitroType.caption,
+                              weight: CitroType.medium,
+                              color: c.onAccent,
                             ),
                           ),
                         ],
@@ -191,7 +191,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
             child: Center(
               child: Text(
                 '卡面目录暂时没加载出来，联网后再试',
-                style: context.body(size: 12, color: c.inkSoft),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             ),
           ),
@@ -214,17 +214,17 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                     category.name,
                     style: context.display(
                       size: wide ? 18 : 15,
-                      weight: FontWeight.w700,
+                      weight: CitroType.medium,
                       color: c.ink,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     '${category.cards.where((e) => owned.contains(e.id)).length}/${category.cards.length}',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(child: DashedLine(color: c.line2.withAlpha(140))),
+                  Expanded(child: CitroDivider(color: c.line2.withAlpha(140))),
                 ],
               ),
             ),
@@ -252,7 +252,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
             child: Text(
               '卡面通过每日打卡、转运、完成游戏、发图文动态、公开菜谱和找 CiCi 聊天获得',
               textAlign: TextAlign.center,
-              style: context.body(size: 10, color: c.inkSoft, height: 1.6),
+              style: context.body(size: CitroType.micro, color: c.inkSoft, height: 1.6),
             ),
           ),
         ),
@@ -282,14 +282,14 @@ class _CardTile extends StatelessWidget {
               enabled: unlocked,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(
                     color: unlocked ? c.accent.withAlpha(120) : c.line2,
                   ),
-                  boxShadow: unlocked ? CitroColors.shadows.note(c) : null,
+                  boxShadow: unlocked ? CitroColors.shadows.sm(c) : null,
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -332,23 +332,21 @@ class _CardTile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Container(color: const Color(0x661B1712)),
+                        Container(color: c.scrim),
                         Center(
                           child: Container(
                             width: 34,
                             height: 34,
                             decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(90),
+                              color: c.scrim,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withAlpha(60),
-                              ),
+                              border: Border.all(color: c.surface.withAlpha(160)),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Icon(
                                 Icons.lock_outline_rounded,
                                 size: 16,
-                                color: Colors.white70,
+                                color: c.surface,
                               ),
                             ),
                           ),
@@ -361,14 +359,14 @@ class _CardTile extends StatelessWidget {
                           child: Container(
                             width: 18,
                             height: 18,
-                            decoration: const BoxDecoration(
-                              color: Color(0xCCF2C46B),
+                            decoration: BoxDecoration(
+                              color: c.accent,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.check_rounded,
                               size: 12,
-                              color: Color(0xFF2E2C22),
+                              color: c.onAccent,
                             ),
                           ),
                         ),
@@ -385,8 +383,8 @@ class _CardTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: context.body(
-              size: 10,
-              weight: unlocked ? FontWeight.w700 : FontWeight.w400,
+              size: CitroType.micro,
+              weight: unlocked ? CitroType.medium : CitroType.regular,
               color: unlocked ? c.ink2 : c.inkSoft,
             ),
           ),
@@ -400,7 +398,7 @@ class _CardTile extends StatelessWidget {
     Navigator.of(context, rootNavigator: true).push<void>(
       PageRouteBuilder<void>(
         opaque: false,
-        barrierColor: const Color(0xF21B1712),
+        barrierColor: context.c.scrim,
         barrierDismissible: true,
         transitionDuration: CitroMotion.modal,
         reverseTransitionDuration: CitroMotion.modalReverse,
@@ -431,6 +429,7 @@ class _CardZoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final width = math.min(size.width - 28, 620.0);
     final height = math.min(
@@ -457,7 +456,7 @@ class _CardZoom extends StatelessWidget {
                 child: CitroHero(
                   tag: CitroHero.tagOf('card', card.id),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                     child: CardFaceImage(
                       card: card,
                       cacheWidth: 1200,
@@ -477,15 +476,15 @@ class _CardZoom extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(28),
+                  color: c.scrim,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withAlpha(50)),
+                  border: Border.all(color: c.surface.withAlpha(140)),
                 ),
                 child: Center(
                   child: AppIcon(
                     strokeSvg(AppIcons.close, width: 2),
                     size: 18,
-                    color: Colors.white.withAlpha(230),
+                    color: c.surface,
                   ),
                 ),
               ),
@@ -497,9 +496,9 @@ class _CardZoom extends StatelessWidget {
             child: Text(
               '${card.categoryName} · ${card.label}',
               style: context.body(
-                size: 11,
-                weight: FontWeight.w700,
-                color: Colors.white.withAlpha(190),
+                size: CitroType.small,
+                weight: CitroType.medium,
+                color: c.surface.withAlpha(230),
                 letterSpacing: 1.2,
               ),
             ),
@@ -537,16 +536,10 @@ class CardCollectionEntry extends StatelessWidget {
           compact ? 14 : 16,
         ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: c.dark
-                ? const [Color(0xFF3A2E20), Color(0xFF241C15)]
-                : const [Color(0xFFFFF2D8), Color(0xFFF4E0BC)],
-          ),
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          color: c.accentLt.withAlpha(c.dark ? 60 : 170),
           border: Border.all(color: c.accent.withAlpha(90)),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Row(
           children: [
@@ -561,7 +554,7 @@ class CardCollectionEntry extends StatelessWidget {
                 child: AppIcon(
                   strokeSvg(AppIcons.sparkle, width: 2),
                   size: compact ? 19 : 22,
-                  color: const Color(0xFF2E2C22),
+                  color: c.onAccent,
                 ),
               ),
             ),
@@ -579,7 +572,7 @@ class CardCollectionEntry extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: context.display(
                             size: compact ? 16 : 18,
-                            weight: FontWeight.w700,
+                            weight: CitroType.medium,
                             color: c.ink,
                           ),
                         ),
@@ -593,15 +586,15 @@ class CardCollectionEntry extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: c.accent,
-                            borderRadius: BorderRadius.circular(99),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                           ),
                           child: Text(
                             '可抽 ${state.cardCredits}',
                             maxLines: 1,
                             style: context.body(
-                              size: 9,
-                              weight: FontWeight.w700,
-                              color: const Color(0xFF2E2C22),
+                              size: CitroType.micro,
+                              weight: CitroType.medium,
+                              color: c.onAccent,
                             ),
                           ),
                         ),
@@ -613,7 +606,7 @@ class CardCollectionEntry extends StatelessWidget {
                     total == 0
                         ? '正在整理卡面…'
                         : '已收集 ${unlockedCards.length} / $total · 抽到才会点亮',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -635,12 +628,12 @@ class CardCollectionEntry extends StatelessWidget {
                           width: compact ? 38 : 45,
                           height: compact ? 51 : 60,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                             border: Border.all(color: c.surface, width: 1.4),
-                            boxShadow: CitroColors.shadows.paper(c),
+                            boxShadow: CitroColors.shadows.card(c),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                             child: i < preview.length
                                 ? CardFaceImage(
                                     card: preview[i],
@@ -661,7 +654,7 @@ class CardCollectionEntry extends StatelessWidget {
                                     child: Icon(
                                       Icons.lock_outline_rounded,
                                       size: 13,
-                                      color: Colors.white.withAlpha(160),
+                                      color: c.surface.withAlpha(200),
                                     ),
                                   ),
                           ),

@@ -109,7 +109,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
             child: Text(
               _error!,
-              style: context.ui(size: CitroType.caption, color: c.stamp),
+              style: context.ui(size: CitroType.caption, color: c.danger),
             ),
           ),
         _quickActions(context),
@@ -132,10 +132,10 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           decoration: BoxDecoration(
-            color: c.surface2,
-            borderRadius: BorderRadius.circular(14),
+            color: c.surface,
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
+            boxShadow: CitroColors.shadows.card(c),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +147,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
                     height: 34,
                     decoration: BoxDecoration(
                       color: c.accent.withAlpha(45),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -213,7 +213,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
                   color: c.bg2.withAlpha(c.dark ? 120 : 80),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   border: Border.all(color: c.line),
                 ),
                 child: Row(
@@ -260,11 +260,11 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
             padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
             decoration: BoxDecoration(
               color: c.accent.withAlpha(c.dark ? 60 : 46),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(4),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(CitroColors.radii.small),
+                topRight: Radius.circular(CitroColors.radii.small),
+                bottomLeft: Radius.circular(CitroColors.radii.small),
+                bottomRight: Radius.circular(CitroColors.radii.xs),
               ),
               border: Border.all(color: c.accent.withAlpha(90)),
             ),
@@ -273,7 +273,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
               children: [
                 if (m.image != null) ...[
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     child: Image.memory(
                       base64Decode(m.image!.split(',').last),
                       width: 150,
@@ -309,7 +309,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
             margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: c.accent.withAlpha(40),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
             child: Center(
               child: AppIcon(
@@ -324,12 +324,12 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
               decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+                color: c.surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(CitroColors.radii.xs),
+                  topRight: Radius.circular(CitroColors.radii.small),
+                  bottomLeft: Radius.circular(CitroColors.radii.small),
+                  bottomRight: Radius.circular(CitroColors.radii.small),
                 ),
                 border: Border.all(color: c.line),
               ),
@@ -431,7 +431,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 13),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 border: Border.all(color: c.line),
               ),
               child: Row(
@@ -487,7 +487,9 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
           ),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(CitroColors.radii.modal),
+            ),
             border: Border.all(color: c.line),
           ),
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
@@ -516,7 +518,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
                           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                           decoration: BoxDecoration(
                             color: c.surface2,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.small),
                             border: Border.all(color: c.line),
                           ),
                           child: Text(
@@ -701,7 +703,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     child: Image.memory(
                       base64Decode(_pendingImage!.split(',').last),
                       width: 42,
@@ -791,7 +793,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     child: Image.memory(
                       base64Decode(_pendingImage!.split(',').last),
                       width: 52,
@@ -856,7 +858,7 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
                   ),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(color: c.line),
                   ),
                   child: TextField(
@@ -886,13 +888,13 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
                   height: 44,
                   decoration: BoxDecoration(
                     color: _sending ? c.line2 : c.accent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   ),
                   child: Center(
                     child: AppIcon(
-                      strokeSvg(AppIcons.send, width: 1.8, color: '#2E2C22'),
+                      strokeSvg(AppIcons.send, width: 1.8),
                       size: 18,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                   ),
                 ),

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/puns.dart';
@@ -53,7 +54,17 @@ class _PlayPageState extends State<PlayPage> {
     _load();
     _refreshRemote();
     _cdTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && remaining > 0) setState(() {});
+      // 归零的那一秒也要刷一次，否则按钮会永远停在「0:01」。
+      if (!mounted) return;
+      if (remaining > 0) {
+        setState(() {});
+      } else if (cooldownUntil != 0) {
+        cooldownUntil = 0;
+        setState(() {});
+        _cdTimer?.cancel();
+        _cdTimer = null;
+        if (!kIsWeb) HapticFeedback.selectionClick();
+      }
     });
   }
 
@@ -75,7 +86,7 @@ class _PlayPageState extends State<PlayPage> {
         );
       } catch (_) {}
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   List<_PlayRecord> _parseRemote(dynamic raw) {
@@ -257,7 +268,7 @@ class _PlayPageState extends State<PlayPage> {
     final c = context.c;
     final left = remaining;
     return Scaffold(
-      body: PaperBackground(
+      body: CitroBackground(
         child: SafeArea(
           child: Stack(
             children: [
@@ -274,7 +285,7 @@ class _PlayPageState extends State<PlayPage> {
                           textAlign: TextAlign.center,
                           style: context.display(
                             size: 30,
-                            weight: FontWeight.w700,
+                            weight: CitroType.strong,
                             color: c.ink,
                           ),
                         ),
@@ -283,127 +294,79 @@ class _PlayPageState extends State<PlayPage> {
                           '不知道这局怎么玩？抽一个，整活正式开始。每 10 分钟限抽 1 次。',
                           textAlign: TextAlign.center,
                           style: context.body(
-                            size: 13,
+                            size: CitroType.meta,
                             color: c.inkSoft,
                             height: 1.6,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: AppSpacing.x3),
                         RepaintBoundary(
                           key: stageKey,
-                          child: Container(
-                            height: 230,
-                            padding: const EdgeInsets.all(22),
-                            decoration: BoxDecoration(
-                              color: c.surface2,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: c.line),
-                              boxShadow: CitroColors.shadows.paper(c),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  top: 4,
-                                  left: 6,
+                          child: CitroCard(
+                            padding: const EdgeInsets.all(24),
+                            child: SizedBox(
+                              height: 180,
+                              child: Center(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 160),
                                   child: Text(
-                                    '“',
+                                    stageText,
+                                    key: ValueKey(stageText),
+                                    textAlign: TextAlign.center,
                                     style: context.display(
-                                      size: 40,
-                                      color: c.hl,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ),
-                                Center(
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 160),
-                                    child: Text(
-                                      stageText,
-                                      key: ValueKey(stageText),
-                                      textAlign: TextAlign.center,
-                                      style: context.display(
-                                        size: stageText.length > 14 ? 24 : 31,
-                                        weight: FontWeight.w700,
-                                        color: rolling ? c.inkSoft : c.ink,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 4,
-                                  bottom: 0,
-                                  child: Text(
-                                    'Citro · 玩法抽签',
-                                    style: context.hand(
-                                      size: 13,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Pressable(
-                                onTap: _draw,
-                                child: Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: left > 0
-                                        ? c.accent.withAlpha(90)
-                                        : c.accent,
-                                    borderRadius: BorderRadius.circular(999),
-                                    boxShadow: CitroColors.shadows.note(c),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      rolling
-                                          ? '停止抽取'
-                                          : (left > 0
-                                                ? '冷却中 ${_fmtCd(left)}'
-                                                : '开始抽取'),
-                                      style: context.body(
-                                        size: 14,
-                                        weight: FontWeight.w700,
-                                        color: const Color(0xFF2E2C22),
-                                      ),
+                                      size: stageText.length > 14 ? 24 : 30,
+                                      weight: CitroType.strong,
+                                      color: rolling ? c.inkSoft : c.ink,
+                                      height: 1.5,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.x2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CitroButton(
+                                label: rolling
+                                    ? '停止抽取'
+                                    : (left > 0
+                                          ? '冷却中 ${_fmtCd(left)}'
+                                          : '开始抽取'),
+                                style: left > 0
+                                    ? CitroButtonStyle.surface
+                                    : CitroButtonStyle.accent,
+                                expanded: true,
+                                onPressed: _draw,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.x1),
                             _ghostButton(
                               c,
                               kIsWeb ? '复制截图' : '分享截图',
                               AppIcons.image,
                               _shareShot,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.x1),
                             _ghostButton(c, '清空', AppIcons.refresh, _clear),
                           ],
                         ),
                         if (left > 0) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.x1),
                           Text(
                             '每 10 分钟限抽 1 次 · 剩余 ${_fmtCd(left)}',
                             textAlign: TextAlign.center,
-                            style: context.body(size: 11, color: c.accentInk),
+                            style: context.body(
+                              size: CitroType.small,
+                              color: c.accentInk,
+                            ),
                           ),
                         ],
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: c.surface2,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: c.line),
-                          ),
+                        const SizedBox(height: AppSpacing.x3),
+                        CitroCard(
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -417,23 +380,23 @@ class _PlayPageState extends State<PlayPage> {
                                   Text(
                                     '${records.length} 条',
                                     style: context.body(
-                                      size: 11,
+                                      size: CitroType.small,
                                       color: c.inkSoft,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: AppSpacing.x1),
                               if (records.isEmpty)
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
+                                    vertical: AppSpacing.x3,
                                   ),
                                   child: Text(
                                     '还没有记录，抽一签试试',
                                     textAlign: TextAlign.center,
                                     style: context.body(
-                                      size: 12,
+                                      size: CitroType.caption,
                                       color: c.inkSoft,
                                     ),
                                   ),
@@ -448,28 +411,19 @@ class _PlayPageState extends State<PlayPage> {
                                         ),
                                         child: Row(
                                           children: [
-                                            Container(
-                                              width: 4,
-                                              height: 4,
-                                              decoration: BoxDecoration(
-                                                color: c.accent,
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
                                                 r.text,
                                                 style: context.body(
-                                                  size: 13,
+                                                  size: CitroType.meta,
                                                   color: c.ink2,
                                                 ),
                                               ),
                                             ),
                                             Text(
                                               _time(r.ts),
-                                              style: context.body(
-                                                size: 10,
+                                              style: context.hand(
+                                                size: CitroType.micro,
                                                 color: c.inkSoft,
                                               ),
                                             ),
@@ -480,13 +434,16 @@ class _PlayPageState extends State<PlayPage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.x2),
                         _communityPanel(c),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: AppSpacing.x2),
                         Text(
                           '玩法仅供参考，快乐第一。',
                           textAlign: TextAlign.center,
-                          style: context.body(size: 11, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ],
                     ),
@@ -502,10 +459,10 @@ class _PlayPageState extends State<PlayPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: c.surface2,
+                      color: c.surface,
                       shape: BoxShape.circle,
                       border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.paper(c),
+                      boxShadow: CitroColors.shadows.card(c),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -534,21 +491,25 @@ class _PlayPageState extends State<PlayPage> {
       onTap: onTap,
       child: Container(
         height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
         ),
         child: Row(
           children: [
-            AppIcon(strokeSvg(icon, width: 2), size: 15, color: c.accentInk),
-            const SizedBox(width: 4),
+            AppIcon(
+              strokeSvg(icon, width: 2),
+              size: 15,
+              color: c.accentInk,
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
               style: context.body(
-                size: 12,
-                weight: FontWeight.w700,
+                size: CitroType.caption,
+                weight: CitroType.medium,
                 color: c.ink2,
               ),
             ),
@@ -559,31 +520,23 @@ class _PlayPageState extends State<PlayPage> {
   }
 
   Widget _communityPanel(CitroColors c) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: c.line),
-      ),
+    return CitroCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              AppIcon(
-                strokeSvg(AppIcons.users, width: 2),
-                size: 15,
-                color: c.accentInk,
-              ),
-              const SizedBox(width: 6),
               Text('大家的抽签', style: context.heading(size: 16)),
               const Spacer(),
               if (remoteLoading)
-                const SizedBox(
+                SizedBox(
                   width: 14,
                   height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 1.6),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.6,
+                    color: c.accent,
+                  ),
                 )
               else
                 Pressable(
@@ -599,40 +552,52 @@ class _PlayPageState extends State<PlayPage> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.x1),
           if (remoteLoading && remote.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x3),
               child: Text(
                 '正在同步全站记录…',
                 textAlign: TextAlign.center,
-                style: context.body(size: 12, color: c.inkSoft),
+                style: context.body(
+                  size: CitroType.caption,
+                  color: c.inkSoft,
+                ),
               ),
             )
           else if (remoteError != null && remote.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x2),
               child: Column(
                 children: [
                   Text(
                     '暂时连不上全站记录',
-                    style: context.body(size: 12, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.caption,
+                      color: c.inkSoft,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '抽签仍可继续，联网后会自动同步',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ],
               ),
             )
           else if (remote.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x3),
               child: Text(
                 '还没有人抽，做第一个',
                 textAlign: TextAlign.center,
-                style: context.body(size: 12, color: c.inkSoft),
+                style: context.body(
+                  size: CitroType.caption,
+                  color: c.inkSoft,
+                ),
               ),
             )
           else
@@ -645,27 +610,27 @@ class _PlayPageState extends State<PlayPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 20,
-                          height: 20,
+                          width: 24,
+                          height: 24,
                           margin: const EdgeInsets.only(top: 1),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: r.you ? c.accent : c.hl,
+                            color: r.you ? c.accent : c.surface2,
                             shape: BoxShape.circle,
-                            border: Border.all(color: c.line2),
+                            border: Border.all(
+                              color: r.you ? c.accent : c.line2,
+                            ),
                           ),
                           child: Text(
                             r.name.isEmpty ? '?' : r.name.characters.last,
                             style: context.body(
-                              size: 9,
-                              weight: FontWeight.w700,
-                              color: r.you
-                                  ? const Color(0xFF2E2C22)
-                                  : c.accentInk,
+                              size: CitroType.micro,
+                              weight: CitroType.medium,
+                              color: r.you ? c.onAccent : c.inkSoft,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.x2),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,8 +643,8 @@ class _PlayPageState extends State<PlayPage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: context.body(
-                                        size: 11,
-                                        weight: FontWeight.w700,
+                                        size: CitroType.small,
+                                        weight: CitroType.medium,
                                         color: r.you ? c.accentInk : c.inkSoft,
                                       ),
                                     ),
@@ -687,9 +652,9 @@ class _PlayPageState extends State<PlayPage> {
                                   const SizedBox(width: 6),
                                   Text(
                                     _time(r.ts),
-                                    style: context.body(
-                                      size: 10,
-                                      color: c.inkSoft.withAlpha(200),
+                                    style: context.hand(
+                                      size: CitroType.micro,
+                                      color: c.inkSoft,
                                     ),
                                   ),
                                 ],
@@ -698,7 +663,7 @@ class _PlayPageState extends State<PlayPage> {
                               Text(
                                 r.text,
                                 style: context.body(
-                                  size: 12,
+                                  size: CitroType.caption,
                                   color: c.ink2,
                                   height: 1.45,
                                 ),

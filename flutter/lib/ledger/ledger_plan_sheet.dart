@@ -145,7 +145,7 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
                           height: 4,
                           decoration: BoxDecoration(
                             color: c.line2,
-                            borderRadius: BorderRadius.circular(99),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                           ),
                         ),
                       ),
@@ -202,9 +202,9 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
                         hint: '只统计支出分类，留空表示不限',
                         trailing: Text(
                           '合计 ${ledgerMoney(sum)}',
-                          style: context.lui(
+                          style: context.lhand(
                             size: CitroType.caption,
-                            color: over ? c.stamp : c.inkSoft,
+                            color: over ? c.danger : c.inkSoft,
                           ),
                         ),
                       ),
@@ -214,7 +214,7 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
                           '分类预算合计超过总预算 ${ledgerMoney(sum - budget)}，保存后仍可继续使用。',
                           style: context.lui(
                             size: CitroType.caption,
-                            color: c.stamp,
+                            color: c.danger,
                           ),
                         ),
                       ],
@@ -318,18 +318,18 @@ class _MoneyField extends StatelessWidget {
                     decimal: true,
                   ),
                   onChanged: onChanged,
-                  style: context.ldisplay(
-                    size: 22,
-                    weight: FontWeight.w700,
+                  style: context.lhand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
                     color: c.ink,
                   ),
                   decoration: InputDecoration(
                     isDense: true,
                     border: InputBorder.none,
                     prefixText: '¥ ',
-                    prefixStyle: context.ldisplay(
-                      size: 16,
-                      weight: FontWeight.w700,
+                    prefixStyle: context.lhand(
+                      size: CitroType.bodyLg,
+                      weight: CitroType.strong,
                       color: c.inkSoft,
                     ),
                     hintText: hint,
@@ -410,7 +410,7 @@ class _CategoryBudgetRow extends StatelessWidget {
               ),
               textAlign: TextAlign.right,
               onChanged: (_) => onChanged(),
-              style: context.lui(
+              style: context.lhand(
                 size: CitroType.meta,
                 weight: CitroType.strong,
                 color: c.ink,

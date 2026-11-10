@@ -22,6 +22,7 @@ import 'sudoku/sudoku_kernel.dart';
 import 'sudoku/sudoku_mode_select.dart';
 import 'sudoku/sudoku_resume.dart';
 import 'sudoku/sudoku_scoring.dart';
+import 'game_theme.dart';
 
 /// 统一数独入口。
 ///
@@ -1639,7 +1640,7 @@ class _ModeBar extends StatelessWidget {
               style: context.body(
                 size: 11,
                 weight: FontWeight.w700,
-                color: c.accentInk,
+                color: c.accentText,
                 height: 1.2,
               ),
             ),
@@ -1702,23 +1703,15 @@ class _DiffTabs extends StatelessWidget {
               ? BoxDecoration(
                   color: c.accent,
                   borderRadius: BorderRadius.circular(999),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x66FE923B),
-                      blurRadius: 12,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
+                  boxShadow: CitroColors.shadows.float(c),
                 )
               : null,
           child: Text(
             difficulty.label,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: on ? const Color(0xFF2E2C22) : c.ink2,
-              height: 1.2,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
+              color: on ? c.accentText : c.ink2,
             ),
           ),
         ),
@@ -1755,7 +1748,7 @@ class _CubeViewToggle extends StatelessWidget {
             style: context.body(
               size: 11,
               weight: FontWeight.w700,
-              color: on ? const Color(0xFF2E2C22) : c.ink2,
+              color: on ? c.accentText : c.ink2,
               height: 1,
             ),
           ),
@@ -1836,7 +1829,7 @@ class _CubeFaceTabs extends StatelessWidget {
           style: context.body(
             size: 11,
             weight: FontWeight.w700,
-            color: on ? const Color(0xFF2E2C22) : c.ink2,
+            color: on ? c.accentText : c.ink2,
             height: 1,
           ),
         ),
@@ -1959,10 +1952,10 @@ class _LayerChip extends StatelessWidget {
             Text(
               '${index + 1}',
               style: TextStyle(
-                fontFamily: AppFonts.kalam,
-                fontSize: 14,
+                fontFamily: AppFonts.mono,
+                fontSize: CitroType.body,
                 fontWeight: FontWeight.w700,
-                color: selected ? const Color(0xFF2E2C22) : c.ink2,
+                color: selected ? c.accentText : c.ink2,
                 height: 1,
               ),
             ),
@@ -1974,7 +1967,7 @@ class _LayerChip extends StatelessWidget {
                 color: bad
                     ? c.stamp
                     : (selected
-                          ? const Color(0xFF2E2C22)
+                          ? c.accentText
                           : (complete ? c.accentInk : c.line2)),
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -2104,8 +2097,8 @@ class _OverlapChip extends StatelessWidget {
             Text(
               '${index + 1}',
               style: TextStyle(
-                fontFamily: AppFonts.kalam,
-                fontSize: 13,
+                fontFamily: AppFonts.mono,
+                fontSize: CitroType.meta,
                 fontWeight: FontWeight.w700,
                 color: selected ? color : c.ink2,
                 height: 1,
@@ -2198,24 +2191,22 @@ class _ColumnPeek extends StatelessWidget {
           children: [
             Text(
               '${l + 1}',
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: on ? const Color(0xFF2E2C22) : c.inkSoft,
-                height: 1,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.strong,
+                color: on ? c.accentText : c.inkSoft,
               ),
             ),
             const SizedBox(height: 1),
             Text(
               value == 0 ? '·' : '$value',
               style: TextStyle(
-                fontFamily: AppFonts.kalam,
-                fontSize: 13,
+                fontFamily: AppFonts.mono,
+                fontSize: CitroType.meta,
                 fontWeight: FontWeight.w700,
                 color: bad
                     ? c.stamp
-                    : (on ? const Color(0xFF2E2C22) : c.accentInk),
+                    : (on ? c.accentText : c.accentInk),
                 height: 1,
               ),
             ),
@@ -2274,12 +2265,12 @@ class _LargeBoardNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          gameIcon(GameIcons.lightbulb, size: 14, color: c.accentInk),
+          gameIcon(GameIcons.lightbulb, size: 14, color: c.accentText),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               '手机屏幕较小，建议使用 iPad / 桌面端 / 网页端游玩；可双指放大。',
-              style: context.body(size: 11, color: c.accentInk, height: 1.5),
+              style: context.body(size: 11, color: c.accentText, height: 1.5),
             ),
           ),
           GestureDetector(
@@ -2287,7 +2278,7 @@ class _LargeBoardNotice extends StatelessWidget {
             onTap: onClose,
             child: Padding(
               padding: const EdgeInsets.all(3),
-              child: gameIcon(GameIcons.close, size: 12, color: c.accentInk),
+              child: gameIcon(GameIcons.close, size: 12, color: c.accentText),
             ),
           ),
         ],
@@ -2398,7 +2389,7 @@ class _SudokuPad extends StatelessWidget {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(color: c.line2, width: 1),
                   ),
                 ),
@@ -2406,12 +2397,10 @@ class _SudokuPad extends StatelessWidget {
               Center(
                 child: Text(
                   '$n',
-                  style: TextStyle(
-                    fontFamily: AppFonts.kalam,
-                    fontSize: size * .42,
-                    fontWeight: FontWeight.w700,
+                  style: context.hand(
+                    size: size * .42,
+                    weight: CitroType.strong,
                     color: c.ink,
-                    height: 1,
                   ),
                 ),
               ),
@@ -2421,12 +2410,10 @@ class _SudokuPad extends StatelessWidget {
                   bottom: 4,
                   child: Text(
                     '${remaining[n - 1]}',
-                    style: TextStyle(
-                      fontFamily: AppFonts.kalam,
-                      fontSize: size * .18,
-                      fontWeight: FontWeight.w700,
+                    style: context.hand(
+                      size: size * .18,
+                      weight: CitroType.strong,
                       color: c.inkSoft,
-                      height: 1,
                     ),
                   ),
                 ),
@@ -2456,87 +2443,48 @@ class _ToolBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
+    final fg = primary ? c.accentText : c.ink2;
     return GameHover(
       enabled: onTap != null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: CssShadowLayer(
-          radius: 999,
-          shadows: primary
-              ? const [
-                  CssShadowSpec(
-                    color: Color(0xA694530A),
-                    offset: Offset(0, 11),
-                    blur: 22,
-                    spread: -12,
-                  ),
-                ]
-              : const [
-                  CssShadowSpec(
-                    color: Color(0x803C301A),
-                    offset: Offset(0, 4),
-                    blur: 12,
-                    spread: -8,
-                  ),
-                ],
-          child: SizedBox(
-            height: 42,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: primary
-                    ? null
-                    : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
-                gradient: primary
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-                      )
-                    : null,
-                border: Border.all(
-                  color: primary
-                      ? const Color(0x2E94530A)
-                      : (c.dark ? c.line2 : const Color(0x294A3A22)),
+        child: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          decoration: BoxDecoration(
+            color: primary ? c.accent : c.surface,
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
+            border: Border.all(color: primary ? c.accent : c.line),
+            boxShadow: primary
+                ? CitroColors.shadows.float(c)
+                : CitroColors.shadows.sm(c),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              gameIcon(icon, size: 15, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: context.body(
+                  size: CitroType.meta,
+                  weight: CitroType.strong,
+                  color: fg,
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    gameIcon(icon, size: 15, color: fg),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: AppFonts.noto,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .2,
-                        color: fg,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (trailing != null) ...[
-                      const SizedBox(width: 5),
-                      Text(
-                        trailing!,
-                        style: TextStyle(
-                          fontFamily: AppFonts.noto,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: fg.withValues(alpha: .7),
-                          height: 1,
-                        ),
-                      ),
-                    ],
-                  ],
+              if (trailing != null) ...[
+                const SizedBox(width: 5),
+                Text(
+                  trailing!,
+                  style: context.body(
+                    size: CitroType.small,
+                    weight: CitroType.strong,
+                    color: fg.withValues(alpha: .7),
+                  ),
                 ),
-              ),
-            ),
+              ],
+            ],
           ),
         ),
       ),
@@ -2618,75 +2566,47 @@ class _BoardOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final card = CssShadowLayer(
-      radius: 14,
-      shadows: const [
-        CssShadowSpec(color: Color(0x0F5A4A2C), offset: Offset(0, 2), blur: 4),
-        CssShadowSpec(
-          color: Color(0x6B5A4A2C),
-          offset: Offset(0, 22),
-          blur: 48,
-          spread: -24,
-        ),
-      ],
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          decoration: BoxDecoration(
-            color: solid
-                ? (c.dark ? c.surface2 : const Color(0xFFFFFDF8))
-                : (c.dark
-                      ? c.surface.withAlpha(0xF0)
-                      : const Color(0xF0FBF7EC)),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: c.line),
+    final card = Container(
+      decoration: BoxDecoration(
+        color: c.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        border: Border.all(color: c.line),
+        boxShadow: CitroColors.shadows.lg(c),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: context.heading(
+              size: CitroType.heading,
+              color: fail ? c.stamp : c.mintInk,
+            ),
           ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w400,
-                  height: 1.3,
-                  letterSpacing: 1.4,
-                  color: fail ? c.stamp : c.mintInk,
-                ),
-              ),
-              if (description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontSize: 12,
-                    color: c.ink2,
-                    height: 1.6,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              _ToolBtn(
-                label: action,
-                icon: GameIcons.reset,
-                primary: true,
-                onTap: onAction,
-              ),
-            ],
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: context.body(size: CitroType.meta, color: c.ink2),
+            ),
+          ],
+          const SizedBox(height: 12),
+          _ToolBtn(
+            label: action,
+            icon: GameIcons.reset,
+            primary: true,
+            onTap: onAction,
           ),
-        ),
+        ],
       ),
     );
     if (!solid) return card;
     return Container(
-      color: c.dark ? c.surface : const Color(0xFFFBF7EC),
+      color: c.bg,
       alignment: Alignment.center,
       padding: const EdgeInsets.all(16),
       child: ConstrainedBox(
@@ -2715,7 +2635,7 @@ class _LoadingPanel extends StatelessWidget {
           color: c.surface2,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2768,7 +2688,7 @@ class _ErrorPanel extends StatelessWidget {
           color: c.surface2,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -25,16 +25,12 @@ Future<void> _loadFonts() async {
     await loader.load();
   }
 
-  await load('Kalam', [
-    'assets/fonts/kalam-400-app.ttf',
-    'assets/fonts/kalam-700-app.ttf',
+  await load('RoundedCN', [
+    'assets/fonts/rounded-400-app.ttf',
+    'assets/fonts/rounded-500-app.ttf',
+    'assets/fonts/rounded-700-app.ttf',
   ]);
-  await load('ZCOOL', ['assets/fonts/zcool-app.ttf']);
-  await load('Caveat', ['assets/fonts/caveat-app.ttf']);
-  await load('NotoSC', [
-    'assets/fonts/noto-sc-400-app.ttf',
-    'assets/fonts/noto-sc-700-app.ttf',
-  ]);
+  await load('XiaolaiMono', ['assets/fonts/mono-app.ttf']);
 }
 
 void main() {

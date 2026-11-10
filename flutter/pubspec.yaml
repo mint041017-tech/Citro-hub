@@ -65,24 +65,19 @@ flutter:
     - assets/tingyu/audio/
     - assets/tingyu/fonts/
   fonts:
-    - family: Kalam
+    # nosh 风格重设计：圆体无衬线（Resource Han Rounded CN，OFL）+ 等宽数字（Xiaolai Mono，OFL）。
+    # 两者都按 Citro 的字符集做了子集化，覆盖与旧 Noto Sans SC 子集一致。
+    - family: RoundedCN
       fonts:
-        - asset: assets/fonts/kalam-400-app.ttf
+        - asset: assets/fonts/rounded-400-app.ttf
           weight: 400
-        - asset: assets/fonts/kalam-700-app.ttf
+        - asset: assets/fonts/rounded-500-app.ttf
+          weight: 500
+        - asset: assets/fonts/rounded-700-app.ttf
           weight: 700
-    - family: ZCOOL
+    - family: XiaolaiMono
       fonts:
-        - asset: assets/fonts/zcool-app.ttf
-    - family: Caveat
-      fonts:
-        - asset: assets/fonts/caveat-app.ttf
-    - family: NotoSC
-      fonts:
-        - asset: assets/fonts/noto-sc-400-app.ttf
-          weight: 400
-        - asset: assets/fonts/noto-sc-700-app.ttf
-          weight: 700
+        - asset: assets/fonts/mono-app.ttf
     - family: NookUI
       fonts:
         - asset: assets/tingyu/fonts/nook-ui.ttf

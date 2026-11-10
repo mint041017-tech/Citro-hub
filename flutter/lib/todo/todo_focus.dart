@@ -25,7 +25,7 @@ Future<void> showTodoFocus(BuildContext context, {TodoTask? task}) {
     context: context,
     barrierDismissible: true,
     barrierLabel: '专注',
-    barrierColor: const Color(0x8A23211C),
+    barrierColor: context.c.scrim,
     transitionDuration: CitroMotion.modal,
     pageBuilder: (_, __, ___) => TodoScope(child: _FocusDialog(task: task)),
     transitionBuilder: (context, anim, _, child) {
@@ -118,7 +118,7 @@ class TodoFocusPage extends StatelessWidget {
                             Pressable(
                               onTap: back,
                               scale: .92,
-                              borderRadius: BorderRadius.circular(99),
+                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                               child: Container(
                                 width: 38,
                                 height: 38,
@@ -126,7 +126,7 @@ class TodoFocusPage extends StatelessWidget {
                                   color: c.surface2,
                                   shape: BoxShape.circle,
                                   border: Border.all(color: c.line),
-                                  boxShadow: CitroColors.shadows.paper(c),
+                                  boxShadow: CitroColors.shadows.card(c),
                                 ),
                                 child: Center(
                                   child: AppIcon(
@@ -155,7 +155,7 @@ class TodoFocusPage extends StatelessWidget {
                                         ),
                                       ),
                                       Text(
-                                        '一段一段地做，把注意力放回此刻。',
+                                        '把注意力放回此刻。',
                                         style: context.ui(
                                           size: CitroType.label,
                                           color: c.inkSoft,
@@ -179,7 +179,7 @@ class TodoFocusPage extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: c.accent.withAlpha(30),
-                                  borderRadius: BorderRadius.circular(99),
+                                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                 ),
                                 child: Text(
                                   '今日 ${state.todayMinutes} 分钟',
@@ -271,7 +271,7 @@ class TodoFocusPage extends StatelessWidget {
           final c = context.c;
           return Scaffold(
             backgroundColor: c.bg,
-            body: PaperBackground(child: content),
+            body: content,
           );
         },
       ),
@@ -288,7 +288,7 @@ class TodoFocusPage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: c.line2),
           ),
           child: Column(
@@ -330,7 +330,7 @@ class TodoFocusPage extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         border: Border.all(color: c.line),
                       ),
                       child: Text(
@@ -348,7 +348,7 @@ class TodoFocusPage extends StatelessWidget {
               const SizedBox(height: 10),
               _mixRow(context),
               const SizedBox(height: 10),
-              Divider(height: 1, color: c.line),
+              CitroDivider(height: 1, color: c.line),
               _SettingsFold(
                 children: [
                   _switchRow(
@@ -427,7 +427,7 @@ class TodoFocusPage extends StatelessWidget {
               value: value,
               onChanged: onChanged,
               activeTrackColor: c.accent.withAlpha(150),
-              activeColor: c.accent,
+              activeThumbColor: c.accent,
             ),
           ),
         ],
@@ -455,7 +455,7 @@ class TodoFocusPage extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: nook.playing ? c.accent.withAlpha(40) : c.surface2,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   border: Border.all(color: nook.playing ? c.accent : c.line),
                 ),
                 child: Text(
@@ -478,7 +478,7 @@ class TodoFocusPage extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: c.surface2,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   border: Border.all(color: c.line),
                 ),
                 child: Text(
@@ -556,7 +556,7 @@ class TodoFocusPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line2),
       ),
       child: Column(
@@ -638,7 +638,7 @@ class TodoFocusPage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: c.line2),
           ),
           child: Column(
@@ -687,7 +687,7 @@ class TodoFocusPage extends StatelessWidget {
         children: [
           Text(
             value,
-            style: context.ui(
+            style: context.hand(
               size: CitroType.titleLg,
               weight: CitroType.strong,
               color: c.accentInk,
@@ -729,7 +729,9 @@ class _MixPicker extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.modal),
+        ),
         border: Border(top: BorderSide(color: c.line2)),
       ),
       child: Column(
@@ -742,7 +744,7 @@ class _MixPicker extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: c.line2,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
             ),
           ),
@@ -777,7 +779,7 @@ class _MixPicker extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         border: Border.all(color: c.line),
                       ),
                       child: Row(
@@ -1002,7 +1004,7 @@ class _DurationDialogState extends State<_DurationDialog> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: onTap == null ? c.surface2.withAlpha(120) : c.surface2,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           border: Border.all(color: c.line),
         ),
         child: Text(
@@ -1077,7 +1079,7 @@ class _FocusDialogState extends State<_FocusDialog> {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _tape(context),
+                      _grabHandle(context),
                       Flexible(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -1147,30 +1149,17 @@ class _FocusDialogState extends State<_FocusDialog> {
     );
   }
 
-  Widget _tape(BuildContext context) {
+  /// 弹层顶部只留一条拖拽条，不再贴旋转纸胶带。
+  Widget _grabHandle(BuildContext context) {
     final c = context.c;
-    return SizedBox(
-      height: 18,
-      child: Center(
-        child: Transform.rotate(
-          angle: -1.6 * math.pi / 180,
-          child: Container(
-            width: 96,
-            height: 16,
-            decoration: BoxDecoration(
-              color: c.tape,
-              boxShadow: [
-                BoxShadow(
-                  color: c.dark
-                      ? const Color(0x30000000)
-                      : const Color(0x735A4A2C),
-                  blurRadius: 5,
-                  spreadRadius: -3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 2),
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: c.line2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
         ),
       ),
     );
@@ -1232,7 +1221,7 @@ class _FocusDialogState extends State<_FocusDialog> {
       padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Column(
@@ -1317,9 +1306,9 @@ class _FocusDialogState extends State<_FocusDialog> {
             children: [
               Text(
                 state.timeText,
-                style: context.ui(
+                style: context.hand(
                   weight: CitroType.strong,
-                  size: 48,
+                  size: CitroType.poster,
                   color: c.ink,
                   height: 1,
                 ),
@@ -1372,14 +1361,14 @@ class _FocusDialogState extends State<_FocusDialog> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: c.accent,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
               ),
               child: Text(
                 _completing ? '下一轮' : (state.running ? '暂停' : '开始'),
                 style: context.ui(
                   size: CitroType.bodyLg,
                   weight: CitroType.strong,
-                  color: const Color(0xFF2E2C22),
+                  color: c.onAccent,
                 ),
               ),
             ),
@@ -1417,7 +1406,7 @@ class _FocusDialogState extends State<_FocusDialog> {
           height: 48,
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(CitroColors.radii.small),
             border: Border.all(color: c.line),
           ),
           child: Center(
@@ -1470,7 +1459,7 @@ class _FocusDialogState extends State<_FocusDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: _showSettings ? c.accent.withAlpha(45) : c.surface2,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(
             color: _showSettings ? c.accent.withAlpha(110) : c.line,
           ),
@@ -1502,7 +1491,7 @@ class _FocusDialogState extends State<_FocusDialog> {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
         color: c.bg2.withAlpha(c.dark ? 120 : 80),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Column(
@@ -1536,7 +1525,7 @@ class _FocusDialogState extends State<_FocusDialog> {
             ],
           ),
           const SizedBox(height: 10),
-          Divider(color: c.line, height: 1),
+          CitroDivider(height: 1, color: c.line),
           const SizedBox(height: 8),
           _toggleLine(context, '自动开始下一轮', state.autoStart, state.setAutoStart),
           _toggleLine(
@@ -1580,7 +1569,7 @@ class _FocusDialogState extends State<_FocusDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 9),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                       border: Border.all(color: c.line),
                     ),
                     child: Center(
@@ -1626,7 +1615,7 @@ class _FocusDialogState extends State<_FocusDialog> {
             ),
           ],
           const SizedBox(height: 8),
-          Divider(color: c.line, height: 1),
+          CitroDivider(height: 1, color: c.line),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1716,7 +1705,7 @@ class _FocusDialogState extends State<_FocusDialog> {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: value ? c.accent : c.line2,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
               ),
               child: AnimatedAlign(
                 duration: CitroMotion.hover,
@@ -1726,15 +1715,9 @@ class _FocusDialogState extends State<_FocusDialog> {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: value ? const Color(0xFFFFFDF8) : c.surface2,
+                    color: value ? c.surface : c.surface2,
                     shape: BoxShape.circle,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                 ),
               ),
@@ -1780,7 +1763,7 @@ class _FocusDialogState extends State<_FocusDialog> {
                 ),
                 decoration: BoxDecoration(
                   color: c.accent.withAlpha(40),
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   border: Border.all(color: c.accent.withAlpha(110)),
                 ),
                 child: Text(

@@ -142,7 +142,7 @@ class _LedgerEntrySheetState extends State<_LedgerEntrySheet> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: c.line2,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                 ),
               ),
@@ -166,15 +166,15 @@ class _LedgerEntrySheetState extends State<_LedgerEntrySheet> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: c.stamp.withAlpha(24),
+                        color: c.danger.withAlpha(24),
                         shape: BoxShape.circle,
-                        border: Border.all(color: c.stamp.withAlpha(80)),
+                        border: Border.all(color: c.danger.withAlpha(80)),
                       ),
                       child: Center(
                         child: AppIcon(
                           strokeSvg(AppIcons.trash, width: 1.9),
                           size: 16,
-                          color: c.stamp,
+                          color: c.danger,
                         ),
                       ),
                     ),
@@ -202,18 +202,18 @@ class _LedgerEntrySheetState extends State<_LedgerEntrySheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      style: context.ldisplay(
-                        size: 34,
-                        weight: FontWeight.w700,
+                      style: context.lhand(
+                        size: CitroType.display,
+                        weight: CitroType.strong,
                         color: c.ink,
                       ),
                       decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         prefixText: '¥ ',
-                        prefixStyle: context.ldisplay(
-                          size: 20,
-                          weight: FontWeight.w700,
+                        prefixStyle: context.lhand(
+                          size: CitroType.titleLg,
+                          weight: CitroType.strong,
                           color: c.inkSoft,
                         ),
                       ),

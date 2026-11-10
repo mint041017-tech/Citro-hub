@@ -1,11 +1,8 @@
-/// Apple UI Design System – Verified: 8pt Grid, SF Pro Typography,
-/// Material-Depth, Natural Spring Motion
-///
-/// Citro 的「原生规范层」：在不改动手账配色与纸感的前提下，
-/// 把间距、材质、字体与触感对齐 Apple HIG，并保留各端自己的原生表达：
+/// Citro 的「原生规范层」：把间距、材质、字体与触感对齐各端原生表达，
+/// 同时保持 nosh 式的干净表面（大圆角、柔和阴影、中性色）：
 /// - iOS / iPadOS：真实背景模糊 + 发丝描边 + 内高光（Liquid Glass 的轻量版）；
 /// - Android：tonal surface（Material 的原生语言），不使用玻璃模糊；
-/// - Windows / Web：半透明纸面 + 发丝边（避免大面积 BackdropFilter 重绘）。
+/// - Windows / Web：半透明表面 + 发丝边（避免大面积 BackdropFilter 重绘）。
 library;
 
 import 'dart:ui' show ImageFilter;
@@ -63,15 +60,13 @@ class CitroNative {
     _ => null,
   };
 
-  /// 中文回退：优先本机系统中文字体，最后落到应用内置的 NotoSC，
-  /// 保证四端中文形态一致。
-  static List<String> get uiFontFallback => switch (defaultTargetPlatform) {
-    TargetPlatform.iOS ||
-    TargetPlatform.macOS => const ['PingFang SC', 'NotoSC'],
-    TargetPlatform.android => const ['Noto Sans CJK SC', 'NotoSC'],
-    TargetPlatform.windows => const ['Microsoft YaHei', 'NotoSC'],
-    _ => const ['NotoSC'],
-  };
+  /// 中文回退：应用内置圆体优先，其次本机系统中文字体。
+  static List<String> get uiFontFallback => const [
+    AppFonts.rounded,
+    'Noto Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+  ];
 
   /// Apple 的字距规范：大标题收紧，小字保持 0，避免正文挤在一起。
   static double trackingFor(double size) => size >= 20 ? -0.02 * size : 0;
@@ -92,7 +87,7 @@ extension CitroNativeType on BuildContext {
   }) {
     final colors = c;
     return TextStyle(
-      fontFamily: CitroNative.uiFontFamily,
+      fontFamily: AppFonts.rounded,
       fontFamilyFallback: CitroNative.uiFontFallback,
       fontSize: size,
       fontWeight: weight,
@@ -104,16 +99,16 @@ extension CitroNativeType on BuildContext {
   }
 }
 
-/// 玻璃 / tonal 材质的配色。亮色沿用纸面暖调，暗色对齐 iOS 的
+/// 玻璃 / tonal 材质的配色。亮色用中性白，暗色对齐 iOS 的
 /// secondarySystemBackground，避免"发蓝的深灰"。
 extension CitroMaterialColors on CitroColors {
   /// 导航栏、侧栏、浮动胶囊的底色。
   Color get glassTint =>
-      dark ? const Color(0xC71C1C23) : const Color(0xC4FBF7EC);
+      dark ? const Color(0xC71C1C23) : const Color(0xE6FFFFFF);
 
   /// 对话框 / 弹层用的更实一点的底色，保证正文对比度。
   Color get glassTintStrong =>
-      dark ? const Color(0xE61C1C23) : const Color(0xF2FBF7EC);
+      dark ? const Color(0xE61C1C23) : const Color(0xFFFFFFFF);
 
   /// 发丝描边：亮色 black 10%，暗色 white 16%。
   Color get glassBorder =>
@@ -121,11 +116,11 @@ extension CitroMaterialColors on CitroColors {
 
   /// 顶部内高光，模拟玻璃边缘折射。
   Color get glassHighlight =>
-      dark ? const Color(0x14FFFFFF) : const Color(0x4DFFFFFF);
+      dark ? const Color(0x14FFFFFF) : const Color(0x33FFFFFF);
 
-  /// 玻璃投影：比纸片阴影更收敛。
+  /// 玻璃投影：中性黑，不再用暖棕。
   Color get glassShadow =>
-      dark ? const Color(0x59000000) : const Color(0x245A4A2C);
+      dark ? const Color(0x59000000) : const Color(0x14000000);
 
   /// Android / 非玻璃端使用的 tonal 表面。
   Color get tonalSurface => surface2;
@@ -152,7 +147,7 @@ class CitroGlass extends StatelessWidget {
   const CitroGlass({
     super.key,
     required this.child,
-    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
+    this.borderRadius = const BorderRadius.all(Radius.circular(24)),
     this.blur = true,
     this.sigma = 20,
     this.tint,

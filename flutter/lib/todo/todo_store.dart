@@ -640,7 +640,11 @@ class TodoStore extends ChangeNotifier {
   // 提醒
   // -------------------------------------------------------------------------
 
-  /// 重排本地提醒。通知 id 落在 9000–9508：每个任务最多 4 个槽，对应多条提前提醒。
+  /// 重排本地提醒。
+  ///
+  /// 通知 id 用「任务序号 × 8 + 槽位」生成（9000 起），每个任务最多 8 条提前提醒；
+  /// 撞号时线性探测到空位。旧版用 hash % 20000 × 4，范围能到 88996，且撞号只
+  /// 重试 8 次仍会把已存在的 id 加进 used，导致两条通知同 id 互相覆盖。
   Future<void> reschedule() async {
     if (!_inited) return;
     // 测试环境不排真提醒，避免留下 pending timer 影响用例收尾。
@@ -648,19 +652,17 @@ class TodoStore extends ChangeNotifier {
     if (!Notifications.enabled) return;
     final now = DateTime.now();
     final wanted = <int>{};
-    // 只取哈希低位时两个任务极易撞车，撞了就会被 _scheduledIds 跳过、提醒直接丢。
     final used = <int>{};
-    for (final t in _tasks) {
+    for (var index = 0; index < _tasks.length; index++) {
+      final t = _tasks[index];
       if (t.done) continue;
       final times = _reminderTimes(t, now);
       if (times.isEmpty) continue;
-      final base = 9000 + (t.id.hashCode.abs() % 20000) * 4;
+      final base = 9000 + index * 8;
       for (var i = 0; i < times.length; i++) {
         var id = base + i;
-        var guard = 0;
-        while (used.contains(id) && guard < 8) {
+        while (used.contains(id)) {
           id++;
-          guard++;
         }
         used.add(id);
         wanted.add(id);

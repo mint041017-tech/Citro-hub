@@ -70,7 +70,7 @@ class _MoodSheetState extends State<_MoodSheet> {
           margin: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
             border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.lg(c),
           ),
@@ -112,12 +112,12 @@ class _MoodSheetState extends State<_MoodSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
                             color: _kind == kind
-                                ? kind.color.withAlpha(36)
+                                ? kind.colorFor(c.dark).withAlpha(36)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.small),
                             border: Border.all(
                               color: _kind == kind
-                                  ? kind.color.withAlpha(160)
+                                  ? kind.colorFor(c.dark).withAlpha(160)
                                   : Colors.transparent,
                             ),
                           ),
@@ -136,7 +136,9 @@ class _MoodSheetState extends State<_MoodSheet> {
                                   weight: _kind == kind
                                       ? CitroType.strong
                                       : CitroType.regular,
-                                  color: _kind == kind ? kind.color : c.inkSoft,
+                                  color: _kind == kind
+                                      ? kind.colorFor(c.dark)
+                                      : c.inkSoft,
                                 ),
                               ),
                             ],
@@ -235,7 +237,7 @@ class _MoodDetailDialogState extends State<_MoodDetailDialog> {
                       height: 38,
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                         border: Border.all(color: c.line),
                       ),
                       child: Center(
@@ -269,7 +271,7 @@ class _MoodDetailDialogState extends State<_MoodDetailDialog> {
                       height: 38,
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                         border: Border.all(color: c.line),
                       ),
                       child: Center(
@@ -301,7 +303,7 @@ class _MoodDetailDialogState extends State<_MoodDetailDialog> {
                     padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       border: Border.all(color: c.line),
                     ),
                     child: Row(

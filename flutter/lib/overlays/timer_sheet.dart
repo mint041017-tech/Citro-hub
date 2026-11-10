@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../services/cook_timer.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -23,7 +24,7 @@ Future<int?> showTimerMinutesSheet(
         height: 342,
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
           border: Border.all(color: c.line),
         ),
         child: SafeArea(
@@ -36,7 +37,7 @@ Future<int?> showTimerMinutesSheet(
                 margin: const EdgeInsets.only(top: 10),
                 decoration: BoxDecoration(
                   color: c.line2,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 ),
               ),
               Padding(
@@ -51,7 +52,7 @@ Future<int?> showTimerMinutesSheet(
                         padding: const EdgeInsets.all(8),
                         child: Text(
                           '取消',
-                          style: ctx.body(size: 12, color: c.inkSoft),
+                          style: ctx.body(size: CitroType.caption, color: c.inkSoft),
                         ),
                       ),
                     ),
@@ -69,10 +70,10 @@ Future<int?> showTimerMinutesSheet(
                         child: Text(
                           '$m 分钟',
                           style: ctx.body(
-                            size: 16,
+                            size: CitroType.bodyLg,
                             weight: m == minutes
-                                ? FontWeight.w700
-                                : FontWeight.w400,
+                                ? CitroType.medium
+                                : CitroType.regular,
                             color: m == minutes ? c.accentInk : c.ink2,
                           ),
                         ),
@@ -112,8 +113,8 @@ Future<void> showTimerManageSheet(BuildContext context) async {
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: c.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(CitroColors.radii.card),
                 ),
                 border: Border.all(color: c.line),
               ),
@@ -139,9 +140,9 @@ Future<void> showTimerManageSheet(BuildContext context) async {
             padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
             decoration: BoxDecoration(
               color: c.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
+              borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(CitroColors.radii.card),
+                ),
               border: Border.all(color: c.line),
             ),
             child: SafeArea(
@@ -154,7 +155,7 @@ Future<void> showTimerManageSheet(BuildContext context) async {
                     height: 4,
                     decoration: BoxDecoration(
                       color: c.line2,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -180,21 +181,21 @@ Future<void> showTimerManageSheet(BuildContext context) async {
                     tick.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: ctx.body(size: 11, color: c.inkSoft),
+                    style: ctx.body(size: CitroType.small, color: c.inkSoft),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     tick.timeText,
-                    style: ctx.display(
-                      size: 46,
-                      weight: FontWeight.w700,
+                    style: ctx.hand(
+                      size: CitroType.hero,
+                      weight: CitroType.medium,
                       color: c.accentInk,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     '剩余 $total 秒 · 常驻在页面左下角',
-                    style: ctx.body(size: 10, color: c.inkSoft),
+                    style: ctx.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -258,12 +259,12 @@ Widget _option(BuildContext context, String label, VoidCallback onTap) {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         border: Border.all(color: c.line2),
       ),
       child: Text(
         label,
-        style: context.body(size: 11, weight: FontWeight.w700, color: c.ink2),
+        style: context.body(size: CitroType.small, weight: CitroType.medium, color: c.ink2),
       ),
     ),
   );

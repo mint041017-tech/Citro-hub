@@ -17,6 +17,7 @@ import '../services/lantern_api.dart';
 import '../services/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../todo/todo_store.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../tingyu/tingyu_controller.dart';
@@ -107,7 +108,7 @@ class _HomePageState extends State<HomePage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: PaperBackground(
+          child: CitroBackground(
             child: SafeArea(
               bottom: false,
               child: SingleChildScrollView(
@@ -127,63 +128,21 @@ class _HomePageState extends State<HomePage> {
                     ActiveListenableBuilder(
                       listenable: NookController.instance,
                       builder: (context, _) {
-                        final now = DateTime.now();
                         final lantern = LanternApi.currentWindow() != null;
-                        // 页眉只承载日期与当前状态，不再放账号胶囊：
-                        // 手机与 Web 窄屏在底部「我的」Tab，Windows / iPad 在侧栏头像。
-                        // 播放控件已移进「听隅」卡片，页眉不再重复显示。
-                        return SizedBox(
-                          height: 48,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final compact = constraints.maxWidth < 460;
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '${now.month} 月 ${now.day} 日',
-                                          style: context.heading(
-                                            size: 20,
-                                            color: c.ink,
-                                            height: 1.1,
-                                            letterSpacing: .4,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          _weekdayLabel(now),
-                                          style: context.body(
-                                            size: 11,
-                                            color: c.inkSoft,
-                                            letterSpacing: .3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (lantern && !compact) ...[
-                                    const LanternEntry(),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  _LayoutEditButton(
-                                    editing: _editing,
-                                    compact: compact,
-                                    onPressed: () => _setEditing(!_editing),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < 460;
+                            return _HomeHero(
+                              showLantern: lantern && !compact,
+                              editing: _editing,
+                              compact: compact,
+                              onToggleEdit: () => _setEditing(!_editing),
+                            );
+                          },
                         );
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.x2),
                     AnimatedSize(
                       duration: CitroMotion.reduced(context)
                           ? Duration.zero
@@ -215,9 +174,8 @@ class _HomePageState extends State<HomePage> {
                         child: Text(
                           'Citro · 今天也要开心',
                           style: context.body(
-                            size: 11,
-                            color: c.inkSoft.withAlpha(150),
-                            letterSpacing: .5,
+                            size: CitroType.small,
+                            color: c.inkSoft,
                           ),
                         ),
                       ),
@@ -279,39 +237,36 @@ class _LayoutEditButton extends StatelessWidget {
         onTap: onPressed,
         hoverLift: 0,
         hoverShadow: false,
-        hoverColor: c.hl.withAlpha(c.dark ? 24 : 60),
         borderRadius: BorderRadius.circular(99),
         child: AnimatedContainer(
           duration: CitroMotion.hover,
           curve: CitroMotion.easeOut,
           height: 40,
           padding: EdgeInsets.symmetric(
-            horizontal: editing && !compact ? 14 : 10,
+            horizontal: !compact ? 14 : 10,
           ),
           decoration: BoxDecoration(
-            color: editing ? c.accent : c.surface2.withAlpha(220),
+            color: editing ? c.ink : c.surface,
             borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: editing ? c.accentInk.withAlpha(50) : c.line,
-            ),
-            boxShadow: CitroColors.shadows.paper(c),
+            border: Border.all(color: editing ? c.ink : c.line),
+            boxShadow: editing ? null : CitroColors.shadows.sm(c),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon(
-                strokeSvg(editing ? AppIcons.calendar : _slidersIcon, width: 2),
-                size: 18,
-                color: editing ? const Color(0xFF2E2C34) : c.ink2,
+                strokeSvg(editing ? AppIcons.check : _slidersIcon, width: 2),
+                size: 17,
+                color: editing ? c.bg : c.ink2,
               ),
-              if (editing && !compact) ...[
-                const SizedBox(width: 5),
+              if (!compact) ...[
+                const SizedBox(width: 6),
                 Text(
-                  '完成',
+                  label,
                   style: context.body(
-                    size: 13,
-                    weight: FontWeight.w700,
-                    color: const Color(0xFF2E2C34),
+                    size: CitroType.label,
+                    weight: CitroType.medium,
+                    color: editing ? c.bg : c.ink,
                   ),
                 ),
               ],
@@ -324,6 +279,130 @@ class _LayoutEditButton extends StatelessWidget {
 
   static const _slidersIcon =
       '<path d="M4 7h8M16 7h4M4 17h3M11 17h9"/><circle cx="14" cy="7" r="2.2"/><circle cx="7" cy="17" r="2.2"/>';
+}
+
+/// 首页英雄区：问候 + 今日三项状态，取代原来只有一行日期的页眉。
+class _HomeHero extends StatelessWidget {
+  final bool showLantern;
+  final bool editing;
+  final bool compact;
+  final VoidCallback onToggleEdit;
+
+  const _HomeHero({
+    this.showLantern = false,
+    this.editing = false,
+    this.compact = false,
+    required this.onToggleEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final state = context.app;
+    final now = DateTime.now();
+    final greeting = now.hour < 6
+        ? '夜深了'
+        : now.hour < 11
+        ? '早上好'
+        : now.hour < 14
+        ? '中午好'
+        : now.hour < 18
+        ? '下午好'
+        : '晚上好';
+    final weather = state.weather;
+    final tasks = TodoStore.instance.todayTasks;
+    final done = tasks.where((t) => t.done).length;
+    return CitroCard(
+      color: c.tintYellow,
+      padding: const EdgeInsets.all(AppSpacing.x3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting，今天也要开心',
+                      style: context.heading(size: CitroType.titleLg, color: c.ink),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
+                      style: context.body(size: CitroType.meta, color: c.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              if (showLantern) ...[
+                const LanternEntry(),
+                const SizedBox(width: AppSpacing.x1),
+              ],
+              _LayoutEditButton(
+                editing: editing,
+                compact: compact,
+                onPressed: onToggleEdit,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x3),
+          Row(
+            children: [
+              _HeroStat(
+                icon: AppIcons.sun,
+                label: '天气',
+                value: '${weather.temp.round()}°',
+              ),
+              const SizedBox(width: AppSpacing.x3),
+              _HeroStat(
+                icon: AppIcons.list,
+                label: '待办',
+                value: '$done/${tasks.length}',
+              ),
+              const SizedBox(width: AppSpacing.x3),
+              _HeroStat(
+                icon: AppIcons.calendar,
+                label: '打卡',
+                value: '${state.checkinStreak} 天',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String value;
+
+  const _HeroStat({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Expanded(
+      child: Column(
+        children: [
+          AppIcon(strokeSvg(icon, width: 2), size: 18, color: c.accent),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: context.hand(size: CitroType.titleLg, color: c.ink, height: 1),
+          ),
+          Text(
+            label,
+            style: context.body(size: CitroType.micro, color: c.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EditHintBar extends StatelessWidget {
@@ -340,8 +419,8 @@ class _EditHintBar extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
           decoration: BoxDecoration(
-            color: c.hl.withAlpha(c.dark ? 30 : 90),
-            borderRadius: BorderRadius.circular(14),
+            color: c.surface2,
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             border: Border.all(color: c.line),
           ),
           child: Row(
@@ -349,7 +428,7 @@ class _EditHintBar extends StatelessWidget {
               AppIcon(
                 strokeSvg(_slidersIcon, width: 2),
                 size: 16,
-                color: c.accentInk,
+                color: c.inkSoft,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -357,7 +436,10 @@ class _EditHintBar extends StatelessWidget {
                   compact ? '拖圆柄换位 · 右上角删除' : '拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 12, color: c.accentInk),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -368,20 +450,19 @@ class _EditHintBar extends StatelessWidget {
                 hoverShadow: false,
                 borderRadius: BorderRadius.circular(99),
                 child: Container(
-                  height: 30,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: c.surface,
+                    color: c.ink,
                     borderRadius: BorderRadius.circular(99),
-                    border: Border.all(color: c.line),
                   ),
                   child: Center(
                     child: Text(
                       '添加卡片',
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
-                        color: c.accentInk,
+                        size: CitroType.caption,
+                        weight: CitroType.medium,
+                        color: c.bg,
                       ),
                     ),
                   ),
@@ -407,24 +488,31 @@ class LanternEntry extends StatelessWidget {
     return Pressable(
       onTap: () => showLanternSheet(context),
       child: Container(
-        height: 42,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: c.surface2,
+          color: c.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.sm(c),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppIcon(
               strokeSvg(AppIcons.moon, width: 2),
-              size: 18,
-              color: c.accentInk,
+              size: 17,
+              color: c.accent,
             ),
-            const SizedBox(width: 5),
-            Text('灯谜', style: context.heading(size: 14, color: c.ink)),
+            const SizedBox(width: 6),
+            Text(
+              '灯谜',
+              style: context.body(
+                size: CitroType.label,
+                weight: CitroType.medium,
+                color: c.ink,
+              ),
+            ),
           ],
         ),
       ),
@@ -440,199 +528,108 @@ class WeatherCard extends StatelessWidget {
     final state = context.app;
     final c = context.c;
     final w = state.weather;
-    return PaperCard(
-      tapeColor: c.tape,
-      tapeAngle: -3,
-      color: c.surface2,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       onTap: () => showWeatherSheet(context),
-      child: Stack(
-        children: [
-          // 地名独立钉在卡片右上角：不再和「天气」标题挤在同一条基线上，
-          // 字号放大后也有稳定的阅读位置。
-          Positioned(
-            top: -2,
-            right: 0,
-            child: Row(
+      // 小尺寸 bento 格里整体等比缩小，避免固定内容把卡片撑爆。
+      child: LayoutBuilder(
+        builder: (context, cons) => FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: cons.maxWidth,
+            child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppIcon(
-                  strokeSvg(AppIcons.location, width: 2),
-                  size: 13,
-                  color: c.inkSoft,
-                ),
-                const SizedBox(width: 3),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    // 窄卡片上按屏宽收紧，避免和左上角的「天气」标签重叠。
-                    maxWidth: math.min(
-                      96.0,
-                      MediaQuery.sizeOf(context).width * .22,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '天气',
+                      style: context.body(
+                        size: CitroType.meta,
+                        weight: CitroType.medium,
+                        color: c.inkSoft,
+                      ),
                     ),
-                  ),
+                    const Spacer(),
+                    AppIcon(
+                      strokeSvg(AppIcons.location, width: 2),
+                      size: 13,
+                      color: c.inkSoft,
+                    ),
+                    const SizedBox(width: 4),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        // 窄卡片上按屏宽收紧，避免和左上角标签重叠。
+                        maxWidth: math.min(
+                          96.0,
+                          MediaQuery.sizeOf(context).width * .22,
+                        ),
+                      ),
+                      child: Text(
+                        w.city.isEmpty ? '定位中…' : w.city,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.body(
+                          size: CitroType.meta,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.x2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      w.emoji,
+                      style: const TextStyle(fontSize: 36, height: 1),
+                    ),
+                    const SizedBox(width: AppSpacing.x1),
+                    Text(
+                      '${w.temp.round()}°',
+                      style: context.hand(
+                        size: 40,
+                        weight: CitroType.strong,
+                        color: c.ink,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  w.desc,
+                  textAlign: TextAlign.center,
+                  style: context.heading(size: CitroType.title, color: c.ink2),
+                ),
+                const SizedBox(height: AppSpacing.x2),
+                const CitroDivider(),
+                const SizedBox(height: AppSpacing.x2),
+                Row(
+                  children: [
+                    Expanded(child: CitroStat('体感', '${w.feels.round()}°')),
+                    Container(width: 1, height: 28, color: c.line),
+                    Expanded(child: CitroStat('湿度', '${w.humidity}%')),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    w.city.isEmpty ? '定位中…' : w.city,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: context
-                        .heading(
-                          size: 16,
-                          color: c.ink,
-                          height: 1.1,
-                          letterSpacing: .2,
-                        )
-                        .copyWith(fontWeight: FontWeight.w700),
+                    '${w.updated} 更新',
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    '天气',
-                    style: context.heading(
-                      size: 13,
-                      color: c.accentInk,
-                      letterSpacing: .25,
-                    ),
-                  ),
-                  const Spacer(),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            w.emoji,
-                            style: const TextStyle(fontSize: 40, height: 1),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${w.temp.round()}°',
-                            style: context.display(
-                              size: 52,
-                              weight: FontWeight.w700,
-                              color: c.ink,
-                              height: .95,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 14),
-                            child: Text(
-                              'C',
-                              style: context.body(
-                                size: 14,
-                                weight: FontWeight.w700,
-                                color: c.ink2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      w.desc,
-                      style: context.heading(
-                        size: 16,
-                        color: c.accentInk,
-                        letterSpacing: .8,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: DashedLine(color: c.line.withAlpha(120)),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _WeatherMetric(
-                            label: '体感',
-                            value: '${w.feels.round()}°',
-                            color: c,
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: c.line.withAlpha(140),
-                        ),
-                        Expanded(
-                          child: _WeatherMetric(
-                            label: '湿度',
-                            value: '${w.humidity}%',
-                            color: c,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        '${w.updated} 更新',
-                        style: context.hand(size: 11, color: c.inkSoft),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
-    );
-  }
-}
-
-class _WeatherMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final CitroColors color;
-
-  const _WeatherMetric({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color;
-    return Column(
-      children: [
-        Text(
-          label,
-          style: context.body(
-            size: 12,
-            weight: FontWeight.w700,
-            color: c.inkSoft,
-            letterSpacing: .5,
-          ),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          value,
-          style: context.display(
-            size: 18,
-            weight: FontWeight.w700,
-            color: c.ink,
-            height: 1.1,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -643,13 +640,8 @@ class CookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return PaperCard(
-      tapeColor: c.tape3,
-      tapeAngle: -2.5,
-      color: c.noteY,
-      shadow: PaperShadow.paper,
-      borderRadius: BorderRadius.circular(14),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+    return CitroCard(
+      padding: const EdgeInsets.all(16),
       onTap: () {
         final rect = CitroCardFlight.rectOf(context);
         if (rect.isEmpty) {
@@ -669,90 +661,53 @@ class CookCard extends StatelessWidget {
           snapshot: CitroCardFlight.snapshotOf(context, rect),
         );
       },
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: 2,
-            top: 0,
-            child: Transform.rotate(
-              angle: 10 * math.pi / 180,
-              child: const Text(
-                '🍳',
-                style: TextStyle(fontSize: 26, height: 1),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 96),
+        child: Row(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: c.tintYellow,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(AppIcons.fork, width: 2),
+                  size: 28,
+                  color: c.accentInk,
+                ),
               ),
             ),
-          ),
-          Positioned.fill(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
+            const SizedBox(width: AppSpacing.x2),
+            Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Transform.rotate(
-                    angle: 0,
-                    child: Column(
-                      children: [
-                        Text(
-                          '食谱',
-                          style: context.heading(
-                            size: 32,
-                            color: c.ink,
-                            height: 1.1,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: Text(
-                            '日记',
-                            style: context.heading(
-                              size: 32,
-                              color: c.accentInk,
-                              height: 1.1,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    '食谱日记',
+                    style: context.heading(size: CitroType.titleLg, color: c.ink),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.line2, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppIcon(
-                          strokeSvg(AppIcons.arrowRight, width: 2.2),
-                          size: 14,
-                          color: c.accentInk,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '进日记',
-                          style: context.body(
-                            size: 12,
-                            weight: FontWeight.w700,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '记录今天吃了什么',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(size: CitroType.meta, color: c.inkSoft),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: AppSpacing.x1),
+            AppIcon(
+              strokeSvg(AppIcons.arrowRight, width: 2),
+              size: 18,
+              color: c.inkSoft,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -770,92 +725,58 @@ class FishCard extends StatelessWidget {
     final lead = (match?.group(1) ?? infoText).trimRight();
     final days = match?.group(2);
     final tail = (match?.group(3) ?? '').trimLeft();
-    return PaperCard(
-      tapeColor: c.tape,
-      tapeAngle: 2.5,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       onTap: () => showFishSheet(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             '摸鱼日历',
-            style: context.heading(
-              size: 13,
-              color: c.accentInk,
-              letterSpacing: .3,
+            style: context.body(
+              size: CitroType.meta,
+              weight: CitroType.medium,
+              color: c.inkSoft,
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          '🐟',
-                          style: TextStyle(fontSize: 26, height: 1),
-                        ),
-                        const SizedBox(width: 6),
-                        if (days == null)
-                          Text(
-                            infoText,
-                            style: context.display(
-                              size: 18,
-                              color: c.ink,
-                              height: 1.3,
-                            ),
-                          )
-                        else ...[
-                          Text(
-                            lead,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.body(
-                              size: 13,
-                              weight: FontWeight.w700,
-                              color: c.ink,
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            days,
-                            style: context.display(
-                              size: 28,
-                              weight: FontWeight.w700,
-                              color: c.ink,
-                              height: 1,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            tail,
-                            maxLines: 1,
-                            style: context.body(
-                              size: 13,
-                              weight: FontWeight.w700,
-                              color: c.ink,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ],
+          const SizedBox(height: AppSpacing.x1),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (lead.isNotEmpty)
+                  Text(
+                    lead,
+                    style: context.body(
+                      size: CitroType.label,
+                      weight: CitroType.medium,
+                      color: c.ink2,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                if (lead.isNotEmpty) const SizedBox(width: 4),
+                Text(
+                  days ?? infoText,
+                  style: context.hand(
+                    size: 30,
+                    weight: CitroType.strong,
+                    color: c.accent,
+                    height: 1,
+                  ),
+                ),
+                if (tail.isNotEmpty) ...[
+                  const SizedBox(width: 4),
                   Text(
-                    '点击查看摸鱼详情',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 11, color: c.inkSoft),
+                    tail,
+                    style: context.body(
+                      size: CitroType.label,
+                      weight: CitroType.medium,
+                      color: c.ink2,
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         ],
@@ -895,7 +816,7 @@ class _CalendarCardState extends State<CalendarCard> {
     );
   }
 
-  /// 日期上是否有倒数日 / 纪念日，供月历格显示小红点。
+  /// 日期上是否有倒数日 / 纪念日，供月历格显示小圆点。
   bool _hasMark(DateTime date) {
     for (final mark in CalendarStore.instance.marks) {
       if (CalendarDates.hits(mark, date)) return true;
@@ -942,10 +863,8 @@ class _CalendarCardState extends State<CalendarCard> {
     }
     return ListenableBuilder(
       listenable: CalendarStore.instance,
-      builder: (context, _) => PaperCard(
-        tapeColor: c.tape2,
-        tapeAngle: 2.5,
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      builder: (context, _) => CitroCard(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
         onTap: () => _open(context),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -1002,59 +921,64 @@ class _CalendarCardState extends State<CalendarCard> {
                   children: [
                     Text(
                       '日历',
-                      style: context.heading(
-                        size: dense ? 11 : 12.5,
-                        color: c.accentInk,
+                      style: context.body(
+                        size: dense ? CitroType.small : CitroType.meta,
+                        weight: CitroType.medium,
+                        color: c.inkSoft,
                       ),
                     ),
                     const Spacer(),
                     Pressable(
                       onTap: () => setState(() => _monthOffset--),
+                      hoverLift: 0,
+                      hoverShadow: false,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(
                           Icons.chevron_left_rounded,
-                          size: dense ? 16 : 20,
-                          color: const Color(0x8F8F4E05),
+                          size: dense ? 18 : 22,
+                          color: c.inkSoft,
                         ),
                       ),
                     ),
                     Text(
                       dense ? '${now.month}月' : '${now.year}年${now.month}月',
-                      style: context.display(
-                        size: dense ? 13 : 16,
-                        color: c.accentInk,
+                      style: context.hand(
+                        size: dense ? CitroType.label : CitroType.bodyLg,
+                        color: c.ink,
                       ),
                     ),
                     Pressable(
                       onTap: () => setState(() => _monthOffset++),
+                      hoverLift: 0,
+                      hoverShadow: false,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(
                           Icons.chevron_right_rounded,
-                          size: dense ? 16 : 20,
-                          color: const Color(0x8F8F4E05),
+                          size: dense ? 18 : 22,
+                          color: c.inkSoft,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.x1),
                 Row(
                   children: [
                     for (var i = 0; i < 7; i++) ...[
                       if (i > 0) const SizedBox(width: 2),
                       Expanded(
                         child: Padding(
-                          padding: EdgeInsets.only(bottom: dense ? 2 : 3),
+                          padding: EdgeInsets.only(bottom: dense ? 2 : 4),
                           child: Text(
                             wd[i],
                             textAlign: TextAlign.center,
                             style: context.body(
-                              size: dense ? 10 : 13,
-                              weight: FontWeight.w700,
+                              size: dense ? CitroType.small : CitroType.label,
+                              weight: CitroType.medium,
                               color: (i == 0 || i == 6)
-                                  ? c.accentInk
+                                  ? c.accent
                                   : c.inkSoft,
                             ),
                           ),
@@ -1101,7 +1025,10 @@ class _CalendarCardState extends State<CalendarCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(yearMonth, style: context.display(size: 14, color: c.accentInk)),
+        Text(
+          yearMonth,
+          style: context.body(size: CitroType.small, color: c.inkSoft),
+        ),
         Expanded(
           child: Align(
             alignment: Alignment.centerLeft,
@@ -1109,16 +1036,21 @@ class _CalendarCardState extends State<CalendarCard> {
               fit: BoxFit.scaleDown,
               child: Text(
                 '${today.day}',
-                style: context.display(size: 54, color: c.ink, height: .95),
+                style: context.hand(
+                  size: CitroType.display,
+                  weight: CitroType.strong,
+                  color: c.ink,
+                  height: .95,
+                ),
               ),
             ),
           ),
         ),
         Container(
-          padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           decoration: BoxDecoration(
-            color: c.surface2.withAlpha(230),
-            borderRadius: BorderRadius.circular(11),
+            color: c.surface2,
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             border: Border.all(color: c.line),
           ),
           child: Column(
@@ -1133,8 +1065,8 @@ class _CalendarCardState extends State<CalendarCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
+                        size: CitroType.caption,
+                        weight: CitroType.medium,
                         color: c.ink,
                       ),
                     ),
@@ -1144,7 +1076,10 @@ class _CalendarCardState extends State<CalendarCard> {
                     Text(
                       markLabel,
                       maxLines: 1,
-                      style: context.body(size: 8.5, color: c.stamp),
+                      style: context.body(
+                        size: CitroType.micro,
+                        color: c.stamp,
+                      ),
                     ),
                   ],
                 ],
@@ -1154,7 +1089,10 @@ class _CalendarCardState extends State<CalendarCard> {
                 dateLine,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.body(size: 9.5, color: c.inkSoft),
+                style: context.body(
+                  size: CitroType.micro,
+                  color: c.inkSoft,
+                ),
               ),
             ],
           ),
@@ -1204,7 +1142,7 @@ class _CalCell extends StatelessWidget {
       final term = termToday(date);
       if (fid != null) {
         label = festivalName(fid);
-        labelColor = c.accentInk;
+        labelColor = c.accent;
       } else if (term != null) {
         label = term;
         labelColor = c.mintInk;
@@ -1218,10 +1156,10 @@ class _CalCell extends StatelessWidget {
       }
     }
     final dayColor = today
-        ? const Color(0xFF2E2C34)
-        : (dim ? c.ink.withAlpha(140) : c.ink);
+        ? c.onAccent
+        : (dim ? c.inkSoft.withAlpha(140) : c.ink);
     final subColor = today
-        ? const Color(0xFF2E2C34)
+        ? c.onAccent
         : (labelColor ?? c.inkSoft).withAlpha(dim ? 140 : 255);
     final content = FittedBox(
       fit: BoxFit.scaleDown,
@@ -1237,8 +1175,8 @@ class _CalCell extends StatelessWidget {
             children: [
               Text(
                 '$day',
-                style: context.display(
-                  size: dense ? 15 : (fill ? 20 : 19),
+                style: context.hand(
+                  size: dense ? CitroType.body : (fill ? CitroType.titleLg : CitroType.title),
                   color: dayColor,
                   height: 1.05,
                 ),
@@ -1251,8 +1189,8 @@ class _CalCell extends StatelessWidget {
                     height: 4,
                     decoration: BoxDecoration(
                       color: today
-                          ? const Color(0xFF2E2C34)
-                          : (dim ? c.stamp.withAlpha(140) : c.stamp),
+                          ? c.onAccent
+                          : (dim ? c.accent.withAlpha(140) : c.accent),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1267,7 +1205,7 @@ class _CalCell extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.body(
-                  size: dense ? 7.5 : (fill ? 9.5 : 10),
+                  size: dense ? CitroType.micro : CitroType.small,
                   color: subColor,
                   height: 1.15,
                 ),
@@ -1282,7 +1220,7 @@ class _CalCell extends StatelessWidget {
       decoration: today
           ? BoxDecoration(
               color: c.accent,
-              borderRadius: BorderRadius.circular(fill ? 10 : 8),
+              borderRadius: BorderRadius.circular(fill ? 12 : 10),
             )
           : null,
       // 非本月日期在上面的颜色里已经压暗，不再额外套 Opacity，
@@ -1305,17 +1243,13 @@ class ZodiacCard extends StatelessWidget {
     final now = DateTime.now();
     final dateText =
         '${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} ${weekdayChinese(now)}';
-    return PaperCard(
-      radius: 18,
+    return CitroCard(
+      radius: CitroColors.radii.card,
       padding: EdgeInsets.zero,
       color: tone.bottom,
-      borderColor: tone.border,
-      shadow: PaperShadow.paper,
-      clip: true,
-      tapeColor: c.tape2,
-      tapeAngle: -2.4,
-      tapeWidth: 96,
-      tapeHeight: 22,
+      border: Border.all(color: tone.border),
+      shadow: CitroColors.shadows.card(c),
+      clip: Clip.antiAlias,
       onTap: () => showZodiacModal(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -1344,14 +1278,6 @@ class ZodiacCard extends StatelessWidget {
                   ),
                 ),
                 Positioned.fill(
-                  child: CustomPaint(
-                    painter: _ZodiacSkyPainter(
-                      star: tone.star,
-                      constellation: tone.constellation,
-                    ),
-                  ),
-                ),
-                Positioned.fill(
                   child: IgnorePointer(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -1366,14 +1292,14 @@ class ZodiacCard extends StatelessWidget {
                 ),
                 if (sign != null)
                   Positioned(
-                    right: -14,
-                    top: 16,
+                    right: -8,
+                    top: 20,
                     child: IgnorePointer(
                       child: Text(
                         sign.symbol,
                         style: TextStyle(
-                          fontFamily: AppFonts.noto,
-                          fontSize: micro ? 104 : 152,
+                          fontFamily: AppFonts.rounded,
+                          fontSize: micro ? 56 : 76,
                           height: 1,
                           color: tone.watermark,
                         ),
@@ -1717,7 +1643,7 @@ class ZodiacCard extends StatelessWidget {
                 Text(
                   '${f.score}',
                   style: TextStyle(
-                    fontFamily: AppFonts.kalam,
+                    fontFamily: AppFonts.mono,
                     fontSize: size * .31,
                     fontWeight: FontWeight.w700,
                     height: 1,
@@ -1727,7 +1653,7 @@ class ZodiacCard extends StatelessWidget {
                 Text(
                   '综合',
                   style: TextStyle(
-                    fontFamily: AppFonts.noto,
+                    fontFamily: AppFonts.rounded,
                     fontFamilyFallback: AppFonts.bodyFallback,
                     fontSize: math.max(7, size * .105),
                     height: 1.25,
@@ -1968,8 +1894,9 @@ class ZodiacCard extends StatelessWidget {
             SizedBox(height: compact ? 5 : 7),
             Text(
               '点击选择 →',
-              style: context.display(
-                size: compact ? 10.5 : 11.5,
+              style: context.body(
+                size: CitroType.small,
+                weight: CitroType.medium,
                 color: tone.accentInk,
               ),
             ),
@@ -1994,8 +1921,6 @@ class _ZodiacTone {
     required this.line,
     required this.chipBg,
     required this.chipLine,
-    required this.star,
-    required this.constellation,
     required this.watermark,
     required this.glow,
     required this.border,
@@ -2013,8 +1938,6 @@ class _ZodiacTone {
   final Color line;
   final Color chipBg;
   final Color chipLine;
-  final Color star;
-  final Color constellation;
   final Color watermark;
   final Color glow;
   final Color border;
@@ -2022,9 +1945,9 @@ class _ZodiacTone {
 
   factory _ZodiacTone.of(CitroColors c) => c.dark
       ? _ZodiacTone(
-          top: const Color(0xFF272735),
-          mid: const Color(0xFF20202B),
-          bottom: const Color(0xFF1B1B24),
+          top: c.tintYellow,
+          mid: c.tintNeutral,
+          bottom: c.tintBlue,
           accent: c.accent,
           accentInk: c.accentInk,
           ink: c.ink,
@@ -2033,17 +1956,15 @@ class _ZodiacTone {
           line: c.line2.withAlpha(120),
           chipBg: c.accent.withAlpha(26),
           chipLine: c.accent.withAlpha(65),
-          star: c.accentLt.withAlpha(130),
-          constellation: c.accent.withAlpha(70),
-          watermark: c.accent.withAlpha(14),
-          glow: c.accent.withAlpha(30),
+          watermark: c.accent.withAlpha(20),
+          glow: c.accent.withAlpha(22),
           border: c.accent.withAlpha(50),
           error: c.stamp,
         )
       : _ZodiacTone(
-          top: const Color(0xFFFFFBF2),
-          mid: const Color(0xFFFBF3E3),
-          bottom: const Color(0xFFF5EAD7),
+          top: c.tintYellow,
+          mid: Color.lerp(c.tintYellow, c.tintBlue, .5)!,
+          bottom: c.tintBlue,
           accent: c.accent,
           accentInk: c.accentInk,
           ink: c.ink,
@@ -2052,62 +1973,11 @@ class _ZodiacTone {
           line: c.line2.withAlpha(90),
           chipBg: c.accent.withAlpha(22),
           chipLine: c.accent.withAlpha(55),
-          star: c.accentInk.withAlpha(55),
-          constellation: c.accent.withAlpha(65),
-          watermark: c.accent.withAlpha(12),
-          glow: c.accent.withAlpha(26),
+          watermark: c.accent.withAlpha(18),
+          glow: c.accent.withAlpha(20),
           border: c.accent.withAlpha(55),
           error: c.stamp,
         );
-}
-
-/// 星象卡的纸面星点：低对比度，不抢纸卡本身的信息。
-class _ZodiacSkyPainter extends CustomPainter {
-  const _ZodiacSkyPainter({required this.star, required this.constellation});
-
-  final Color star;
-  final Color constellation;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-    final baseAlpha = (star.a * 255).round();
-    for (var i = 0; i < 28; i++) {
-      final fx = ((i * 37 + 11) % 97) / 97;
-      final fy = ((i * 53 + 7) % 89) / 89;
-      final r = i % 7 == 0 ? 1.6 : (i % 3 == 0 ? 1.0 : .7);
-      final factor = .35 + .65 * ((i * 23) % 100) / 100;
-      paint.color = star.withAlpha((baseAlpha * factor).round());
-      canvas.drawCircle(Offset(fx * size.width, fy * size.height), r, paint);
-    }
-    final line = Paint()
-      ..color = constellation
-      ..strokeWidth = .8;
-    final points = [
-      Offset(size.width * .16, size.height * .30),
-      Offset(size.width * .28, size.height * .20),
-      Offset(size.width * .37, size.height * .35),
-      Offset(size.width * .52, size.height * .25),
-    ];
-    for (var i = 0; i < points.length - 1; i++) {
-      canvas.drawLine(points[i], points[i + 1], line);
-    }
-    for (final p in points) {
-      canvas.drawCircle(p, 1.7, Paint()..color = constellation);
-      canvas.drawCircle(
-        p,
-        4.6,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = .7
-          ..color = constellation.withAlpha(70),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ZodiacSkyPainter oldDelegate) =>
-      oldDelegate.star != star || oldDelegate.constellation != constellation;
 }
 
 /// 金色刻度环：12 格刻度 + 进度弧 + 中心光面。
@@ -2204,17 +2074,17 @@ class QuoteCard extends StatelessWidget {
     final now = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     final q = kQuotes[dayOfYear % kQuotes.length];
-    return PaperCard(
-      tapeColor: c.tape3,
-      tapeAngle: -2.5,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    return CitroCard(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       onTap: () =>
           copyText('${q.cn} — ${q.en}', context: context, tip: '已复制每日一言'),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 112),
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            final quoteBody = SizedBox(
+          builder: (context, constraints) => FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: SizedBox(
               width: constraints.maxWidth,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2222,66 +2092,37 @@ class QuoteCard extends StatelessWidget {
                 children: [
                   Text(
                     '每日一言',
-                    textAlign: TextAlign.center,
-                    style: context.heading(size: 13, color: c.accentInk),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Text(
-                      '「${q.cn}」',
-                      textAlign: TextAlign.center,
-                      locale: const Locale('zh', 'CN'),
-                      style: context.heading(
-                        size: 20,
-                        color: c.ink,
-                        height: 1.7,
-                        letterSpacing: .3,
-                      ),
+                    style: context.body(
+                      size: CitroType.meta,
+                      weight: CitroType.medium,
+                      color: c.accent,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Text(
-                      '— ${q.en}',
-                      textAlign: TextAlign.center,
-                      style: context.hand(
-                        size: 14,
-                        color: c.inkSoft,
-                        height: 1.45,
-                        style: FontStyle.italic,
-                      ),
+                  const SizedBox(height: AppSpacing.x1),
+                  Text(
+                    '「${q.cn}」',
+                    textAlign: TextAlign.center,
+                    locale: const Locale('zh', 'CN'),
+                    style: context.heading(
+                      size: CitroType.titleLg,
+                      color: c.ink,
+                      height: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x1),
+                  Text(
+                    '— ${q.en}',
+                    textAlign: TextAlign.center,
+                    style: context.body(
+                      size: CitroType.meta,
+                      color: c.inkSoft,
+                      height: 1.4,
                     ),
                   ),
                 ],
               ),
-            );
-            return Stack(
-              children: [
-                Positioned(
-                  right: 0,
-                  top: -8,
-                  child: Text(
-                    '“',
-                    style: context.display(
-                      size: 28,
-                      color: const Color(0x38B8924A),
-                      height: 1,
-                    ),
-                  ),
-                ),
-                // 卡片被编辑成较矮的尺寸时整体等比缩小，避免文字硬溢出。
-                Positioned.fill(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.center,
-                    child: quoteBody,
-                  ),
-                ),
-              ],
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

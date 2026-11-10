@@ -118,6 +118,13 @@ class CalendarDates {
     return names[d.weekday - 1];
   }
 
+  /// 把标记的「月 / 日」安全落到指定年份：2/29 在非闰年落到 2/28，
+  /// 避免 DateTime 把 2/29 规范化成 3/1 让闰日生日错乱。
+  static DateTime _sameMonthDay(int year, DateTime base) {
+    final lastDay = DateTime(year, base.month + 1, 0).day;
+    return DateTime(year, base.month, base.day > lastDay ? lastDay : base.day);
+  }
+
   /// 某个标记在当前时间点对应的「下一次发生日」。
   ///
   /// 倒数日：单次就是目标日，每年重复则取今年或明年的同月日；
@@ -127,9 +134,9 @@ class CalendarDates {
     if (mark.kind == CalendarMarkKind.anniversary) return base;
     if (!mark.yearly) return base;
     final todayOnly = dayOnly(today);
-    var next = DateTime(todayOnly.year, base.month, base.day);
+    var next = _sameMonthDay(todayOnly.year, base);
     if (diffDays(todayOnly, next) < 0) {
-      next = DateTime(todayOnly.year + 1, base.month, base.day);
+      next = _sameMonthDay(todayOnly.year + 1, base);
     }
     return next;
   }
@@ -162,8 +169,14 @@ class CalendarDates {
   }
 
   /// 日期是否命中该标记：每年重复按月日匹配，否则要求年月日完全一致。
+  ///
+  /// 2/29 的年度标记在非闰年命中 2/28（该月最后一天）。
   static bool hits(CalendarMark mark, DateTime date) {
     if (mark.yearly) {
+      if (mark.date.month == 2 && mark.date.day == 29) {
+        final lastDay = DateTime(date.year, 3, 0).day;
+        return date.month == 2 && date.day == lastDay;
+      }
       return mark.date.month == date.month && mark.date.day == date.day;
     }
     return mark.date.year == date.year &&

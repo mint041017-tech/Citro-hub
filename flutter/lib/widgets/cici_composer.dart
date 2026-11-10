@@ -53,10 +53,11 @@ bool _voiceMode = false;
   Timer? _capTimer;
   OverlayEntry? _entry;
   final GlobalKey _barKey = GlobalKey();
+  // 录音启动中的 Future：松手时先等它落地，避免 finish() 在 _startedAt 为 null 时空转。
+  Future<bool>? _starting;
 
   static const String _voicePrefKey = 'citro_cici_voice_mode';
   static const double _cancelDistance = 54;
-  static const Color _cancelRed = Color(0xFFD4514A);
 
   @override
   void initState() {
@@ -101,7 +102,7 @@ bool _voiceMode = false;
     });
     _holdAt = DateTime.now();
     _showOverlay();
-    final started = await VoiceRecorder.start(
+    final starting = VoiceRecorder.start(
       onLevel: (level) {
         if (!mounted) return;
         setState(() => _level = level);
@@ -113,6 +114,9 @@ bool _voiceMode = false;
         _entry?.markNeedsBuild();
       },
     );
+    _starting = starting;
+    final started = await starting;
+    _starting = null;
     if (!mounted) return;
     if (!started) {
       final message = VoiceRecorder.lastError ?? '麦克风没有启动';
@@ -122,7 +126,7 @@ bool _voiceMode = false;
       unawaited(_showVoiceHelp(title: '麦克风没有启动', note: message));
       return;
     }
-    // 服务端只接受 30 秒以内的音频，到点自动收尾。
+    // 录音上限是 VoiceRecorder.maxLength（25 秒），到点自动收尾。
     _capTimer = Timer(VoiceRecorder.maxLength, () {
       if (_holding) _endHold(abort: false);
     });
@@ -141,6 +145,15 @@ bool _voiceMode = false;
 
   Future<void> _endHold({bool abort = false}) async {
     if (!_holding) return;
+    // 松手可能早于录音启动完成：先等启动落地，再决定取消还是收尾，
+    // 否则 finish() 会在 _startedAt == null 时直接返回，麦克风继续采集。
+    final starting = _starting;
+    if (starting != null) {
+      try {
+        await starting;
+      } catch (_) {}
+      _starting = null;
+    }
     final cancel = abort || _slideCancel;
     HapticFeedback.mediumImpact();
     _capTimer?.cancel();
@@ -200,7 +213,19 @@ bool _voiceMode = false;
 
   void _cancelHold() {
     if (_holding) {
-      unawaited(VoiceRecorder.cancel());
+      final starting = _starting;
+      if (starting != null) {
+        // 启动还没完成：等它落地后再取消，确保麦克风一定停住。
+        () async {
+          try {
+            await starting;
+          } catch (_) {}
+          _starting = null;
+          await VoiceRecorder.cancel();
+        }();
+      } else {
+        unawaited(VoiceRecorder.cancel());
+      }
       setState(() {
         _holding = false;
         _recognizing = false;
@@ -230,8 +255,9 @@ bool _voiceMode = false;
           ),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border(top: BorderSide(color: c.line2)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(CitroColors.radii.modal),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -256,7 +282,7 @@ bool _voiceMode = false;
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
                   color: c.surface2,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                   border: Border.all(color: c.line),
                 ),
                 child: Text(
@@ -308,7 +334,7 @@ void _showOverlay() {
 
 Widget _buildOverlay(BuildContext context) {
     final c = context.c;
-    final accent = _slideCancel ? _cancelRed : c.ink;
+    final accent = _slideCancel ? c.danger : c.ink;
     return Positioned(
       left: 16,
       right: 16,
@@ -321,7 +347,7 @@ Widget _buildOverlay(BuildContext context) {
             padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
             decoration: BoxDecoration(
               color: accent.withAlpha(238),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               boxShadow: CitroColors.shadows.lg(c),
             ),
             child: Column(
@@ -334,7 +360,7 @@ Widget _buildOverlay(BuildContext context) {
                       strokeSvg(_slideCancel ? AppIcons.close : AppIcons.mic,
                           width: 2),
                       size: 13,
-                      color: c.surface,
+                      color: c.bg,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -344,7 +370,7 @@ Widget _buildOverlay(BuildContext context) {
                       style: context.ui(
                         size: CitroType.caption,
                         weight: CitroType.strong,
-                        color: c.surface,
+                        color: c.bg,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -355,7 +381,7 @@ Widget _buildOverlay(BuildContext context) {
                         height: 6.0 + i * 3,
                         margin: const EdgeInsets.only(right: 2),
                         decoration: BoxDecoration(
-                          color: c.surface.withAlpha(
+                          color: c.bg.withAlpha(
                             _level / 2 > i ? 230 : 60,
                           ),
                           borderRadius: BorderRadius.circular(2),
@@ -366,8 +392,8 @@ Widget _buildOverlay(BuildContext context) {
                       Text(
                         '上滑取消',
                         style: context.ui(
-                          size: 10,
-                          color: c.surface.withAlpha(120),
+                          size: CitroType.micro,
+                          color: c.bg.withAlpha(120),
                         ),
                       ),
                   ],
@@ -382,8 +408,8 @@ Widget _buildOverlay(BuildContext context) {
                       style: context.ui(
                         size: CitroType.bodyLg,
                         color: _preview.isNotEmpty
-                            ? c.surface
-                            : c.surface.withAlpha(150),
+                            ? c.bg
+                            : c.bg.withAlpha(150),
                         height: 1.6,
                       ),
                     ),
@@ -415,12 +441,12 @@ Widget _buildOverlay(BuildContext context) {
     }) => Pressable(
       onTap: onTap,
       scale: .92,
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
       child: Container(
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: active ? c.accent.withAlpha(40) : Colors.transparent,
+          color: active ? c.ink : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Center(
@@ -429,7 +455,7 @@ Widget _buildOverlay(BuildContext context) {
               AppIcon(
                 strokeSvg(icon, width: 2),
                 size: 19,
-                color: active ? c.accentInk : c.ink2,
+                color: active ? c.bg : c.ink2,
               ),
         ),
       ),
@@ -447,9 +473,9 @@ final input = _voiceMode
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: _slideCancel
-                    ? _cancelRed.withAlpha(30)
-                    : (_holding ? c.accent.withAlpha(36) : Colors.transparent),
-                borderRadius: BorderRadius.circular(19),
+                    ? c.dangerSoft
+                    : (_holding ? c.surface : Colors.transparent),
+                borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
               ),
               child: Text(
                 _slideCancel
@@ -461,8 +487,8 @@ final input = _voiceMode
                   size: CitroType.body,
                   weight: CitroType.strong,
                   color: _slideCancel
-                      ? _cancelRed
-                      : (_holding ? c.accentInk : c.ink2),
+                      ? c.danger
+                      : (_holding ? c.ink : c.ink2),
                 ),
               ),
             ),
@@ -497,7 +523,7 @@ return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(23),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
         ),
         child: Row(

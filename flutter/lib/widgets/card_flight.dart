@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
+import '../theme/tokens.dart';
 
 /// 没有共享元素可用的卡片：用 Overlay 做一个"悬浮替身"。
 ///
@@ -91,7 +92,11 @@ class CitroCardFlight {
           final t = CitroMotion.easeInOut.transform(animation.value);
           final r = Rect.lerp(rect, rect.translate(0, -18), t)!;
           final opacity = (1 - t).clamp(0.0, 1.0);
-          final radius = ui.lerpDouble(14, 18, t) ?? 14;
+          final radius = ui.lerpDouble(
+            CitroColors.radii.card,
+            CitroColors.radii.inner,
+            t,
+          )!;
           return Stack(
             children: [
               Positioned.fromRect(
@@ -103,7 +108,9 @@ class CitroCardFlight {
                       borderRadius: BorderRadius.circular(radius),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0x33000000),
+                          color: fallback.computeLuminance() > .5
+                              ? const Color(0x2E000000)
+                              : const Color(0x66000000),
                           blurRadius: 26 * t + 8,
                           offset: Offset(0, 8 * t + 2),
                         ),

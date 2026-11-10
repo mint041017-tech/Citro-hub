@@ -9,6 +9,7 @@ import '../services/api.dart';
 import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
@@ -486,7 +487,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         if (_loading && _error == null)
           Positioned.fill(
             child: ColoredBox(
-              color: const Color(0xFFF5ECDB),
+              color: c.surface,
               child: Center(
                 child: SizedBox(
                   width: 26,
@@ -502,7 +503,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         if (_error != null)
           Positioned.fill(
             child: ColoredBox(
-              color: const Color(0xFFF5ECDB),
+              color: c.surface,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -511,10 +512,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                     children: [
                       Text(
                         '果冻铺没有开门',
-                        style: context.heading(
-                          size: 20,
-                          color: const Color(0xFF26313F),
-                        ),
+                        style: context.heading(size: CitroType.titleLg, color: c.ink),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -523,19 +521,16 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: context.body(
-                          size: 12,
-                          color: const Color(0xFF66727E),
+                          size: CitroType.caption,
+                          color: c.inkSoft,
                           height: 1.5,
                         ),
                       ),
                       const SizedBox(height: 14),
-                      FilledButton(
+                      CitroButton(
+                        label: '重试',
+                        style: CitroButtonStyle.accent,
                         onPressed: _retry,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: c.accent,
-                          foregroundColor: const Color(0xFF2E2C22),
-                        ),
-                        child: const Text('重试'),
                       ),
                     ],
                   ),
@@ -550,12 +545,13 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   }
 
   Widget _testBody(BuildContext context) {
+    final c = context.c;
     return Container(
-      color: const Color(0xFFF5ECDB),
+      color: c.surface,
       alignment: Alignment.center,
       child: Text(
         '咕噜果冻铺',
-        style: context.heading(size: 24, color: const Color(0xFF26313F)),
+        style: context.heading(size: CitroType.titleLg, color: c.ink),
       ),
     );
   }

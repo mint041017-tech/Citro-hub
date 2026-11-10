@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -13,7 +14,7 @@ class SearchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Scaffold(
-      body: PaperBackground(
+      body: CitroBackground(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -34,12 +35,12 @@ class SearchPage extends StatelessWidget {
                           onTap: () => popOrHome(context),
                           child: Container(
                             height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
-                              color: c.surface2,
-                              borderRadius: BorderRadius.circular(999),
+                              color: c.surface,
+                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                               border: Border.all(color: c.line),
-                              boxShadow: CitroColors.shadows.paper(c),
+                              boxShadow: CitroColors.shadows.card(c),
                             ),
                             child: Row(
                               children: [
@@ -48,58 +49,60 @@ class SearchPage extends StatelessWidget {
                                   size: 16,
                                   color: c.ink2,
                                 ),
-                                const SizedBox(width: 3),
+                                const SizedBox(width: 6),
                                 Text(
                                   '返回',
                                   style: context.body(
-                                    size: 12,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.label,
+                                    weight: CitroType.medium,
+                                    color: c.ink,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.x2),
                         Text('全站搜索', style: context.heading(size: 28)),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    PaperCard(
-                      padding: const EdgeInsets.all(14),
+                    const SizedBox(height: AppSpacing.x2),
+                    CitroCard(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
                             '按名称或关键词找页面、游戏、Mod、工具和驱动',
                             style: context.body(
-                              size: 12,
+                              size: CitroType.meta,
                               color: c.inkSoft,
                               height: 1.5,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.x2),
                           const GlobalSearch(hint: '搜索页面 / 游戏 / Mod / 工具 / 驱动'),
-                          const SizedBox(height: 10),
-                          Text(
-                            '支持上下键选择，回车直接打开；没有本地结果时回退到必应。',
-                            style: context.body(
-                              size: 11,
-                              color: c.inkSoft.withAlpha(200),
-                              height: 1.5,
+                          if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows ||
+                              defaultTargetPlatform == TargetPlatform.macOS) ...[
+                            const SizedBox(height: AppSpacing.x2),
+                            Text(
+                              '支持上下键选择，回车直接打开；没有本地结果时回退到必应。',
+                              style: context.body(
+                                size: CitroType.small,
+                                color: c.inkSoft,
+                                height: 1.5,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    PaperCard(
-                      tapeColor: c.tape2,
-                      tapeAngle: 2,
-                      padding: const EdgeInsets.all(14),
+                    const SizedBox(height: AppSpacing.x2),
+                    CitroCard(
+                      padding: const EdgeInsets.all(20),
                       child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: AppSpacing.x1,
+                        runSpacing: AppSpacing.x1,
                         children: [
                           for (final item in const [
                             ('小游戏', '15 款原生小游戏'),
@@ -133,31 +136,28 @@ class _SearchHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: c.hl.withAlpha(c.dark ? 24 : 90),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line2.withAlpha(150)),
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: c.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
           Text(
             label,
             style: context.body(
-              size: 12,
-              weight: FontWeight.w700,
-              color: c.accentInk,
+              size: CitroType.caption,
+              weight: CitroType.medium,
+              color: c.ink,
             ),
           ),
-          const SizedBox(width: 5),
-          Text(desc, style: context.body(size: 10, color: c.inkSoft)),
+          const SizedBox(width: 6),
+          Text(
+            desc,
+            style: context.body(size: CitroType.small, color: c.inkSoft),
+          ),
         ],
       ),
     );

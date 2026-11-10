@@ -520,8 +520,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
       key: const ValueKey('globalSearchPanel'),
       constraints: BoxConstraints(maxHeight: _panelMaxHeight),
       decoration: BoxDecoration(
-        color: c.dark ? const Color(0xFF211E19) : const Color(0xFFFFFCF4),
-        borderRadius: BorderRadius.circular(16),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
         boxShadow: CitroColors.shadows.lg(c),
       ),
@@ -551,7 +551,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
       padding: const EdgeInsets.fromLTRB(14, 5, 8, 5),
       child: Row(
         children: [
-          Text(text, style: context.body(size: 11, color: context.c.inkSoft)),
+          Text(
+            text,
+            style: context.body(size: CitroType.small, color: context.c.inkSoft),
+          ),
           const Spacer(),
           if (clear)
             TextButton(
@@ -562,7 +565,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               },
               child: Text(
                 '清空',
-                style: context.body(size: 11, color: context.c.accentInk),
+                style: context.body(size: CitroType.small, color: context.c.accent),
               ),
             ),
         ],
@@ -595,21 +598,22 @@ class _GlobalSearchState extends State<GlobalSearch> {
         }
       },
       child: Container(
-        color: _active == index ? c.hl.withAlpha(170) : null,
+        color: _active == index ? c.surface2 : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
             Container(
               width: 43,
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: c.hl.withAlpha(150),
-                borderRadius: BorderRadius.circular(6),
+                color: c.surface2,
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                border: Border.all(color: c.line),
               ),
               child: Text(
                 tag,
-                style: context.body(size: 10, color: c.accentInk),
+                style: context.body(size: CitroType.micro, color: c.ink2),
               ),
             ),
             const SizedBox(width: 10),
@@ -656,7 +660,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
           decoration: BoxDecoration(
             color: c.surface2.withAlpha(c.dark ? 225 : 245),
             borderRadius: BorderRadius.circular(14),
-            boxShadow: CitroColors.shadows.paper(c),
+            boxShadow: CitroColors.shadows.card(c),
           ),
           child: CustomPaint(
             foregroundPainter: _SearchBorderPainter(

@@ -163,13 +163,13 @@ class _AuthDialogState extends State<_AuthDialog> {
         Text(
           '扫码登录',
           textAlign: TextAlign.center,
-          style: context.heading(size: 24, color: c.ink, letterSpacing: .4),
+          style: context.heading(size: CitroType.heading, color: c.ink, letterSpacing: .4),
         ),
         const SizedBox(height: 5),
         Text(
           '用手机 Citro App 扫一扫，电脑端立即登录',
           textAlign: TextAlign.center,
-          style: context.body(size: 12, color: c.inkSoft, height: 1.5),
+          style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.5),
         ),
         const SizedBox(height: 18),
         QrLoginView(onConfirmed: _onQrConfirmed),
@@ -182,8 +182,8 @@ class _AuthDialogState extends State<_AuthDialog> {
               child: Text(
                 '返回账号登录',
                 style: context.body(
-                  size: 12,
-                  weight: FontWeight.w700,
+                  size: CitroType.caption,
+                  weight: CitroType.medium,
                   color: c.accentInk,
                 ),
               ),
@@ -204,13 +204,13 @@ class _AuthDialogState extends State<_AuthDialog> {
         Text(
           mode == 'login' ? '欢迎回来' : '加入 Citro',
           textAlign: TextAlign.center,
-          style: context.heading(size: 24, color: c.ink, letterSpacing: .4),
+          style: context.heading(size: CitroType.heading, color: c.ink, letterSpacing: .4),
         ),
         const SizedBox(height: 5),
         Text(
           mode == 'login' ? '用手机号或邮箱继续' : '手机号 / 邮箱都可以注册',
           textAlign: TextAlign.center,
-          style: context.body(size: 12, color: c.inkSoft, height: 1.5),
+          style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.5),
         ),
         const SizedBox(height: 18),
         _modeSwitch(),
@@ -275,8 +275,8 @@ class _AuthDialogState extends State<_AuthDialog> {
                 child: Text(
                   error!,
                   style: context.body(
-                    size: 12,
-                    weight: FontWeight.w700,
+                    size: CitroType.caption,
+                    weight: CitroType.medium,
                     color: c.stamp,
                     height: 1.45,
                   ),
@@ -297,16 +297,16 @@ class _AuthDialogState extends State<_AuthDialog> {
           Text(
             '昵称会公开展示，别用真名哦。',
             textAlign: TextAlign.center,
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           )
         else
           Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('登录即表示你同意', style: context.body(size: 11, color: c.inkSoft)),
+              Text('登录即表示你同意', style: context.body(size: CitroType.small, color: c.inkSoft)),
               _legalLink('《用户协议》', LegalDoc.terms),
-              Text('和', style: context.body(size: 11, color: c.inkSoft)),
+              Text('和', style: context.body(size: CitroType.small, color: c.inkSoft)),
               _legalLink('《隐私政策》', LegalDoc.privacy),
             ],
           ),
@@ -327,7 +327,7 @@ class _AuthDialogState extends State<_AuthDialog> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             border: Border.all(color: c.line2),
           ),
           child: Row(
@@ -342,8 +342,8 @@ class _AuthDialogState extends State<_AuthDialog> {
               Text(
                 '扫码登录',
                 style: context.body(
-                  size: 12,
-                  weight: FontWeight.w700,
+                  size: CitroType.caption,
+                  weight: CitroType.medium,
                   color: c.ink2,
                 ),
               ),
@@ -362,8 +362,8 @@ class _AuthDialogState extends State<_AuthDialog> {
         Container(
           width: 8,
           height: 8,
-          decoration: const BoxDecoration(
-            color: Color(0xFF7A9BBE),
+          decoration: BoxDecoration(
+            color: c.accent,
             shape: BoxShape.circle,
           ),
         ),
@@ -371,8 +371,8 @@ class _AuthDialogState extends State<_AuthDialog> {
         Text(
           'CITRO',
           style: context.body(
-            size: 11,
-            weight: FontWeight.w700,
+            size: CitroType.small,
+            weight: CitroType.medium,
             color: c.inkSoft,
             letterSpacing: 2.4,
           ),
@@ -388,7 +388,7 @@ class _AuthDialogState extends State<_AuthDialog> {
       decoration: BoxDecoration(
         color: c.surface2,
         border: Border.all(color: c.line2),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Row(
         children: [_modeChip('登录', 'login'), _modeChip('注册', 'register')],
@@ -414,7 +414,7 @@ class _AuthDialogState extends State<_AuthDialog> {
           height: 38,
           decoration: BoxDecoration(
             color: active ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             boxShadow: active
                 ? [
                     BoxShadow(
@@ -429,9 +429,9 @@ class _AuthDialogState extends State<_AuthDialog> {
             child: Text(
               label,
               style: context.body(
-                size: 14,
-                weight: FontWeight.w700,
-                color: active ? const Color(0xFF2E2C22) : c.inkSoft,
+                size: CitroType.body,
+                weight: CitroType.medium,
+                color: active ? c.onAccent : c.inkSoft,
               ),
             ),
           ),
@@ -468,9 +468,9 @@ class _AuthDialogState extends State<_AuthDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: active
-              ? c.hl.withAlpha(c.dark ? 90 : 120)
+              ? c.accentLt.withAlpha(c.dark ? 90 : 170)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: active ? c.accent : c.line2),
         ),
         // 文字在胶囊内真正居中；图标单独靠左，不参与文字居中的宽度计算。
@@ -481,8 +481,8 @@ class _AuthDialogState extends State<_AuthDialog> {
               child: Text(
                 label,
                 style: context.body(
-                  size: 13,
-                  weight: FontWeight.w700,
+                  size: CitroType.meta,
+                  weight: CitroType.medium,
                   color: active ? c.ink : c.inkSoft,
                 ),
               ),
@@ -526,18 +526,18 @@ class _AuthDialogState extends State<_AuthDialog> {
               height: 18,
               decoration: BoxDecoration(
                 color: _agreed ? c.accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 border: Border.all(
                   color: _agreed ? c.accent : c.line2,
                   width: 1.2,
                 ),
               ),
               child: _agreed
-                  ? const Center(
+                  ? Center(
                       child: AppIcon(
                         '<path d="M20 6 9 17l-5-5"/>',
                         size: 11,
-                        color: Color(0xFF2E2C22),
+                        color: c.onAccent,
                       ),
                     )
                   : null,
@@ -548,9 +548,9 @@ class _AuthDialogState extends State<_AuthDialog> {
           child: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('我已阅读并同意', style: context.body(size: 11, color: c.inkSoft)),
+              Text('我已阅读并同意', style: context.body(size: CitroType.small, color: c.inkSoft)),
               _legalLink('《用户协议》', LegalDoc.terms),
-              Text('和', style: context.body(size: 11, color: c.inkSoft)),
+              Text('和', style: context.body(size: CitroType.small, color: c.inkSoft)),
               _legalLink('《隐私政策》', LegalDoc.privacy),
             ],
           ),
@@ -567,8 +567,8 @@ class _AuthDialogState extends State<_AuthDialog> {
         child: Text(
           label,
           style: context.body(
-            size: 11,
-            weight: FontWeight.w700,
+            size: CitroType.small,
+            weight: CitroType.medium,
             color: context.c.accentInk,
           ),
         ),

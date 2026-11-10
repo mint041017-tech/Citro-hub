@@ -1075,8 +1075,6 @@ class GameSheepView extends StatelessWidget {
   final VoidCallback? onRevive;
 
   static const int _slotCount = 7;
-  static const double _tapeW = 66;
-  static const double _tapeH = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -1173,45 +1171,30 @@ class GameSheepView extends StatelessWidget {
       width: 62,
       height: 56.64,
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Transform.translate(
-              offset: const Offset(-1, 1),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1.65,
-                  letterSpacing: 1.68,
-                  color: c.accentInk,
-                ),
+            Text(
+              label,
+              style: context.body(
+                size: CitroType.small,
+                weight: CitroType.medium,
+                color: c.inkSoft,
               ),
             ),
             const SizedBox(height: 1),
-            Transform.translate(
-              offset: const Offset(0, -1),
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontFamily: AppFonts.kalam,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.15,
-                  letterSpacing: 0.38,
-                  color: c.ink,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+            Text(
+              value,
+              style: context.hand(
+                size: CitroType.titleLg,
+                weight: CitroType.strong,
+                color: c.ink,
               ),
             ),
           ],
@@ -1280,54 +1263,29 @@ class GameSheepView extends StatelessWidget {
       height: 37,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line2),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        border: Border.all(color: c.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // web：`.gsheep-tool svg{filter:drop-shadow(0 1px 0 rgba(90,55,20,.5))}`
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 1,
-                  child: gameIcon(
-                    icon,
-                    size: 16,
-                    color: const Color(0x805A3714),
-                  ),
-                ),
-                gameIcon(icon, size: 16, color: c.accentInk),
-              ],
-            ),
-          ),
+          gameIcon(icon, size: 16, color: c.ink2),
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              height: 19 / 13,
+            style: context.body(
+              size: CitroType.meta,
+              weight: CitroType.strong,
               color: c.ink2,
             ),
           ),
           const SizedBox(width: 6),
           Text(
             '$count',
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              height: 19 / 13,
+            style: context.hand(
+              size: CitroType.meta,
+              weight: CitroType.strong,
               color: c.mintInk,
             ),
           ),
@@ -1363,30 +1321,12 @@ class GameSheepView extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: CssShadowLayer(
-              radius: 14,
-              shadows: const <CssShadowSpec>[
-                // CSS box-shadow 列表「先写的在上层」，kit 是后写覆盖先写 → 反序。
-                CssShadowSpec(
-                  color: Color(0x4D5A4A2C),
-                  offset: Offset(0, 8),
-                  blur: 20,
-                  spread: -12,
-                ),
-                CssShadowSpec(
-                  color: Color(0x0E5A4A2C),
-                  offset: Offset(0, 1),
-                  blur: 2,
-                ),
-              ],
-              child: SizedBox.expand(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: c.line),
-                  ),
-                ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                border: Border.all(color: c.line),
+                boxShadow: CitroColors.shadows.card(c),
               ),
             ),
           ),
@@ -1404,28 +1344,13 @@ class GameSheepView extends StatelessWidget {
                     child: _board(context, geom),
                   ),
                   const SizedBox(height: 14),
-                  // web 卡槽盒顶 776.0（参考图边框整像素落在 776 行），
-                  // 布局链给的是 776.3，故视觉上移 0.303。
-                  Transform.translate(
-                    offset: const Offset(0, -0.303),
-                    child: _slotsRow(context, boardW),
-                  ),
+                  _slotsRow(context, boardW),
                   if (removed.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _removedRow(context, boardW),
                   ],
                 ],
               ),
-            ),
-          ),
-          Positioned(
-            left: (bodyW - _tapeW) / 2,
-            top: -9,
-            child: const GameTape(
-              width: _tapeW,
-              height: _tapeH,
-              angle: 1.6,
-              color: Color(0x99F4D678),
             ),
           ),
           if (overlayTitle != null) Positioned.fill(child: _overlay(context)),
@@ -1452,7 +1377,7 @@ class GameSheepView extends StatelessWidget {
     bool locked = false,
   }) {
     final c = context.c;
-    final radius = BorderRadius.circular(10);
+    final radius = BorderRadius.circular(CitroColors.radii.small);
     final iconSize = (size - 2) * 0.8;
     // 300 张牌时逐牌做 MaskFilter/SaveLayer 是主要掉帧源：
     // 这里改成实色投影 + 复用的 SVG 图标，锁定态只叠一层半透明遮罩。
@@ -1463,29 +1388,18 @@ class GameSheepView extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: radius,
-          border: Border.all(color: c.line2),
-          boxShadow: locked
-              ? const <BoxShadow>[
-                  BoxShadow(color: Color(0x24584A28), offset: Offset(0, 2)),
-                ]
-              : const <BoxShadow>[
-                  BoxShadow(color: Color(0x405A4A2C), offset: Offset(0, 3)),
-                ],
+          border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.sm(c),
         ),
         child: Stack(
           children: [
             if (locked)
               Positioned.fill(
                 child: IgnorePointer(
-                  // web 的 `inset 0 0 0 999px rgba(46,44,34,.22)` 画在 padding box
-                  // （边框内侧），边框本身不受影响，所以这里内缩 1px、圆角 9。
-                  child: Padding(
-                    padding: const EdgeInsets.all(1),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0x332E2C22),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: c.inkSoft.withAlpha(70),
+                      borderRadius: radius,
                     ),
                   ),
                 ),
@@ -1516,18 +1430,11 @@ class GameSheepView extends StatelessWidget {
       height: 50,
       decoration: BoxDecoration(
         color: c.bg2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.line2),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _InsetTopPainter(color: Color(0x155A4A2C)),
-              ),
-            ),
-          ),
           Padding(
             // 边框已被 Container 当作内边距（1px），web 是 1 + 7；再补 0.303
             // 让卡槽虚线框落在参考图的 784.3。
@@ -1560,15 +1467,9 @@ class GameSheepView extends StatelessWidget {
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: c.surface2,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _DashedRRectPainter(color: c.line2, radius: 10),
+              color: c.surface,
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
+              border: Border.all(color: c.line2),
             ),
           ),
         ),
@@ -1611,8 +1512,8 @@ class GameSheepView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       decoration: BoxDecoration(
         color: c.bg2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.line2),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1647,9 +1548,9 @@ class GameSheepView extends StatelessWidget {
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(
-          color: c.dark ? c.surface.withAlpha(0xF6) : const Color(0xF6F6EFDF),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: c.dark ? c.line2 : const Color(0xF2FFF8EA)),
+          color: c.surface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          border: Border.all(color: c.line),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1658,14 +1559,7 @@ class GameSheepView extends StatelessWidget {
             Text(
               overlayTitle!,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppFonts.zcool,
-                fontFamilyFallback: AppFonts.fallback,
-                fontSize: 26,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 26 * 0.02,
-                color: c.ink,
-              ),
+              style: context.heading(size: CitroType.heading, color: c.ink),
             ),
             const SizedBox(height: 12),
             ConstrainedBox(
@@ -1673,13 +1567,7 @@ class GameSheepView extends StatelessWidget {
               child: Text(
                 overlayDesc ?? '',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 14,
-                  height: 1.6,
-                  color: c.ink2,
-                ),
+                style: context.body(size: CitroType.body, color: c.ink2),
               ),
             ),
             const SizedBox(height: 12),
@@ -1704,17 +1592,8 @@ String _sheepSvg(int type) {
   final i = type < 0
       ? 0
       : (type >= _sheepIconBodies.length ? _sheepIconBodies.length - 1 : type);
-  // Chrome 的 SVG 描边比 Skia 细一点（AA 更亮），按参考图把 stroke-width 收 5%，
-  // 使贴纸牌图标的墨色像素量和浏览器版对齐。
-  final body = _sheepIconBodies[i].replaceAllMapped(
-    RegExp(r'stroke-width="([0-9.]+)"'),
-    (m) {
-      final w = double.parse(m[1]!);
-      return 'stroke-width="${(w * _iconStrokeScale).toStringAsFixed(2)}"';
-    },
-  );
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
-      '$body</svg>';
+      '${_sheepIconBodies[i]}</svg>';
 }
 
 /// SVG 容易在每次 build 时重新解析；按牌型缓存一次，300 张牌共用。
@@ -1728,90 +1607,4 @@ Widget _sheepIcon(int type) {
     i,
     () => SvgPicture.string(_sheepSvg(i), fit: BoxFit.contain),
   );
-}
-
-/// 图标描边收细系数（见 [_sheepSvg]）。
-const double _iconStrokeScale = 1.0;
-
-/// 虚线圆角边框（卡槽 `border:1px dashed`）：按 PathMetrics 等距切段。
-class _DashedRRectPainter extends CustomPainter {
-  const _DashedRRectPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  static const double _dash = 3;
-  static const double _gap = 3;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      (Offset.zero & size).deflate(0.5),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        final next = math.min(d + _dash, metric.length);
-        canvas.drawPath(metric.extractPath(d, next), paint);
-        d = next + _gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedRRectPainter old) =>
-      old.color != color || old.radius != radius;
-}
-
-/// 卡槽容器顶部内阴影（web `box-shadow:inset 0 2px 6px rgba(90,74,44,.12)`）。
-class _InsetTopPainter extends CustomPainter {
-  const _InsetTopPainter({required this.color});
-
-  final Color color;
-
-  /// 逐行衰减比例（取自 web 截图的 inset 阴影剖面，深度 8px）。
-  static const List<double> _fade = <double>[
-    1,
-    .82,
-    .55,
-    .45,
-    .28,
-    .18,
-    .10,
-    .05,
-    0,
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.width <= 4 || size.height <= 4) return;
-    // 注意：Container 带 border 且未设 padding 时，边框会被当作 child 的内边距
-    // （等价 border-box），所以这里的 (0,0) 已经是 border 内侧，阴影从边框下沿起算。
-    final inner = Offset.zero & size;
-    canvas.save();
-    canvas.clipRRect(RRect.fromRectAndRadius(inner, const Radius.circular(9)));
-    final depth = math.min(8.0, inner.height);
-    final span = depth / inner.height;
-    final shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: <Color>[
-        for (final f in _fade) color.withValues(alpha: color.a * f),
-      ],
-      stops: <double>[
-        for (var i = 0; i < _fade.length; i++) (i * span / (_fade.length - 1)),
-      ],
-    ).createShader(inner);
-    canvas.drawRect(inner, Paint()..shader = shader);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _InsetTopPainter old) => old.color != color;
 }

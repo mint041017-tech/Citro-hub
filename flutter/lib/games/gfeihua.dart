@@ -14,15 +14,9 @@ import 'game_ui.dart';
 // 序数印章字「壹贰叁肆」在内置子集字体里缺字，统一复用成语接龙页里的
 // OrdinalGlyph（内嵌 ZCOOL KuaiLe 字形轮廓），两页保持同一套渲染。
 import 'gidiom.dart' show OrdinalGlyph;
-
-// ---------------------------------------------------------------------------
-// 纸笺色板（取自 web 计算样式树 _tmp/ref/spec/gfeihua.txt，390x844 light）
-// ---------------------------------------------------------------------------
-const Color _onAccent = Color(0xFF2E2C22);
+import 'game_theme.dart';
 
 const double _stageH = 506.39;
-const double _innerW = 360;
-
 /// 飞花令链上的一句（you 玩家 / ai 电脑）。
 class FhItem {
   final String line;
@@ -337,7 +331,7 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
 }
 
 // ---------------------------------------------------------------------------
-// 纯视觉层：web #gfeihuaPage 的 390x844 版式
+// 纯视觉层：nosh 卡片流
 // ---------------------------------------------------------------------------
 
 /// 飞花令视图（纯视觉；golden 用默认 menu 态渲染）。
@@ -428,7 +422,6 @@ class GameFeihuaView extends StatelessWidget {
       ],
       board: SizedBox(
         width: math.max(0.0, w - GameMetrics.sidePad * 2),
-        // v1.6.2：键盘弹出时按剩余可视高度收短舞台。
         height: phase == FeihuaPhase.playing
             ? math.min(
                 stageH,
@@ -438,226 +431,87 @@ class GameFeihuaView extends StatelessWidget {
                 ),
               )
             : stageH,
-        child: CssShadowLayer(
-          radius: 14,
-          shadows: const [
-            CssShadowSpec(
-              color: Color(0x0E5A4A2C),
-              offset: Offset(0, 1),
-              blur: 2,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
+            border: Border.all(color: c.line),
+            boxShadow: CitroColors.shadows.card(c),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
+            child: phase == FeihuaPhase.menu
+                ? _menu(context)
+                : (phase == FeihuaPhase.playing ? _board(context) : _result(context)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- 菜单 --------------------------------------------------------------
+
+  Widget _menu(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.tintBlue,
+                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              ),
+              child: Text(
+                '令',
+                style: context.heading(size: CitroType.titleLg, color: c.accentInk),
+              ),
             ),
-            CssShadowSpec(
-              color: Color(0x4D5A4A2C),
-              offset: Offset(0, 8),
-              blur: 20,
-              spread: -12,
+            const SizedBox(height: 14),
+            Text(
+              '飞花令',
+              textAlign: TextAlign.center,
+              style: context.heading(size: CitroType.heading, color: c.ink),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '说出含有令字的诗句',
+              textAlign: TextAlign.center,
+              style: context.body(size: CitroType.meta, color: c.ink2),
+            ),
+            const SizedBox(height: 18),
+            _rules(context),
+            const SizedBox(height: 20),
+            GameActionButton(
+              label: '开始飞花令',
+              primary: true,
+              expand: true,
+              onTap: onStart,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'AI 对战 · GLM-5.3-Flash 实时抽字与对诗',
+              textAlign: TextAlign.center,
+              style: context.body(size: CitroType.small, color: c.inkSoft),
             ),
           ],
-          child: SizedBox.expand(
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                // 纸笺色板固定为浅色，舞台也保持浅色纸面，
-                // 否则深色主题下深色文字会压在深色底上。
-                color: c.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: c.line),
-              ),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(painter: _PaperLinesPainter(c.grid)),
-                  ),
-                  if (phase == FeihuaPhase.menu)
-                    Center(
-                      child: tablet
-                          ? SizedBox.expand(
-                              child: FittedBox(
-                                fit: BoxFit.contain,
-                                child: SizedBox(
-                                  width: _innerW,
-                                  height: _stageH,
-                                  child: _menu(),
-                                ),
-                              ),
-                            )
-                          : SizedBox(
-                              width: _innerW,
-                              height: _stageH,
-                              child: _menu(),
-                            ),
-                    )
-                  else if (phase == FeihuaPhase.playing)
-                    _board()
-                  else
-                    _result(),
-                  // web .gi-stage::after 的「诗」水印；菜单面板不透明会盖住它。
-                  if (phase != FeihuaPhase.menu) _watermark(),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 
-  // --- 菜单（web #gfeihuaMenu.gi-panel.on） -------------------------------
-  Widget _menu() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          top: 52.891,
-          left: (_innerW - 52) / 2,
-          width: 52,
-          height: 52,
-          child: _sealMark(),
-        ),
-        Positioned(
-          top: 112.891,
-          left: -1,
-          right: 1,
-          height: 26.4,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 2.64),
-              child: Text(
-                '飞花令',
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: 22,
-                  height: 1.2,
-                  letterSpacing: 2.64,
-                  color: c.ink,
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 148.281,
-          left: 18,
-          width: 324,
-          height: 20.625,
-          child: _tagRow('说出含有令字的诗句'),
-        ),
-        Positioned(top: 182.905, left: 18, width: 324, child: _rules()),
-        Positioned(
-          top: 375.531,
-          left: (_innerW - 140) / 2,
-          width: 140,
-          height: 48,
-          child: _bigButton('开始飞花令', onStart),
-        ),
-        Positioned(
-          top: 431.531,
-          left: -1,
-          right: 1,
-          height: 18.969,
-          child: Center(
-            child: Text(
-              'AI 对战 · GLM-5.3-Flash 实时抽字与对诗',
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 12,
-                height: 1.65,
-                letterSpacing: 0.575,
-                color: c.inkSoft,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _sealMark() {
-    return Transform.rotate(
-      angle: -4 * math.pi / 180,
-      child: Opacity(
-        opacity: 0.92,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: c.stamp, width: 2),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '飞花\n令',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppFonts.zcool,
-              fontFamilyFallback: AppFonts.fallback,
-              fontSize: 13,
-              height: 1.12,
-              letterSpacing: 0,
-              color: c.stamp,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tagRow(String text) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _tagRule(reverse: true),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 13,
-              height: 1.65,
-              letterSpacing: 0.75,
-              color: c.ink2,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        _tagRule(),
-      ],
-    );
-  }
-
-  Widget _tagRule({bool reverse = false}) {
-    return Container(
-      width: 40,
-      height: 1,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: reverse
-              ? [const Color(0x00D2C8B0), c.line2]
-              : [c.line2, const Color(0x00D2C8B0)],
-        ),
-      ),
-    );
-  }
-
-  Widget _rules() {
-    final base = TextStyle(
-      fontFamily: AppFonts.noto,
-      fontFamilyFallback: AppFonts.bodyFallback,
-      fontSize: 14,
-      height: 22.95 / 13.5,
-      letterSpacing: 0,
-      color: c.ink2,
-    );
+  Widget _rules(BuildContext context) {
     const ord = ['壹', '贰', '叁', '肆'];
     final texts = <List<InlineSpan>>[
       [
         const TextSpan(text: '系统随机抽一个'),
         TextSpan(text: '令字', style: _emStyle),
-        const TextSpan(text: '，你与 AI 轮流说出含这个字\n的诗句'),
+        const TextSpan(text: '，你与 AI 轮流说出含这个字的诗句'),
       ],
       [
         const TextSpan(text: '每回合 '),
@@ -667,12 +521,10 @@ class GameFeihuaView extends StatelessWidget {
       [
         const TextSpan(text: '每句基础 '),
         TextSpan(text: '+10 分', style: _emStyle),
-        const TextSpan(text: '；本局答对 '),
+        const TextSpan(text: '；答对 '),
         TextSpan(text: '2 句后 ×2', style: _emStyle),
         const TextSpan(text: '、'),
-        TextSpan(text: '4 句后', style: _emStyle),
-        const TextSpan(text: '\n'),
-        TextSpan(text: '×4', style: _emStyle),
+        TextSpan(text: '4 句后 ×4', style: _emStyle),
         const TextSpan(text: '，之后每多 2 句倍率再加 2 倍'),
       ],
       [
@@ -685,8 +537,14 @@ class GameFeihuaView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < texts.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8),
-          _ruleRow(ord[i], TextSpan(style: base, children: texts[i])),
+          if (i > 0) const SizedBox(height: 10),
+          _ruleRow(
+            ord[i],
+            TextSpan(
+              style: context.body(size: CitroType.body, color: c.ink2),
+              children: texts[i],
+            ),
+          ),
         ],
       ],
     );
@@ -697,15 +555,15 @@ class GameFeihuaView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 20,
-          height: 20,
-          margin: const EdgeInsets.only(top: 3),
+          width: 22,
+          height: 22,
+          margin: const EdgeInsets.only(top: 2),
           decoration: BoxDecoration(
-            border: Border.all(color: c.stamp, width: 1),
-            borderRadius: BorderRadius.circular(3),
+            color: c.tintBlue,
+            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           ),
           alignment: Alignment.center,
-          child: OrdinalGlyph(ord),
+          child: OrdinalGlyph(ord, color: c.accentText),
         ),
         const SizedBox(width: 10),
         Expanded(child: Text.rich(span)),
@@ -713,112 +571,71 @@ class GameFeihuaView extends StatelessWidget {
     );
   }
 
-  // --- 运行中棋盘（web #gfeihuaBoard） -----------------------------------
-  Widget _board() {
+  // --- 运行中棋盘 --------------------------------------------------------
+
+  Widget _board(BuildContext context) {
     final frac = (seconds / 120).clamp(0.0, 1.0);
     final mult = math.max(1, (count ~/ 2) * 2);
     return Column(
       children: [
-        SizedBox(
-          height: 66.297,
-          child: Column(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          child: Row(
             children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        '令字',
-                        style: TextStyle(
-                          fontFamily: AppFonts.noto,
-                          fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 12,
-                          height: 1.65,
-                          letterSpacing: 0.92,
-                          color: c.inkSoft,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(14, 2, 14, 3),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: c.stamp, width: 2),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: Text(
-                          ch.isEmpty ? '—' : ch,
-                          style: TextStyle(
-                            fontFamily: AppFonts.zcool,
-                            fontFamilyFallback: AppFonts.fallback,
-                            fontSize: 22,
-                            height: 36.3 / 22,
-                            letterSpacing: 1.32,
-                            color: c.stamp,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      SizedBox(
-                        width: 32,
-                        child: Text(
-                          '$seconds',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontFamily: AppFonts.noto,
-                            fontFamilyFallback: AppFonts.bodyFallback,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            height: 1.65,
-                            letterSpacing: 0,
-                            color: seconds <= 10 ? c.stamp : c.ink,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 58,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: c.line,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(color: c.line2, width: 1),
-                        ),
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          width: 56 * frac,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: seconds <= 10 ? c.stamp : c.accent,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                        ),
-                      ),
-                    ],
+              Text('令字', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.accentLt.withAlpha(150),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                ),
+                child: Text(
+                  ch.isEmpty ? '—' : ch,
+                  style: context.hand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
+                    color: c.accentInk,
                   ),
                 ),
               ),
-              _dashedLine(c.line2),
+              const Spacer(),
+              SizedBox(
+                width: 34,
+                child: Text(
+                  '$seconds',
+                  textAlign: TextAlign.right,
+                  style: context.hand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
+                    color: seconds <= 10 ? c.stamp : c.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 58,
+                child: CitroProgressBar(
+                  value: frac,
+                  height: 6,
+                  color: seconds <= 10 ? c.stamp : c.accent,
+                ),
+              ),
             ],
           ),
         ),
+        CitroDivider(color: c.line),
         Expanded(
-          // v1.6.1：错误 / AI 判定提示改为浮层挂在链表区顶部（用户反馈：
-          // 提示要显示在屏幕上方；此前放在底部，弹键盘后被遮）。
           child: Stack(
             children: [
               Positioned.fill(
                 child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  // 计时器每秒都会重建整页；懒构建避免整条诗句链跟着重建。
                   itemCount: chain.length,
                   itemBuilder: (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _chainRow(chain[index]),
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _chainRow(context, chain[index]),
                   ),
                 ),
               ),
@@ -827,202 +644,153 @@ class GameFeihuaView extends StatelessWidget {
                   left: 0,
                   right: 0,
                   top: 6,
-                  child: Center(child: _fbChip(fb)),
+                  child: Center(child: _fbChip(context, fb)),
                 ),
             ],
           ),
         ),
-        SizedBox(
-          height: 65,
-          child: Column(
-            children: [
-              _dashedLine(c.line2),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-                child: SizedBox(
-                  height: 46,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: input,
-                          focusNode: focusNode,
-                          enabled: !thinking,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => onEnter?.call(),
-                          maxLength: 128,
-                          style: TextStyle(
-                            fontFamily: AppFonts.noto,
-                            fontFamilyFallback: AppFonts.bodyFallback,
-                            fontSize: 16,
-                            height: 1.65,
-                            letterSpacing: 0.96,
-                            color: c.ink,
-                          ),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            counterText: '',
-                            hintText: '输入一句诗，选候选词后回车或点「对」',
-                            hintStyle: TextStyle(
-                              fontFamily: AppFonts.noto,
-                              fontFamilyFallback: AppFonts.bodyFallback,
-                              fontSize: 16,
-                              color: c.inkSoft,
-                            ),
-                            filled: true,
-                            fillColor: c.surface2,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.line2),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.line2),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.accent),
-                            ),
-                            disabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.line2),
-                            ),
-                          ),
-                        ),
+        CitroDivider(color: c.line),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+          child: SizedBox(
+            height: 46,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: input,
+                    focusNode: focusNode,
+                    enabled: !thinking,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => onEnter?.call(),
+                    maxLength: 128,
+                    style: context.body(size: CitroType.bodyLg, color: c.ink),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      counterText: '',
+                      hintText: '输入一句诗，选候选词后回车或点「对」',
+                      hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+                      filled: true,
+                      fillColor: c.surface2,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
                       ),
-                      const SizedBox(width: 10),
-                      _pillButton(
-                        label: '对',
-                        width: 66,
-                        height: 46,
-                        fontSize: 18,
-                        letterSpacing: 1.02,
-                        onTap: thinking ? null : onSubmit,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.accent),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GameActionButton(
+                  label: '对',
+                  width: 66,
+                  onTap: thinking ? null : onSubmit,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: c.surface2,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                  border: Border.all(color: c.accentLt),
+                ),
+                child: Text.rich(
+                  TextSpan(
+                    style: context.body(size: CitroType.small, color: c.ink2),
+                    children: [
+                      const TextSpan(text: '令字 '),
+                      TextSpan(
+                        text: ch.isEmpty ? '—' : ch,
+                        style: context.body(
+                          size: CitroType.body,
+                          weight: CitroType.strong,
+                          color: c.accentInk,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 28.266,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-            child: Row(
-              children: [
-                // v1.6.1：令字常驻输入行上方（用户反馈：键盘抬起会遮住顶部
-                // 的令字，把它复制到键盘上方永远可见的位置）。
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 1,
+              const SizedBox(width: 8),
+              Opacity(
+                opacity: count >= 2 ? 1 : 0.4,
+                child: GestureDetector(
+                  onTap: onSwap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                      border: Border.all(color: c.line2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '换个令字',
+                      style: context.body(
+                        size: CitroType.meta,
+                        weight: CitroType.strong,
+                        color: c.accentInk,
+                      ),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.stamp),
-                  ),
-                  child: Text.rich(
+                ),
+              ),
+              const Spacer(),
+              Text.rich(
+                TextSpan(
+                  style: context.body(size: CitroType.small, color: c.inkSoft),
+                  children: [
+                    const TextSpan(text: '当前 '),
                     TextSpan(
-                      style: TextStyle(
-                        fontFamily: AppFonts.noto,
-                        fontFamilyFallback: AppFonts.bodyFallback,
-                        fontSize: 12,
-                        height: 1.65,
-                        letterSpacing: 0.23,
-                        color: c.ink2,
-                      ),
-                      children: [
-                        const TextSpan(text: '令字 '),
-                        TextSpan(
-                          text: ch.isEmpty ? '—' : ch,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: c.stamp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Opacity(
-                  opacity: count >= 2 ? 1 : 0.3,
-                  child: GestureDetector(
-                    onTap: onSwap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: c.line2),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '换个令字',
-                        style: TextStyle(
-                          fontFamily: AppFonts.noto,
-                          fontFamilyFallback: AppFonts.bodyFallback,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          height: 1.65,
-                          letterSpacing: 0.5,
-                          color: c.accentInk,
-                        ),
+                      text: '×$mult',
+                      style: context.body(
+                        size: CitroType.body,
+                        weight: CitroType.strong,
+                        color: c.mintInk,
                       ),
                     ),
-                  ),
+                    TextSpan(text: ' · 本局已答 $count 句'),
+                  ],
                 ),
-                const Spacer(),
-                Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 12,
-                      height: 1.65,
-                      letterSpacing: 0.23,
-                      color: c.inkSoft,
-                    ),
-                    children: [
-                      const TextSpan(text: '当前 '),
-                      TextSpan(
-                        text: '×$mult',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: c.mintInk,
-                        ),
-                      ),
-                      TextSpan(text: ' · 本局已答 $count 句'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _chainRow(FhItem item) {
-    final bar = item.role == 'ai' ? c.mintInk : c.accent;
+  Widget _chainRow(BuildContext context, FhItem item) {
+    final bar = item.role == 'ai' ? c.mint : c.accent;
     final tagText = item.role == 'ai' ? 'AI' : '你';
     return Container(
       decoration: BoxDecoration(
-        color: item.role == 'ai'
-            ? c.surface2
-            : Color.alphaBlend(c.accent.withAlpha(20), c.surface2),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: item.role == 'ai' ? c.line : c.accent),
+        color: item.role == 'ai' ? c.surface2 : c.accentLt.withAlpha(90),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: item.role == 'ai' ? c.line : c.accentLt),
       ),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -1040,27 +808,17 @@ class GameFeihuaView extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: bar,
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                           ),
                           child: Text(
                             tagText,
-                            style: TextStyle(
-                              fontFamily: AppFonts.zcool,
-                              fontFamilyFallback: AppFonts.fallback,
-                              fontSize: 11,
-                              height: 1.4,
-                              letterSpacing: 0,
-                              color: item.role == 'ai'
-                                  ? (c.dark
-                                        ? const Color(0xFF23211C)
-                                        : const Color(0xFFF5F1E3))
-                                  : _onAccent,
+                            style: context.body(
+                              size: CitroType.micro,
+                              weight: CitroType.strong,
+                              color: c.accentText,
                             ),
                           ),
                         ),
@@ -1071,19 +829,13 @@ class GameFeihuaView extends StatelessWidget {
                             textAlign: TextAlign.right,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppFonts.noto,
-                              fontFamilyFallback: AppFonts.bodyFallback,
-                              fontSize: 11,
-                              letterSpacing: 0,
-                              color: c.inkSoft,
-                            ),
+                            style: context.body(size: CitroType.small, color: c.inkSoft),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text.rich(_markedLine(item.line)),
+                    const SizedBox(height: 4),
+                    Text.rich(_markedLine(context, item.line)),
                   ],
                 ),
               ),
@@ -1094,18 +846,11 @@ class GameFeihuaView extends StatelessWidget {
     );
   }
 
-  /// 诗句里的令字用朱砂高亮（web gfeihuaMark：split(ch).join(<em>ch</em>)）。
-  TextSpan _markedLine(String line) {
-    final base = TextStyle(
-      fontFamily: AppFonts.zcool,
-      fontFamilyFallback: AppFonts.fallback,
-      fontSize: 18,
-      height: 1.5,
-      letterSpacing: 1.2,
-      color: c.ink,
-    );
+  /// 诗句里的令字用朱砂高亮。
+  TextSpan _markedLine(BuildContext context, String line) {
+    final base = context.heading(size: CitroType.title, color: c.ink);
     if (ch.isEmpty || !line.contains(ch)) {
-      return TextSpan(style: base, text: '');
+      return TextSpan(style: base, text: line);
     }
     final parts = line.split(ch);
     return TextSpan(
@@ -1123,97 +868,62 @@ class GameFeihuaView extends StatelessWidget {
     );
   }
 
-  // --- 结算（web #gfeihuaResult.gi-panel） ------------------------------
-  Widget _result() {
+  // --- 结算 --------------------------------------------------------------
+
+  Widget _result(BuildContext context) {
     final titleColor = won ? c.mintInk : c.stamp;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            height: 36.3,
-            child: Center(
-              child: Text(
-                endTitle,
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: 22,
-                  height: 36.3 / 22,
-                  letterSpacing: 2.64,
-                  color: titleColor,
-                ),
-              ),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              endTitle,
+              textAlign: TextAlign.center,
+              style: context.heading(size: CitroType.heading, color: titleColor),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _tagRule(reverse: true),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  endSub,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 13,
-                    height: 1.65,
-                    letterSpacing: 0.75,
-                    color: c.ink2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              _tagRule(),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _stat('本局对句', '$count'),
-              const SizedBox(width: 20),
-              _stat('最长链', '${chain.length}'),
-              const SizedBox(width: 20),
-              _stat('本局得分', '$score', accent: true),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(width: 140, height: 48, child: _bigButton('再来一局', onAgain)),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              endSub,
+              textAlign: TextAlign.center,
+              style: context.body(size: CitroType.meta, color: c.ink2),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _stat(context, '本局对句', '$count'),
+                const SizedBox(width: 20),
+                _stat(context, '最长链', '${chain.length}'),
+                const SizedBox(width: 20),
+                _stat(context, '本局得分', '$score', accent: true),
+              ],
+            ),
+            const SizedBox(height: 20),
+            GameActionButton(
+              label: '再来一局',
+              primary: true,
+              expand: true,
+              onTap: onAgain,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _stat(String label, String value, {bool accent = false}) {
+  Widget _stat(BuildContext context, String label, String value, {bool accent = false}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: AppFonts.noto,
-            fontFamilyFallback: AppFonts.bodyFallback,
-            fontSize: 12,
-            height: 1.65,
-            letterSpacing: 0.46,
-            color: c.inkSoft,
-          ),
-        ),
+        Text(label, style: context.body(size: CitroType.small, color: c.inkSoft)),
         const SizedBox(height: 3),
         Text(
           value,
-          style: TextStyle(
-            fontFamily: AppFonts.kalam,
-            fontFamilyFallback: AppFonts.fallback,
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            height: 1.65,
-            letterSpacing: 0,
+          style: context.hand(
+            size: CitroType.heading,
+            weight: CitroType.strong,
             color: accent ? c.accentInk : c.ink,
           ),
         ),
@@ -1222,224 +932,27 @@ class GameFeihuaView extends StatelessWidget {
   }
 
   // --- 共用小件 ----------------------------------------------------------
-  Widget _watermark() {
-    return Positioned(
-      right: 13,
-      bottom: 11,
-      width: 25,
-      height: 25,
-      child: IgnorePointer(
-        child: Opacity(
-          opacity: 0.5,
-          child: Transform.rotate(
-            angle: -7 * math.pi / 180,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: c.stamp, width: 1),
-                borderRadius: BorderRadius.circular(3),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '诗',
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: 14,
-                  height: 1.65,
-                  letterSpacing: 0,
-                  color: c.stamp,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _dashedLine(Color color) {
-    return SizedBox(
-      height: 1,
-      width: double.infinity,
-      child: CustomPaint(painter: _DashedLinePainter(color)),
-    );
-  }
-
-  Widget _bigButton(String label, VoidCallback? onTap) {
-    return GameHover(
-      enabled: onTap != null,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 2,
-              height: 48,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.accent2,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.transparent),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.28,
-                    color: _onAccent,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 链表区顶部的错误 / AI 判定提示胶囊（不占布局，浮在列表上方）。
-  Widget _fbChip(String text) {
+  /// 链表区顶部的错误 / AI 判定提示胶囊。
+  Widget _fbChip(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         border: Border.all(color: c.line2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A3C301A),
-            offset: Offset(0, 2),
-            blurRadius: 6,
-          ),
-        ],
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Text(
         text,
         maxLines: 1,
         overflow: TextOverflow.clip,
-        style: TextStyle(
-          fontFamily: AppFonts.noto,
-          fontFamilyFallback: AppFonts.bodyFallback,
-          fontSize: 13,
-          height: 1.5,
-          letterSpacing: 0,
-          fontWeight: FontWeight.w700,
+        style: context.body(
+          size: CitroType.meta,
+          weight: CitroType.strong,
           color: c.ink2,
         ),
       ),
     );
   }
-
-  Widget _pillButton({
-    required String label,
-    required double width,
-    required double height,
-    required double fontSize,
-    required double letterSpacing,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 2,
-              height: height,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.accent2,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: letterSpacing,
-                    color: _onAccent,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 背景竖线 / 虚线
-// ---------------------------------------------------------------------------
-
-class _PaperLinesPainter extends CustomPainter {
-  _PaperLinesPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = color;
-    for (var x = 28.0; x < size.width; x += 28) {
-      canvas.drawRect(Rect.fromLTWH(x, 0, 1, size.height), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PaperLinesPainter old) => old.color != color;
-}
-
-class _DashedLinePainter extends CustomPainter {
-  _DashedLinePainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = 1;
-    for (var x = 0.0; x < size.width; x += 6) {
-      canvas.drawLine(
-        Offset(x, 0.5),
-        Offset(math.min(x + 3, size.width), 0.5),
-        p,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedLinePainter old) => old.color != color;
 }

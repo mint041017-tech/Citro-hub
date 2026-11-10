@@ -29,9 +29,9 @@ class WebHomePage extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final height = math.max(900.0, constraints.maxHeight);
-          final rowHeight = (height - 64 - 12 * 9) / 8;
-          // 搜索框高 44，星象卡顶部与它对齐（再让出 9px 纸胶带）。
-          final zodiacTop = (rowHeight - 44) / 2 + 9;
+          final rowHeight = (height - 64 - 16 * 9) / 8;
+          // 搜索框高 44，星象卡顶部与它对齐。
+          final zodiacTop = (rowHeight - 44) / 2;
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: CitroReveal(
@@ -113,23 +113,23 @@ class _WebGames extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const WebSectionTitle('小游戏', size: 22),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.x1),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   '共 ${kGameCards.length} 款',
-                  style: context.hand(size: 13, color: c.inkSoft),
+                  style: context.body(size: CitroType.small, color: c.inkSoft),
                 ),
               ),
               const Spacer(),
               Text(
                 '账号同步 · 全站排行',
-                style: context.body(size: 11, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) => GridView.builder(
@@ -146,7 +146,7 @@ class _WebGames extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.x2),
         const WebGameToolsRow(),
       ],
     );
@@ -166,7 +166,7 @@ class WebGameToolsRow extends StatelessWidget {
         title: '听隅',
         desc: '白噪音混音',
         icon: AppIcons.wave,
-        background: c.mintSoft,
+        background: c.tintGreen,
         foreground: c.mintInk,
         onTap: () => Navigator.of(context).pushNamed('/tingyu'),
       ),
@@ -174,7 +174,7 @@ class WebGameToolsRow extends StatelessWidget {
         title: '玩法抽签',
         desc: '无畏契约整活',
         icon: AppIcons.sparkle,
-        background: c.hl,
+        background: c.tintYellow,
         foreground: c.accentInk,
         onTap: () => Navigator.of(context).pushNamed('/play'),
       ),
@@ -182,7 +182,7 @@ class WebGameToolsRow extends StatelessWidget {
         title: '瞬投',
         desc: '投掷物点位',
         icon: AppIcons.location,
-        background: c.mintSoft,
+        background: c.tintGreen,
         foreground: c.mintInk,
         onTap: () =>
             openCitroPage(context, 'https://shuntou.top/', title: '瞬投'),
@@ -191,7 +191,7 @@ class WebGameToolsRow extends StatelessWidget {
         title: '屏幕分享',
         desc: '网页共享演示',
         icon: AppIcons.monitor,
-        background: c.noteB,
+        background: c.tintBlue,
         foreground: c.accentInk,
         onTap: () =>
             openCitroPage(context, 'https://demo.piik.tv/', title: '屏幕分享'),
@@ -200,7 +200,7 @@ class WebGameToolsRow extends StatelessWidget {
         title: '视野live',
         desc: '实时视野直播',
         icon: AppIcons.eye,
-        background: c.mintSoft,
+        background: c.tintGreen,
         foreground: c.mintInk,
         onTap: () => openCitroPage(
           context,
@@ -212,8 +212,8 @@ class WebGameToolsRow extends StatelessWidget {
         title: 'MsLab',
         desc: '毫秒灵敏度调试',
         icon: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
-        background: c.noteG,
-        foreground: c.mintInk,
+        background: c.tintBlue,
+        foreground: c.accentInk,
         onTap: () =>
             openCitroPage(context, 'https://mslab.gg/', title: 'MsLab'),
       ),
@@ -222,17 +222,17 @@ class WebGameToolsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          height: 80,
+          height: 84,
           child: Row(
             children: [
               for (var i = 0; i < tools.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+                if (i > 0) const SizedBox(width: AppSpacing.x1),
                 Expanded(child: _WebGameToolCard(tool: tools[i])),
               ],
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         _WebDownloadCard(
           onTap: () => openCitroPage(
             context,
@@ -273,25 +273,24 @@ class _WebGameToolCard extends StatelessWidget {
     final c = context.c;
     return Pressable(
       onTap: tool.onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      hoverColor: c.surface2,
       child: Container(
         decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: c.line),
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: tool.background,
-                borderRadius: BorderRadius.circular(9),
+                shape: BoxShape.circle,
               ),
               child: Center(
                 child: AppIcon(
@@ -308,8 +307,8 @@ class _WebGameToolCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 13,
-                weight: FontWeight.w700,
+                size: CitroType.meta,
+                weight: CitroType.medium,
                 color: c.ink,
                 height: 1.15,
               ),
@@ -320,7 +319,11 @@ class _WebGameToolCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: context.body(size: 10, color: c.inkSoft, height: 1.15),
+              style: context.body(
+                size: CitroType.micro,
+                color: c.inkSoft,
+                height: 1.15,
+              ),
             ),
           ],
         ),
@@ -340,43 +343,36 @@ class _WebDownloadCard extends StatelessWidget {
     final c = context.c;
     return Pressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.mintLine.withAlpha(c.dark ? 30 : 80),
+      hoverColor: c.mintSoft,
       child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: c.dark
-                ? const [Color(0x2AC9D3B2), Color(0x0DC9D3B2)]
-                : const [Color(0xFFE4EFDC), Color(0xFFFBF7EC)],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: c.mintLine, width: 1.2),
-          boxShadow: CitroColors.shadows.paper(c),
+          color: c.mintSoft,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          border: Border.all(color: c.mintLine),
         ),
         child: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: c.mint,
-                borderRadius: BorderRadius.circular(9),
+                shape: BoxShape.circle,
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.download, width: 2),
                   size: 16,
-                  color: const Color(0xFF2E2C22),
+                  color: c.onAccent,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.x2),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -387,28 +383,29 @@ class _WebDownloadCard extends StatelessWidget {
                       Text(
                         '下载站',
                         style: context.body(
-                          size: 13,
-                          weight: FontWeight.w700,
+                          size: CitroType.meta,
+                          weight: CitroType.medium,
                           color: c.mintInk,
                           height: 1.2,
                         ),
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius:
+                              BorderRadius.circular(CitroColors.radii.chip),
                         ),
                         child: Text(
                           '官方',
                           style: context.body(
-                            size: 9,
-                            weight: FontWeight.w700,
-                            color: const Color(0xFF2E2C22),
+                            size: CitroType.micro,
+                            weight: CitroType.medium,
+                            color: c.onAccent,
                             height: 1.15,
                           ),
                         ),
@@ -421,21 +418,20 @@ class _WebDownloadCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 10,
-                      color: c.mintInk.withAlpha(190),
+                      size: CitroType.micro,
+                      color: c.mintInk,
                       height: 1.15,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.x1),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: c.mintLine),
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -443,15 +439,15 @@ class _WebDownloadCard extends StatelessWidget {
                   Text(
                     '直达',
                     style: context.body(
-                      size: 10,
-                      weight: FontWeight.w700,
+                      size: CitroType.micro,
+                      weight: CitroType.medium,
                       color: c.mintInk,
                     ),
                   ),
                   const SizedBox(width: 2),
                   AppIcon(
                     strokeSvg(AppIcons.arrowUpRight, width: 2),
-                    size: 10,
+                    size: 11,
                     color: c.mintInk,
                   ),
                 ],
@@ -473,52 +469,49 @@ class _WebGameCard extends StatelessWidget {
     final c = context.c;
     return Pressable(
       onTap: () => Navigator.of(context).pushNamed('/${entry.key}'),
-      borderRadius: BorderRadius.circular(14),
-      hoverOverlayColor: c.hl.withAlpha(24),
-      child: Transform.rotate(
-        angle: 0,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-          decoration: BoxDecoration(
-            color: c.dark ? const Color(0xFF262320) : const Color(0xFFFFFDF8),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: CitroColors.shadows.paper(c),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: entry.gradient(c),
-                    ),
-                    borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+      hoverOverlayColor: c.surface2,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: entry.gradient(c),
                   ),
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: entry.art(context),
-                    ),
+                  borderRadius:
+                      BorderRadius.circular(CitroColors.radii.small),
+                ),
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: entry.art(context),
                   ),
                 ),
               ),
-              SizedBox(
-                height: 28,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    entry.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: 16, color: c.ink),
-                  ),
+            ),
+            SizedBox(
+              height: 28,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  entry.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(size: CitroType.bodyLg),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -534,43 +527,13 @@ class _WebCommunityTicket extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Transform.rotate(
-      angle: 0,
-      child: PaperCard(
-        color: c.noteB,
-        borderColor: c.line,
-        fold: true,
-        borderRadius: BorderRadius.circular(14),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
-        tapeWidth: 54,
-        tapeHeight: 15,
-        tapeTop: -8,
-        onTap: onTap,
-        child: Row(
-          children: [
-            const _EntryIcon(icon: AppIcons.users),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _EntryTitle(first: 'Citro ', second: '社区'),
-                  Text(
-                    '在清爽的汽水里，与同频的灵魂相遇',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 11, color: c.ink2, height: 1.35),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            _EntryArrow(badge: unread),
-          ],
-        ),
-      ),
+    return _EntryTile(
+      tint: c.tintBlue,
+      icon: AppIcons.users,
+      title: 'Citro 社区',
+      desc: '在清爽的汽水里，与同频的灵魂相遇',
+      badge: unread,
+      onTap: onTap,
     );
   }
 }
@@ -582,98 +545,95 @@ class _WebRecipeTicket extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _EntryTile(
+      tint: context.c.tintYellow,
+      icon: AppIcons.book,
+      title: '食谱日记',
+      desc: '记录每一道拿手菜，把喜欢的味道收好。',
+      onTap: onTap,
+    );
+  }
+}
+
+/// 首页入口卡：粉彩底 + 白色圆角 + 图标与标题。
+class _EntryTile extends StatelessWidget {
+  final Color tint;
+  final String icon;
+  final String title;
+  final String desc;
+  final int badge;
+  final VoidCallback onTap;
+
+  const _EntryTile({
+    required this.tint,
+    required this.icon,
+    required this.title,
+    required this.desc,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final c = context.c;
-    return Transform.rotate(
-      angle: 0,
-      child: PaperCard(
-        color: c.noteY,
-        borderColor: c.line,
-        fold: true,
-        borderRadius: BorderRadius.circular(14),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        tapeColor: c.dark ? const Color(0x44FFCE8E) : const Color(0x99F7BC78),
-        tapeWidth: 54,
-        tapeHeight: 15,
-        tapeTop: -8,
-        onTap: onTap,
+    return Pressable(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.surface.withAlpha(120),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: tint,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        ),
         child: Row(
           children: [
-            const _EntryIcon(icon: AppIcons.book),
-            const SizedBox(width: 10),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: c.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(icon, width: 1.9),
+                  size: 18,
+                  color: c.accentInk,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x2),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _EntryTitle(first: '食谱 ', second: '日记'),
                   Text(
-                    '记录每一道拿手菜，把喜欢的味道收好。',
+                    title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 11, color: c.ink2, height: 1.35),
+                    style: context.heading(size: CitroType.bodyLg),
+                  ),
+                  Text(
+                    desc,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.ink2,
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            const _EntryArrow(),
+            const SizedBox(width: AppSpacing.x1),
+            _EntryArrow(badge: badge),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EntryIcon extends StatelessWidget {
-  final String icon;
-
-  const _EntryIcon({required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: c.surface2.withAlpha(205),
-        shape: BoxShape.circle,
-        border: Border.all(color: c.line),
-      ),
-      child: Center(
-        child: AppIcon(
-          strokeSvg(icon, width: 1.9),
-          size: 18,
-          color: c.accentInk,
-        ),
-      ),
-    );
-  }
-}
-
-class _EntryTitle extends StatelessWidget {
-  final String first;
-  final String second;
-
-  const _EntryTitle({required this.first, required this.second});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        style: context.display(size: 24, color: c.ink),
-        children: [
-          TextSpan(text: first),
-          TextSpan(
-            text: second,
-            style: context
-                .heading(size: 22, color: c.ink)
-                .copyWith(backgroundColor: c.hl, height: 1.25),
-          ),
-        ],
       ),
     );
   }
@@ -696,9 +656,8 @@ class _EntryArrow extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: c.surface2.withAlpha(200),
+                color: c.surface,
                 shape: BoxShape.circle,
-                border: Border.all(color: c.line2),
               ),
               child: Center(
                 child: AppIcon(
@@ -714,20 +673,21 @@ class _EntryArrow extends StatelessWidget {
               top: -4,
               right: -4,
               child: Container(
-                constraints: const BoxConstraints(minWidth: 15),
-                height: 15,
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+                constraints: const BoxConstraints(minWidth: 16),
+                height: 16,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   color: c.stamp,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                  border: Border.all(color: c.surface, width: 2),
                 ),
                 child: Center(
                   child: Text(
                     badge > 9 ? '9+' : '$badge',
                     style: context.body(
-                      size: 9,
-                      weight: FontWeight.w700,
-                      color: c.surface2,
+                      size: CitroType.micro,
+                      weight: CitroType.medium,
+                      color: c.surface,
                     ),
                   ),
                 ),
@@ -748,20 +708,21 @@ class _WebQuoteStrip extends StatelessWidget {
     final now = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     final quote = kQuotes[dayOfYear % kQuotes.length];
-    return Transform.rotate(
-      angle: 0,
-      child: PaperCard(
-        color: c.dark ? const Color(0xFF201E19) : const Color(0xFFFBF3E1),
-        borderColor: c.accent.withAlpha(70),
+    return Pressable(
+      onTap: () => copyText(
+        '${quote.cn} — ${quote.en}',
+        context: context,
+        tip: '已复制每日一言',
+      ),
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.surface2,
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        tapeColor: c.tape3,
-        tapeWidth: 42,
-        tapeHeight: 14,
-        tapeTop: -8,
-        onTap: () => copyText(
-          '${quote.cn} — ${quote.en}',
-          context: context,
-          tip: '已复制每日一言',
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -773,20 +734,23 @@ class _WebQuoteStrip extends StatelessWidget {
                 children: [
                   Image.asset(
                     'assets/images/logo.webp',
-                    width: 34,
-                    height: 34,
-                    cacheWidth: 102,
+                    width: 30,
+                    height: 30,
+                    cacheWidth: 90,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.x1),
                   Text(
                     'Citro',
-                    style: context.display(size: 18, color: c.inkSoft),
+                    style: context.heading(
+                      size: CitroType.body,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 120),
+              padding: const EdgeInsets.symmetric(horizontal: 96),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final maxText = math.max(
@@ -803,7 +767,7 @@ class _WebQuoteStrip extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: context.heading(size: 22, color: c.ink),
+                          style: context.heading(size: 20),
                         ),
                       ),
                       Container(
@@ -819,10 +783,9 @@ class _WebQuoteStrip extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: context.hand(
-                            size: 20,
+                          style: context.body(
+                            size: CitroType.body,
                             color: c.inkSoft,
-                            style: FontStyle.italic,
                           ),
                         ),
                       ),

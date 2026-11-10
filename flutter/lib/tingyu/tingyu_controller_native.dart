@@ -418,6 +418,13 @@ class NookController extends ChangeNotifier {
 
   Future<void> _play() async {
     if (_tracks.isEmpty) throw StateError('先加入至少一种声音。');
+    // 上次定时到点后 gain 被压到 0、状态停在 expired；再次播放前必须复位，
+    // 否则所有轨道会继续静音，且不会重新计时。
+    if (_timerStatus == 'expired' || _timerGain != 1) {
+      _timerStatus = 'off';
+      _timerGain = 1;
+      unawaited(_applyVolumes());
+    }
     _busy = true;
     notifyListeners();
     try {
@@ -650,6 +657,9 @@ class NookController extends ChangeNotifier {
     _timerDuration = seconds;
     _timerFade = fadeSeconds.clamp(0, seconds);
     _timerGain = 1;
+    // 重置后立刻把增益写回播放器：否则「上次淡出到 0，再重新计时且 fade=0」
+    // 时轨道音量仍停在 0，听起来就是全部静音。
+    if (_playing) unawaited(_applyVolumes());
     if (_playing) {
       _timerDeadline = DateTime.now().add(Duration(seconds: seconds));
       _timerStatus = 'running';

@@ -36,14 +36,27 @@ class GamesPage extends StatelessWidget {
         ? (width >= 900 ? 6 : (width >= 640 ? 5 : (width >= 460 ? 4 : 3)))
         : (width >= 1180 ? 7 : (width >= 920 ? 6 : (width >= 680 ? 5 : 3)));
     final games = kGameCards;
+    // 分类重排：按玩法类型分组，不再是一整坨平铺。
+    final gameGroups = <(String, List<GameCardData>)>[
+      for (final group in const <(String, List<String>)>[
+        ('益智', ['g2048', 'gmem', 'gsudoku', 'gnono', 'gslide']),
+        ('休闲', ['gsnake', 'gsheep', 'gjump', 'gpeng', 'gbrake']),
+        ('文字', ['gidiom', 'gfeihua']),
+        ('创意', ['gliquid', 'gknockwater']),
+      ])
+        (
+          group.$1,
+          [for (final key in group.$2) games.firstWhere((g) => g.key == key)],
+        ),
+    ];
     final mobileApp = !kIsWeb && (platform.isAndroid || platform.isIOS);
     final gameTools = <_GameToolLink>[
       _GameToolLink(
         title: '玩法抽签',
         desc: '无畏契约整活玩法',
         icon: AppIcons.sparkle,
-        background: c.hl,
-        foreground: c.accentInk,
+        background: c.tintPink,
+        foreground: c.stamp,
         onTap: () => Navigator.of(context).pushNamed('/play'),
       ),
       _GameToolLink(
@@ -59,7 +72,7 @@ class GamesPage extends StatelessWidget {
         title: '屏幕分享',
         desc: '网页共享与远程演示',
         icon: AppIcons.monitor,
-        background: c.noteB,
+        background: c.tintBlue,
         foreground: c.accentInk,
         onTap: () =>
             openCitroPage(context, 'https://demo.piik.tv/', title: '屏幕分享'),
@@ -81,7 +94,7 @@ class GamesPage extends StatelessWidget {
           title: 'MsLab',
           desc: '毫秒灵敏度调试',
           icon: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
-          background: c.noteG,
+          background: c.tintGreen,
           foreground: c.mintInk,
           onTap: () =>
               openCitroPage(context, 'https://mslab.gg/', title: 'MsLab'),
@@ -92,7 +105,7 @@ class GamesPage extends StatelessWidget {
             title: '下载站',
             desc: 'App、Mod 与工具下载',
             icon: AppIcons.download,
-            background: c.noteG,
+            background: c.tintGreen,
             foreground: c.mintInk,
             onTap: () => openCitroPage(
               context,
@@ -102,7 +115,7 @@ class GamesPage extends StatelessWidget {
           )
         : null;
     final showGameTools = kIsWeb || platform.isAndroid || platform.isIOS;
-    final content = PaperBackground(
+    final content = CitroBackground(
       child: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -119,101 +132,42 @@ class GamesPage extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  PaperCard(
-                    color: c.surface2,
+                  CitroCard(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Stack(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Positioned(
-                          right: -18,
-                          bottom: -34,
-                          child: IgnorePointer(
-                            child: Transform.rotate(
-                              angle: -9 * math.pi / 180,
-                              child: Opacity(
-                                opacity: .08,
-                                child: Image.asset(
-                                  'assets/images/logo.webp',
-                                  width: 170,
-                                  cacheWidth: 340,
-                                ),
-                              ),
+                        CitroSectionHeader(
+                          '游戏',
+                          subtitle: '账号同步 · 全站排行',
+                        ),
+                        const SizedBox(height: AppSpacing.x3),
+                        for (final group in gameGroups) ...[
+                          Text(
+                            group.$1,
+                            style: context.body(
+                              size: CitroType.label,
+                              weight: CitroType.medium,
+                              color: c.ink2,
                             ),
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Center(
-                              child: HighlightedText(
-                                '游戏',
-                                style: context.heading(
-                                  size: 32,
-                                  color: c.ink,
-                                  letterSpacing: 4,
-                                ),
-                                highlight: c.hl,
-                              ),
+                          const SizedBox(height: AppSpacing.x1),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: gameColumns,
+                              crossAxisSpacing: AppSpacing.x1,
+                              mainAxisSpacing: AppSpacing.x1,
+                              childAspectRatio: 1.06,
                             ),
-                            const SizedBox(height: 3),
-                            Center(
-                              child: Text(
-                                '账号同步 · 全站排行',
-                                style: context.body(
-                                  size: 13,
-                                  weight: FontWeight.w400,
-                                  color: c.inkSoft,
-                                  letterSpacing: .78,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Transform.rotate(
-                                angle: -1 * math.pi / 180,
-                                child: Container(
-                                  width: 56,
-                                  height: 6,
-                                  color: c.hl,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: gameColumns,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
-                                    childAspectRatio: 1.06,
-                                  ),
-                              itemCount: games.length,
-                              itemBuilder: (_, i) => _GameCard(entry: games[i]),
-                            ),
-                          ],
-                        ),
+                            itemCount: group.$2.length,
+                            itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
+                          ),
+                          const SizedBox(height: AppSpacing.x3),
+                        ],
                       ],
-                    ),
-                  ),
-                  Positioned(
-                    top: -9,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Transform.rotate(
-                        angle: -2.5 * math.pi / 180,
-                        child: ClipPath(
-                          clipper: _TapeClip(),
-                          child: Container(
-                            width: 110,
-                            height: 26,
-                            color: c.tape2,
-                          ),
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -224,23 +178,23 @@ class GamesPage extends StatelessWidget {
               ],
               if (!platform.isWindows && !kIsWeb) ...[
                 const SizedBox(height: 12),
-                PaperCard(
-                  padding: const EdgeInsets.all(12),
+                CitroCard(
+                  padding: const EdgeInsets.all(14),
                   onTap: () => _openRes(context),
                   child: Row(
                     children: [
                       Container(
-                        width: 38,
-                        height: 38,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: c.hl,
-                          borderRadius: BorderRadius.circular(10),
+                          color: c.tintBlue,
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         ),
                         child: Center(
                           child: AppIcon(
                             strokeSvg(AppIcons.monitor, width: 2),
                             size: 20,
-                            color: c.accentInk,
+                            color: c.accent,
                           ),
                         ),
                       ),
@@ -336,20 +290,21 @@ class _GameToolSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return PaperCard(
-      tapeColor: c.tape2,
-      tapeAngle: 2.2,
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const SectionTitle('小工具', size: 20),
+              Text(
+                '小工具',
+                style: context.heading(size: CitroType.titleLg, color: c.ink),
+              ),
               const Spacer(),
               Text(
                 kIsWeb ? '在线工具 · 下载' : '在线工具',
-                style: context.body(size: 11, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
@@ -417,7 +372,7 @@ class _GameToolCompactCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      hoverColor: c.accent.withAlpha(c.dark ? 44 : 46),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         decoration: BoxDecoration(
@@ -476,7 +431,7 @@ class _GameToolCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.hl.withAlpha(c.dark ? 20 : 48),
+      hoverColor: c.accent.withAlpha(c.dark ? 44 : 46),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
@@ -545,19 +500,6 @@ class _GameToolCard extends StatelessWidget {
   }
 }
 
-class _TapeClip extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(size.width * .02, size.height * .06)
-    ..lineTo(size.width, 0)
-    ..lineTo(size.width * .97, size.height * .94)
-    ..lineTo(0, size.height)
-    ..close();
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> old) => false;
-}
-
 class _GameCard extends StatelessWidget {
   final GameCardData entry;
   const _GameCard({required this.entry});
@@ -593,7 +535,7 @@ class _GameCard extends StatelessWidget {
           color: c.surface2,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(

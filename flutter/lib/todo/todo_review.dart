@@ -87,7 +87,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           margin: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
             border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.lg(c),
           ),
@@ -136,7 +136,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: c.accent.withAlpha(36),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         border: Border.all(color: c.accent.withAlpha(110)),
                       ),
                       child: Row(
@@ -207,7 +207,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: c.bg2.withAlpha(c.dark ? 120 : 90),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -251,7 +251,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   color: c.surface2,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   border: Border.all(color: c.line),
                 ),
                 child: Center(
@@ -266,7 +266,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                 ),
               ),
             ),
-          _PaperSwitch(
+          _ToggleSwitch(
             value: store.autoReviewEnabled,
             onChanged: (v) => store.setAutoReview(enabled: v),
           ),
@@ -276,11 +276,11 @@ class _ReviewSheetState extends State<_ReviewSheet> {
   }
 }
 
-class _PaperSwitch extends StatelessWidget {
+class _ToggleSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _PaperSwitch({required this.value, required this.onChanged});
+  const _ToggleSwitch({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -291,30 +291,24 @@ class _PaperSwitch extends StatelessWidget {
       child: AnimatedContainer(
         duration: CitroMotion.hover,
         curve: CitroMotion.easeColor,
-        width: 44,
-        height: 26,
+        width: 46,
+        height: 28,
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           color: value ? c.accent : c.line2,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         ),
         child: AnimatedAlign(
           duration: CitroMotion.hover,
           curve: CitroMotion.easeOut,
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: 20,
-            height: 20,
+            width: 22,
+            height: 22,
             decoration: BoxDecoration(
-              color: value ? const Color(0xFFFFFDF8) : c.surface2,
+              color: value ? c.surface : c.surface2,
               shape: BoxShape.circle,
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1A000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                ),
-              ],
+              boxShadow: CitroColors.shadows.sm(c),
             ),
           ),
         ),

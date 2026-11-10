@@ -11,6 +11,7 @@ import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import 'game_theme.dart';
 
 /// “正在玩”列表每 4s 刷新一次；内容没变时不触发整页重建。
 bool sameLiveList(List<dynamic> a, List<dynamic> b) {
@@ -109,7 +110,8 @@ class _GamePageShellState extends State<GamePageShell> {
     final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
     final state = context.app;
     return Scaffold(
-      body: PaperBackground(
+      backgroundColor: c.bg,
+      body: CitroBackground(
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -121,16 +123,17 @@ class _GamePageShellState extends State<GamePageShell> {
                     if (!duo)
                       Pressable(
                         onTap: () => Navigator.of(context).maybePop(),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.button),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 12,
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: c.surface2,
-                            borderRadius: BorderRadius.circular(999),
+                            color: c.surface,
+                            borderRadius: BorderRadius.circular(CitroColors.radii.button),
                             border: Border.all(color: c.line),
-                            boxShadow: CitroColors.shadows.paper(c),
+                            boxShadow: CitroColors.shadows.sm(c),
                           ),
                           child: Row(
                             children: [
@@ -139,12 +142,12 @@ class _GamePageShellState extends State<GamePageShell> {
                                 size: 15,
                                 color: c.ink2,
                               ),
-                              const SizedBox(width: 3),
+                              const SizedBox(width: 4),
                               Text(
                                 '返回',
                                 style: context.body(
-                                  size: 12,
-                                  weight: FontWeight.w700,
+                                  size: CitroType.caption,
+                                  weight: CitroType.strong,
                                 ),
                               ),
                             ],
@@ -163,7 +166,7 @@ class _GamePageShellState extends State<GamePageShell> {
                         const SizedBox(width: 5),
                         Text(
                           '游戏空间',
-                          style: context.heading(size: 15, color: c.ink),
+                          style: context.heading(size: CitroType.body, color: c.ink),
                         ),
                       ],
                     ),
@@ -176,8 +179,8 @@ class _GamePageShellState extends State<GamePageShell> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: c.surface2,
-                          borderRadius: BorderRadius.circular(999),
+                          color: c.surface,
+                          borderRadius: BorderRadius.circular(CitroColors.radii.button),
                           border: Border.all(color: c.line),
                         ),
                         child: Row(
@@ -210,7 +213,7 @@ class _GamePageShellState extends State<GamePageShell> {
                                         style: context.body(
                                           size: 10,
                                           weight: FontWeight.w700,
-                                          color: c.accentInk,
+                                          color: c.accentText,
                                         ),
                                       ),
                                     ),
@@ -218,7 +221,7 @@ class _GamePageShellState extends State<GamePageShell> {
                             const SizedBox(width: 4),
                             Text(
                               state.loggedIn ? state.displayName : '游客',
-                              style: context.body(size: 11, color: c.ink2),
+                              style: context.body(size: CitroType.small, color: c.ink2),
                             ),
                           ],
                         ),
@@ -237,14 +240,14 @@ class _GamePageShellState extends State<GamePageShell> {
                       Text(
                         widget.title,
                         textAlign: TextAlign.center,
-                        style: context.heading(size: 28, color: c.ink),
+                        style: context.heading(size: CitroType.heading, color: c.ink),
                       ),
                       const SizedBox(height: 5),
                       Text(
                         widget.subtitle,
                         textAlign: TextAlign.center,
                         style: context.body(
-                          size: 13,
+                          size: CitroType.meta,
                           color: c.inkSoft,
                           height: 1.6,
                         ),
@@ -263,7 +266,7 @@ class _GamePageShellState extends State<GamePageShell> {
                       Text(
                         widget.note,
                         style: context.body(
-                          size: 11,
+                          size: CitroType.small,
                           color: c.inkSoft,
                           height: 1.65,
                         ),
@@ -306,18 +309,18 @@ Future<void> showGameAccount(BuildContext context) async {
           TextField(
             controller: controller,
             maxLength: 5,
-            style: context.body(size: 14),
+            style: context.body(size: CitroType.body),
             decoration: InputDecoration(
               counterText: '',
               prefixText: '游客·',
               filled: true,
               fillColor: ctx.c.surface2,
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(CitroColors.radii.field),
                 borderSide: BorderSide(color: ctx.c.line2),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(CitroColors.radii.field),
                 borderSide: BorderSide(color: ctx.c.accent),
               ),
             ),
@@ -356,25 +359,24 @@ class GamePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(12),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.sm(c),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: context.body(size: 10, color: c.inkSoft)),
-          const SizedBox(height: 1),
+          Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
+          const SizedBox(height: 2),
           Text(
             value,
-            style: context.display(
-              size: 18,
-              weight: FontWeight.w700,
+            style: context.hand(
+              size: CitroType.titleLg,
+              weight: CitroType.strong,
               color: color ?? c.ink,
-              height: 1.1,
             ),
           ),
         ],
@@ -402,20 +404,23 @@ class GameButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final fg = primary ? c.accentText : c.ink2;
     return Pressable(
       onTap: onTap,
+      scale: .97,
+      borderRadius: BorderRadius.circular(CitroColors.radii.button),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: small ? 10 : 12,
+          horizontal: small ? 12 : 16,
           vertical: small ? 8 : 10,
         ),
         decoration: BoxDecoration(
-          color: primary ? c.accent : c.surface2,
-          borderRadius: BorderRadius.circular(10),
+          color: primary ? c.accent : c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.button),
           border: Border.all(color: primary ? c.accent : c.line),
           boxShadow: primary
-              ? CitroColors.shadows.note(c)
-              : CitroColors.shadows.paper(c),
+              ? CitroColors.shadows.float(c)
+              : CitroColors.shadows.sm(c),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -423,17 +428,17 @@ class GameButton extends StatelessWidget {
             if (icon != null) ...[
               AppIcon(
                 strokeSvg(icon!, width: 2.2),
-                size: small ? 12 : 14,
-                color: primary ? const Color(0xFF2E2C22) : c.accentInk,
+                size: small ? 13 : 15,
+                color: fg,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 5),
             ],
             Text(
               label,
               style: context.body(
-                size: small ? 11 : 12,
-                weight: FontWeight.w700,
-                color: primary ? const Color(0xFF2E2C22) : c.ink2,
+                size: small ? CitroType.small : CitroType.caption,
+                weight: CitroType.strong,
+                color: fg,
               ),
             ),
           ],
@@ -451,11 +456,12 @@ class LivePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(12),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.line),
+        boxShadow: CitroColors.shadows.sm(c),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,17 +471,14 @@ class LivePanel extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4CAF50),
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: c.mint, shape: BoxShape.circle),
               ),
               const SizedBox(width: 5),
               Text(
                 '正在玩 · ${list.length} 人',
                 style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
+                  size: CitroType.small,
+                  weight: CitroType.strong,
                   color: c.ink2,
                 ),
               ),
@@ -493,14 +496,14 @@ class LivePanel extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 11,
+                        size: CitroType.small,
                         color: (raw['you'] == true) ? c.accentInk : c.inkSoft,
                       ),
                     ),
                   ),
                   Text(
                     '${raw['progress'] ?? ''}',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                 ],
               ),
@@ -583,8 +586,8 @@ class GameDiffTabs extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: selected == d.$1 ? c.hl : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                color: selected == d.$1 ? c.accentLt : Colors.transparent,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(
                   color: selected == d.$1 ? c.accent : c.line2,
                 ),
@@ -592,9 +595,9 @@ class GameDiffTabs extends StatelessWidget {
               child: Text(
                 d.$2,
                 style: context.body(
-                  size: 12,
-                  weight: FontWeight.w700,
-                  color: selected == d.$1 ? c.accentInk : c.inkSoft,
+                  size: CitroType.caption,
+                  weight: CitroType.strong,
+                  color: selected == d.$1 ? c.accentText : c.inkSoft,
                 ),
               ),
             ),
@@ -674,16 +677,16 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: on ? c.hl : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          color: on ? c.accentLt : Colors.transparent,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: on ? c.accent : c.line2),
         ),
         child: Text(
           label,
           style: context.body(
-            size: 13,
-            weight: FontWeight.w700,
-            color: on ? c.accentInk : c.inkSoft,
+            size: CitroType.meta,
+            weight: CitroType.strong,
+            color: on ? c.accentText : c.inkSoft,
           ),
         ),
       ),
@@ -725,7 +728,9 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
       height: height,
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.modal),
+        ),
         border: Border.all(color: c.line),
         boxShadow: CitroColors.shadows.lg(c),
       ),
@@ -740,7 +745,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
                   color: c.line2,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs / 2),
                 ),
               ),
             ),
@@ -818,13 +823,17 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🏆', style: TextStyle(fontSize: 40)),
+                          Icon(
+                            Icons.emoji_events_outlined,
+                            size: 40,
+                            color: c.accentLt,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             widget.aiSplit && boardTab == 'ai'
                                 ? 'AI 榜还没有成绩 · 十万分以上自动归入'
                                 : '还没有人上榜，快来抢第一',
-                            style: context.body(size: 12, color: c.inkSoft),
+                            style: context.body(size: CitroType.caption, color: c.inkSoft),
                           ),
                         ],
                       ),
@@ -835,37 +844,39 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                         vertical: 4,
                       ),
                       itemCount: _shownRows.length,
-                      separatorBuilder: (_, _) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: DashedLine(color: c.line2.withAlpha(120)),
+                      separatorBuilder: (_, _) => CitroDivider(
+                        color: c.line,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
                       ),
                       itemBuilder: (_, i) {
                         final r = _shownRows[i];
-                        final medal = r.rank == 1
-                            ? '🥇'
-                            : r.rank == 2
-                            ? '🥈'
-                            : r.rank == 3
-                            ? '🥉'
-                            : '${r.rank}';
+                        final rankColor = r.rank == 1
+                            ? c.accent
+                            : (r.rank == 2 ? c.ink2 : (r.rank == 3 ? c.stamp : c.line2));
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           decoration: r.you
                               ? BoxDecoration(
-                                  color: c.hl.withAlpha(110),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: c.accentLt.withAlpha(150),
+                                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                                 )
                               : null,
                           child: Row(
                             children: [
-                              SizedBox(
-                                width: 30,
+                              Container(
+                                width: 26,
+                                height: 26,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: r.rank <= 3 ? rankColor : c.surface2,
+                                  shape: BoxShape.circle,
+                                ),
                                 child: Text(
-                                  medal,
-                                  textAlign: TextAlign.center,
-                                  style: context.display(
-                                    size: 15,
-                                    color: c.inkSoft,
+                                  '${r.rank}',
+                                  style: context.hand(
+                                    size: CitroType.small,
+                                    weight: CitroType.strong,
+                                    color: r.rank == 1 ? c.accentText : (r.rank <= 3 ? c.onAccent : c.inkSoft),
                                   ),
                                 ),
                               ),
@@ -874,7 +885,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                                 height: 30,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: c.hl,
+                                  color: c.surface2,
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: r.av != null
@@ -887,8 +898,8 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                                         child: Text(
                                           r.name.isEmpty ? '?' : r.name[0],
                                           style: context.body(
-                                            size: 12,
-                                            color: c.accentInk,
+                                            size: CitroType.small,
+                                            color: c.ink2,
                                           ),
                                         ),
                                       ),
@@ -900,17 +911,17 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: context.body(
-                                    size: 13,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.meta,
+                                    weight: CitroType.strong,
                                     color: c.ink,
                                   ),
                                 ),
                               ),
                               Text(
                                 '${r.score}',
-                                style: context.display(
-                                  size: 18,
-                                  weight: FontWeight.w700,
+                                style: context.hand(
+                                  size: CitroType.bodyLg,
+                                  weight: CitroType.strong,
                                   color: c.accentInk,
                                 ),
                               ),
@@ -1092,7 +1103,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                 Pressable(
                   scale: .97,
                   hoverLift: 0,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   onTap: () {
                     if (diff == item.$1) return;
                     setState(() => diff = item.$1);
@@ -1105,7 +1116,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                     ),
                     decoration: BoxDecoration(
                       color: diff == item.$1 ? c.accent : c.surface2,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                       border: Border.all(
                         color: diff == item.$1 ? c.accent : c.line,
                       ),
@@ -1116,7 +1127,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                         size: 12,
                         weight: FontWeight.w700,
                         color: diff == item.$1
-                            ? const Color(0xFF2E2C22)
+                            ? c.accentText
                             : c.inkSoft,
                       ),
                     ),
@@ -1135,7 +1146,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                   child: Pressable(
                     scale: .97,
                     hoverLift: 0,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     onTap: () => setState(() => boardTab = item.$1),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -1144,7 +1155,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                       ),
                       decoration: BoxDecoration(
                         color: boardTab == item.$1 ? c.hl : Colors.transparent,
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                         border: Border.all(
                           color: boardTab == item.$1 ? c.accent : c.line,
                         ),
@@ -1154,7 +1165,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                         style: context.body(
                           size: 12,
                           weight: FontWeight.w700,
-                          color: boardTab == item.$1 ? c.accentInk : c.inkSoft,
+                          color: boardTab == item.$1 ? c.accentText : c.inkSoft,
                         ),
                       ),
                     ),
@@ -1164,7 +1175,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
           ),
         ],
         const SizedBox(height: 8),
-        DashedLine(color: c.line2.withAlpha(150)),
+        CitroDivider(color: c.line),
         const SizedBox(height: 4),
         Expanded(
           child: loading
@@ -1195,8 +1206,8 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: c.hl,
-              borderRadius: BorderRadius.circular(9),
+              color: c.accentLt.withAlpha(140),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.accent.withAlpha(100)),
             ),
             child: Text(
@@ -1220,8 +1231,8 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
       margin: const EdgeInsets.only(bottom: 3),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: row.you ? c.hl.withAlpha(120) : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        color: row.you ? c.accentLt.withAlpha(150) : Colors.transparent,
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
       ),
       child: Row(
         children: [
@@ -1230,9 +1241,9 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
             child: Text(
               '${row.rank}',
               textAlign: TextAlign.center,
-              style: context.display(
-                size: 14,
-                weight: FontWeight.w700,
+              style: context.hand(
+                size: CitroType.body,
+                weight: CitroType.strong,
                 color: row.rank <= 3 ? c.accentInk : c.inkSoft,
               ),
             ),
@@ -1240,7 +1251,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
           Container(
             width: 28,
             height: 28,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: c.hl),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: c.surface2),
             clipBehavior: Clip.antiAlias,
             child: row.av != null
                 ? Image.network(
@@ -1251,7 +1262,7 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                 : Center(
                     child: Text(
                       row.name.isEmpty ? '?' : row.name[0],
-                      style: context.body(size: 11, color: c.accentInk),
+                      style: context.body(size: CitroType.small, color: c.ink2),
                     ),
                   ),
           ),
@@ -1262,8 +1273,8 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.body(
-                size: 12,
-                weight: FontWeight.w700,
+                size: CitroType.caption,
+                weight: CitroType.strong,
                 color: c.ink,
               ),
             ),
@@ -1271,9 +1282,9 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
           const SizedBox(width: 4),
           Text(
             '${row.score}',
-            style: context.display(
-              size: 15,
-              weight: FontWeight.w700,
+            style: context.hand(
+              size: CitroType.bodyLg,
+              weight: CitroType.strong,
               color: c.accentInk,
             ),
           ),

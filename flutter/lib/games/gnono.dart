@@ -19,6 +19,7 @@ import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import 'game_ui.dart';
+import 'game_theme.dart';
 
 class GameNonoPage extends StatefulWidget {
   const GameNonoPage({super.key});
@@ -361,12 +362,10 @@ class _NonoTabs extends StatelessWidget {
               : null,
           child: Text(
             it.$2,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
-              height: 1.4,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
+              color: on ? c.accentText : c.inkSoft,
             ),
           ),
         ),
@@ -375,7 +374,7 @@ class _NonoTabs extends StatelessWidget {
   }
 }
 
-/// 单行 HUD 里的拉伸按钮（web .g-actions stretch → 103.73×56.64）。
+/// 单行 HUD 里的拉伸按钮（nosh 胶囊）。
 class _NonoButton extends StatelessWidget {
   const _NonoButton({
     required this.label,
@@ -392,73 +391,39 @@ class _NonoButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fg = primary ? const Color(0xFF3B2A10) : c.ink2;
+    final fg = primary ? c.accentText : c.ink2;
     return GameHover(
       enabled: onTap != null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: CssShadowLayer(
-          radius: 999,
-          shadows: primary
-              ? const [
-                  CssShadowSpec(
-                    color: Color(0xA694530A),
-                    offset: Offset(0, 11),
-                    blur: 22,
-                    spread: -12,
+        child: Container(
+          width: 103.73,
+          height: 56.64,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: primary ? c.accent : c.surface,
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
+            border: Border.all(color: primary ? c.accent : c.line),
+            boxShadow: primary
+                ? CitroColors.shadows.float(c)
+                : CitroColors.shadows.sm(c),
+          ),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                gameIcon(icon, size: 15, color: fg),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: context.body(
+                    size: CitroType.meta,
+                    weight: CitroType.strong,
+                    color: fg,
                   ),
-                ]
-              : const [
-                  CssShadowSpec(
-                    color: Color(0x803C301A),
-                    offset: Offset(0, 4),
-                    blur: 12,
-                    spread: -8,
-                  ),
-                ],
-          child: SizedBox(
-            width: 103.73,
-            height: 56.64,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: primary
-                    ? null
-                    : (c.dark ? c.surface2 : const Color(0xB8FFFCF4)),
-                gradient: primary
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-                      )
-                    : null,
-                border: Border.all(
-                  color: primary
-                      ? const Color(0x2E94530A)
-                      : (c.dark ? c.line2 : const Color(0x294A3A22)),
                 ),
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    gameIcon(icon, size: 15, color: fg),
-                    const SizedBox(width: 8),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: AppFonts.noto,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .26,
-                        color: fg,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
@@ -553,18 +518,13 @@ class _NonoBoard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: c.line,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: c.line2),
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                      border: Border.all(color: c.line),
+                      boxShadow: CitroColors.shadows.card(c),
                     ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
-                    child: CustomPaint(painter: _NonoInsetShadowPainter()),
                   ),
                 ),
                 Positioned.fill(
@@ -684,12 +644,10 @@ class _RowHint extends StatelessWidget {
               if (i > 0) const SizedBox(width: 3),
               Text(
                 '${hints[i]}',
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  height: 1,
-                  color: done ? const Color(0x38F4F1ED) : c.mintInk,
+                style: context.body(
+                  size: CitroType.micro,
+                  weight: CitroType.strong,
+                  color: done ? c.line2 : c.mintInk,
                 ),
               ),
             ],
@@ -711,25 +669,27 @@ class _ColHint extends StatelessWidget {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          for (var i = 0; i < hints.length; i++) ...[
-            if (i > 0) const SizedBox(height: 3),
-            Text(
-              '${hints[i]}',
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                height: 1,
-                color: done ? const Color(0x38F4F1ED) : c.mintInk,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            for (var i = 0; i < hints.length; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              Text(
+                '${hints[i]}',
+                style: context.body(
+                  size: CitroType.micro,
+                  weight: CitroType.strong,
+                  height: 1,
+                  color: done ? c.line2 : c.mintInk,
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -762,17 +722,15 @@ class _NonoCell extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: filled ? c.accent : c.surface2,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
         ),
         child: marked
             ? Center(
                 child: Text(
                   '×',
-                  style: TextStyle(
-                    fontFamily: AppFonts.noto,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
+                  style: context.body(
+                    size: CitroType.body,
+                    weight: CitroType.strong,
                     color: c.inkSoft,
                   ),
                 ),
@@ -781,29 +739,6 @@ class _NonoCell extends StatelessWidget {
       ),
     );
   }
-}
-
-/// CSS `inset 0 2px 6px rgba(90,74,44,.09)` 的近似：在内边缘画一圈模糊描边。
-class _NonoInsetShadowPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final inner = RRect.fromRectAndRadius(
-      Rect.fromLTWH(1, 3, size.width - 2, size.height - 2),
-      const Radius.circular(12),
-    );
-    canvas.save();
-    canvas.clipRRect(inner);
-    final paint = Paint()
-      ..color = const Color(0x155A4A2C)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 9
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-    canvas.drawRRect(inner, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _NonoInsetShadowPainter oldDelegate) => false;
 }
 
 class _NonoOverlay extends StatelessWidget {
@@ -821,37 +756,26 @@ class _NonoOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
       child: CitroBackdropBlur(
         sigma: 6,
         child: Container(
           decoration: BoxDecoration(
-            color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FBF7EC),
+            color: c.surface.withValues(alpha: 0.96),
             border: Border.all(color: c.line),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(CitroColors.radii.card),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '恭喜完成！',
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.68,
-                  color: c.mintInk,
-                ),
+                style: context.heading(size: CitroType.heading, color: c.mintInk),
               ),
               const SizedBox(height: 6),
               Text(
                 '用时 ${gameFmtDuration(seconds)} · 得分 $score',
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontSize: 13,
-                  color: c.ink2,
-                  height: 1.7,
-                ),
+                style: context.body(size: CitroType.meta, color: c.ink2),
               ),
               const SizedBox(height: 10),
               _NonoRetryButton(onTap: onRetry),
@@ -870,57 +794,10 @@ class _NonoRetryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const fg = Color(0xFF3B2A10);
-    return GameHover(
-      enabled: onTap != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: CssShadowLayer(
-          radius: 999,
-          shadows: const [
-            CssShadowSpec(
-              color: Color(0xA694530A),
-              offset: Offset(0, 11),
-              blur: 22,
-              spread: -12,
-            ),
-          ],
-          child: SizedBox(
-            height: 42,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFF9C98C), Color(0xFFF0A85C)],
-                ),
-                border: Border.all(color: const Color(0x2E94530A)),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 22),
-                // widthFactor:1 —— 没有它 Center 会撑满浮层宽度，
-                // 按钮被拉成整条棋盘宽（web 是 inline-flex 内容自适应）。
-                child: Center(
-                  widthFactor: 1,
-                  child: Text(
-                    '再来一局',
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: .26,
-                      color: fg,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    return GameActionButton(
+      label: '再来一局',
+      primary: true,
+      onTap: onTap,
     );
   }
 }

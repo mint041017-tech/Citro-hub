@@ -11,412 +11,264 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
-/// 24px 网格纸 + 纸纹。对应 .main-root 的背景。
-class PaperBackground extends StatelessWidget {
+/// 页面背景。纯色或极轻的垂直渐变，没有网格纸。
+///
+/// 旧版 PaperBackground 的 24px 网格 + 暖光已删除；需要分区底色时用 [CitroBackground.tint]。
+class CitroBackground extends StatelessWidget {
   final Widget child;
   final Color? color;
-  final bool grid;
-  final bool wallpaper;
+  final CitroTint? tint;
+  final bool gradient;
 
-  const PaperBackground({
+  const CitroBackground({
     super.key,
     required this.child,
     this.color,
-    this.grid = true,
-    this.wallpaper = false,
+    this.tint,
+    this.gradient = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return CustomPaint(
-      // 背景网格是静态的：允许引擎把它缓存成位图，滚动/切页时不再重画网格线。
-      isComplex: true,
-      willChange: false,
-      painter: _PaperPainter(
-        color: color ?? c.surface,
-        gridColor: c.grid,
-        grid: grid,
-        highlight: c.dark ? const Color(0x0CFFCE8E) : const Color(0x80FFF6E0),
-        wallpaper: wallpaper,
+    final base = color ?? (tint != null ? c.tint(tint!) : c.bg);
+    if (!gradient) {
+      return ColoredBox(color: base, child: child);
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [base, Color.lerp(base, c.surface, .6)!],
+        ),
       ),
       child: child,
     );
   }
 }
 
-class _PaperPainter extends CustomPainter {
-  final Color color;
-  final Color gridColor;
-  final bool grid;
-  final Color highlight;
-  final bool wallpaper;
-
-  _PaperPainter({
-    required this.color,
-    required this.gridColor,
-    required this.grid,
-    required this.highlight,
-    required this.wallpaper,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    if (wallpaper) {
-      final gradient = _gradient(rect);
-      canvas.drawRect(rect, Paint()..shader = gradient);
-    } else {
-      canvas.drawRect(rect, Paint()..color = color);
-      final g = Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(0.82, -0.95),
-          radius: 0.75,
-          colors: [highlight, highlight.withAlpha(0)],
-        ).createShader(rect);
-      canvas.drawRect(rect, g);
-    }
-    if (!grid) return;
-    final line = Paint()
-      ..color = gridColor
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    for (double y = 0; y < size.height; y += 24) {
-      canvas.drawLine(Offset(0, y + .5), Offset(size.width, y + .5), line);
-    }
-    for (double x = 0; x < size.width; x += 24) {
-      canvas.drawLine(Offset(x + .5, 0), Offset(x + .5, size.height), line);
-    }
-  }
-
-  Shader _gradient(Rect rect) {
-    return const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFFEBE4D5), Color(0xFFE4DCC9)],
-      stops: [0, 1],
-    ).createShader(rect);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PaperPainter old) =>
-      old.color != color ||
-      old.gridColor != gridColor ||
-      old.grid != grid ||
-      old.highlight != highlight ||
-      old.wallpaper != wallpaper;
-}
-
-/// 纸胶带。默认 92x24，顶端居中，带撕边。
-class Tape extends StatelessWidget {
-  final Color color;
-  final double width;
-  final double height;
-  final double angle;
-  final Color? shadowColor;
-  final double top;
-  final double? left;
-  final bool torn;
-
-  const Tape({
-    super.key,
-    required this.color,
-    this.width = 92,
-    this.height = 24,
-    this.angle = -2.5,
-    this.shadowColor,
-    this.top = 0,
-    this.left,
-    this.torn = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tape = ClipPath(
-      clipper: torn ? _TapeClipper() : null,
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: color,
-          boxShadow: [
-            BoxShadow(
-              color: shadowColor ?? const Color(0x1A786040),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-      ),
-    );
-    return Positioned(
-      top: top,
-      left: left,
-      right: left == null ? null : null,
-      child: left == null
-          ? Align(
-              alignment: Alignment.topCenter,
-              child: Transform.rotate(
-                angle: angle * math.pi / 180,
-                child: tape,
-              ),
-            )
-          : Transform.rotate(angle: angle * math.pi / 180, child: tape),
-    );
-  }
-}
-
-class _TapeClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    return Path()
-      ..moveTo(size.width * .02, size.height * .06)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width * .97, size.height * .94)
-      ..lineTo(0, size.height)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-enum PaperShadow { paper, large, note, none }
-
-/// 手账卡纸。支持整卡微旋、顶部纸胶带、便签配色与右下折角。
-class PaperCard extends StatelessWidget {
+/// 卡片：大圆角 + 柔和阴影 + 可选整卡按压。
+///
+/// 这是全站容器的唯一基座：没有描边、没有胶带、没有折角、没有旋转。
+class CitroCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final Color? color;
-  final Color? borderColor;
   final double radius;
-  final PaperShadow shadow;
-  final Color? tapeColor;
-  final double? tapeWidth;
-  final double? tapeHeight;
-  final double tapeAngle;
-  final double tapeTop;
-  final bool fold;
-  final bool clip;
-  final BorderRadius? borderRadius;
   final VoidCallback? onTap;
-  final BoxConstraints? constraints;
+  final VoidCallback? onLongPress;
+  final List<BoxShadow>? shadow;
+  final Border? border;
+  final Clip clip;
 
-  const PaperCard({
+  const CitroCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(12),
+    this.padding = const EdgeInsets.all(16),
     this.margin,
     this.color,
-    this.borderColor,
-    this.radius = 14,
-    this.shadow = PaperShadow.paper,
-    this.tapeColor,
-    this.tapeWidth,
-    this.tapeHeight,
-    this.tapeAngle = -2.5,
-    this.tapeTop = -9,
-    this.fold = false,
-    this.clip = false,
-    this.borderRadius,
+    this.radius = 0,
     this.onTap,
-    this.constraints,
+    this.onLongPress,
+    this.shadow,
+    this.border,
+    this.clip = Clip.none,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final br = borderRadius ?? BorderRadius.circular(radius);
+    final r = radius == 0 ? CitroColors.radii.card : radius;
+    final br = BorderRadius.circular(r);
     Widget box = Container(
-      constraints: constraints,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? c.surface2,
+        color: color ?? c.surface,
         borderRadius: br,
-        border: Border.all(color: borderColor ?? c.line, width: 1),
-        boxShadow: switch (shadow) {
-          PaperShadow.paper => CitroColors.shadows.paper(c),
-          PaperShadow.large => CitroColors.shadows.lg(c),
-          PaperShadow.note => CitroColors.shadows.note(c),
-          PaperShadow.none => const [],
-        },
+        border: border,
+        boxShadow: shadow ?? CitroColors.shadows.card(c),
       ),
-      child: clip ? ClipRRect(borderRadius: br, child: child) : child,
+      child: clip == Clip.none ? child : ClipRRect(borderRadius: br, child: child),
     );
-    if (fold) {
-      box = Stack(
-        clipBehavior: Clip.none,
-        children: [
-          box,
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: ClipPath(
-              clipper: _FoldClipper(corner: 18, radius: br.bottomRight.x),
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [c.surface2, c.line.withAlpha(200)],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    if (onTap != null || onLongPress != null) {
+      box = Pressable(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        scale: .98,
+        borderRadius: br,
+        child: box,
       );
     }
-    if (tapeColor != null) {
-      box = Stack(
-        clipBehavior: Clip.none,
-        fit: StackFit.passthrough,
-        children: [
-          box,
-          Positioned(
-            top: tapeTop,
-            left: 0,
-            right: 0,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Transform.rotate(
-                angle: tapeAngle * math.pi / 180,
-                // 这里本来是全不透明的胶带，Opacity(1) 只是多一层合成节点。
-                child: ClipPath(
-                  clipper: _TapeClipper(),
-                  child: Container(
-                    width: tapeWidth ?? 92,
-                    height: tapeHeight ?? 24,
-                    decoration: BoxDecoration(
-                      color: tapeColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: c.tapeLine,
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    if (onTap != null) {
-      box = Pressable(onTap: onTap, scale: .985, borderRadius: br, child: box);
-    }
-    if (margin != null) {
-      return Padding(padding: margin!, child: box);
-    }
+    if (margin != null) return Padding(padding: margin!, child: box);
     return box;
   }
 }
 
-class _FoldClipper extends CustomClipper<Path> {
-  final double corner;
-  final double radius;
-  _FoldClipper({required this.corner, required this.radius});
-
-  @override
-  Path getClip(Size size) {
-    return Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height - 3)
-      ..lineTo(size.width - 3, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant _FoldClipper old) => false;
-}
-
-/// 虚线分隔线。
-class DashedLine extends StatelessWidget {
-  final Color? color;
+/// 胶囊按钮。主按钮是近黑（深色主题近白），品牌橙只做强调变体。
+class CitroButton extends StatelessWidget {
+  final String label;
+  final Widget? icon;
+  final Widget? trailing;
+  final VoidCallback? onPressed;
+  final CitroButtonStyle style;
   final double height;
-  final double dash;
-  final double gap;
-  final double thickness;
+  final double? width;
+  final bool expanded;
+  final bool busy;
 
-  const DashedLine({
+  const CitroButton({
     super.key,
-    this.color,
-    this.height = 1,
-    this.dash = 4,
-    this.gap = 4,
-    this.thickness = 1,
+    required this.label,
+    this.icon,
+    this.trailing,
+    required this.onPressed,
+    this.style = CitroButtonStyle.primary,
+    this.height = 48,
+    this.width,
+    this.expanded = false,
+    this.busy = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _DashPainter(
-          color: color ?? context.c.line2,
-          dash: dash,
-          gap: gap,
-          thickness: thickness,
+    final c = context.c;
+    final (bg, fg, border) = switch (style) {
+      CitroButtonStyle.primary => (c.ink, c.bg, Border.all(color: c.ink)),
+      CitroButtonStyle.accent => (c.accent, c.onAccent, Border.all(color: c.accent)),
+      CitroButtonStyle.mint => (c.mint, c.onAccent, Border.all(color: c.mint)),
+      CitroButtonStyle.danger => (c.danger, c.onAccent, Border.all(color: c.danger)),
+      CitroButtonStyle.outline => (Colors.transparent, c.ink, Border.all(color: c.line2)),
+      CitroButtonStyle.ghost => (Colors.transparent, c.ink2, Border.all(color: Colors.transparent)),
+      CitroButtonStyle.surface => (c.surface2, c.ink, Border.all(color: c.line)),
+    };
+    final enabled = onPressed != null && !busy;
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (busy)
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+          )
+        else if (icon != null)
+          IconTheme(data: IconThemeData(color: fg, size: 18), child: icon!),
+        if (busy || icon != null) const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.body(size: CitroType.label, weight: CitroType.medium, color: fg),
+          ),
         ),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+      ],
+    );
+    Widget btn = Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(CitroColors.radii.button),
+      child: InkWell(
+        onTap: enabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        child: Container(
+          height: height,
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(border: border, borderRadius: BorderRadius.circular(999)),
+          alignment: Alignment.center,
+          child: content,
+        ),
+      ),
+    );
+    if (expanded) btn = SizedBox(width: double.infinity, child: btn);
+    if (!enabled) {
+      btn = Opacity(
+        opacity: .45,
+        child: IgnorePointer(ignoring: true, child: btn),
+      );
+    }
+    return btn;
+  }
+}
+
+enum CitroButtonStyle { primary, accent, mint, danger, outline, ghost, surface }
+
+/// 胶囊标签。中性为主，语义色只作小面积点缀。
+class CitroChip extends StatelessWidget {
+  final String text;
+  final Widget? icon;
+  final Color? color;
+  final Color? background;
+  final Color? borderColor;
+  final EdgeInsets padding;
+  final double size;
+  final FontWeight weight;
+
+  const CitroChip(
+    this.text, {
+    super.key,
+    this.icon,
+    this.color,
+    this.background,
+    this.borderColor,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    this.size = CitroType.caption,
+    this.weight = CitroType.medium,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: background ?? c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: borderColor ?? c.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null)
+            IconTheme(
+              data: IconThemeData(color: color ?? c.ink2, size: size + 3),
+              child: icon!,
+            ),
+          if (icon != null) const SizedBox(width: 4),
+          Text(
+            text,
+            style: context.body(
+              size: size,
+              weight: weight,
+              color: color ?? c.ink2,
+              height: 1.1,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DashPainter extends CustomPainter {
-  final Color color;
-  final double dash;
-  final double gap;
-  final double thickness;
-  _DashPainter({
-    required this.color,
-    required this.dash,
-    required this.gap,
-    required this.thickness,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.round;
-    double x = 0;
-    while (x < size.width) {
-      canvas.drawLine(
-        Offset(x, size.height / 2),
-        Offset(math.min(x + dash, size.width), size.height / 2),
-        p,
-      );
-      x += dash + gap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashPainter old) =>
-      old.color != color || old.dash != dash || old.gap != gap;
-}
-
-/// 标题（橙色短横 + 荧光笔底纹）。对应 .tile-title。
-class SectionTitle extends StatelessWidget {
-  final String text;
-  final double size;
+/// 分区标题：纯文字 + 可选右侧操作，没有荧光笔底纹和斜置短横。
+class CitroSectionHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget? action;
   final EdgeInsetsGeometry padding;
+  final double size;
 
-  const SectionTitle(
-    this.text, {
+  const CitroSectionHeader(
+    this.title, {
     super.key,
-    this.size = 23,
+    this.subtitle,
+    this.action,
     this.padding = const EdgeInsets.symmetric(horizontal: 4),
+    this.size = CitroType.title,
   });
 
   @override
@@ -427,26 +279,300 @@ class SectionTitle extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Transform.rotate(
-            angle: -3 * math.pi / 180,
-            child: Container(
-              width: 16,
-              height: 5,
-              margin: const EdgeInsets.only(right: 10, top: 4),
-              decoration: BoxDecoration(
-                color: c.accent,
-                borderRadius: BorderRadius.circular(3),
-              ),
+          Container(
+            width: 4,
+            height: size * .72,
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              color: c.accent,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          HighlightedText(
-            text,
-            style: context.heading(
-              size: size,
-              color: c.ink,
-              letterSpacing: .02 * size,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.heading(size: size, color: c.ink),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    style: context.body(size: CitroType.meta, color: c.inkSoft),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
-            highlight: c.hl,
+          ),
+          if (action != null) ...[const SizedBox(width: 8), action!],
+        ],
+      ),
+    );
+  }
+}
+
+/// 输入框：大圆角、无下划线、聚焦时品牌橙描边。
+class CitroTextField extends StatelessWidget {
+  final TextEditingController? controller;
+  final String? hint;
+  final Widget? prefix;
+  final Widget? suffix;
+  final int maxLines;
+  final int? minLines;
+  final bool obscure;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
+  final TextInputType? keyboardType;
+  final TextStyle? style;
+  final Color? fillColor;
+
+  const CitroTextField({
+    super.key,
+    this.controller,
+    this.hint,
+    this.prefix,
+    this.suffix,
+    this.maxLines = 1,
+    this.minLines,
+    this.obscure = false,
+    this.onChanged,
+    this.onSubmitted,
+    this.textInputAction,
+    this.focusNode,
+    this.keyboardType,
+    this.style,
+    this.fillColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(CitroColors.radii.field),
+      borderSide: BorderSide(color: c.line),
+      gapPadding: 8,
+    );
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      minLines: minLines,
+      obscureText: obscure,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      style: style ?? context.body(size: CitroType.body, color: c.ink),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+        prefixIcon: prefix,
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: fillColor ?? c.surface2,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        enabledBorder: border,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(CitroColors.radii.field),
+          borderSide: BorderSide(color: c.accent, width: 1.5),
+          gapPadding: 8,
+        ),
+        border: border,
+      ),
+    );
+  }
+}
+
+/// 指标块：小标签 + 大数字（等宽），用于营养/统计栅格。
+class CitroStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? unit;
+  final Color? color;
+  final bool center;
+
+  const CitroStat(this.label, this.value, {super.key, this.unit, this.color, this.center = true});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final valueColor = color ?? c.ink;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.1),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(value, style: context.hand(size: CitroType.bodyLg, color: valueColor)),
+            if (unit != null) ...[
+              const SizedBox(width: 1),
+              Text(unit!, style: context.body(size: CitroType.small, color: c.inkSoft)),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 贴纸相框：白色圆角/圆形底 + 虚线描边，nosh 的「sticker」符号。
+///
+/// 只用在照片/插画上（菜谱图、头像、相册），不做大面积容器。
+class StickerFrame extends StatelessWidget {
+  final Widget child;
+  final double size;
+  final double radius;
+  final bool circle;
+  final Color? color;
+  final Color? dashColor;
+  final double dashWidth;
+
+  const StickerFrame({
+    super.key,
+    required this.child,
+    this.size = 96,
+    this.radius = 24,
+    this.circle = false,
+    this.color,
+    this.dashColor,
+    this.dashWidth = 1.6,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final br = circle ? BorderRadius.circular(size / 2) : BorderRadius.circular(radius);
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: color ?? c.surface,
+        borderRadius: br,
+        boxShadow: CitroColors.shadows.sm(c),
+      ),
+      child: CustomPaint(
+        foregroundPainter: _DashPainter(
+          color: dashColor ?? c.inkSoft.withAlpha(150),
+          radius: br,
+          width: dashWidth,
+        ),
+        child: ClipRRect(borderRadius: br, child: child),
+      ),
+    );
+  }
+}
+
+class _DashPainter extends CustomPainter {
+  final Color color;
+  final BorderRadius radius;
+  final double width;
+  _DashPainter({required this.color, required this.radius, required this.width});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = radius.toRRect(Offset.zero & size);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round;
+    final path = Path()..addRRect(rrect.deflate(width / 2));
+    final metrics = path.computeMetrics();
+    for (final m in metrics) {
+      double d = 0;
+      const dash = 5.0;
+      const gap = 4.0;
+      while (d < m.length) {
+        canvas.drawPath(m.extractPath(d, math.min(d + dash, m.length)), paint);
+        d += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashPainter old) =>
+      old.color != color || old.radius != radius || old.width != width;
+}
+
+/// 圆形头像 / 图标块。
+class CitroAvatar extends StatelessWidget {
+  final String? text;
+  final Widget? child;
+  final double size;
+  final Color? color;
+
+  const CitroAvatar({super.key, this.text, this.child, this.size = 40, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color ?? c.surface2,
+        shape: BoxShape.circle,
+      ),
+      child: child ??
+          (text == null
+              ? null
+              : Text(
+                  text!,
+                  style: context.body(
+                    size: size * .38,
+                    weight: CitroType.strong,
+                    color: c.ink2,
+                  ),
+                )),
+    );
+  }
+}
+
+/// 胶囊进度条。
+class CitroProgressBar extends StatelessWidget {
+  final double value;
+  final double height;
+  final Color? color;
+  final Color? track;
+
+  const CitroProgressBar({
+    super.key,
+    required this.value,
+    this.height = 6,
+    this.color,
+    this.track,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final v = value.clamp(0.0, 1.0);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(height / 2),
+      child: Stack(
+        children: [
+          Container(height: height, color: track ?? c.surface2),
+          FractionallySizedBox(
+            widthFactor: v,
+            child: Container(height: height, color: color ?? c.accent),
           ),
         ],
       ),
@@ -454,86 +580,20 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-/// 下半段黄色荧光笔底纹的文本。
-class HighlightedText extends StatelessWidget {
-  final String text;
-  final TextStyle style;
-  final Color highlight;
-  final bool rotate;
-
-  const HighlightedText(
-    this.text, {
-    super.key,
-    required this.style,
-    required this.highlight,
-    this.rotate = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    final h = tp.height;
-    final bar = Positioned(
-      left: 0,
-      right: 0,
-      top: h * .58,
-      height: h * .36,
-      child: Transform.rotate(
-        angle: rotate ? -.7 * math.pi / 180 : 0,
-        child: Container(color: highlight),
-      ),
-    );
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        bar,
-        Text(text, style: style, maxLines: 1, softWrap: false),
-      ],
-    );
-  }
-}
-
-/// 手写小标签胶囊。
-class HandChip extends StatelessWidget {
-  final String text;
+/// 发丝分隔线。
+class CitroDivider extends StatelessWidget {
+  final double height;
   final Color? color;
-  final Color? bg;
-  final EdgeInsets padding;
-  final double size;
-  final Border? border;
+  final EdgeInsetsGeometry? margin;
 
-  const HandChip(
-    this.text, {
-    super.key,
-    this.color,
-    this.bg,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    this.size = 12,
-    this.border,
-  });
+  const CitroDivider({super.key, this.height = 1, this.color, this.margin});
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: bg ?? Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-        border: border ?? Border.all(color: c.line2),
-      ),
-      child: Text(
-        text,
-        style: context.display(
-          size: size,
-          color: color ?? c.accentInk,
-          letterSpacing: .3,
-        ),
-      ),
+      height: height,
+      margin: margin,
+      color: color ?? context.c.line,
     );
   }
 }
@@ -734,8 +794,7 @@ class _PressableState extends State<Pressable> {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
     // Windows 上鼠标悬停会连续触发大半径阴影重绘，是掉帧的主要来源之一。
-    // 这里不再直接取消阴影（结构突变会让悬停看起来"闪一下"），
-    // 而是保留同一条阴影、只缩小半径，四端都有稳定的悬停层次。
+    // 这里保留同一条阴影、只缩小半径，四端都有稳定的悬停层次。
     final cheapHover = !kIsWeb && platform.isWindows;
     final hoverShadow = widget.hoverShadow ?? true;
     final lift = _hover && !_down && !reduce ? -widget.hoverLift : 0.0;
@@ -786,7 +845,7 @@ class _PressableState extends State<Pressable> {
                         color: _hover && !_down
                             ? (c.dark
                                   ? const Color(0x66000000)
-                                  : const Color(0x385A4A2C))
+                                  : const Color(0x2E000000))
                             : Colors.transparent,
                         blurRadius: _hover && !_down
                             ? (cheapHover ? 12 : 22)
@@ -819,7 +878,7 @@ class _PressableState extends State<Pressable> {
                                     color: widget.hoverColor,
                                     borderRadius:
                                         widget.borderRadius ??
-                                        BorderRadius.circular(12),
+                                        BorderRadius.circular(16),
                                   ),
                                 ),
                               ),
@@ -838,7 +897,7 @@ class _PressableState extends State<Pressable> {
                                     color: widget.hoverOverlayColor,
                                     borderRadius:
                                         widget.borderRadius ??
-                                        BorderRadius.circular(12),
+                                        BorderRadius.circular(16),
                                   ),
                                 ),
                               ),
@@ -936,8 +995,7 @@ class _ToastBubbleState extends State<_ToastBubble>
   Widget build(BuildContext context) {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
-    // v1.6.2：全局轻提示统一显示在屏幕上方（用户反馈：文字游戏上下
-    // 各有一条 toast，且键盘弹出时底部提示被遮）。
+    // 全局轻提示统一显示在屏幕上方（键盘弹出时不会被遮）。
     return Positioned(
       left: 24,
       right: 24,
@@ -953,17 +1011,17 @@ class _ToastBubbleState extends State<_ToastBubble>
               color: Colors.transparent,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                  horizontal: 16,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
                   color: c.ink.withAlpha(240),
-                  borderRadius: BorderRadius.circular(99),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: Text(
                   widget.message,
-                  style: context.body(size: 13, color: c.surface2),
+                  style: context.body(size: CitroType.meta, color: c.bg),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -982,4 +1040,213 @@ Future<void> copyText(
 }) async {
   await Clipboard.setData(ClipboardData(text: text));
   if (context != null && context.mounted) AppToast.show(context, tip);
+}
+
+// ---------------------------------------------------------------------------
+// 弃用替身：保留旧类名，让尚未迁移的文件继续编译。新代码请用上面的新组件。
+// 这些替身全部按新风格渲染（无网格 / 无胶带 / 无折角 / 大圆角）。
+// ---------------------------------------------------------------------------
+
+/// @deprecated 用 [CitroBackground]。
+@Deprecated('用 CitroBackground 代替')
+class PaperBackground extends StatelessWidget {
+  final Widget child;
+  final Color? color;
+  final bool grid;
+  final bool wallpaper;
+
+  const PaperBackground({
+    super.key,
+    required this.child,
+    this.color,
+    this.grid = true,
+    this.wallpaper = false,
+  });
+
+  @override
+  Widget build(BuildContext context) =>
+      CitroBackground(color: color, child: child);
+}
+
+/// @deprecated 用 [CitroCard]。
+@Deprecated('用 CitroCard 代替')
+class PaperCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? margin;
+  final Color? color;
+  final Color? borderColor;
+  final double radius;
+  final PaperShadow shadow;
+  final Color? tapeColor;
+  final double? tapeWidth;
+  final double? tapeHeight;
+  final double tapeAngle;
+  final double tapeTop;
+  final bool fold;
+  final bool clip;
+  final BorderRadius? borderRadius;
+  final VoidCallback? onTap;
+  final BoxConstraints? constraints;
+
+  const PaperCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(12),
+    this.margin,
+    this.color,
+    this.borderColor,
+    this.radius = 14,
+    this.shadow = PaperShadow.paper,
+    this.tapeColor,
+    this.tapeWidth,
+    this.tapeHeight,
+    this.tapeAngle = -2.5,
+    this.tapeTop = -9,
+    this.fold = false,
+    this.clip = false,
+    this.borderRadius,
+    this.onTap,
+    this.constraints,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    Widget box = Container(
+      constraints: constraints,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color ?? c.surface,
+        borderRadius: borderRadius ?? BorderRadius.circular(radius == 14 ? CitroColors.radii.card : radius),
+        border: borderColor == null ? null : Border.all(color: borderColor!),
+        boxShadow: shadow == PaperShadow.none ? const [] : CitroColors.shadows.card(c),
+      ),
+      child: clip ? ClipRRect(borderRadius: BorderRadius.circular(radius), child: child) : child,
+    );
+    if (onTap != null) {
+      box = Pressable(onTap: onTap, scale: .98, borderRadius: BorderRadius.circular(radius), child: box);
+    }
+    if (margin != null) return Padding(padding: margin!, child: box);
+    return box;
+  }
+}
+
+enum PaperShadow { paper, large, note, none }
+
+/// @deprecated 用纸胶带做装饰的手账风已移除。
+@Deprecated('纸胶带已移除')
+class Tape extends StatelessWidget {
+  final Color color;
+  final double width;
+  final double height;
+  final double angle;
+  final Color? shadowColor;
+  final double top;
+  final double? left;
+  final bool torn;
+
+  const Tape({
+    super.key,
+    required this.color,
+    this.width = 92,
+    this.height = 24,
+    this.angle = -2.5,
+    this.shadowColor,
+    this.top = 0,
+    this.left,
+    this.torn = true,
+  });
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+/// @deprecated 用 [CitroSectionHeader]。
+@Deprecated('用 CitroSectionHeader 代替')
+class SectionTitle extends StatelessWidget {
+  final String text;
+  final double size;
+  final EdgeInsetsGeometry padding;
+
+  const SectionTitle(this.text, {super.key, this.size = 23, this.padding = const EdgeInsets.symmetric(horizontal: 4)});
+
+  @override
+  Widget build(BuildContext context) =>
+      CitroSectionHeader(text, size: size < 23 ? size : CitroType.title, padding: padding);
+}
+
+/// @deprecated 用 [CitroChip]。
+@Deprecated('用 CitroChip 代替')
+class HandChip extends StatelessWidget {
+  final String text;
+  final Color? color;
+  final Color? bg;
+  final EdgeInsets padding;
+  final double size;
+  final Border? border;
+
+  const HandChip(
+    this.text, {
+    super.key,
+    this.color,
+    this.bg,
+    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    this.size = 12,
+    this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) => CitroChip(
+        text,
+        color: color,
+        background: bg,
+        padding: padding,
+        size: size,
+        borderColor: border?.top.color,
+      );
+}
+
+/// @deprecated 用 [CitroDivider]。
+@Deprecated('用 CitroDivider 代替')
+class DashedLine extends StatelessWidget {
+  final Color? color;
+  final double height;
+  final double dash;
+  final double gap;
+  final double thickness;
+
+  const DashedLine({
+    super.key,
+    this.color,
+    this.height = 1,
+    this.dash = 4,
+    this.gap = 4,
+    this.thickness = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) =>
+      CitroDivider(height: thickness, color: color);
+}
+
+/// @deprecated 荧光笔底纹已移除，直接用 Text。
+@Deprecated('荧光笔底纹已移除，直接用 Text')
+class HighlightedText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  final Color highlight;
+  final bool rotate;
+
+  const HighlightedText(
+    this.text, {
+    super.key,
+    required this.style,
+    required this.highlight,
+    this.rotate = true,
+  });
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(text, style: style, maxLines: 1, softWrap: false);
 }

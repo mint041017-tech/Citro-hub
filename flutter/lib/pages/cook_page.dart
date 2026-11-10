@@ -22,6 +22,7 @@ import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/app_image.dart';
 import '../widgets/cover_flight.dart';
+import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -79,6 +80,7 @@ class _CookPageState extends State<CookPage> {
   String? _lastUser;
   final shoppingInput = TextEditingController();
   final findInput = TextEditingController();
+  final searchCtrl = TextEditingController();
   String findView = 'fridge';
   final List<String> dishSel = [];
 
@@ -120,6 +122,7 @@ class _CookPageState extends State<CookPage> {
     searchDebounce?.cancel();
     shoppingInput.dispose();
     findInput.dispose();
+    searchCtrl.dispose();
     _detailCoverHidden.dispose();
     super.dispose();
   }
@@ -247,13 +250,14 @@ class _CookPageState extends State<CookPage> {
     return ctx == null ? null : _rectOfContext(ctx);
   }
 
-  /// 卡片封面的几何：卡片内缩 7 的边，封面是宽高相等的正方形。
+  /// 卡片封面的几何：卡片内缩 8，封面宽 = 卡宽 - 16，高 = 卡宽 - 8。
   Rect? _coverRectOf(BuildContext cardCtx) {
     final card = _rectOfContext(cardCtx);
     if (card == null) return null;
-    final side = card.width - 14;
-    if (side <= 0) return null;
-    return Rect.fromLTWH(card.left + 7, card.top + 7, side, side);
+    final w = card.width - 16;
+    final h = card.width - 8;
+    if (w <= 0 || h <= 0) return null;
+    return Rect.fromLTWH(card.left + 8, card.top + 8, w, h);
   }
 
   void _registerCover(String id, bool square, BuildContext cardCtx) {
@@ -265,11 +269,11 @@ class _CookPageState extends State<CookPage> {
   }
 
   /// 列表封面、详情封面和飞行替身共用这一份画法，接缝才看不出来。
-  Widget _coverArt(Recipe r, {double radius = 8}) {
+  Widget _coverArt(Recipe r, {double radius = 12}) {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: c.dark ? const Color(0xFF24231D) : const Color(0xFFFCF7E8),
+        color: c.surface2,
         borderRadius: BorderRadius.circular(radius),
       ),
       clipBehavior: Clip.antiAlias,
@@ -416,6 +420,7 @@ class _CookPageState extends State<CookPage> {
       detail = null;
       cat = '';
       search = '';
+      searchCtrl.clear();
       _hiddenRecipeId = null;
       _detailCoverHidden.value = false;
       _coverFlighting = false;
@@ -448,22 +453,28 @@ class _CookPageState extends State<CookPage> {
 
   Future<void> _addIngredientsToShopping(Recipe r) async {
     final seen = {for (final it in shopping) it.text.trim()};
-    var added = 0;
+    final additions = <ShoppingItem>[];
     for (final it in r.ingredients) {
       final name = it.name.trim();
       if (name.isEmpty) continue;
       final amount = it.amount.trim();
       final text = amount.isEmpty ? name : '$name $amount';
       if (!seen.add(text)) continue;
-      shopping.add(ShoppingItem(text: text));
-      added++;
+      additions.add(ShoppingItem(text: text));
     }
-    if (added == 0) {
+    if (additions.isEmpty) {
       if (mounted) AppToast.show(context, '食材已经在购物清单里了');
       return;
     }
-    final ok = await _saveShopping();
-    if (ok && mounted) AppToast.show(context, '已加入 $added 项到购物清单');
+    // 先把新清单交给服务端，成功后再落到本地，避免保存失败时出现幻影项。
+    try {
+      final list = await Api.saveShopping([...shopping, ...additions]);
+      if (!mounted) return;
+      setState(() => shopping = list);
+      AppToast.show(context, '已加入 ${additions.length} 项到购物清单');
+    } catch (e) {
+      if (mounted) AppToast.show(context, '清单保存失败');
+    }
   }
 
   Future<void> _saveFridge() async {
@@ -576,7 +587,7 @@ class _CookPageState extends State<CookPage> {
           if (!didPop && detail != null) _closeDetail();
         },
         child: Scaffold(
-          body: PaperBackground(
+          body: CitroBackground(
             child: SafeArea(
               left: false,
               right: false,
@@ -626,7 +637,7 @@ class _CookPageState extends State<CookPage> {
         if (!didPop && detail != null) _closeDetail();
       },
       child: Scaffold(
-        body: PaperBackground(
+        body: CitroBackground(
           child: SafeArea(
             bottom: tablet,
             child: tablet
@@ -682,7 +693,7 @@ class _CookPageState extends State<CookPage> {
                     }
                   },
                   scale: .92,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                   child: Container(
                     width: 34,
                     height: 34,
@@ -690,7 +701,7 @@ class _CookPageState extends State<CookPage> {
                       color: c.surface2,
                       shape: BoxShape.circle,
                       border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.paper(c),
+                      boxShadow: CitroColors.shadows.sm(c),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -703,7 +714,7 @@ class _CookPageState extends State<CookPage> {
                 ),
                 const SizedBox(width: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                   child: Image.asset(
                     'assets/images/logo.webp',
                     width: 38,
@@ -718,15 +729,14 @@ class _CookPageState extends State<CookPage> {
                     children: [
                       Text(
                         '食谱日记',
-                        style: context.heading(size: 18, color: c.ink),
+                        style: context.heading(size: CitroType.title, color: c.ink),
                       ),
                       Text(
                         'NOMBOOK',
                         style: context.body(
-                          size: 9,
-                          weight: FontWeight.w700,
+                          size: CitroType.micro,
+                          weight: CitroType.strong,
                           color: c.inkSoft,
-                          letterSpacing: 1.2,
                         ),
                       ),
                     ],
@@ -735,7 +745,7 @@ class _CookPageState extends State<CookPage> {
               ],
             ),
           ),
-          DashedLine(color: c.line2.withAlpha(150)),
+          CitroDivider(),
           const SizedBox(height: 12),
           for (final item in _desktopNavItems)
             Padding(
@@ -752,7 +762,10 @@ class _CookPageState extends State<CookPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               '把喜欢的味道，一页页收好。',
-              style: context.hand(size: 13, color: c.inkSoft),
+              style: context.body(
+                size: CitroType.caption,
+                color: c.inkSoft,
+              ),
             ),
           ),
         ],
@@ -775,48 +788,27 @@ class _CookPageState extends State<CookPage> {
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: active ? c.hl : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: active ? c.accent.withAlpha(110) : Colors.transparent,
-          ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: c.accent.withAlpha(20),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
+          color: active ? c.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         ),
         child: Row(
           children: [
             AppIcon(
               strokeSvg(icon, width: 2),
               size: 18,
-              color: active ? c.accentInk : c.inkSoft,
+              color: active ? c.bg : c.inkSoft,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 label,
                 style: context.body(
-                  size: 14,
-                  weight: FontWeight.w700,
-                  color: active ? c.accentInk : c.ink2,
+                  size: CitroType.label,
+                  weight: CitroType.strong,
+                  color: active ? c.bg : c.ink2,
                 ),
               ),
             ),
-            if (active)
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  shape: BoxShape.circle,
-                ),
-              ),
           ],
         ),
       ),
@@ -864,13 +856,13 @@ class _CookPageState extends State<CookPage> {
                 }
               },
               child: Container(
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: c.surface2,
                   shape: BoxShape.circle,
                   border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.sm(c),
                 ),
                 child: Center(
                   child: AppIcon(
@@ -887,33 +879,17 @@ class _CookPageState extends State<CookPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.heading(size: 20, color: c.ink),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: c.accent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.heading(size: CitroType.titleLg, color: c.ink),
                 ),
                 Text(
                   sub,
                   style: context.body(
-                    size: 9,
+                    size: CitroType.micro,
                     color: c.accentInk,
-                    letterSpacing: .7,
                   ),
                 ),
               ],
@@ -923,13 +899,12 @@ class _CookPageState extends State<CookPage> {
             Pressable(
               onTap: () => showAiChat(context, recipe: detail),
               child: Container(
-                height: 36,
+                height: 38,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: c.hl,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: c.accent.withAlpha(120)),
-                  boxShadow: CitroColors.shadows.note(c),
+                  color: c.ink,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                  boxShadow: CitroColors.shadows.sm(c),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -937,15 +912,15 @@ class _CookPageState extends State<CookPage> {
                     AppIcon(
                       strokeSvg(AppIcons.sparkle, width: 2),
                       size: 16,
-                      color: c.accentInk,
+                      color: c.bg,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'AI',
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
-                        color: c.accentInk,
+                        size: CitroType.caption,
+                        weight: CitroType.strong,
+                        color: c.bg,
                       ),
                     ),
                   ],
@@ -958,20 +933,20 @@ class _CookPageState extends State<CookPage> {
             Pressable(
               onTap: _newRecipe,
               child: Container(
-                height: 34,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: CitroColors.shadows.note(c),
+                  color: c.ink,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                  boxShadow: CitroColors.shadows.sm(c),
                 ),
                 child: Center(
                   child: Text(
                     '＋ 新食谱',
                     style: context.body(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
+                      size: CitroType.caption,
+                      weight: CitroType.strong,
+                      color: c.bg,
                     ),
                   ),
                 ),
@@ -1000,30 +975,34 @@ class _CookPageState extends State<CookPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Container(
-              height: 40,
+              height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(color: c.line2),
               ),
               child: Row(
                 children: [
                   AppIcon(
                     strokeSvg(AppIcons.search, width: 2),
-                    size: 15,
-                    color: c.accentInk,
+                    size: 16,
+                    color: c.inkSoft,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: TextField(
+                      controller: searchCtrl,
                       onChanged: (v) => setState(() => search = v),
-                      style: context.body(size: 13),
+                      style: context.body(size: CitroType.meta),
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         isDense: true,
                         hintText: '搜食谱 / 标签 / 食材',
-                        hintStyle: context.body(size: 12, color: c.inkSoft),
+                        hintStyle: context.body(
+                          size: CitroType.caption,
+                          color: c.inkSoft,
+                        ),
                       ),
                     ),
                   ),
@@ -1058,9 +1037,9 @@ class _CookPageState extends State<CookPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: on ? c.accent : c.surface2,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: on ? c.accent : c.line2),
+            color: on ? c.ink : c.surface2,
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+            border: Border.all(color: on ? c.ink : c.line2),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1068,23 +1047,23 @@ class _CookPageState extends State<CookPage> {
               Text(
                 label,
                 style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
-                  color: on ? const Color(0xFF2E2C22) : c.inkSoft,
+                  size: CitroType.small,
+                  weight: CitroType.strong,
+                  color: on ? c.bg : c.inkSoft,
                 ),
               ),
               const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  color: on ? const Color(0x332E2C22) : c.line,
-                  borderRadius: BorderRadius.circular(99),
+                  color: on ? c.bg.withAlpha(28) : c.line,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Text(
                   '$count',
                   style: context.body(
-                    size: 9,
-                    color: on ? const Color(0xFF2E2C22) : c.inkSoft,
+                    size: CitroType.micro,
+                    color: on ? c.bg : c.inkSoft,
                   ),
                 ),
               ),
@@ -1101,23 +1080,36 @@ class _CookPageState extends State<CookPage> {
       padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
       child: Column(
         children: [
-          Image.asset(
-            'assets/images/logo.webp',
-            width: 110,
-            cacheWidth: 240,
-            opacity: const AlwaysStoppedAnimation(.9),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              // logo 是深色图形：深色主题下垫一块浅色底，避免融进暗色背景。
+              color: c.dark ? c.ink : c.surface2,
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              boxShadow: CitroColors.shadows.sm(c),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Image.asset(
+              'assets/images/logo.webp',
+              cacheWidth: 240,
+            ),
           ),
           const SizedBox(height: 18),
           Text(
-            '登录后开始写你的食谱日记',
+            '登录后开始收藏菜谱、记录下厨',
             textAlign: TextAlign.center,
-            style: context.body(size: 14, color: c.ink2, height: 1.8),
+            style: context.body(size: CitroType.bodyLg, color: c.ink, height: 1.6),
           ),
           const SizedBox(height: 6),
           Text(
             '收藏菜谱、记每次下厨的心得，购物清单随账号同步，换设备也不丢。',
             textAlign: TextAlign.center,
-            style: context.body(size: 12, color: c.inkSoft, height: 1.7),
+            style: context.body(
+              size: CitroType.caption,
+              color: c.inkSoft,
+              height: 1.7,
+            ),
           ),
           const SizedBox(height: 22),
           ConstrainedBox(
@@ -1126,27 +1118,11 @@ class _CookPageState extends State<CookPage> {
                   ? 300
                   : double.infinity,
             ),
-            child: Pressable(
-              onTap: _openAuth,
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: CitroColors.shadows.note(c),
-                ),
-                child: Center(
-                  child: Text(
-                    '登录 / 注册',
-                    style: context.body(
-                      size: 14,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
-                    ),
-                  ),
-                ),
-              ),
+            child: CitroButton(
+              label: '登录 / 注册',
+              style: CitroButtonStyle.primary,
+              expanded: true,
+              onPressed: _openAuth,
             ),
           ),
         ],
@@ -1160,15 +1136,29 @@ class _CookPageState extends State<CookPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('⚠️', style: TextStyle(fontSize: 36)),
-          const SizedBox(height: 8),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: c.dangerSoft,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: AppIcon(
+                strokeSvg(AppIcons.info, width: 1.8),
+                size: 28,
+                color: c.danger,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           Text(
             error ?? '加载失败',
             textAlign: TextAlign.center,
-            style: context.body(size: 12, color: c.inkSoft),
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
-          const SizedBox(height: 12),
-          AccentButton(text: '重试', width: 130, height: 40, onTap: _load),
+          const SizedBox(height: 16),
+          AccentButton(text: '重试', width: 130, height: 42, onTap: _load),
         ],
       ),
     );
@@ -1185,7 +1175,10 @@ class _CookPageState extends State<CookPage> {
       return r.name.toLowerCase().contains(q) ||
           '${r.cuisine} ${r.dishType}'.toLowerCase().contains(q) ||
           r.tags.join(' ').toLowerCase().contains(q) ||
-          r.ingredients.map((e) => e.name).join(' ').contains(q);
+          r.ingredients
+              .map((e) => e.name.toLowerCase())
+              .join(' ')
+              .contains(q);
     }).toList();
     if (tab == 'recipes') {
       list = _sortWithPins(list);
@@ -1198,15 +1191,34 @@ class _CookPageState extends State<CookPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const SizedBox(height: 60),
-                const Center(child: Text('🍳', style: TextStyle(fontSize: 40))),
-                const SizedBox(height: 8),
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: context.c.surface2,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: AppIcon(
+                        strokeSvg(AppIcons.fork, width: 1.8),
+                        size: 30,
+                        color: context.c.accent,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Center(
                   child: Text(
                     tab == 'square'
                         ? '广场上还没有公开食谱'
                         : (mine.isEmpty ? '还没有食谱——从第一道拿手菜开始记吧' : '没有匹配的食谱'),
                     textAlign: TextAlign.center,
-                    style: context.body(size: 12, color: context.c.inkSoft),
+                    style: context.body(
+                      size: CitroType.caption,
+                      color: context.c.inkSoft,
+                    ),
                   ),
                 ),
                 if (tab == 'recipes' && mine.isEmpty) ...[
@@ -1261,7 +1273,10 @@ class _CookPageState extends State<CookPage> {
       final pa = pinned.contains(a.id) ? 0 : 1;
       final pb = pinned.contains(b.id) ? 0 : 1;
       if (pa != pb) return pa - pb;
-      return b.updatedAt.compareTo(a.updatedAt);
+      final byTime = b.updatedAt.compareTo(a.updatedAt);
+      if (byTime != 0) return byTime;
+      // updatedAt 可能缺失/相等，用 id 做稳定次键，避免两次加载顺序抖动。
+      return a.id.compareTo(b.id);
     });
   }
 
@@ -1295,10 +1310,9 @@ class _CookPageState extends State<CookPage> {
               : null,
           child: Container(
             decoration: BoxDecoration(
-              color: c.surface2,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c.line),
-              boxShadow: CitroColors.shadows.paper(c),
+              color: c.surface,
+              borderRadius: BorderRadius.circular(CitroColors.radii.card),
+              boxShadow: CitroColors.shadows.card(c),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -1313,17 +1327,11 @@ class _CookPageState extends State<CookPage> {
                       margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
-                        color: c.dark
-                            ? const Color(0xFF24231D)
-                            : const Color(0xFFFCF7E8),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: c.line.withAlpha(160)),
+                        color: c.surface2,
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       ),
                       child: Stack(
                         children: [
-                          Positioned.fill(
-                            child: CustomPaint(painter: _GridPainter(c.grid)),
-                          ),
                           if (r.cover.isEmpty)
                             Center(
                               child: Text(
@@ -1359,25 +1367,29 @@ class _CookPageState extends State<CookPage> {
                                 : Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
-                                      vertical: 2,
+                                      vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                          (r.visibility == 'public'
-                                                  ? c.hl
-                                                  : c.surface2)
-                                              .withAlpha(240),
-                                      borderRadius: BorderRadius.circular(99),
-                                      border: Border.all(color: c.line),
+                                      color: r.visibility == 'public'
+                                          ? c.ink
+                                          : c.surface2,
+                                      borderRadius: BorderRadius.circular(
+                                        CitroColors.radii.chip,
+                                      ),
+                                      border: Border.all(
+                                        color: r.visibility == 'public'
+                                            ? c.ink
+                                            : c.line,
+                                      ),
                                     ),
                                     child: Text(
                                       r.visibility == 'public' ? '公开' : '私密',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: context.body(
-                                        size: 9,
+                                        size: CitroType.micro,
                                         color: r.visibility == 'public'
-                                            ? c.accentInk
+                                            ? c.bg
                                             : c.inkSoft,
                                       ),
                                     ),
@@ -1397,7 +1409,10 @@ class _CookPageState extends State<CookPage> {
                         '${pinned ? '置顶 · ' : ''}${r.name}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.heading(size: 15, color: c.ink),
+                        style: context.heading(
+                          size: CitroType.bodyLg,
+                          color: c.ink,
+                        ),
                       ),
                       const SizedBox(height: 3),
                       if (r.cuisine.isNotEmpty || r.dishType.isNotEmpty)
@@ -1408,14 +1423,17 @@ class _CookPageState extends State<CookPage> {
                           ].where((e) => e.isNotEmpty).join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.body(size: 10, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.micro,
+                            color: c.inkSoft,
+                          ),
                         ),
                       if (r.calories > 0)
                         Text(
                           '${r.calories} 千卡/100g',
                           style: context.body(
-                            size: 10,
-                            weight: FontWeight.w700,
+                            size: CitroType.micro,
+                            weight: CitroType.strong,
                             color: c.accentInk,
                           ),
                         ),
@@ -1437,14 +1455,14 @@ class _CookPageState extends State<CookPage> {
         : (_app?.user?.name ?? '匿名');
     final av = r.ownerAv ?? '';
     Widget fallback() => Container(
-      color: c.hl,
+      color: c.surface2,
       alignment: Alignment.center,
       child: Text(
-        name.isEmpty ? '?' : name[0],
+        name.isEmpty ? '?' : name.characters.first,
         style: context.body(
-          size: 9,
-          weight: FontWeight.w700,
-          color: c.accentInk,
+          size: CitroType.micro,
+          weight: CitroType.strong,
+          color: c.ink2,
         ),
       ),
     );
@@ -1452,8 +1470,8 @@ class _CookPageState extends State<CookPage> {
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.fromLTRB(3, 2, 8, 2),
       decoration: BoxDecoration(
-        color: c.surface2.withAlpha(240),
-        borderRadius: BorderRadius.circular(99),
+        color: c.surface.withAlpha(240),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -1479,7 +1497,7 @@ class _CookPageState extends State<CookPage> {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.body(size: 9, color: c.ink2),
+              style: context.body(size: CitroType.micro, color: c.ink2),
             ),
           ),
         ],
@@ -1548,10 +1566,9 @@ class _CookPageState extends State<CookPage> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -1566,12 +1583,12 @@ class _CookPageState extends State<CookPage> {
                   builder: (_, hidden, _) => Opacity(
                     opacity: hidden ? 0 : 1,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       child: AspectRatio(
                         // 共享元素的落点：列表卡封面从那张卡的位置长到这里。
                         key: _detailCoverKey,
                         aspectRatio: 1,
-                        child: _coverArt(r, radius: 12),
+                        child: _coverArt(r, radius: 16),
                       ),
                     ),
                   ),
@@ -1579,9 +1596,10 @@ class _CookPageState extends State<CookPage> {
               ),
             );
             final header = <Widget>[
-              Text(r.name, style: context.heading(size: 24, color: c.ink)),
-              const SizedBox(height: 6),
-              Container(width: 150, height: 8, color: c.hl),
+              Text(
+                r.name,
+                style: context.heading(size: CitroType.titleLg, color: c.ink),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 6,
@@ -1590,12 +1608,16 @@ class _CookPageState extends State<CookPage> {
                   if (r.cuisine.isNotEmpty) _pill(context, r.cuisine),
                   if (r.dishType.isNotEmpty) _pill(context, r.dishType),
                   if (r.calories > 0)
-                    _pill(context, '${r.calories} 千卡/100g', color: c.hl),
+                    _pill(
+                      context,
+                      '${r.calories} 千卡/100g',
+                      color: c.tintYellow,
+                    ),
                   if (r.prepMin + r.cookMin > 0)
                     _pill(
                       context,
                       '⏱ ${r.prepMin + r.cookMin} 分钟',
-                      color: c.hl,
+                      color: c.tintYellow,
                     ),
                   if (r.servings > 0) _pill(context, '份量 ${r.servings} 人'),
                   for (final t in r.tags)
@@ -1609,7 +1631,7 @@ class _CookPageState extends State<CookPage> {
                   '来源：${r.source}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 10, color: c.accentInk),
+                  style: context.body(size: CitroType.micro, color: c.accentInk),
                 ),
               ],
               const SizedBox(height: 10),
@@ -1621,11 +1643,17 @@ class _CookPageState extends State<CookPage> {
                       children: [
                         Text(
                           'by ${r.owner ?? _app?.user?.name ?? ''}',
-                          style: context.body(size: 11, color: c.accentInk),
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.accentInk,
+                          ),
                         ),
                         Text(
                           _date(r.updatedAt),
-                          style: context.body(size: 10, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.micro,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ],
                     ),
@@ -1659,10 +1687,10 @@ class _CookPageState extends State<CookPage> {
                 ],
               ),
             ];
-            // 虚线以下（食材、步骤、小记、日记、底部按钮）保持纵向原样。
+            // 以下（食材、步骤、小记、日记、底部按钮）保持纵向原样。
             final body = <Widget>[
               const SizedBox(height: 16),
-              DashedLine(color: c.line2),
+              CitroDivider(),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1671,12 +1699,13 @@ class _CookPageState extends State<CookPage> {
                   GestureDetector(
                     onTap: () => _addIngredientsToShopping(r),
                     child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: c.hl,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: c.accent.withAlpha(110)),
+                        color: c.ink,
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1684,15 +1713,15 @@ class _CookPageState extends State<CookPage> {
                           AppIcon(
                             strokeSvg(AppIcons.cart, width: 2),
                             size: 13,
-                            color: c.accentInk,
+                            color: c.bg,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '加入购物清单',
                             style: context.body(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: c.accentInk,
+                              size: CitroType.small,
+                              weight: CitroType.strong,
+                              color: c.bg,
                             ),
                           ),
                         ],
@@ -1714,9 +1743,11 @@ class _CookPageState extends State<CookPage> {
                       height: 32,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: c.surface,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: c.line2),
+                        color: c.surface2,
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
+                        border: Border.all(color: c.line),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1727,15 +1758,15 @@ class _CookPageState extends State<CookPage> {
                               width: 2,
                             ),
                             size: 13,
-                            color: c.accentInk,
+                            color: c.ink2,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '自定义计时',
                             style: context.body(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: c.accentInk,
+                              size: CitroType.small,
+                              weight: CitroType.strong,
+                              color: c.ink2,
                             ),
                           ),
                         ],
@@ -1746,7 +1777,13 @@ class _CookPageState extends State<CookPage> {
               ),
               const SizedBox(height: 8),
               if (r.steps.isEmpty)
-                Text('还没有写步骤', style: context.body(size: 12, color: c.inkSoft))
+                Text(
+                  '还没有写步骤',
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
+                )
               else
                 for (var i = 0; i < r.steps.length; i++) _step(context, r, i),
               if (r.note.isNotEmpty) ...[
@@ -1755,7 +1792,7 @@ class _CookPageState extends State<CookPage> {
                 const SizedBox(height: 5),
                 Text(
                   r.note,
-                  style: context.body(size: 14, color: c.ink2, height: 1.75),
+                  style: context.body(size: CitroType.body, color: c.ink2, height: 1.75),
                 ),
               ],
               const SizedBox(height: 14),
@@ -1765,7 +1802,7 @@ class _CookPageState extends State<CookPage> {
                   const SizedBox(width: 6),
                   Text(
                     '${r.diary.length} 次',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
                   ),
                   const Spacer(),
                   if (r.mine)
@@ -1789,17 +1826,18 @@ class _CookPageState extends State<CookPage> {
                         height: 32,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: c.hl,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: c.accent.withAlpha(110)),
+                          color: c.ink,
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             '＋ 记一笔',
                             style: context.body(
-                              size: 12,
-                              weight: FontWeight.w700,
-                              color: c.accentInk,
+                              size: CitroType.caption,
+                              weight: CitroType.strong,
+                              color: c.bg,
                             ),
                           ),
                         ),
@@ -1811,7 +1849,10 @@ class _CookPageState extends State<CookPage> {
               if (r.diary.isEmpty)
                 Text(
                   '还没有下厨记录，做一次就记一笔吧',
-                  style: context.body(size: 11, color: c.inkSoft),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
                 )
               else
                 for (final d in r.diary.reversed.take(5))
@@ -1896,16 +1937,16 @@ class _CookPageState extends State<CookPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: danger ? c.stamp.withAlpha(c.dark ? 28 : 16) : c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: danger ? c.stamp.withAlpha(160) : c.line2),
+          color: danger ? c.dangerSoft : c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+          border: Border.all(color: danger ? c.danger : c.line2),
         ),
         child: Text(
           label,
           style: context.body(
-            size: 13,
-            weight: FontWeight.w700,
-            color: danger ? c.stamp : c.accentInk,
+            size: CitroType.caption,
+            weight: CitroType.strong,
+            color: danger ? c.danger : c.ink2,
           ),
         ),
       ),
@@ -2004,12 +2045,18 @@ class _CookPageState extends State<CookPage> {
     return Row(
       children: [
         Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+          width: 4,
+          height: 14,
+          decoration: BoxDecoration(
+            color: c.accent,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
-        const SizedBox(width: 5),
-        Text(text, style: context.heading(size: 15, color: c.accentInk)),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: context.heading(size: CitroType.bodyLg, color: c.ink),
+        ),
       ],
     );
   }
@@ -2019,18 +2066,24 @@ class _CookPageState extends State<CookPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color ?? c.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line2),
+        color: color ?? c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: c.line),
       ),
-      child: Text(text, style: context.body(size: 11, color: c.ink2)),
+      child: Text(
+        text,
+        style: context.body(size: CitroType.small, color: c.ink2),
+      ),
     );
   }
 
   Widget _ingredients(BuildContext context, Recipe r) {
     final c = context.c;
     if (r.ingredients.isEmpty)
-      return Text('还没有食材', style: context.body(size: 12, color: c.inkSoft));
+      return Text(
+        '还没有食材',
+        style: context.body(size: CitroType.caption, color: c.inkSoft),
+      );
     final groups = <String, List<CookIngredient>>{};
     for (final it in r.ingredients) {
       final group = it.group == 'season' ? 'season' : 'main';
@@ -2039,8 +2092,8 @@ class _CookPageState extends State<CookPage> {
     const names = {'main': '食材', 'season': '调料'};
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.line2),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: c.line),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -2048,25 +2101,25 @@ class _CookPageState extends State<CookPage> {
           for (final e in groups.entries) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-              color: c.dark ? const Color(0x0DFFFFFF) : const Color(0x0DF2A43C),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+              color: c.surface2,
               child: Text(
                 names[e.key] ?? '主料',
                 style: context.body(
-                  size: 10,
-                  weight: FontWeight.w700,
-                  color: c.accentInk,
+                  size: CitroType.micro,
+                  weight: CitroType.strong,
+                  color: c.ink2,
                 ),
               ),
             ),
             for (final it in e.value)
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                  horizontal: 12,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: c.line.withAlpha(120))),
+                  border: Border(top: BorderSide(color: c.line)),
                 ),
                 child: Row(
                   children: [
@@ -2074,7 +2127,10 @@ class _CookPageState extends State<CookPage> {
                     const Spacer(),
                     Text(
                       it.amount,
-                      style: context.body(size: 11, color: c.inkSoft),
+                      style: context.hand(
+                        size: CitroType.small,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ],
                 ),
@@ -2094,20 +2150,20 @@ class _CookPageState extends State<CookPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 22,
-            height: 22,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: c.accent,
+              color: c.ink,
               shape: BoxShape.circle,
-              boxShadow: CitroColors.shadows.note(c),
+              boxShadow: CitroColors.shadows.sm(c),
             ),
             child: Center(
               child: Text(
                 '${i + 1}',
                 style: context.body(
-                  size: 10,
-                  weight: FontWeight.w700,
-                  color: const Color(0xFF2E2C22),
+                  size: CitroType.micro,
+                  weight: CitroType.strong,
+                  color: c.bg,
                 ),
               ),
             ),
@@ -2120,29 +2176,77 @@ class _CookPageState extends State<CookPage> {
                 if (step.text.isNotEmpty)
                   Text(
                     step.text,
-                    style: context.body(size: 14, color: c.ink2, height: 1.75),
+                    style: context.body(size: CitroType.body, color: c.ink2, height: 1.75),
                   ),
                 if (step.img.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: 88,
-                      height: 88,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).push<void>(
+                        PageRouteBuilder<void>(
+                          opaque: false,
+                          barrierColor: c.scrim,
+                          barrierDismissible: true,
+                          transitionDuration: CitroMotion.modal,
+                          reverseTransitionDuration: CitroMotion.modalReverse,
+                          pageBuilder: (ctx, animation, secondary) =>
+                              CitroImageViewer(
+                            urls: [Api.imageUrl(step.img)],
+                            initialIndex: 0,
+                            tagOf: (_) => 'cook-step-${r.id}-$i',
+                            cacheWidth: 720,
+                          ),
+                          transitionsBuilder: (
+                            ctx,
+                            animation,
+                            secondary,
+                            child,
+                          ) {
+                            final curved = CurvedAnimation(
+                              parent: animation,
+                              curve: CitroMotion.easeOut,
+                              reverseCurve: CitroMotion.exit,
+                            );
+                            return FadeTransition(
+                              opacity: curved,
+                              child: child,
+                            );
+                          },
+                        ),
+                      ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: AppImage(
-                          Api.imageUrl(step.img),
-                          fit: BoxFit.cover,
-                          cacheWidth: 280,
-                          errorBuilder: (_, __, ___) => const SizedBox(),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.small,
+                        ),
+                        child: SizedBox(
+                          width: 96,
+                          height: 96,
+                          child: AppImage(
+                            Api.imageUrl(step.img),
+                            fit: BoxFit.cover,
+                            cacheWidth: 280,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: c.surface2,
+                              child: Center(
+                                child: AppIcon(
+                                  strokeSvg(AppIcons.image, width: 1.8),
+                                  size: 22,
+                                  color: c.inkSoft,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
                 if (step.timer > 0) ...[
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   GestureDetector(
                     onTap: () => CookTimer.instance.start(
                       '${r.name} · 第 ${i + 1} 步',
@@ -2151,12 +2255,13 @@ class _CookPageState extends State<CookPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
-                        vertical: 4,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: c.hl,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: c.accent.withAlpha(100)),
+                        color: c.tintYellow,
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -2167,12 +2272,15 @@ class _CookPageState extends State<CookPage> {
                               width: 2,
                             ),
                             size: 11,
-                            color: c.accentInk,
+                            color: c.ink2,
                           ),
                           const SizedBox(width: 3),
                           Text(
                             '计时 ${step.timer} 分钟',
-                            style: context.body(size: 10, color: c.accentInk),
+                            style: context.body(
+                              size: CitroType.micro,
+                              color: c.ink2,
+                            ),
                           ),
                         ],
                       ),
@@ -2189,13 +2297,13 @@ class _CookPageState extends State<CookPage> {
 
   Widget _diaryTile(BuildContext context, CookDiary d) {
     final c = context.c;
+    final rating = d.rating.clamp(0, 5);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: c.line.withAlpha(160)),
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2204,24 +2312,30 @@ class _CookPageState extends State<CookPage> {
             children: [
               Text(
                 d.date,
-                style: context.display(size: 13, color: c.accentInk),
+                style: context.hand(size: CitroType.caption, color: c.ink2),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Text(
-                '${'★' * d.rating}${'☆' * (5 - d.rating)}',
-                style: TextStyle(fontSize: 10, color: c.accentInk),
+                '${'★' * rating}${'☆' * (5 - rating)}',
+                style: context.body(size: CitroType.small, color: c.accentInk),
               ),
             ],
           ),
           if (d.tweaks.isNotEmpty)
-            Text(
-              '改动：${d.tweaks}',
-              style: context.body(size: 11, color: c.inkSoft),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '改动：${d.tweaks}',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
             ),
           if (d.result.isNotEmpty)
-            Text(
-              d.result,
-              style: context.body(size: 12, color: c.ink2, height: 1.6),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                d.result,
+                style: context.body(size: CitroType.body, color: c.ink2, height: 1.6),
+              ),
             ),
         ],
       ),
@@ -2238,7 +2352,7 @@ class _CookPageState extends State<CookPage> {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: c.surface2,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               border: Border.all(color: c.line2),
             ),
             child: Row(
@@ -2271,18 +2385,18 @@ class _CookPageState extends State<CookPage> {
         onTap: () => setState(() => findView = value),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          height: 34,
+          height: 36,
           decoration: BoxDecoration(
-            color: on ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            color: on ? c.ink : Colors.transparent,
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           ),
           child: Center(
             child: Text(
               label,
               style: context.body(
-                size: 12,
-                weight: FontWeight.w700,
-                color: on ? const Color(0xFF2E2C22) : c.inkSoft,
+                size: CitroType.caption,
+                weight: CitroType.strong,
+                color: on ? c.bg : c.inkSoft,
               ),
             ),
           ),
@@ -2299,7 +2413,7 @@ class _CookPageState extends State<CookPage> {
       children: [
         Text(
           '告诉我手头有什么，我来找能做的菜。冰箱里有的可以直接点选。',
-          style: context.body(size: 12, color: c.inkSoft, height: 1.6),
+          style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.6),
         ),
         const SizedBox(height: 10),
         Row(
@@ -2308,7 +2422,7 @@ class _CookPageState extends State<CookPage> {
             const SizedBox(width: 6),
             Text(
               '${dishSel.length}',
-              style: context.body(size: 10, color: c.inkSoft),
+              style: context.body(size: CitroType.micro, color: c.inkSoft),
             ),
             const Spacer(),
             if (dishSel.isNotEmpty)
@@ -2316,7 +2430,7 @@ class _CookPageState extends State<CookPage> {
                 onTap: () => setState(dishSel.clear),
                 child: Text(
                   '清空',
-                  style: context.body(size: 11, color: c.inkSoft),
+                  style: context.body(size: CitroType.small, color: c.inkSoft),
                 ),
               ),
           ],
@@ -2326,13 +2440,13 @@ class _CookPageState extends State<CookPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: c.surface2.withAlpha(150),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: c.line.withAlpha(140)),
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              border: Border.all(color: c.line),
             ),
             child: Text(
               '还没选食材 —— 从冰箱挑，或在下面直接手打',
-              style: context.body(size: 11, color: c.inkSoft),
+              style: context.body(size: CitroType.small, color: c.inkSoft),
             ),
           )
         else
@@ -2344,16 +2458,17 @@ class _CookPageState extends State<CookPage> {
                 Container(
                   padding: const EdgeInsets.fromLTRB(10, 5, 5, 5),
                   decoration: BoxDecoration(
-                    color: c.hl,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.accent.withAlpha(110)),
+                    color: c.ink,
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.chip,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         name,
-                        style: context.body(size: 11, color: c.accentInk),
+                        style: context.body(size: CitroType.small, color: c.bg),
                       ),
                       const SizedBox(width: 3),
                       GestureDetector(
@@ -2363,7 +2478,7 @@ class _CookPageState extends State<CookPage> {
                           child: AppIcon(
                             strokeSvg(AppIcons.close, width: 2.2),
                             size: 11,
-                            color: c.accentInk,
+                            color: c.bg,
                           ),
                         ),
                       ),
@@ -2382,7 +2497,7 @@ class _CookPageState extends State<CookPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: c.surface2,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   border: Border.all(color: c.line2),
                 ),
                 child: Row(
@@ -2391,15 +2506,15 @@ class _CookPageState extends State<CookPage> {
                     AppIcon(
                       strokeSvg(AppIcons.book, width: 1.8),
                       size: 14,
-                      color: c.accentInk,
+                      color: c.ink2,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       '食材库',
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
-                        color: c.accentInk,
+                        size: CitroType.caption,
+                        weight: CitroType.strong,
+                        color: c.ink2,
                       ),
                     ),
                   ],
@@ -2407,7 +2522,10 @@ class _CookPageState extends State<CookPage> {
               ),
             ),
             const SizedBox(width: 8),
-            Text('可多选，选完直接匹配', style: context.body(size: 10, color: c.inkSoft)),
+            Text(
+              '可多选，选完直接匹配',
+              style: context.body(size: CitroType.micro, color: c.inkSoft),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -2416,7 +2534,7 @@ class _CookPageState extends State<CookPage> {
         if (fridge.isEmpty)
           Text(
             '冰箱还是空的，先去「我的冰箱」加几样食材',
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           )
         else
           Wrap(
@@ -2438,20 +2556,20 @@ class _CookPageState extends State<CookPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: dishSel.contains(it.name) ? c.accent : c.surface2,
-                      borderRadius: BorderRadius.circular(999),
+                      color: dishSel.contains(it.name) ? c.ink : c.surface2,
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.chip,
+                      ),
                       border: Border.all(
-                        color: dishSel.contains(it.name) ? c.accent : c.line2,
+                        color: dishSel.contains(it.name) ? c.ink : c.line2,
                       ),
                     ),
                     child: Text(
                       it.name,
                       style: context.body(
-                        size: 11,
-                        weight: FontWeight.w700,
-                        color: dishSel.contains(it.name)
-                            ? const Color(0xFF2E2C22)
-                            : c.ink2,
+                        size: CitroType.small,
+                        weight: CitroType.strong,
+                        color: dishSel.contains(it.name) ? c.bg : c.ink2,
                       ),
                     ),
                   ),
@@ -2463,22 +2581,25 @@ class _CookPageState extends State<CookPage> {
           children: [
             Expanded(
               child: Container(
-                height: 38,
+                height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: c.surface2,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   border: Border.all(color: c.line2),
                 ),
                 child: TextField(
                   controller: findInput,
                   onSubmitted: (_) => _addDishInput(),
-                  style: context.body(size: 12),
+                  style: context.body(size: CitroType.caption),
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     isDense: true,
                     hintText: '直接手打，如：剩米饭',
-                    hintStyle: context.body(size: 12, color: c.inkSoft),
+                    hintStyle: context.body(
+                      size: CitroType.caption,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ),
               ),
@@ -2487,19 +2608,19 @@ class _CookPageState extends State<CookPage> {
             GestureDetector(
               onTap: _addDishInput,
               child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
+                  color: c.ink,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Center(
                   child: Text(
                     '加入',
                     style: context.body(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
+                      size: CitroType.caption,
+                      weight: CitroType.strong,
+                      color: c.bg,
                     ),
                   ),
                 ),
@@ -2513,7 +2634,10 @@ class _CookPageState extends State<CookPage> {
             children: [
               _sectionTitle(context, '可以做的菜'),
               const Spacer(),
-              Text('按匹配度排序', style: context.body(size: 10, color: c.inkSoft)),
+              Text(
+                '按匹配度排序',
+                style: context.body(size: CitroType.micro, color: c.inkSoft),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -2523,7 +2647,7 @@ class _CookPageState extends State<CookPage> {
               child: Text(
                 '没找到匹配的食谱——食谱里的食材写详细点，或者换几样试试',
                 textAlign: TextAlign.center,
-                style: context.body(size: 12, color: c.inkSoft),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             )
           else
@@ -2668,25 +2792,23 @@ class _CookPageState extends State<CookPage> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: c.line),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          boxShadow: CitroColors.shadows.sm(c),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               child: SizedBox(
-                width: 54,
-                height: 54,
+                width: 56,
+                height: 56,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     Container(
-                      color: c.dark
-                          ? const Color(0xFF24231D)
-                          : const Color(0xFFFCF7E8),
+                      color: c.surface2,
                       child: Center(
                         child: Text(
                           r.emoji.isEmpty ? '🍳' : r.emoji,
@@ -2717,26 +2839,28 @@ class _CookPageState extends State<CookPage> {
                           r.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.heading(size: 14, color: c.ink),
+                          style: context.heading(size: CitroType.bodyLg, color: c.ink),
                         ),
                       ),
                       if (m.fullMain) ...[
                         const SizedBox(width: 5),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
+                            horizontal: 6,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: c.mintSoft,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.chip,
+                            ),
                             border: Border.all(color: c.mintLine),
                           ),
                           child: Text(
                             '食材齐了',
                             style: context.body(
-                              size: 9,
-                              weight: FontWeight.w700,
+                              size: CitroType.micro,
+                              weight: CitroType.strong,
                               color: c.mintInk,
                             ),
                           ),
@@ -2747,18 +2871,18 @@ class _CookPageState extends State<CookPage> {
                   const SizedBox(height: 2),
                   Text(
                     '${m.mine ? '我的食谱' : '${r.owner ?? '广场'}'} · 食材 ${m.mainHit}/${m.mainTotal}',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.hand(size: CitroType.micro, color: c.inkSoft),
                   ),
                   if (m.missing.isNotEmpty)
                     Text(
                       '还缺 ${m.missing.length} 样：${m.missing.take(5).join('、')}${m.missing.length > 5 ? '…' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.body(size: 10, color: c.stamp),
+                      style: context.body(size: CitroType.micro, color: c.danger),
                     ),
                   const SizedBox(height: 5),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     child: LinearProgressIndicator(
                       value: m.score.clamp(0.0, 1.0),
                       minHeight: 4,
@@ -2787,11 +2911,28 @@ class _CookPageState extends State<CookPage> {
                 padding: const EdgeInsets.symmetric(vertical: 50),
                 child: Column(
                   children: [
-                    const Text('🧊', style: TextStyle(fontSize: 40)),
-                    const SizedBox(height: 8),
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: c.surface2,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: AppIcon(
+                          strokeSvg(AppIcons.cart, width: 1.8),
+                          size: 30,
+                          color: c.accent,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     Text(
                       '冰箱还是空的，先加几样食材吧',
-                      style: context.body(size: 12, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ],
                 ),
@@ -2805,9 +2946,9 @@ class _CookPageState extends State<CookPage> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: c.line),
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: Row(
                     children: [
@@ -2820,19 +2961,19 @@ class _CookPageState extends State<CookPage> {
                             Text(
                               it.name,
                               style: context.body(
-                                size: 13,
-                                weight: FontWeight.w700,
+                                size: CitroType.bodyLg,
+                                weight: CitroType.strong,
                                 color: c.ink,
                               ),
                             ),
                             Text(
                               '${it.qty} ${it.unit}${it.expDate.isNotEmpty ? ' · 到期 ${it.expDate}' : ''}',
-                              style: context.body(
-                                size: 10,
+                              style: context.hand(
+                                size: CitroType.micro,
                                 color:
                                     it.expDate.isNotEmpty &&
                                         it.expDate.compareTo(_today()) < 0
-                                    ? c.stamp
+                                    ? c.danger
                                     : c.inkSoft,
                               ),
                             ),
@@ -2858,7 +2999,10 @@ class _CookPageState extends State<CookPage> {
                         },
                         child: Text(
                           '编辑',
-                          style: context.body(size: 10, color: c.accentInk),
+                          style: context.body(
+                            size: CitroType.micro,
+                            color: c.accentInk,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -2869,7 +3013,10 @@ class _CookPageState extends State<CookPage> {
                         },
                         child: Text(
                           '删除',
-                          style: context.body(size: 10, color: c.stamp),
+                          style: context.body(
+                            size: CitroType.micro,
+                            color: c.danger,
+                          ),
                         ),
                       ),
                     ],
@@ -2889,18 +3036,18 @@ class _CookPageState extends State<CookPage> {
               }
             },
             child: Container(
-              width: 50,
-              height: 50,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
-                color: c.accent,
+                color: c.ink,
                 shape: BoxShape.circle,
-                boxShadow: CitroColors.shadows.lg(c),
+                boxShadow: CitroColors.shadows.float(c),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.plus, width: 2.4),
-                  size: 20,
-                  color: const Color(0xFF2E2C22),
+                  size: 22,
+                  color: c.bg,
                 ),
               ),
             ),
@@ -2920,15 +3067,15 @@ class _CookPageState extends State<CookPage> {
             children: [
               for (final it in shopping)
                 Container(
-                  margin: const EdgeInsets.only(bottom: 6),
+                  margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 10,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: c.line),
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: Row(
                     children: [
@@ -2938,31 +3085,29 @@ class _CookPageState extends State<CookPage> {
                           _saveShopping();
                         },
                         child: Container(
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           decoration: BoxDecoration(
-                            color: it.done ? c.accent : Colors.transparent,
-                            borderRadius: BorderRadius.circular(5),
+                            color: it.done ? c.ink : Colors.transparent,
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.small,
+                            ),
                             border: Border.all(
-                              color: it.done ? c.accent : c.line2,
+                              color: it.done ? c.ink : c.line2,
                             ),
                           ),
                           child: it.done
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 14,
-                                  color: Color(0xFF2E2C22),
-                                )
+                              ? Icon(Icons.check, size: 15, color: c.bg)
                               : null,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           it.text,
                           style: context
                               .body(
-                                size: 13,
+                                size: CitroType.body,
                                 color: it.done ? c.inkSoft : c.ink,
                                 height: 1.5,
                               )
@@ -2979,18 +3124,18 @@ class _CookPageState extends State<CookPage> {
                           _saveShopping();
                         },
                         child: Container(
-                          width: 32,
-                          height: 32,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
-                            color: c.stamp.withAlpha(c.dark ? 28 : 16),
+                            color: c.dangerSoft,
                             shape: BoxShape.circle,
-                            border: Border.all(color: c.stamp.withAlpha(150)),
+                            border: Border.all(color: c.danger),
                           ),
                           child: Center(
                             child: AppIcon(
                               strokeSvg(AppIcons.close, width: 2.2),
                               size: 15,
-                              color: c.stamp,
+                              color: c.danger,
                             ),
                           ),
                         ),
@@ -3003,11 +3148,28 @@ class _CookPageState extends State<CookPage> {
                   padding: const EdgeInsets.symmetric(vertical: 50),
                   child: Column(
                     children: [
-                      const Text('🛒', style: TextStyle(fontSize: 40)),
-                      const SizedBox(height: 8),
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: c.surface2,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: AppIcon(
+                            strokeSvg(AppIcons.cart, width: 1.8),
+                            size: 30,
+                            color: c.accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       Text(
                         '清单是空的，加一点要买的',
-                        style: context.body(size: 12, color: c.inkSoft),
+                        style: context.body(
+                          size: CitroType.caption,
+                          color: c.inkSoft,
+                        ),
                       ),
                     ],
                   ),
@@ -3025,22 +3187,25 @@ class _CookPageState extends State<CookPage> {
             children: [
               Expanded(
                 child: Container(
-                  height: 40,
+                  height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     border: Border.all(color: c.line2),
                   ),
                   child: TextField(
                     controller: shoppingInput,
                     onSubmitted: (_) => _addShopping(),
-                    style: context.body(size: 13),
+                    style: context.body(size: CitroType.meta),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
                       hintText: '添加要买的东西…',
-                      hintStyle: context.body(size: 12, color: c.inkSoft),
+                      hintStyle: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ),
                 ),
@@ -3049,18 +3214,18 @@ class _CookPageState extends State<CookPage> {
               GestureDetector(
                 onTap: _addShopping,
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: c.accent,
+                    color: c.ink,
                     shape: BoxShape.circle,
-                    boxShadow: CitroColors.shadows.note(c),
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: Center(
                     child: AppIcon(
                       strokeSvg(AppIcons.plus, width: 2.2),
-                      size: 18,
-                      color: const Color(0xFF2E2C22),
+                      size: 20,
+                      color: c.bg,
                     ),
                   ),
                 ),
@@ -3100,7 +3265,7 @@ class _CookPageState extends State<CookPage> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: AppSpacing.navBar,
           child: Row(
             children: [
               for (final it in _navItems)
@@ -3113,33 +3278,33 @@ class _CookPageState extends State<CookPage> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: it.$1 == 'food'
-                            ? (foodActive ? c.mint : c.mintSoft.withAlpha(170))
-                            : (tab == it.$1 ? c.hl : Colors.transparent),
-                        borderRadius: BorderRadius.circular(10),
-                        border: it.$1 == 'food'
-                            ? Border.all(color: c.mintLine)
-                            : null,
+                        color: (it.$1 == 'food' ? foodActive : tab == it.$1)
+                            ? c.ink
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.inner,
+                        ),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           AppIcon(
                             strokeSvg(it.$3, width: 2),
-                            size: it.$1 == 'food' ? 19 : 18,
-                            color: it.$1 == 'food'
-                                ? c.mintInk
-                                : (tab == it.$1 ? c.accentInk : c.inkSoft),
+                            size: 19,
+                            color: (it.$1 == 'food' ? foodActive : tab == it.$1)
+                                ? c.bg
+                                : c.inkSoft,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             it.$2,
                             style: context.body(
-                              size: 10,
-                              weight: FontWeight.w700,
-                              color: it.$1 == 'food'
-                                  ? c.mintInk
-                                  : (tab == it.$1 ? c.accentInk : c.inkSoft),
+                              size: CitroType.micro,
+                              weight: CitroType.strong,
+                              color:
+                                  (it.$1 == 'food' ? foodActive : tab == it.$1)
+                                      ? c.bg
+                                      : c.inkSoft,
                             ),
                           ),
                         ],
@@ -3203,46 +3368,29 @@ class _IngredientCheckState extends State<_IngredientCheck> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 16,
-            height: 16,
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
-              color: checked ? c.accent : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: checked ? c.accent : c.line2),
+              color: checked ? c.ink : Colors.transparent,
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+              border: Border.all(color: checked ? c.ink : c.line2),
             ),
             child: checked
-                ? const Icon(Icons.check, size: 11, color: Color(0xFF2E2C22))
+                ? Icon(Icons.check, size: 12, color: c.bg)
                 : null,
           ),
           const SizedBox(width: 8),
           Text(
             widget.name,
-            style: context.body(size: 12, color: checked ? c.inkSoft : c.ink2),
+            style: context.body(
+              size: CitroType.body,
+              color: checked ? c.inkSoft : c.ink2,
+            ),
           ),
         ],
       ),
     );
   }
-}
-
-class _GridPainter extends CustomPainter {
-  final Color color;
-  _GridPainter(this.color);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = .6;
-    for (var y = 12.0; y < size.height; y += 12) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-    }
-    for (var x = 12.0; x < size.width; x += 12) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class PrefsCook {

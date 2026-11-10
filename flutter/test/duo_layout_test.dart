@@ -135,7 +135,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     final fish = tester.getTopLeft(find.byType(FishCard));
     final zodiac = tester.getTopLeft(find.byType(ZodiacCard));
-    expect(zodiac.dx, greaterThan(fish.dx));
+    // 新默认布局：状态条（打卡/听隅/记账/摸鱼）占满第一行，星象在下一段左列。
+    expect(zodiac.dx, lessThan(fish.dx));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

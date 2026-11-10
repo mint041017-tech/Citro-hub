@@ -36,7 +36,7 @@ Future<void> showMeWindow(BuildContext context) {
   return Navigator.of(context, rootNavigator: true).push<void>(
     PageRouteBuilder<void>(
       opaque: false,
-      barrierColor: const Color(0x8A23211C),
+      barrierColor: context.c.scrim,
       barrierDismissible: true,
       barrierLabel: '关闭我的',
       transitionDuration: CitroMotion.modal,
@@ -51,17 +51,13 @@ Future<void> showMeWindow(BuildContext context) {
             height: height,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66000000),
-                    blurRadius: 30,
-                    offset: Offset(0, 16),
-                  ),
-                ],
+                borderRadius:
+                    BorderRadius.circular(CitroColors.radii.modal),
+                boxShadow: CitroColors.shadows.lg(context.c),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius:
+                    BorderRadius.circular(CitroColors.radii.modal),
                 child: MediaQuery(
                   data: media.copyWith(size: Size(width, height)),
                   child: const MePage(floating: true),
@@ -112,7 +108,7 @@ class MePage extends StatelessWidget {
 
   static void _downloadApp() {
     launchUrl(
-      Uri.parse('https://obs.chimu-claw.xyz/APK/Citro-v1.9.1-release.apk'),
+      Uri.parse('https://obs.chimu-claw.xyz/APK/Citro-v2.1.0-release.apk'),
       mode: LaunchMode.externalApplication,
     );
   }
@@ -129,8 +125,7 @@ class MePage extends StatelessWidget {
     final maxWidth = web ? 1040.0 : (duo ? 980.0 : 760.0);
     final side = math.max(10.0, (width - maxWidth) / 2);
     return Scaffold(
-      body: PaperBackground(
-        grid: false,
+      body: CitroBackground(
         child: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(
@@ -216,46 +211,44 @@ class MePage extends StatelessWidget {
           Pressable(
             onTap: () => popOrHome(context),
             child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: p.surface2,
-                borderRadius: BorderRadius.circular(999),
+                color: p.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(color: p.line),
-                boxShadow: CitroColors.shadows.paper(p),
+                boxShadow: CitroColors.shadows.card(p),
               ),
               child: Row(
                 children: [
                   AppIcon(
                     strokeSvg(AppIcons.arrowLeft, width: 2.2),
-                    size: 15,
+                    size: 16,
                     color: p.ink2,
                   ),
-                  const SizedBox(width: 3),
+                  const SizedBox(width: 6),
                   Text(
                     '返回',
-                    style: context.body(size: 12, weight: FontWeight.w700),
+                    style: context.body(
+                      size: CitroType.label,
+                      weight: CitroType.medium,
+                      color: p.ink,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.x2),
         ],
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: p.accent, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
         Text('我的', style: context.heading(size: web ? 28 : 22)),
         if (web) ...[
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.x2),
           Text(
             'ACCOUNT & PREFERENCES',
             style: context.body(
-              size: 10,
-              weight: FontWeight.w700,
+              size: CitroType.micro,
+              weight: CitroType.medium,
               color: p.inkSoft,
               letterSpacing: 1.7,
             ),
@@ -266,18 +259,18 @@ class MePage extends StatelessWidget {
           Pressable(
             onTap: () => Navigator.of(context).maybePop(),
             child: Container(
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: p.surface2,
+                color: p.surface,
                 shape: BoxShape.circle,
                 border: Border.all(color: p.line),
-                boxShadow: CitroColors.shadows.paper(p),
+                boxShadow: CitroColors.shadows.card(p),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.close, width: 2.2),
-                  size: 15,
+                  size: 16,
                   color: p.ink2,
                 ),
               ),
@@ -294,7 +287,7 @@ class MePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _section(c, '账号'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         _rows(c, [
           _MeRow(
             icon: AppIcons.logout,
@@ -340,7 +333,7 @@ class MePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _section(c, '通知与外观'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         _rows(c, [
           _MeToggleRow(
             icon: AppIcons.bell,
@@ -364,14 +357,14 @@ class MePage extends StatelessWidget {
               trailing: Text(
                 'HyperOS',
                 textAlign: TextAlign.right,
-                style: context.body(size: 11, color: c.inkSoft),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
               onTap: () => _openBackgroundSettings(context),
             ),
         ]),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.x3),
         _section(c, '隐私与协议'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         _rows(c, [
           _MeRow(
             icon: AppIcons.lock,
@@ -393,13 +386,28 @@ class MePage extends StatelessWidget {
               ),
             ),
         ]),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.x3),
         if (accountAfterLegal) ...[
           _accountGroup(context, user),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.x3),
         ],
+        _section(c, '资源'),
+        const SizedBox(height: AppSpacing.x1),
+        _rows(c, [
+          _MeRow(
+            icon: AppIcons.library,
+            label: '资源库',
+            trailing: AppIcon(
+              strokeSvg(AppIcons.chevronRight, width: 2),
+              size: 18,
+              color: c.inkSoft,
+            ),
+            onTap: () => Navigator.of(context).pushNamed('/res'),
+          ),
+        ]),
+        const SizedBox(height: AppSpacing.x3),
         _section(c, '关于'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         _rows(c, [
           const _MeRow(
             icon: AppIcons.book,
@@ -407,20 +415,18 @@ class MePage extends StatelessWidget {
             trailing: _VersionLabel(),
           ),
         ]),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.x3),
         _section(c, '联系我们'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x1),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: c.surface2,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.paper(c),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           ),
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.x1,
+            runSpacing: AppSpacing.x1,
             children: [
               _contactChip(context, 'KOOK 25343821', '25343821'),
               _contactChip(context, '微信 Tangerine-1017', 'Tangerine-1017'),
@@ -432,7 +438,7 @@ class MePage extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.x3),
       ],
     );
   }
@@ -473,7 +479,7 @@ class MePage extends StatelessWidget {
         final columns = box.maxWidth >= 320
             ? (items.length <= 4 ? items.length : 5)
             : 2;
-        const spacing = 8.0;
+        const spacing = AppSpacing.x1;
         final itemWidth = (box.maxWidth - spacing * (columns - 1)) / columns;
         return Wrap(
           spacing: spacing,
@@ -503,213 +509,159 @@ class MePage extends StatelessWidget {
           showProfileModal(context);
         }
       },
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(web ? 20 : 16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: c.dark
-                ? const [Color(0xFF32271C), Color(0xFF241D16)]
-                : const [Color(0xFFFFF3DC), Color(0xFFF4E2C2)],
-          ),
-          border: Border.all(color: c.accent.withAlpha(mediumBorderAlpha(c))),
-          boxShadow: CitroColors.shadows.paper(c),
+      child: CitroCard(
+        padding: EdgeInsets.fromLTRB(
+          web ? 22 : 18,
+          web ? 20 : 16,
+          web ? 18 : 16,
+          web ? 18 : 16,
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -22,
-              bottom: -30,
-              child: IgnorePointer(
-                child: Transform.rotate(
-                  angle: -10 * math.pi / 180,
-                  child: Opacity(
-                    opacity: c.dark ? .07 : .09,
-                    child: Image.asset(
-                      'assets/images/logo.webp',
-                      width: web ? 168 : 132,
-                      cacheWidth: 336,
-                    ),
+            Row(
+              children: [
+                CitroHero(
+                  // 侧栏/折叠栏的头像才参与容器变换；Tab 内与浮层里的
+                  // 副本用独立 tag，避免同一路由子树出现两个相同 Hero。
+                  tag: CitroHero.tagOf(
+                    'profile',
+                    embedded || floating ? 'tab' : 'me',
                   ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: -30,
-              top: -54,
-              child: IgnorePointer(
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [c.accent.withAlpha(20), c.accent.withAlpha(0)],
+                  child: Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: BoxDecoration(
+                      color: c.surface2,
+                      borderRadius:
+                          BorderRadius.circular(CitroColors.radii.inner),
+                      border: Border.all(color: c.line),
+                      image: user?.av != null
+                          ? DecorationImage(
+                              image: ResizeImage(
+                                NetworkImage(Api.imageUrl(user!.av)),
+                                width: 160,
+                              ),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                web ? 22 : 16,
-                web ? 20 : 14,
-                web ? 18 : 14,
-                web ? 18 : 14,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CitroHero(
-                        // 侧栏/折叠栏的头像才参与容器变换；Tab 内与浮层里的
-                        // 副本用独立 tag，避免同一路由子树出现两个相同 Hero。
-                        tag: CitroHero.tagOf(
-                          'profile',
-                          embedded || floating ? 'tab' : 'me',
-                        ),
-                        child: Container(
-                          width: avatarSize,
-                          height: avatarSize,
-                          decoration: BoxDecoration(
-                            color: user == null ? c.accent : c.hl,
-                            borderRadius: BorderRadius.circular(web ? 16 : 14),
-                            border: Border.all(color: c.surface, width: 2),
-                            boxShadow: CitroColors.shadows.note(c),
-                            image: user?.av != null
-                                ? DecorationImage(
-                                    image: ResizeImage(
-                                      NetworkImage(Api.imageUrl(user!.av)),
-                                      width: 160,
-                                    ),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: user?.av != null
-                              ? null
-                              : Center(
-                                  child: Text(
-                                    user?.name.isNotEmpty == true
-                                        ? user!.name[0]
-                                        : '友',
-                                    style: context.display(
-                                      size: avatarSize * .42,
-                                      weight: FontWeight.w700,
-                                      color: const Color(0xFF2E2C22),
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    user?.name ?? '未登录',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: context.display(
-                                      size: web ? 22 : (floating ? 20 : 18),
-                                      weight: FontWeight.w700,
-                                      color: c.ink,
-                                    ),
-                                  ),
-                                ),
-                                if (user != null) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: c.mintSoft,
-                                      borderRadius: BorderRadius.circular(99),
-                                      border: Border.all(color: c.mintLine),
-                                    ),
-                                    child: Text(
-                                      state.loggedIn ? '云端同步' : '游客',
-                                      style: context.body(
-                                        size: 9,
-                                        weight: FontWeight.w700,
-                                        color: c.mintInk,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
+                    child: user?.av != null
+                        ? null
+                        : Center(
+                            child: Text(
+                              user?.name.isNotEmpty == true
+                                  ? user!.name[0]
+                                  : '友',
+                              style: context.heading(
+                                size: avatarSize * .42,
+                                color: c.ink2,
+                              ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              user == null
-                                  ? '点击登录 / 注册，收藏与记录会跟着你'
-                                  : '今天也把日子过成喜欢的样子',
-                              maxLines: 2,
-                              style: context.body(
-                                size: web ? 12.5 : 11,
-                                color: c.inkSoft,
-                                height: 1.45,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              user?.name ?? '未登录',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.heading(
+                                size: web ? 22 : (floating ? 20 : 18),
+                                color: c.ink,
+                              ),
+                            ),
+                          ),
+                          if (user != null) ...[
+                            const SizedBox(width: AppSpacing.x1),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: c.mintSoft,
+                                borderRadius:
+                                    BorderRadius.circular(CitroColors.radii.chip),
+                                border: Border.all(color: c.mintLine),
+                              ),
+                              child: Text(
+                                state.loggedIn ? '云端同步' : '游客',
+                                style: context.body(
+                                  size: CitroType.micro,
+                                  weight: CitroType.medium,
+                                  color: c.mintInk,
+                                ),
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user == null
+                            ? '点击登录 / 注册，收藏与记录会跟着你'
+                            : '今天也把日子过成喜欢的样子',
+                        maxLines: 2,
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.inkSoft,
+                          height: 1.45,
                         ),
                       ),
-                      if (user != null)
-                        AppIcon(
-                          strokeSvg(AppIcons.chevronRight, width: 2),
-                          size: 18,
-                          color: c.inkSoft,
-                        ),
                     ],
                   ),
-                  SizedBox(height: web ? 18 : 12),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: web ? 14 : 6,
-                      vertical: web ? 12 : 10,
+                ),
+                if (user != null)
+                  AppIcon(
+                    strokeSvg(AppIcons.chevronRight, width: 2),
+                    size: 18,
+                    color: c.inkSoft,
+                  ),
+              ],
+            ),
+            SizedBox(height: web ? 18 : 14),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: web ? 14 : 4,
+                vertical: web ? 12 : 10,
+              ),
+              decoration: BoxDecoration(
+                color: c.surface2,
+                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _heroStat(
+                      context,
+                      '连续打卡',
+                      '${state.checkinStreak} 天',
                     ),
-                    decoration: BoxDecoration(
-                      color: c.surface.withAlpha(c.dark ? 34 : 110),
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: c.line2.withAlpha(120)),
+                  ),
+                  _heroDivider(c),
+                  Expanded(
+                    child: _heroStat(
+                      context,
+                      '卡面收藏',
+                      CardCatalog.all.isEmpty
+                          ? '—'
+                          : '${state.cardOwnedCount}/${CardCatalog.all.length}',
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _heroStat(
-                            context,
-                            '连续打卡',
-                            '${state.checkinStreak} 天',
-                          ),
-                        ),
-                        _heroDivider(c),
-                        Expanded(
-                          child: _heroStat(
-                            context,
-                            '卡面收藏',
-                            CardCatalog.all.isEmpty
-                                ? '—'
-                                : '${state.cardOwnedCount}/${CardCatalog.all.length}',
-                          ),
-                        ),
-                        _heroDivider(c),
-                        Expanded(
-                          child: _heroStat(
-                            context,
-                            '抽卡机会',
-                            '${state.cardCredits} 次',
-                          ),
-                        ),
-                      ],
+                  ),
+                  _heroDivider(c),
+                  Expanded(
+                    child: _heroStat(
+                      context,
+                      '抽卡机会',
+                      '${state.cardCredits} 次',
                     ),
                   ),
                 ],
@@ -721,13 +673,11 @@ class MePage extends StatelessWidget {
     );
   }
 
-  int mediumBorderAlpha(CitroColors c) => c.dark ? 70 : 80;
-
   Widget _heroDivider(CitroColors c) => Container(
     width: 1,
     height: 24,
     margin: const EdgeInsets.symmetric(horizontal: 4),
-    color: c.line2.withAlpha(140),
+    color: c.line,
   );
 
   Widget _heroStat(BuildContext context, String label, String value) {
@@ -739,15 +689,18 @@ class MePage extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: context.display(
-            size: 18,
-            weight: FontWeight.w700,
-            color: c.accentInk,
+          style: context.hand(
+            size: CitroType.titleLg,
+            weight: CitroType.strong,
+            color: c.ink,
             height: 1.1,
           ),
         ),
         const SizedBox(height: 2),
-        Text(label, style: context.body(size: 10, color: c.inkSoft)),
+        Text(
+          label,
+          style: context.body(size: CitroType.micro, color: c.inkSoft),
+        ),
       ],
     );
   }
@@ -756,19 +709,20 @@ class MePage extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: kIsWeb ? 7 : 6,
-          height: kIsWeb ? 7 : 6,
-          decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+          width: 4,
+          height: 14,
+          decoration: BoxDecoration(
+            color: c.accent,
+            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+          ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: AppSpacing.x2),
         Builder(
           builder: (ctx) => Text(
             title,
-            style: ctx.body(
-              size: kIsWeb ? 12.5 : 11.5,
-              weight: FontWeight.w700,
-              color: c.accentInk,
-              letterSpacing: kIsWeb ? 1.3 : 1,
+            style: ctx.heading(
+              size: CitroType.label,
+              color: c.ink,
             ),
           ),
         ),
@@ -777,47 +731,22 @@ class MePage extends StatelessWidget {
   }
 
   Widget _rows(CitroColors c, List<Widget> children) {
-    if (kIsWeb) {
-      return RepaintBoundary(
-        child: Column(
-          children: [
-            for (final child in children)
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: c.surface2,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
-                ),
-                child: child,
-              ),
-          ],
-        ),
-      );
-    }
-    final list = <Widget>[];
-    for (var i = 0; i < children.length; i++) {
-      list.add(children[i]);
-      if (i < children.length - 1) {
-        list.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: DashedLine(color: c.line2.withAlpha(140)),
-          ),
-        );
-      }
-    }
     return RepaintBoundary(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          boxShadow: CitroColors.shadows.card(c),
         ),
-        child: Column(children: list),
+        child: Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) CitroDivider(color: c.line, margin: const EdgeInsets.symmetric(vertical: 2)),
+              children[i],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -832,11 +761,14 @@ class MePage extends StatelessWidget {
           vertical: kIsWeb ? 10 : 8,
         ),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.line2.withAlpha(150)),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+          border: Border.all(color: c.line2),
         ),
-        child: Text(label, style: context.body(size: 13, color: c.ink2)),
+        child: Text(
+          label,
+          style: context.body(size: CitroType.meta, color: c.ink2),
+        ),
       ),
     );
   }
@@ -881,17 +813,17 @@ class MePage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('后台运行设置', style: context.heading(size: 20)),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.x1),
             Text(
               'HyperOS / MIUI 的省电策略可能限制后台计时、定位与音频。'
               '若提醒不准时或听隅被暂停，请在本应用的「省电策略」中选择「无限制」。',
               style: context.body(
-                size: 12,
+                size: CitroType.caption,
                 color: context.c.inkSoft,
                 height: 1.6,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.x3),
             Row(
               children: [
                 Expanded(
@@ -901,7 +833,7 @@ class MePage extends StatelessWidget {
                     onTap: () => Navigator.pop(ctx, false),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.x1),
                 Expanded(
                   child: AccentButton(
                     text: '去设置',
@@ -928,12 +860,15 @@ class MePage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('退出登录？', style: context.heading(size: 20)),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.x1),
             Text(
               '退出后仍会保留社区内容',
-              style: context.body(size: 12, color: context.c.inkSoft),
+              style: context.body(
+                size: CitroType.caption,
+                color: context.c.inkSoft,
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.x3),
             Row(
               children: [
                 Expanded(
@@ -943,7 +878,7 @@ class MePage extends StatelessWidget {
                     onTap: () => Navigator.pop(ctx, false),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.x1),
                 Expanded(
                   child: AccentButton(
                     text: '退出',
@@ -983,7 +918,7 @@ class _MeToggleRow extends StatelessWidget {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 14 : 0,
+        horizontal: kIsWeb ? 14 : 10,
         vertical: kIsWeb ? 12 : 8,
       ),
       child: Row(
@@ -994,16 +929,22 @@ class _MeToggleRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: context.body(size: 14, color: c.ink)),
+                Text(
+                  label,
+                  style: context.body(size: CitroType.body, color: c.ink),
+                ),
                 if (hint.isNotEmpty)
-                  Text(hint, style: context.body(size: 10, color: c.inkSoft)),
+                  Text(
+                    hint,
+                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                  ),
               ],
             ),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: c.surface2,
+            activeThumbColor: c.surface,
             activeTrackColor: c.accent,
             inactiveThumbColor: c.inkSoft,
             inactiveTrackColor: c.line2,
@@ -1022,7 +963,7 @@ class _ThemeRow extends StatelessWidget {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 14 : 0,
+        horizontal: kIsWeb ? 14 : 10,
         vertical: kIsWeb ? 12 : 8,
       ),
       child: Row(
@@ -1037,10 +978,10 @@ class _ThemeRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('主题', style: context.body(size: 14, color: c.ink)),
+                Text('主题', style: context.body(size: CitroType.body, color: c.ink)),
                 Text(
                   '浅色、深色或跟随系统',
-                  style: context.body(size: 10, color: c.inkSoft),
+                  style: context.body(size: CitroType.micro, color: c.inkSoft),
                 ),
               ],
             ),
@@ -1155,12 +1096,12 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
         ),
       ),
       child: Material(
-        color: c.surface2,
+        color: c.surface,
         elevation: 16,
-        shadowColor: c.dark ? Colors.black : const Color(0x335A4A2C),
+        shadowColor: c.scrim,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
           side: BorderSide(color: c.line),
         ),
         clipBehavior: Clip.antiAlias,
@@ -1192,19 +1133,16 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
       padding: const EdgeInsets.only(bottom: 2),
       child: InkWell(
         onTap: () => _select(mode),
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: c.hl.withAlpha(c.dark ? 48 : 60),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        hoverColor: c.surface2,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
-          height: 42,
+          height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: active
-                ? c.accent.withAlpha(c.dark ? 40 : 26)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: active ? Border.all(color: c.accent.withAlpha(90)) : null,
+            color: active ? c.accentLt.withAlpha(120) : Colors.transparent,
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           ),
           child: Row(
             children: [
@@ -1220,8 +1158,8 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.body(
-                    size: 13,
-                    weight: active ? FontWeight.w700 : FontWeight.w400,
+                    size: CitroType.meta,
+                    weight: active ? CitroType.medium : CitroType.regular,
                     color: active ? c.accentInk : c.ink2,
                   ),
                 ),
@@ -1261,8 +1199,8 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
             padding: const EdgeInsets.only(left: 10, right: 8),
             decoration: BoxDecoration(
               color: c.surface2,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: c.line2.withAlpha(170)),
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+              border: Border.all(color: c.line2),
             ),
             child: Row(
               children: [
@@ -1278,8 +1216,8 @@ class _ThemeDropdownState extends State<_ThemeDropdown> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: 12,
-                      weight: FontWeight.w700,
+                      size: CitroType.caption,
+                      weight: CitroType.medium,
                       color: c.ink2,
                     ),
                   ),
@@ -1324,10 +1262,7 @@ class _MeRowState extends State<_MeRow> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final dangerColor = c.dark
-        ? const Color(0xFFFF8A80)
-        : const Color(0xFFB42318);
-    final color = widget.danger ? dangerColor : c.ink;
+    final color = widget.danger ? c.danger : c.ink;
     return Semantics(
       button: widget.onTap != null,
       enabled: widget.onTap != null,
@@ -1341,17 +1276,17 @@ class _MeRowState extends State<_MeRow> {
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: _hover ? c.hl.withAlpha(45) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            color: _hover ? c.surface2 : Colors.transparent,
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           ),
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: kIsWeb ? 54 : 44),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: kIsWeb ? 14 : 0,
+                  horizontal: kIsWeb ? 14 : 10,
                   vertical: kIsWeb ? 12 : 8,
                 ),
                 child: Row(
@@ -1359,15 +1294,15 @@ class _MeRowState extends State<_MeRow> {
                     AppIcon(
                       strokeSvg(widget.icon, width: 2),
                       size: 20,
-                      color: widget.danger ? dangerColor : c.accentInk,
+                      color: widget.danger ? c.danger : c.accentInk,
                     ),
                     const SizedBox(width: kIsWeb ? 12 : 10),
                     Expanded(
                       child: Text(
                         widget.label,
                         style: context.body(
-                          size: kIsWeb ? 14.5 : 13.5,
-                          weight: kIsWeb ? FontWeight.w700 : FontWeight.w400,
+                          size: kIsWeb ? CitroType.body : CitroType.meta,
+                          weight: kIsWeb ? CitroType.medium : CitroType.regular,
                           color: color,
                         ),
                       ),
@@ -1379,13 +1314,13 @@ class _MeRowState extends State<_MeRow> {
                           child: widget.trailing!,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.x1),
                     ],
                     if (widget.onTap != null)
                       AppIcon(
                         strokeSvg(AppIcons.chevronRight, width: 2),
                         size: 15,
-                        color: c.inkSoft.withAlpha(140),
+                        color: c.inkSoft,
                       ),
                   ],
                 ),
@@ -1413,37 +1348,36 @@ class _QuickTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.paper(c),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          boxShadow: CitroColors.shadows.card(c),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: c.accent.withAlpha(c.dark ? 44 : 24),
+                color: c.surface2,
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(icon, width: 2),
                   size: 18,
-                  color: c.accentInk,
+                  color: c.ink2,
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.x1),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.body(
-                size: 11,
-                weight: FontWeight.w700,
+                size: CitroType.small,
+                weight: CitroType.medium,
                 color: c.ink2,
               ),
             ),
@@ -1467,7 +1401,7 @@ class _VersionLabel extends StatelessWidget {
         if (version.isEmpty) return const SizedBox.shrink();
         return Text(
           version == 'dev' ? '开发版' : 'v$version',
-          style: context.body(size: 11, color: c.inkSoft),
+          style: context.body(size: CitroType.small, color: c.inkSoft),
         );
       },
     );

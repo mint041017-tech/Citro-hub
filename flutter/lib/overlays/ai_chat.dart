@@ -51,7 +51,7 @@ Future<void> showAiChat(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x8A23211C),
+    barrierColor: context.c.scrim,
     builder: (_) => _AiChatSheet(
       recipe: recipe,
       goodDeed: goodDeed,
@@ -537,14 +537,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
     return Padding(
       padding: EdgeInsets.only(bottom: inset),
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
         child: Container(
           height: height,
           decoration: BoxDecoration(
             color: c.surface,
             border: Border(top: BorderSide(color: c.line)),
           ),
-          child: PaperBackground(
+          child: CitroBackground(
             child: SafeArea(
               top: false,
               child: Column(
@@ -555,7 +555,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
                       color: c.line2,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     ),
                   ),
                   Padding(
@@ -570,7 +570,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             color: c.accent.withAlpha(70),
                             shape: BoxShape.circle,
                             border: Border.all(color: c.line2),
-                            boxShadow: CitroColors.shadows.note(c),
+                            boxShadow: CitroColors.shadows.sm(c),
                           ),
                           child: ClipOval(
                             child: Image.asset(
@@ -587,13 +587,13 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             children: [
                               Text(
                                 'CiCi',
-                                style: context.heading(size: 20, color: c.ink),
+                                style: context.heading(size: CitroType.titleLg, color: c.ink),
                               ),
                               Text(
                                 _subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: context.body(size: 10, color: c.inkSoft),
+                                style: context.body(size: CitroType.micro, color: c.inkSoft),
                               ),
                             ],
                           ),
@@ -605,7 +605,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: c.surface2,
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                               border: Border.all(color: c.line2),
                             ),
                             child: Row(
@@ -620,8 +620,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 Text(
                                   '性格',
                                   style: context.body(
-                                    size: 13,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.meta,
+                                    weight: CitroType.medium,
                                     color: c.ink2,
                                   ),
                                 ),
@@ -637,7 +637,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
                               color: c.surface2,
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                               border: Border.all(color: c.line2),
                             ),
                             child: Row(
@@ -654,8 +654,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 Text(
                                   '新对话',
                                   style: context.body(
-                                    size: 13,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.meta,
+                                    weight: CitroType.medium,
                                     color: _sending
                                         ? c.inkSoft.withAlpha(100)
                                         : c.ink2,
@@ -688,7 +688,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       ],
                     ),
                   ),
-                  DashedLine(color: c.line2.withAlpha(150)),
+                  CitroDivider(color: c.line2.withAlpha(150)),
                   if (_chatRewarded)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -698,8 +698,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: c.hl.withAlpha(120),
-                          borderRadius: BorderRadius.circular(10),
+                          color: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                           border: Border.all(color: c.accent.withAlpha(80)),
                         ),
                         child: Row(
@@ -714,8 +714,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                               child: Text(
                                 '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
                                 style: context.body(
-                                  size: 11,
-                                  weight: FontWeight.w700,
+                                  size: CitroType.small,
+                                  weight: CitroType.medium,
                                   color: c.accentInk,
                                 ),
                               ),
@@ -745,7 +745,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         ),
                         decoration: BoxDecoration(
                           color: c.mintSoft,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
                           border: Border.all(color: c.mintLine),
                         ),
                         child: Row(
@@ -760,8 +760,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                               child: Text(
                                 '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
                                 style: context.body(
-                                  size: 11,
-                                  weight: FontWeight.w700,
+                                  size: CitroType.small,
+                                  weight: CitroType.medium,
                                   color: c.mintInk,
                                 ),
                               ),
@@ -775,7 +775,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                       child: Text(
                         _error!,
-                        style: context.body(size: 11, color: c.stamp),
+                        style: context.body(size: CitroType.small, color: c.stamp),
                       ),
                     ),
                   Padding(
@@ -783,7 +783,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     child: Text(
                       'AI 生成内容仅供参考；文字与图片会发送至第三方 AI 服务处理，请勿发送敏感信息。',
                       textAlign: TextAlign.center,
-                      style: context.body(size: 10, color: c.inkSoft),
+                      style: context.body(size: CitroType.micro, color: c.inkSoft),
                     ),
                   ),
                   _inputBar(context),
@@ -821,7 +821,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     color: c.accent.withAlpha(70),
                     shape: BoxShape.circle,
                     border: Border.all(color: c.line),
-                    boxShadow: CitroColors.shadows.note(c),
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: ClipOval(
                     child: Image.asset(
@@ -837,12 +837,12 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   decoration: BoxDecoration(
-                    color: c.noteY.withAlpha(170),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(3),
-                      topRight: Radius.circular(14),
-                      bottomLeft: Radius.circular(14),
-                      bottomRight: Radius.circular(14),
+                    color: c.tintYellow.withAlpha(170),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(CitroColors.radii.xs),
+                      topRight: Radius.circular(CitroColors.radii.inner),
+                      bottomLeft: Radius.circular(CitroColors.radii.inner),
+                      bottomRight: Radius.circular(CitroColors.radii.inner),
                     ),
                     border: Border.all(color: c.line),
                   ),
@@ -852,7 +852,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         : widget.goodDeed
                         ? '今天抽到下签也别慌。\n跟我说说你今天做的一件好事，我帮你转运一次。'
                         : '你好呀，我是 CiCi。\n今天想聊点什么？',
-                    style: context.body(size: 13, color: c.ink2, height: 1.7),
+                    style: context.body(size: CitroType.meta, color: c.ink2, height: 1.7),
                   ),
                 ),
               ),
@@ -864,14 +864,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: c.mintSoft,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 border: Border.all(color: c.mintLine),
               ),
               child: Text(
                 context.app.loggedIn
                     ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会以「今日好事：…」同步到社区动态（含图片，公开可见）。'
                     : '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后才能获得转运机会。',
-                style: context.body(size: 12, color: c.mintInk, height: 1.6),
+                style: context.body(size: CitroType.caption, color: c.mintInk, height: 1.6),
               ),
             ),
           ],
@@ -880,8 +880,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
             Text(
               '可以试试',
               style: context.body(
-                size: 11,
-                weight: FontWeight.w700,
+                size: CitroType.small,
+                weight: CitroType.medium,
                 color: c.inkSoft,
                 letterSpacing: .5,
               ),
@@ -901,12 +901,12 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       ),
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                         border: Border.all(color: c.line),
                       ),
                       child: Text(
                         p,
-                        style: context.body(size: 12, color: c.ink2),
+                        style: context.body(size: CitroType.caption, color: c.ink2),
                       ),
                     ),
                   ),
@@ -931,20 +931,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           decoration: BoxDecoration(
             color: c.accent,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(4),
-              bottomLeft: Radius.circular(15),
-              bottomRight: Radius.circular(15),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(CitroColors.radii.inner),
+              topRight: Radius.circular(CitroColors.radii.xs),
+              bottomLeft: Radius.circular(CitroColors.radii.inner),
+              bottomRight: Radius.circular(CitroColors.radii.inner),
             ),
-            boxShadow: CitroColors.shadows.note(c),
+            boxShadow: CitroColors.shadows.sm(c),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (m.image != null) ...[
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   child: _LocalImage(
                     dataUrl: m.image!,
                     width: 178,
@@ -957,8 +957,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 Text(
                   m.text,
                   style: context.body(
-                    size: 13,
-                    color: const Color(0xFF2E2C22),
+                    size: CitroType.meta,
+                    color: c.onAccent,
                     height: 1.65,
                   ),
                 ),
@@ -978,7 +978,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
             margin: const EdgeInsets.only(top: 2),
             padding: const EdgeInsets.all(1.5),
             decoration: BoxDecoration(
-              color: c.hl,
+              color: c.accentLt.withAlpha(c.dark ? 70 : 170),
               shape: BoxShape.circle,
               border: Border.all(color: c.line),
             ),
@@ -1000,11 +1000,11 @@ class _AiChatSheetState extends State<_AiChatSheet>
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: BoxDecoration(
                 color: c.surface2,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(15),
-                  bottomLeft: Radius.circular(15),
-                  bottomRight: Radius.circular(15),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(CitroColors.radii.xs),
+                  topRight: Radius.circular(CitroColors.radii.inner),
+                  bottomLeft: Radius.circular(CitroColors.radii.inner),
+                  bottomRight: Radius.circular(CitroColors.radii.inner),
                 ),
                 border: Border.all(color: c.line),
               ),
@@ -1023,13 +1023,13 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         const SizedBox(width: 8),
                         Text(
                           '正在想想…',
-                          style: context.body(size: 12, color: c.inkSoft),
+                          style: context.body(size: CitroType.caption, color: c.inkSoft),
                         ),
                       ],
                     )
                   : Text(
                       m.text,
-                      style: context.body(size: 13, color: c.ink, height: 1.7),
+                      style: context.body(size: CitroType.meta, color: c.ink, height: 1.7),
                     ),
             ),
           ),
@@ -1056,7 +1056,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       child: Image.memory(
                         base64Decode(_pendingImage!.split(',').last),
                         width: 44,
@@ -1121,7 +1121,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     clipBehavior: Clip.none,
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         child: _LocalImage(
                           dataUrl: _pendingImage!,
                           width: 58,
@@ -1141,10 +1141,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                               shape: BoxShape.circle,
                               border: Border.all(color: c.surface, width: 1.4),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.close_rounded,
                               size: 12,
-                              color: Colors.white,
+                              color: c.bg,
                             ),
                           ),
                         ),
@@ -1155,7 +1155,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: Text(
                       '图片会和文字一起发给 CiCi',
-                      style: context.body(size: 11, color: c.inkSoft),
+                      style: context.body(size: CitroType.small, color: c.inkSoft),
                     ),
                   ),
                 ],
@@ -1178,7 +1178,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: Text(
                       '正在聆听…说完点一下麦克风停止',
-                      style: context.body(size: 11, color: c.accentInk),
+                      style: context.body(size: CitroType.small, color: c.accentInk),
                     ),
                   ),
                 ],
@@ -1256,7 +1256,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                     border: Border.all(color: c.line2),
                   ),
                   child: TextField(
@@ -1280,13 +1280,13 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     },
                     onSubmitted: (_) => _send(),
                     onTapOutside: (_) => _focus.unfocus(),
-                    style: context.body(size: 13, height: 1.5),
+                    style: context.body(size: CitroType.meta, height: 1.5),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       hintText: '和 CiCi 聊聊…',
-                      hintStyle: context.body(size: 13, color: c.inkSoft),
+                      hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
                     ),
                   ),
                 ),
@@ -1301,7 +1301,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     color: _sending ? c.accent.withAlpha(100) : c.accent,
                     shape: BoxShape.circle,
                     border: Border.all(color: c.line2),
-                    boxShadow: _sending ? null : CitroColors.shadows.note(c),
+                    boxShadow: _sending ? null : CitroColors.shadows.sm(c),
                   ),
                   child: Center(
                     child: _sending
@@ -1316,7 +1316,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         : AppIcon(
                             strokeSvg(AppIcons.send, width: 2),
                             size: 18,
-                            color: const Color(0xFF2E2C22),
+                            color: c.onAccent,
                           ),
                   ),
                 ),
@@ -1335,7 +1335,7 @@ Future<void> showCiciPersonaSheet(BuildContext context) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x8A23211C),
+    barrierColor: context.c.scrim,
     builder: (_) => const _PersonaSheet(),
   );
 }
@@ -1383,7 +1383,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
         ),
         child: SafeArea(
           top: false,
@@ -1399,7 +1399,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                     height: 4,
                     decoration: BoxDecoration(
                       color: c.line2,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     ),
                   ),
                 ),
@@ -1408,7 +1408,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   children: [
                     Text(
                       'CiCi 的性格',
-                      style: context.heading(size: 20, color: c.ink),
+                      style: context.heading(size: CitroType.titleLg, color: c.ink),
                     ),
                     const Spacer(),
                     GestureDetector(
@@ -1435,7 +1435,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                 const SizedBox(height: 6),
                 Text(
                   '选一个喜欢的说话方式，或者在下面写你想要的性格。保存后从下一句话开始生效，留空就是默认的嘴硬心软。',
-                  style: context.body(size: 12, color: c.inkSoft, height: 1.6),
+                  style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.6),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -1453,25 +1453,25 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   maxLines: 5,
                   maxLength: CiciPersona.maxLength,
                   onChanged: (_) => setState(() {}),
-                  style: context.body(size: 14, color: c.ink, height: 1.6),
+                  style: context.body(size: CitroType.body, color: c.ink, height: 1.6),
                   cursorColor: c.accent,
                   decoration: InputDecoration(
                     hintText: '例如：说话像邻居姐姐，爱用「呀」「啦」结尾，会主动关心我今天吃了什么。',
                     hintStyle: context.body(
-                      size: 13,
+                      size: CitroType.meta,
                       color: c.inkSoft,
                       height: 1.6,
                     ),
                     filled: true,
                     fillColor: c.surface2,
-                    counterStyle: context.body(size: 11, color: c.inkSoft),
+                    counterStyle: context.body(size: CitroType.small, color: c.inkSoft),
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                       borderSide: BorderSide(color: c.line2),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                       borderSide: BorderSide(color: c.accent),
                     ),
                   ),
@@ -1513,15 +1513,15 @@ class _PersonaSheetState extends State<_PersonaSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? c.hl : c.surface2,
-          borderRadius: BorderRadius.circular(999),
+          color: selected ? c.accentLt.withAlpha(c.dark ? 70 : 170) : c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: selected ? c.accent : c.line2),
         ),
         child: Text(
           preset.label,
           style: context.body(
-            size: 13,
-            weight: selected ? FontWeight.w700 : FontWeight.w400,
+            size: CitroType.meta,
+            weight: selected ? CitroType.medium : CitroType.regular,
             color: selected ? c.accentInk : c.ink2,
           ),
         ),
@@ -1621,9 +1621,9 @@ class AiHomeButton extends StatelessWidget {
             const SizedBox(height: 1),
             Text(
               'CiCi',
-              style: context.display(
-                size: 9,
-                weight: FontWeight.w700,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.medium,
                 color: c.accentInk,
                 height: 1,
               ),

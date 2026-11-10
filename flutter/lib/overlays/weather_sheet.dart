@@ -86,9 +86,9 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                   children: [
                     Text(
                       '${w.temp.round()}',
-                      style: context.display(
-                        size: 44,
-                        weight: FontWeight.w700,
+                      style: context.hand(
+                        size: CitroType.hero,
+                        weight: CitroType.medium,
                         color: c.ink,
                         height: 1,
                       ),
@@ -97,19 +97,19 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         '°C',
-                        style: context.body(size: 14, color: c.inkSoft),
+                        style: context.body(size: CitroType.body, color: c.inkSoft),
                       ),
                     ),
                   ],
                 ),
                 Text(
                   '${w.desc} · ${w.city}',
-                  style: context.body(size: 13, color: c.ink2),
+                  style: context.body(size: CitroType.meta, color: c.ink2),
                 ),
                 if (today != null)
                   Text(
                     '最高 ${today.max.round()}° / 最低 ${today.min.round()}°',
-                    style: context.body(size: 12, color: c.inkSoft),
+                    style: context.body(size: CitroType.caption, color: c.inkSoft),
                   ),
               ],
             ),
@@ -119,17 +119,17 @@ class _WeatherDialogState extends State<_WeatherDialog> {
               children: [
                 Text(
                   '体感 ${w.feels.round()}°',
-                  style: context.body(size: 12, color: c.inkSoft),
+                  style: context.body(size: CitroType.caption, color: c.inkSoft),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '湿度 ${w.humidity}%',
-                  style: context.body(size: 12, color: c.inkSoft),
+                  style: context.body(size: CitroType.caption, color: c.inkSoft),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${w.windDirection} ${w.wind.round()} km/h',
-                  style: context.body(size: 12, color: c.inkSoft),
+                  style: context.body(size: CitroType.caption, color: c.inkSoft),
                 ),
               ],
             ),
@@ -150,8 +150,8 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                   width: 58,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
-                    color: current ? c.hl : c.surface,
-                    borderRadius: BorderRadius.circular(10),
+                    color: current ? c.accentLt.withAlpha(c.dark ? 70 : 170) : c.surface,
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(color: current ? c.accent : c.line),
                   ),
                   child: Column(
@@ -161,8 +161,8 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                             ? '现在'
                             : '${hour.time.hour.toString().padLeft(2, '0')}:00',
                         style: context.body(
-                          size: 11,
-                          weight: current ? FontWeight.w700 : FontWeight.w400,
+                          size: CitroType.small,
+                          weight: current ? CitroType.medium : CitroType.regular,
                           color: current ? c.accentInk : c.inkSoft,
                         ),
                       ),
@@ -175,8 +175,8 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                       Text(
                         '${hour.temp.round()}°',
                         style: context.body(
-                          size: 12,
-                          weight: FontWeight.w700,
+                          size: CitroType.caption,
+                          weight: CitroType.medium,
                           color: c.ink,
                         ),
                       ),
@@ -188,7 +188,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
           ),
         ],
         const SizedBox(height: 12),
-        DashedLine(color: c.line2),
+        CitroDivider(color: c.line2),
         const SizedBox(height: 8),
         if (w.daily.isEmpty)
           Padding(
@@ -196,7 +196,7 @@ class _WeatherDialogState extends State<_WeatherDialog> {
             child: Text(
               state.weatherError ?? '天气加载中…',
               textAlign: TextAlign.center,
-              style: context.body(size: 12, color: c.inkSoft),
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
             ),
           )
         else
@@ -213,8 +213,8 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                           ? '今天'
                           : '周${'一二三四五六日'[d.date.weekday - 1]}',
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
+                        size: CitroType.caption,
+                        weight: CitroType.medium,
                         color: c.ink2,
                       ),
                     ),
@@ -227,21 +227,21 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                   Expanded(
                     child: Text(
                       weatherText(d.code),
-                      style: context.body(size: 12, color: c.inkSoft),
+                      style: context.body(size: CitroType.caption, color: c.inkSoft),
                     ),
                   ),
                   if (d.rain > 0) ...[
                     Text(
                       '${d.rain}%',
-                      style: context.body(size: 11, color: c.mintInk),
+                      style: context.body(size: CitroType.small, color: c.mintInk),
                     ),
                     const SizedBox(width: 8),
                   ],
                   Text(
                     '${d.min.round()}° / ${d.max.round()}°',
                     style: context.body(
-                      size: 12,
-                      weight: FontWeight.w700,
+                      size: CitroType.caption,
+                      weight: CitroType.medium,
                       color: c.ink,
                     ),
                   ),

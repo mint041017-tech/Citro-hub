@@ -8,6 +8,7 @@ import 'package:web/web.dart' as web;
 import '../services/api.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import 'game_ui.dart';
 
 Future<void> prewarmBrakeBundle() async {}
@@ -152,28 +153,17 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: Column(
+    return GameScaffold(
+      gameKey: 'gbrake',
+      title: '极限刹车',
+      showLive: false,
+      showSidePanels: false,
+      onBack: () => Navigator.maybePop(context),
+      board: Stack(
         children: [
-          SafeArea(
-            bottom: false,
-            child: GameHead(
-              onBack: () => Navigator.maybePop(context),
-              buttonSize: 42,
-              iconSize: 20,
-              centerBrand: true,
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(child: HtmlElementView(viewType: _viewType)),
-                if (_loading) const Positioned.fill(child: _BrakeLoading()),
-              ],
-            ),
-          ),
+          Positioned.fill(child: HtmlElementView(viewType: _viewType)),
+          if (_loading)
+            Positioned.fill(child: _BrakeLoading(key: const ValueKey('brake-loading'))),
         ],
       ),
     );
@@ -181,32 +171,26 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
 }
 
 class _BrakeLoading extends StatelessWidget {
-  const _BrakeLoading();
+  const _BrakeLoading({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFF120D10),
+    final c = context.c;
+    return ColoredBox(
+      color: c.bg,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 26,
               height: 26,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFFFCE8E),
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(height: 14),
+            const SizedBox(height: 14),
             Text(
               '正在进入刹车场…',
-              style: TextStyle(
-                color: Color(0xB3FFF8EA),
-                fontSize: 12,
-                letterSpacing: .4,
-              ),
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
             ),
           ],
         ),

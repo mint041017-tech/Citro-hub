@@ -22,12 +22,9 @@ class TodoHomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return TodoScope(
-      child: PaperCard(
-        tapeColor: c.tape3,
-        tapeAngle: 1.8,
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: CitroCard(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         onTap: () => _open(context),
         child: ListenableBuilder(
           listenable: Listenable.merge([
@@ -403,16 +400,15 @@ class TodoHomeCard extends StatelessWidget {
     );
   }
 
-  /// 一枚小票式指标块，与记账卡保持同一套视觉。
+  /// 一枚指标块，与记账卡保持同一套视觉。
   Widget _stat(BuildContext context, String label, String value) {
     final c = context.c;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: c.line),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,15 +418,15 @@ class TodoHomeCard extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.ui(size: 8.5, color: c.inkSoft),
+              style: context.body(size: CitroType.micro, color: c.inkSoft),
             ),
             const SizedBox(height: 1),
             Text(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.ui(
-                size: 11,
+              style: context.hand(
+                size: CitroType.bodyLg,
                 weight: CitroType.strong,
                 color: c.ink,
               ),

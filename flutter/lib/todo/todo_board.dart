@@ -183,7 +183,7 @@ class _TodoBoardState extends State<TodoBoard> {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: c.surface2,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.line),
             ),
             child: Row(
@@ -224,8 +224,8 @@ class _TodoBoardState extends State<TodoBoard> {
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 11),
               decoration: BoxDecoration(
-                color: c.hl.withAlpha(120),
-                borderRadius: BorderRadius.circular(9),
+                color: c.tintYellow,
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 border: Border.all(color: c.accent.withAlpha(70)),
               ),
               child: Center(
@@ -251,7 +251,7 @@ class _TodoBoardState extends State<TodoBoard> {
       height: 34,
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
         border: Border.all(color: c.line),
       ),
       child: Center(
@@ -347,7 +347,7 @@ class _TodoBoardState extends State<TodoBoard> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: c.accent.withAlpha(40),
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                     border: Border.all(color: c.accent.withAlpha(110)),
                   ),
                   child: Row(
@@ -541,7 +541,7 @@ class _TodoBoardState extends State<TodoBoard> {
             children: [
               Text(
                 '${(rate * 100).round()}%',
-                style: context.heading(size: 34, color: c.ink, height: 1),
+                style: context.hand(size: CitroType.display, color: c.ink, height: 1),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 6, bottom: 3),
@@ -563,7 +563,7 @@ class _TodoBoardState extends State<TodoBoard> {
           ),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             child: LinearProgressIndicator(
               value: rate.clamp(0.0, 1.0),
               minHeight: 10,
@@ -575,7 +575,7 @@ class _TodoBoardState extends State<TodoBoard> {
           Row(
             children: [
               _stat(context, '已完成', '$done', c.mintInk),
-              _stat(context, '未完成', '$open', open > 0 ? c.stamp : c.mintInk),
+              _stat(context, '未完成', '$open', c.ink2),
             ],
           ),
           const SizedBox(height: 14),
@@ -625,8 +625,8 @@ class _TodoBoardState extends State<TodoBoard> {
         children: [
           Text(
             value,
-            style: context.ui(
-              size: 27,
+            style: context.hand(
+              size: CitroType.heading,
               weight: CitroType.strong,
               color: color,
               height: 1.1,
@@ -679,7 +679,7 @@ class _TodoBoardState extends State<TodoBoard> {
             children: [
               Text(
                 '$today',
-                style: context.ui(
+                style: context.hand(
                   weight: CitroType.strong,
                   size: CitroType.hero,
                   color: c.ink,
@@ -775,7 +775,7 @@ class _DayDetailSheet extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
         border: Border(top: BorderSide(color: c.line2)),
       ),
       child: SingleChildScrollView(
@@ -788,7 +788,7 @@ class _DayDetailSheet extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: c.line2,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 ),
               ),
             ),
@@ -859,7 +859,7 @@ class _DayDetailSheet extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 6),
-            Divider(color: c.line, height: 1),
+            CitroDivider(height: 1, color: c.line),
             const SizedBox(height: 14),
             Text(
               '复盘',
@@ -933,10 +933,11 @@ class _Panel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       constraints: BoxConstraints(minHeight: minHeight ?? 0),
       decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(14),
+        // 白板 + 大圆角：看板的每张面板都是页面上的主容器。
+        color: c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.paper(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

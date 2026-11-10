@@ -44,7 +44,7 @@ class LedgerRail extends StatelessWidget {
             Pressable(
               onTap: onBack,
               scale: .92,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
               child: Container(
                 width: 34,
                 height: 34,
@@ -52,7 +52,7 @@ class LedgerRail extends StatelessWidget {
                   color: c.surface2,
                   shape: BoxShape.circle,
                   border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: Center(
                   child: AppIcon(
@@ -83,7 +83,7 @@ class LedgerRail extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Pressable(
                   onTap: () => onSelect(item.$1),
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   child: AnimatedContainer(
                     duration: reduce ? Duration.zero : CitroMotion.hover,
                     curve: CitroMotion.easeColor,
@@ -95,7 +95,7 @@ class LedgerRail extends StatelessWidget {
                       color: active == item.$1
                           ? c.accent.withAlpha(30)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(13),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     ),
                     child: Row(
                       children: [

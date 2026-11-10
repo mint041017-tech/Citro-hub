@@ -133,7 +133,6 @@ class _CoinDialogState extends State<_CoinDialog>
     final copy = _resultCopy(_result);
     return PaperDialog(
       maxWidth: 376,
-      tapeColor: c.tape3,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -205,7 +204,8 @@ class _CoinDialogState extends State<_CoinDialog>
                         height: 14,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.black.withAlpha(c.dark ? 90 : 30),
+                          // 硬币投影：纯黑低透明，深浅色下都自然。
+                          color: const Color(0x4D000000),
                         ),
                       ),
                     ),
@@ -255,6 +255,13 @@ class _CoinDialogState extends State<_CoinDialog>
   Widget _buildCoin(CitroColors c, double angle) {
     final front = math.cos(angle) >= 0;
     final edge = math.cos(angle).abs() < .08;
+    // 硬币是插画对象：用品牌橙的金属渐变而不是写死的金色，
+    // 这样深色模式下它也是同一枚「Citro 硬币」。
+    const coinShine = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFFC890), Color(0xFFFF8A1F), Color(0xFFE5730F)],
+    );
     return SizedBox(
       width: 158,
       height: 158,
@@ -266,16 +273,16 @@ class _CoinDialogState extends State<_CoinDialog>
               width: 14,
               height: 150,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF8F5718),
-                    Color(0xFFFFD477),
-                    Color(0xFF9A5A16),
+                    Color(0xFFE5730F),
+                    Color(0xFFFFC890),
+                    Color(0xFFE5730F),
                   ],
                 ),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x55A86B20), blurRadius: 14),
+                  BoxShadow(color: Color(0x55E5730F), blurRadius: 14),
                 ],
               ),
             ),
@@ -285,19 +292,11 @@ class _CoinDialogState extends State<_CoinDialog>
               height: 154,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFB87923), width: 5),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFE5A0),
-                    Color(0xFFE6AA43),
-                    Color(0xFFFFD477),
-                  ],
-                ),
+                border: Border.all(color: c.accent2, width: 5),
+                gradient: coinShine,
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x4D765018),
+                    color: Color(0x4DE5730F),
                     blurRadius: 18,
                     offset: Offset(0, 8),
                   ),
@@ -319,9 +318,9 @@ class _CoinDialogState extends State<_CoinDialog>
                         child: Text(
                           'Citro',
                           style: context.display(
-                            size: 30,
-                            weight: FontWeight.w700,
-                            color: const Color(0xFF875015),
+                            size: CitroType.display,
+                            weight: CitroType.strong,
+                            color: c.onAccent,
                           ),
                         ),
                       ),

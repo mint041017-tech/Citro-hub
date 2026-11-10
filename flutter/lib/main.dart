@@ -435,7 +435,7 @@ class _BootError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF7EC),
+      backgroundColor: context.c.bg,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -445,12 +445,11 @@ class _BootError extends StatelessWidget {
               children: [
                 const Text('🍊', style: TextStyle(fontSize: 40)),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Citro 启动失败',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF23211C),
+                  style: context.heading(
+                    size: CitroType.subtitle,
+                    color: context.c.ink,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -459,9 +458,9 @@ class _BootError extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 6,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6E6858),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: context.c.inkSoft,
                     height: 1.5,
                   ),
                 ),
@@ -469,8 +468,9 @@ class _BootError extends StatelessWidget {
                 FilledButton(
                   onPressed: onRetry,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7A9BBE),
-                    foregroundColor: const Color(0xFF2E2C22),
+                    backgroundColor: context.c.ink,
+                    foregroundColor: context.c.bg,
+                    shape: const StadiumBorder(),
                   ),
                   child: const Text('重试'),
                 ),
@@ -490,7 +490,7 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (kIsWeb) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFBF7EC),
+        backgroundColor: context.c.bg,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -502,12 +502,12 @@ class SplashScreen extends StatelessWidget {
                 cacheWidth: 224,
               ),
               const SizedBox(height: 18),
-              const SizedBox(
+              SizedBox(
                 width: 88,
                 child: LinearProgressIndicator(
                   minHeight: 3,
-                  color: Color(0xFF7A9BBE),
-                  backgroundColor: Color(0x22F2A43C),
+                  color: context.c.accent,
+                  backgroundColor: context.c.surface2,
                 ),
               ),
             ],
@@ -522,7 +522,7 @@ class SplashScreen extends StatelessWidget {
     final isPad = size.shortestSide >= 700;
     final landscape = desktopSplash || isPad || size.width > size.height;
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF7EC),
+      backgroundColor: context.c.bg,
       body: SizedBox.expand(
         child: Image.asset(
           landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
@@ -552,7 +552,7 @@ class _FriendlyError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFBF7EC),
+      color: context.c.bg,
       padding: const EdgeInsets.all(20),
       alignment: Alignment.center,
       child: SingleChildScrollView(
@@ -561,12 +561,11 @@ class _FriendlyError extends StatelessWidget {
           children: [
             const Text('🍊', style: TextStyle(fontSize: 36)),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               '页面加载出了点问题',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF23211C),
+              style: context.heading(
+                size: CitroType.titleLg,
+                color: context.c.ink,
               ),
             ),
             const SizedBox(height: 6),
@@ -575,9 +574,9 @@ class _FriendlyError extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 8,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF6E6858),
+              style: context.body(
+                size: CitroType.small,
+                color: context.c.inkSoft,
                 height: 1.5,
               ),
             ),

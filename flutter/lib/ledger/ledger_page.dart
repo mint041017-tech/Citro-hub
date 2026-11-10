@@ -91,40 +91,38 @@ class _LedgerPageState extends State<LedgerPage>
           final c = context.c;
           return Scaffold(
             backgroundColor: c.bg,
-            body: PaperBackground(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (wide) _rail(context),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          SizedBox(height: top),
-                          // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
-                          // 下面的内容区仍然保持 1120 的阅读宽度。
-                          _header(context, wide: wide),
-                          const SizedBox(height: 4),
-                          // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
-                          // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
-                          Expanded(child: _pages(pages)),
-                          if (!wide)
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 180),
-                              curve: CitroMotion.easeOut,
-                              alignment: Alignment.bottomCenter,
-                              child:
-                                  MediaQuery.viewInsetsOf(context).bottom == 0
-                                  ? _bottomBar(context)
-                                  : const SizedBox(width: double.infinity),
-                            ),
-                        ],
-                      ),
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (wide) _rail(context),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        SizedBox(height: top),
+                        // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
+                        // 下面的内容区仍然保持 1120 的阅读宽度。
+                        _header(context, wide: wide),
+                        const SizedBox(height: 4),
+                        // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
+                        // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
+                        Expanded(child: _pages(pages)),
+                        if (!wide)
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 180),
+                            curve: CitroMotion.easeOut,
+                            alignment: Alignment.bottomCenter,
+                            child:
+                                MediaQuery.viewInsetsOf(context).bottom == 0
+                                ? _bottomBar(context)
+                                : const SizedBox(width: double.infinity),
+                          ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -185,7 +183,7 @@ class _LedgerPageState extends State<LedgerPage>
             Pressable(
               onTap: () => _back(context),
               scale: .92,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
               child: Container(
                 width: 38,
                 height: 38,
@@ -193,7 +191,7 @@ class _LedgerPageState extends State<LedgerPage>
                   color: c.surface2,
                   shape: BoxShape.circle,
                   border: Border.all(color: c.line),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: Center(
                   child: AppIcon(
@@ -226,11 +224,11 @@ class _LedgerPageState extends State<LedgerPage>
               onTap: () => _switchTab(1),
               scale: .94,
               child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: c.accent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                   boxShadow: [
                     BoxShadow(
                       color: c.accent.withAlpha(40),
@@ -243,9 +241,9 @@ class _LedgerPageState extends State<LedgerPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     AppIcon(
-                      strokeSvg(AppIcons.plus, width: 2.2, color: '#2E2C22'),
+                      strokeSvg(AppIcons.plus, width: 2.2),
                       size: 16,
-                      color: const Color(0xFF2E2C22),
+                      color: c.onAccent,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -253,7 +251,7 @@ class _LedgerPageState extends State<LedgerPage>
                       style: context.lui(
                         size: CitroType.label,
                         weight: CitroType.strong,
-                        color: const Color(0xFF2E2C22),
+                        color: c.onAccent,
                       ),
                     ),
                   ],
@@ -281,7 +279,7 @@ class _LedgerPageState extends State<LedgerPage>
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: AppSpacing.navBar,
           child: Row(
             children: [
               for (final item in items)
@@ -315,10 +313,10 @@ class _LedgerPageState extends State<LedgerPage>
                                 ? Duration.zero
                                 : CitroMotion.indicator,
                             style: context.lui(
-                              size: 12,
+                              size: CitroType.caption,
                               weight: _tab == item.$1
                                   ? CitroType.strong
-                                  : FontWeight.w400,
+                                  : CitroType.regular,
                               color: _tab == item.$1 ? c.accentInk : c.inkSoft,
                             ),
                             child: Text(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
+import '../theme/tokens.dart';
 
 /// 卡片 → 详情 的容器形变（Container Transform）。
 ///
@@ -47,7 +48,7 @@ class CitroCardMorph {
       PageRouteBuilder<T>(
         settings: settings,
         opaque: false,
-        barrierColor: barrier ?? const Color(0xB223211C),
+        barrierColor: barrier,
         barrierDismissible: false,
         transitionDuration: reduce ? Duration.zero : CitroMotion.pageTouch,
         reverseTransitionDuration: reduce
@@ -121,7 +122,7 @@ class CitroCardMorph {
     BuildContext context, {
     required Rect source,
     required WidgetBuilder builder,
-    Color barrier = const Color(0x8A23211C),
+    Color? barrier,
   }) {
     final reduce = CitroMotion.reduced(context);
     final media = MediaQuery.sizeOf(context);
@@ -189,7 +190,10 @@ class _CardMorphTransition extends StatelessWidget {
       reverseCurve: CitroMotion.exit,
     );
     final rect = RectTween(begin: source, end: end);
-    final radius = Tween<double>(begin: 14, end: target == null ? 0 : 20);
+    final radius = Tween<double>(
+      begin: CitroColors.radii.card,
+      end: target == null ? 0 : CitroColors.radii.modal,
+    );
     // 内容在纸面长到 55% 后才淡入，避免布局在飞行中被压缩变形。
     final contentOpacity = CurvedAnimation(
       parent: animation,
@@ -229,7 +233,9 @@ class _CardMorphTransition extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0x33000000),
+                          color: c.dark
+                              ? const Color(0x66000000)
+                              : const Color(0x2E000000),
                           blurRadius: 24 * curved.value,
                           offset: const Offset(0, 10),
                         ),
@@ -325,17 +331,23 @@ class _SoftPageTransition extends StatelessWidget {
                     opacity: (1 - snapshotFade.value).clamp(0.0, 1.0),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14 + lift * .3),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.card + lift * .3,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0x2E000000),
+                            color: c.dark
+                                ? const Color(0x66000000)
+                                : const Color(0x2E000000),
                             blurRadius: 18 + lift * 2,
                             offset: Offset(0, 6 + lift * .4),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14 + lift * .3),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.card + lift * .3,
+                        ),
                         child: RawImage(
                           image: snapshot,
                           fit: BoxFit.cover,

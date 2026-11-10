@@ -50,7 +50,6 @@ class SpeechInput {
         onError: (error) => _lastError = error.errorMsg,
         onStatus: (status) {
           lastStatus = status;
-          debugPrint('speech status: $status');
         },
       );
       if (!_available) {

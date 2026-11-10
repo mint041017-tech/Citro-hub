@@ -32,25 +32,64 @@ class _PengColorPair {
   final Color d;
 }
 
-const List<_PengColorPair> _pengColors = [
-  _PengColorPair(Color(0xFFE8A0B4), Color(0xFFC4768D)),
-  _PengColorPair(Color(0xFF9EC3C9), Color(0xFF6C98A0)),
-  _PengColorPair(Color(0xFFE8C97E), Color(0xFFBB9C50)),
-  _PengColorPair(Color(0xFFA8C6A0), Color(0xFF789D6F)),
-  _PengColorPair(Color(0xFFC9B2E0), Color(0xFF9B82BD)),
-  _PengColorPair(Color(0xFFF4B183), Color(0xFFCB8454)),
-];
+/// 淘气小球调色板：全部由 token 派生（亮色粉彩 / 深色深青）。
+class PengPalette {
+  const PengPalette({
+    required this.balls,
+    required this.wall,
+    required this.gapDot,
+    required this.danger,
+    required this.dangerInk,
+    required this.floatInk,
+    required this.timebarBg,
+    required this.timebarFill,
+  });
 
-// light 调色板（web gpengPalette light 分支）
-const Color _wallColor = Color(0xAD4A3A22); // rgba(74,58,34,.68)
-const Color _gapDotColor = Color(0xF2C45E16); // rgba(196,94,22,.95)
-const Color _dangerRgb = Color(0xFFC62E24); // rgba(198,46,36,x)
-const Color _dangerInk = Color(0xFFB5392B);
-const Color _floatInk = Color(0xFF35506E);
-const Color _timebarBg = Color(0xFFE4DCC9); // var(--line)
-const Color _timebarFill = Color(0xFF7A9BBE); // var(--accent)
+  final List<_PengColorPair> balls;
+  final Color wall;
+  final Color gapDot;
+  final Color danger;
+  final Color dangerInk;
+  final Color floatInk;
+  final Color timebarBg;
+  final Color timebarFill;
+}
 
-const double _cardRadius = 14;
+PengPalette pengPalette(CitroColors c) {
+  Color shade(Color base, double amount) => Color.lerp(base, c.ink, amount)!;
+  final balls = <_PengColorPair>[
+    _PengColorPair(c.tintPink, shade(c.tintPink, .28)),
+    _PengColorPair(c.tintBlue, shade(c.tintBlue, .28)),
+    _PengColorPair(c.tintYellow, shade(c.tintYellow, .24)),
+    _PengColorPair(c.tintGreen, shade(c.tintGreen, .28)),
+    _PengColorPair(c.accentLt, c.accent2),
+    _PengColorPair(c.tintNeutral, shade(c.tintNeutral, .22)),
+  ];
+  if (!c.dark) {
+    return PengPalette(
+      balls: balls,
+      wall: c.ink2.withAlpha(178),
+      gapDot: c.accent2,
+      danger: c.danger,
+      dangerInk: c.stamp,
+      floatInk: c.ink2,
+      timebarBg: c.surface2,
+      timebarFill: c.accent,
+    );
+  }
+  return PengPalette(
+    balls: balls,
+    wall: c.inkSoft.withAlpha(150),
+    gapDot: c.accent,
+    danger: c.danger,
+    dangerInk: c.stamp,
+    floatInk: c.ink2,
+    timebarBg: c.surface2,
+    timebarFill: c.accent,
+  );
+}
+
+const double _cardRadius = 24;
 
 /// web 暗角 = createRadialGradient(中心, r0=30 → 外半径 max(w,h)*0.8，
 /// rgba(255,255,255,.34) → rgba(120,86,48,.12)) 叠加在卡片底色 #FFFDF8 上。
@@ -59,356 +98,44 @@ const double _cardRadius = 14;
 /// 整卡会系统性偏 1。这里不用 shader，而是从 web 参考图按半径统计出每个 1px
 /// 环带的众数颜色（已含合成结果），再从外到内画不透明实心圆盘：像素距离 d
 /// 最终取 LUT[ceil(d)] 的颜色，与 Chrome 的最终像素值一致。
-const List<int> _vignetteLut = [
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFEFA,
-  0xFFFFFDF9,
-  0xFFFFFDF9,
-  0xFFFFFEF9,
-  0xFFFFFDF9,
-  0xFFFEFDF9,
-  0xFFFEFDF8,
-  0xFFFEFCF8,
-  0xFFFEFCF8,
-  0xFFFEFDF8,
-  0xFFFEFCF8,
-  0xFFFDFCF8,
-  0xFFFDFCF7,
-  0xFFFDFBF7,
-  0xFFFDFCF7,
-  0xFFFDFCF7,
-  0xFFFDFBF7,
-  0xFFFCFBF6,
-  0xFFFCFBF6,
-  0xFFFCFAF6,
-  0xFFFCFBF6,
-  0xFFFCFBF6,
-  0xFFFCFAF5,
-  0xFFFCFAF5,
-  0xFFFBFAF5,
-  0xFFFBFAF5,
-  0xFFFCFAF5,
-  0xFFFBF9F4,
-  0xFFFBF9F4,
-  0xFFFBF9F4,
-  0xFFFBF9F3,
-  0xFFFBF9F4,
-  0xFFFBF9F4,
-  0xFFFBF8F3,
-  0xFFFAF8F3,
-  0xFFFAF8F3,
-  0xFFFAF8F2,
-  0xFFFAF8F3,
-  0xFFFAF8F2,
-  0xFFFAF8F2,
-  0xFFFAF7F2,
-  0xFFF9F7F1,
-  0xFFF9F7F1,
-  0xFFFAF7F2,
-  0xFFF9F7F1,
-  0xFFF9F7F1,
-  0xFFF9F6F1,
-  0xFFF8F6F0,
-  0xFFF9F6F0,
-  0xFFF9F6F0,
-  0xFFF9F6F0,
-  0xFFF8F6F0,
-  0xFFF8F5EF,
-  0xFFF8F5EF,
-  0xFFF8F5EF,
-  0xFFF8F5EF,
-  0xFFF8F5EF,
-  0xFFF8F5EF,
-  0xFFF7F4EE,
-  0xFFF7F4EE,
-  0xFFF8F5EE,
-  0xFFF7F5EE,
-  0xFFF7F4EE,
-  0xFFF7F4EE,
-  0xFFF7F4ED,
-  0xFFF7F4ED,
-  0xFFF7F4EE,
-  0xFFF7F4ED,
-  0xFFF6F3ED,
-  0xFFF6F3ED,
-  0xFFF6F3EC,
-  0xFFF6F3ED,
-  0xFFF6F3ED,
-  0xFFF6F3EC,
-  0xFFF6F2EC,
-  0xFFF6F2EC,
-  0xFFF5F2EB,
-  0xFFF6F2EC,
-  0xFFF6F2EC,
-  0xFFF5F2EB,
-  0xFFF5F2EB,
-  0xFFF5F1EB,
-  0xFFF5F1EB,
-  0xFFF5F2EB,
-  0xFFF5F2EB,
-  0xFFF5F1EA,
-  0xFFF5F1EA,
-  0xFFF4F1EA,
-  0xFFF5F1EA,
-  0xFFF5F1EA,
-  0xFFF4F1EA,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF4F0E9,
-  0xFFF3EFE8,
-  0xFFF3F0E8,
-  0xFFF4F0E9,
-  0xFFF4F0E8,
-  0xFFF3EFE8,
-  0xFFF3EFE8,
-  0xFFF3EFE7,
-  0xFFF3EFE8,
-  0xFFF3EFE8,
-  0xFFF3EFE8,
-  0xFFF3EFE7,
-  0xFFF3EEE7,
-  0xFFF2EEE7,
-  0xFFF3EFE7,
-  0xFFF3EFE7,
-  0xFFF3EEE7,
-  0xFFF2EEE6,
-  0xFFF2EEE6,
-  0xFFF2EEE6,
-  0xFFF2EEE6,
-  0xFFF2EEE6,
-  0xFFF2EEE6,
-  0xFFF2EDE6,
-  0xFFF2EDE5,
-  0xFFF2EDE5,
-  0xFFF2EDE5,
-  0xFFF2EDE5,
-  0xFFF2EDE5,
-  0xFFF1EDE5,
-  0xFFF1ECE5,
-  0xFFF1ECE5,
-  0xFFF1ECE5,
-  0xFFF1ECE5,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1ECE4,
-  0xFFF1EBE4,
-  0xFFF1EBE4,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EBE3,
-  0xFFF0EAE3,
-  0xFFF0EAE3,
-  0xFFF0EAE3,
-  0xFFF0EAE3,
-  0xFFF0EAE3,
-  0xFFF0EAE2,
-  0xFFEFE9E2,
-  0xFFEFE9E2,
-  0xFFF0EAE3,
-  0xFFF0EAE2,
-  0xFFEFEAE2,
-  0xFFEFE9E2,
-  0xFFEFE9E2,
-  0xFFEFE9E2,
-  0xFFEFEAE2,
-  0xFFEFE9E2,
-  0xFFEFE9E2,
-  0xFFEFE9E1,
-  0xFFEFE9E1,
-  0xFFEFE9E1,
-  0xFFEFE9E2,
-  0xFFEFE9E1,
-  0xFFEFE9E1,
-  0xFFEFE8E1,
-  0xFFEEE8E1,
-  0xFFEFE9E1,
-  0xFFEFE9E1,
-  0xFFEFE9E1,
-  0xFFEEE8E1,
-  0xFFEEE8E0,
-  0xFFEEE8E1,
-  0xFFEFE9E1,
-  0xFFEFE8E1,
-  0xFFEEE8E1,
-  0xFFEEE8E0,
-  0xFFEEE8E0,
-  0xFFEEE8E0,
-  0xFFEFE8E0,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE7DF,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE7DF,
-  0xFFEEE7DE,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE8DF,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DF,
-  0xFFEEE8DF,
-  0xFFEEE7DF,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DF,
-  0xFFEEE7DF,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DD,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE6DD,
-  0xFFEDE6DD,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEDE7DE,
-  0xFFEDE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEEE7DE,
-  0xFFEEE8DE,
-  0xFFEEE8DE,
-];
-
-void _paintVignette(Canvas canvas, Size size) {
+/// 暗角：中心柔光 → 边缘轻压暗，颜色由 token 派生（亮色暖白、深色深青）。
+void _paintVignette(Canvas canvas, Size size, PengPalette palette) {
   final cx = size.width / 2;
   final cy = size.height * 0.42;
   final maxR = math.sqrt(
     math.pow(math.max(cx, size.width - cx), 2) +
         math.pow(math.max(cy, size.height - cy), 2),
   );
-  final paint = Paint()
-    ..style = PaintingStyle.fill
-    ..isAntiAlias = false;
-  final top = math.min(maxR.ceil(), _vignetteLut.length - 1);
-  for (var r = top; r >= 0; r--) {
-    paint.color = Color(_vignetteLut[r]);
-    canvas.drawCircle(Offset(cx, cy), r.toDouble(), paint);
-  }
+  canvas.drawRect(
+    Offset.zero & size,
+    Paint()
+      ..shader = RadialGradient(
+        center: Alignment(cx / size.width * 2 - 1, cy / size.height * 2 - 1),
+        radius: maxR / math.max(size.width, size.height),
+        colors: [palette.timebarBg, palette.wall],
+        stops: const [0, 1],
+      ).createShader(Offset.zero & size),
+  );
 }
 
-// 暗角是纯静态的 400 层圆环。旧实现每帧重画 400 个圆（120Hz 下 4.8 万次/秒），
-// 这里按“逻辑尺寸 × DPR”离屏烘焙一次，之后每帧只 drawImage。
 ui.Image? _vignetteImage;
 Size _vignetteLogicalSize = Size.zero;
 double _vignetteDpr = 0;
+int? _vignettePaletteKey;
 
-ui.Image _cachedVignette(Size size) {
+ui.Image _cachedVignette(Size size, PengPalette palette) {
   final views = ui.PlatformDispatcher.instance.views;
   final dpr = views.isEmpty ? 1.0 : views.first.devicePixelRatio;
+  final paletteKey = Object.hash(palette.wall, palette.timebarBg);
   if (_vignetteImage != null &&
       _vignetteLogicalSize == size &&
-      _vignetteDpr == dpr) {
+      _vignetteDpr == dpr &&
+      _vignettePaletteKey == paletteKey) {
     return _vignetteImage!;
   }
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)..scale(dpr);
-  _paintVignette(canvas, size);
+  _paintVignette(canvas, size, palette);
   final picture = recorder.endRecording();
   final w = math.max(1, (size.width * dpr).ceil());
   final h = math.max(1, (size.height * dpr).ceil());
@@ -417,6 +144,7 @@ ui.Image _cachedVignette(Size size) {
   _vignetteImage = image;
   _vignetteLogicalSize = size;
   _vignetteDpr = dpr;
+  _vignettePaletteKey = paletteKey;
   return image;
 }
 
@@ -538,6 +266,7 @@ class _GamePengPageState extends State<GamePengPage>
   final math.Random _rnd = math.Random();
   final Stopwatch _clock = Stopwatch()..start();
   final ValueNotifier<String> _progress = ValueNotifier<String>('得分 0');
+  CitroColors _colors = CitroColors.light;
 
   late final Ticker _ticker;
   bool _tickerReady = false;
@@ -635,6 +364,7 @@ class _GamePengPageState extends State<GamePengPage>
   void _spawnBall() {
     final a = _rnd.nextDouble() * math.pi * 2;
     final sp = _ballSpeed;
+    final palette = pengPalette(_colors).balls;
     _balls.add(
       _PengBall(
         x: _layout.cx,
@@ -642,7 +372,7 @@ class _GamePengPageState extends State<GamePengPage>
         r: (11 + _rnd.nextDouble() * 3) * _layout.sc,
         vx: math.cos(a) * sp,
         vy: math.sin(a) * sp,
-        color: _pengColors[_rnd.nextInt(_pengColors.length)],
+        color: palette[_rnd.nextInt(palette.length)],
       ),
     );
   }
@@ -698,7 +428,7 @@ class _GamePengPageState extends State<GamePengPage>
       _layout.cx,
       _layout.cy - _layout.radius * 0.5,
       big: true,
-      color: _dangerInk,
+      color: pengPalette(_colors).dangerInk,
     );
     GameSfx.warn();
   }
@@ -838,14 +568,14 @@ class _GamePengPageState extends State<GamePengPage>
   void _bounceFx(double x, double y) {
     _bounces++;
     _score += _bouncePts.toInt();
-    _burst(x, y, const Color(0xFFFFC48A), 8);
-    _addFloat('+2', x, y - 16 * _layout.sc, color: _floatInk);
+    _burst(x, y, _colors.accent, 8);
+    _addFloat('+2', x, y - 16 * _layout.sc, color: pengPalette(_colors).floatInk);
     _shake = math.min(8, _shake + 2);
     GameSfx.bounce();
   }
 
   void _escape(_PengBall b) {
-    _burst(b.x, b.y, const Color(0xFFF07B6A), 16);
+    _burst(b.x, b.y, _colors.stamp, 16);
     _shake = _shakeMax;
     GameSfx.lose();
     _addFloat(
@@ -853,7 +583,7 @@ class _GamePengPageState extends State<GamePengPage>
       _layout.cx,
       _layout.cy - _layout.radius * 0.5,
       big: true,
-      color: _dangerInk,
+      color: pengPalette(_colors).dangerInk,
     );
     _end();
   }
@@ -881,8 +611,9 @@ class _GamePengPageState extends State<GamePengPage>
     double x,
     double y, {
     bool big = false,
-    Color color = _floatInk,
+    Color? color,
   }) {
+    color ??= pengPalette(_colors).floatInk;
     _floats.add(_PengFloat(text: text, x: x, y: y, big: big, color: color));
   }
 
@@ -981,6 +712,7 @@ class _GamePengPageState extends State<GamePengPage>
 
   @override
   Widget build(BuildContext context) {
+    _colors = context.c;
     final best = math.max(_best, context.app.localBest('peng'));
     return GamePengView(
       score: _score,
@@ -1065,7 +797,7 @@ class GamePengView extends StatelessWidget {
         r: 9.3,
         vx: 108.0,
         vy: 225.0,
-        color: _pengColors[0],
+        color: pengPalette(CitroColors.light).balls[0],
       ),
     ],
   );
@@ -1112,27 +844,18 @@ class GamePengView extends StatelessWidget {
             : screen.width - 30;
         final side = math.min(availableW, math.max(300.0, screen.height - 260));
         onBoardSize?.call(Size(side, side));
+        final palette = pengPalette(c);
         return Center(
-          child: CssShadowLayer(
-            radius: _cardRadius,
-            shadows: const [
-              CssShadowSpec(
-                color: Color(0x0E5A4A2C),
-                offset: Offset(0, 1),
-                blur: 2,
-              ),
-              CssShadowSpec(
-                color: Color(0x4D5A4A2C),
-                offset: Offset(0, 8),
-                blur: 20,
-                spread: -12,
-              ),
-            ],
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(_cardRadius),
+              boxShadow: CitroColors.shadows.card(c),
+            ),
             child: Container(
               width: side,
               height: side,
               decoration: BoxDecoration(
-                color: c.surface2,
+                color: c.surface,
                 border: Border.all(color: c.line),
                 borderRadius: BorderRadius.circular(_cardRadius),
               ),
@@ -1170,9 +893,7 @@ class GamePengView extends StatelessWidget {
                                     ..state = state
                                     ..addGapT = addGapT),
                               repaint: sceneRepaint,
-                              danger: c.dark
-                                  ? _dangerRgb
-                                  : const Color(0xFFFF3B30),
+                              palette: palette,
                               showVignette:
                                   MediaQuery.sizeOf(context).width < 900,
                             ),
@@ -1190,8 +911,8 @@ class GamePengView extends StatelessWidget {
                         height: 3,
                         child: Stack(
                           children: [
-                            const Positioned.fill(
-                              child: ColoredBox(color: _timebarBg),
+                            Positioned.fill(
+                              child: ColoredBox(color: palette.timebarBg),
                             ),
                             Align(
                               alignment: Alignment.centerLeft,
@@ -1201,8 +922,8 @@ class GamePengView extends StatelessWidget {
                                           .clamp(0.0, 1.0)
                                           .toDouble(),
                                       heightFactor: 1,
-                                      child: const ColoredBox(
-                                        color: _timebarFill,
+                                      child: ColoredBox(
+                                        color: palette.timebarFill,
                                       ),
                                     )
                                   : ValueListenableBuilder<double>(
@@ -1213,8 +934,8 @@ class GamePengView extends StatelessWidget {
                                                 .clamp(0.0, 1.0)
                                                 .toDouble(),
                                             heightFactor: 1,
-                                            child: const ColoredBox(
-                                              color: _timebarFill,
+                                            child: ColoredBox(
+                                              color: palette.timebarFill,
                                             ),
                                           ),
                                     ),
@@ -1311,58 +1032,39 @@ class _PengHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CssShadowLayer(
-      radius: 99,
-      shadows: const [
-        CssShadowSpec(color: Color(0x0E5A4A2C), offset: Offset(0, 1), blur: 2),
-        CssShadowSpec(
-          color: Color(0x4D5A4A2C),
-          offset: Offset(0, 8),
-          blur: 20,
-          spread: -12,
-        ),
-      ],
-      child: Container(
-        // web computed 188.25×33.797；水平保持原值（文本 x 已与 web 对齐），
-        // 高度取整到 34 并把底边对齐整像素，让上下 1px 边框像 Chrome 一样清晰。
-        width: 188.25,
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          border: Border.all(color: c.line2),
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: Color(0xFF7A9BBE),
-                shape: BoxShape.circle,
+    return Container(
+      width: 188.25,
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        boxShadow: CitroColors.shadows.card(c),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              '按住拖动 · 旋转边框守球',
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              softWrap: false,
+              style: context.body(
+                size: CitroType.caption,
+                weight: CitroType.strong,
+                color: c.ink2,
               ),
             ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                '按住拖动 · 旋转边框守球',
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                softWrap: false,
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1.65,
-                  letterSpacing: 0.6,
-                  color: c.ink2,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1388,22 +1090,16 @@ class _PengOverlay extends StatelessWidget {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
-        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
-        borderRadius: BorderRadius.circular(22),
+        color: c.surface.withValues(alpha: 0.96),
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             '球飞出去了！',
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontSize: 22,
-              height: 36.3 / 22,
-              letterSpacing: 1.32,
-              color: context.c.ink,
-            ),
+            style: context.heading(size: CitroType.subtitle, color: c.ink),
           ),
           const SizedBox(height: 10),
           Padding(
@@ -1415,28 +1111,31 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$secs',
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : _floatInk,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  TextSpan(text: ' 秒 · 反弹 $bounces 次 · 得分 '),
+                  const TextSpan(text: ' 秒 · 反弹 '),
+                  TextSpan(
+                    text: '$bounces',
+                    style: TextStyle(
+                      color: c.accentInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const TextSpan(text: ' 次 · 得分 '),
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : _floatInk,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (improved) const TextSpan(text: '\n新纪录诞生！'),
+                  if (improved) const TextSpan(text: '· 新纪录诞生！'),
                 ],
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontSize: 13,
-                height: 22.1 / 13,
-                color: context.c.ink2,
-              ),
+              style: context.body(size: CitroType.meta, color: c.ink2),
             ),
           ),
           const SizedBox(height: 10),
@@ -1461,12 +1160,13 @@ class _PengPainter extends CustomPainter {
   _PengPainter(
     this.data, {
     Listenable? repaint,
-    required this.danger,
+    required this.palette,
     this.showVignette = true,
   }) : super(repaint: repaint);
 
   final _PengFrameData data;
   final bool showVignette;
+  final PengPalette palette;
 
   double get phi => data.phi;
   List<_PengGap> get gaps => data.gaps;
@@ -1478,8 +1178,6 @@ class _PengPainter extends CustomPainter {
   String get state => data.state;
   double get addGapT => data.addGapT;
 
-  /// 快消失预警色（浅色主题用 web 的亮红 255,59,48，深色用暗红）。
-  final Color danger;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1507,7 +1205,7 @@ class _PengPainter extends CustomPainter {
     }
 
     if (showVignette) {
-      final vig = _cachedVignette(size);
+      final vig = _cachedVignette(size, palette);
       canvas.drawImageRect(
         vig,
         Rect.fromLTWH(0, 0, vig.width.toDouble(), vig.height.toDouble()),
@@ -1537,7 +1235,7 @@ class _PengPainter extends CustomPainter {
         text: TextSpan(
           text: f.text,
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontSize: f.big ? 17 : 13.5,
             fontWeight: FontWeight.w700,
             color: f.color.withValues(
@@ -1569,7 +1267,7 @@ class _PengPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 11 * sc
       ..strokeCap = StrokeCap.butt
-      ..color = _wallColor;
+      ..color = palette.wall;
     final rect = Rect.fromCircle(center: center, radius: radius);
     for (var i = 0; i < ivs.length; i++) {
       final cur = ivs[i];
@@ -1580,7 +1278,7 @@ class _PengPainter extends CustomPainter {
       }
     }
     // 缺口两端橙色圆点
-    final dot = Paint()..color = _gapDotColor;
+    final dot = Paint()..color = palette.gapDot;
     for (final iv in ivs) {
       for (final t in [iv.s, iv.s + iv.w]) {
         canvas.drawCircle(_gapPoint(center, radius, t), 2.8 * sc, dot);
@@ -1606,16 +1304,16 @@ class _PengPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 13 * sc
       ..strokeCap = StrokeCap.butt
-      ..color = danger.withValues(alpha: al * 0.75)
+      ..color = palette.danger.withValues(alpha: al * 0.75)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 * sc);
     canvas.drawArc(rect, s, w, false, glow);
     final solid = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.5 * sc
       ..strokeCap = StrokeCap.butt
-      ..color = danger.withValues(alpha: math.min(1.0, al + 0.2));
+      ..color = palette.danger.withValues(alpha: math.min(1.0, al + 0.2));
     canvas.drawArc(rect, s, w, false, solid);
-    final dot = Paint()..color = danger.withValues(alpha: al);
+    final dot = Paint()..color = palette.danger.withValues(alpha: al);
     for (final q in [s, s + w]) {
       canvas.drawCircle(
         Offset(
@@ -1687,7 +1385,7 @@ class _PengPainter extends CustomPainter {
         width: b.r * 0.6,
         height: b.r * 0.36,
       ),
-      Paint()..color = const Color(0x57FFFFFF),
+      Paint()..color = palette.timebarBg.withAlpha(150),
     );
     canvas.restore();
   }

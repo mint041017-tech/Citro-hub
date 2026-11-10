@@ -140,7 +140,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                     height: 4,
                     decoration: BoxDecoration(
                       color: c.line2,
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     ),
                   ),
                 ),
@@ -274,7 +274,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                         onTap: () => _edit(category),
                         scale: .9,
                         hoverLift: 0,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         child: LedgerIconTile(
                           iconKey: category.iconKey,
                           tint: category.tint,
@@ -319,7 +319,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                           width: 1.9,
                         ),
                         size: 15,
-                        color: category.builtIn ? c.inkSoft : c.stamp,
+                        color: category.builtIn ? c.inkSoft : c.danger,
                       ),
                     ),
                   ),
@@ -370,6 +370,9 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
   late int _color = widget.existing?.color ?? _palette.first;
   late String _icon = widget.existing?.iconKey ?? 'flag';
 
+  /// 分类配色调色板。这些是「数据值」而不是主题色：分类的 tint 以 int 存在
+  /// 账本里（[LedgerCategory.color]），换主题不该改动已保存的分类颜色，
+  /// 因此这里有意保留固定色值，不走 context.c。
   static const _palette = [
     0xFFC08A4A,
     0xFF6F8CA8,
@@ -475,11 +478,11 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                       ),
                     ),
                     child: _color == color
-                        ? const Center(
+                        ? Center(
                             child: Icon(
                               Icons.check_rounded,
                               size: 15,
-                              color: Colors.white,
+                              color: c.onAccent,
                             ),
                           )
                         : null,

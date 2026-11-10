@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
@@ -165,6 +166,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return GameScaffold(
       gameKey: 'gliquid',
       title: '咕噜果冻铺',
@@ -212,14 +214,17 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
               children: [
                 Positioned.fill(child: HtmlElementView(viewType: _viewType)),
                 if (_loading)
-                  const Positioned.fill(
+                  Positioned.fill(
                     child: ColoredBox(
-                      color: Color(0xFFF5ECDB),
+                      color: c.surface,
                       child: Center(
                         child: SizedBox(
                           width: 26,
                           height: 26,
-                          child: CircularProgressIndicator(strokeWidth: 2.4),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: c.accent,
+                          ),
                         ),
                       ),
                     ),

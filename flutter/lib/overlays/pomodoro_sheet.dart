@@ -31,7 +31,7 @@ Future<void> showPomodoroOverlay(
             onTap: () => Navigator.of(ctx).maybePop(),
             child: CitroBackdropBlur(
               sigma: 14,
-              child: Container(color: const Color(0x8A23211C)),
+              child: Container(color: ctx.c.scrim),
             ),
           ),
         ),
@@ -65,25 +65,13 @@ Future<void> showPomodoroOverlay(
 CitroColors _nookColors(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   final base = dark ? CitroColors.darkColors : CitroColors.light;
+  // 子主题只覆盖强调色，其余（表面/描边/文字）全部继承全局，
+  // 避免同一 App 内切换时出现第二套「深色」。
   return base.copyWith(
-    bg: dark ? const Color(0xFF191F1C) : const Color(0xFFF5F3EE),
-    bg2: dark ? const Color(0xFF141A17) : const Color(0xFFEFECE4),
-    surface: dark ? const Color(0xFF242D27) : const Color(0xFFFFFFFF),
-    surface2: dark ? const Color(0xFF2C362E) : const Color(0xFFF7F5EF),
-    paperLine: dark ? const Color(0xFF37433A) : const Color(0xFFEFEDE6),
-    ink: dark ? const Color(0xFFE5EBDE) : const Color(0xFF2C2C2C),
-    ink2: dark ? const Color(0xFFCFD8C9) : const Color(0xFF4A4A4A),
-    inkSoft: dark ? const Color(0xFFA8B5A6) : const Color(0xFF8A8A8A),
-    line: dark ? const Color(0xFF37433A) : const Color(0xFFE8E6E1),
-    line2: dark ? const Color(0xFF465248) : const Color(0xFFD9DFD6),
     accent: dark ? const Color(0xFFAAC4A2) : const Color(0xFF4F6957),
     accent2: dark ? const Color(0xFF8FAF86) : const Color(0xFF3E5747),
     accentInk: dark ? const Color(0xFFC8DCC0) : const Color(0xFF3E5747),
     accentLt: dark ? const Color(0xFFC8DCC0) : const Color(0xFF7C9B79),
-    mintSoft: dark ? const Color(0x33354B39) : const Color(0xFFE8EDE3),
-    mintLine: dark ? const Color(0x38C9D3B2) : const Color(0xFFD7DED2),
-    hl: dark ? const Color(0x33AAC4A2) : const Color(0x8FE4EADD),
-    hlInk: dark ? const Color(0x57AAC4A2) : const Color(0x9E4F6957),
   );
 }
 
@@ -139,7 +127,7 @@ class _PomodoroDoneWatcherState extends State<PomodoroDoneWatcher> {
               onTap: () => Navigator.of(dialogCtx).maybePop(),
               child: CitroBackdropBlur(
                 sigma: 14,
-                child: Container(color: const Color(0x9923211C)),
+                child: Container(color: dialogCtx.c.scrim),
               ),
             ),
           ),
@@ -207,18 +195,12 @@ class _PomodoroDoneDialog extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: c.dark
-                  ? [const Color(0xFF2C2720), const Color(0xFF201D18)]
-                  : [const Color(0xFFFBF6EA), const Color(0xFFEDE0CA)],
+                  ? [c.surface2, c.bg2]
+                  : [c.surface, c.surface2],
             ),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(CitroColors.radii.modal),
             border: Border.all(color: c.accent.withAlpha(c.dark ? 70 : 60)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x306E5030),
-                blurRadius: 50,
-                offset: Offset(0, 22),
-              ),
-            ],
+            boxShadow: CitroColors.shadows.lg(c),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -267,13 +249,13 @@ class _PomodoroDoneDialog extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: c.accent.withAlpha(c.dark ? 30 : 22),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Text(
                   '今日已完成 ${PomodoroState.instance.todayCount} 颗番茄',
                   style: context.body(
-                    size: 11,
-                    weight: FontWeight.w700,
+                    size: CitroType.small,
+                    weight: CitroType.medium,
                     color: c.accentInk,
                   ),
                 ),
@@ -290,15 +272,15 @@ class _PomodoroDoneDialog extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [c.accent, c.accent2]),
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: CitroColors.shadows.note(c),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                    boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: Text(
                     action,
                     style: context.body(
-                      size: 14,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
+                      size: CitroType.body,
+                      weight: CitroType.medium,
+                      color: c.onAccent,
                     ),
                   ),
                 ),
@@ -408,15 +390,9 @@ class _PomodoroCardState extends State<PomodoroCard> {
       constraints: BoxConstraints(minHeight: widget.minHeight),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(CitroColors.radii.page),
         border: Border.all(color: c.line2),
-        boxShadow: [
-          BoxShadow(
-            color: c.dark ? const Color(0x66000000) : const Color(0x1F6E5030),
-            blurRadius: 40,
-            offset: const Offset(0, 18),
-          ),
-        ],
+        boxShadow: CitroColors.shadows.lg(c),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
@@ -449,7 +425,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 Text(
                   state.running ? '通知栏常驻倒计时 · 到点会弹窗提醒' : '关闭窗口后计时继续 · 到点会提醒你',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: c.inkSoft, height: 1.6),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                    height: 1.6,
+                  ),
                 ),
               ],
             );
@@ -459,9 +439,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
     );
   }
 
+  // 短/长休息不再各自定义一套色，统一用 accent 的 alpha 变体，
+  // 跟随主题（含听隅子主题的绿色 accent）自动变化。
   Color _phaseColor(CitroColors c, String mode) => switch (mode) {
-    'short' => c.dark ? const Color(0xFFD3B77E) : const Color(0xFFB08245),
-    'long' => c.dark ? const Color(0xFFA3C0C3) : const Color(0xFF5D7B80),
+    'short' => c.accent2,
+    'long' => c.mint,
     _ => c.accent,
   };
 
@@ -484,9 +466,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
     return '准备开始';
   }
 
-  Color _onAccent(CitroColors c) => c.accent.computeLuminance() > .55
-      ? const Color(0xFF1B2A1E)
-      : const Color(0xFFFFFDF8);
+  Color _onAccent(CitroColors c) => c.onAccent;
 
   Widget _header(BuildContext context, PomodoroState state) {
     final c = _colorsOf(context);
@@ -500,19 +480,17 @@ class _PomodoroCardState extends State<PomodoroCard> {
             children: [
               Text(
                 '番茄钟',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .5,
-                  color: c.ink,
-                ),
+                style: context.heading(size: CitroType.subtitle, color: c.ink),
               ),
               const SizedBox(height: 3),
               Text(
                 '一段一段地做，把心放回此刻。',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: c.inkSoft),
+                style: context.body(
+                  size: CitroType.caption,
+                  color: c.inkSoft,
+                ),
               ),
             ],
           ),
@@ -522,7 +500,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: c.accent.withAlpha(c.dark ? 34 : 22),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -531,9 +509,9 @@ class _PomodoroCardState extends State<PomodoroCard> {
               const SizedBox(width: 5),
               Text(
                 '今日 ${state.todayMinutes} 分钟',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                style: context.body(
+                  size: CitroType.small,
+                  weight: CitroType.medium,
                   color: c.accentInk,
                 ),
               ),
@@ -601,13 +579,13 @@ class _PomodoroCardState extends State<PomodoroCard> {
             ? color.withAlpha(c.dark ? 56 : 30)
             : c.surface2.withAlpha(c.dark ? 50 : 120),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           side: BorderSide(
             color: selected ? color.withAlpha(140) : Colors.transparent,
           ),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           onTap: () => state.switchMode(item.$1),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -618,9 +596,9 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 const SizedBox(height: 4),
                 Text(
                   item.$2,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                  style: context.body(
+                    size: CitroType.caption,
+                    weight: selected ? CitroType.medium : CitroType.regular,
                     color: selected ? color : c.inkSoft,
                   ),
                 ),
@@ -639,13 +617,16 @@ class _PomodoroCardState extends State<PomodoroCard> {
       children: [
         Row(
           children: [
-            Text('长休时长', style: TextStyle(fontSize: 12, color: c.inkSoft)),
+            Text(
+              '长休时长',
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
+            ),
             const Spacer(),
             Text(
               '${state.longMinutes} 分钟',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+              style: context.hand(
+                size: CitroType.caption,
+                weight: CitroType.medium,
                 color: c.accentInk,
               ),
             ),
@@ -703,13 +684,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
             children: [
               Text(
                 state.timeText,
-                style: TextStyle(
-                  fontSize: dimension * .225,
-                  height: 1.05,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: .5,
+                style: context.hand(
+                  size: dimension * .225,
+                  weight: CitroType.regular,
                   color: c.ink,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  height: 1.05,
                 ),
               ),
               const SizedBox(height: 10),
@@ -728,8 +707,8 @@ class _PomodoroCardState extends State<PomodoroCard> {
                   const SizedBox(width: 8),
                   Text(
                     _statusLabel(state),
-                    style: TextStyle(
-                      fontSize: 13,
+                    style: context.body(
+                      size: CitroType.meta,
                       color: c.inkSoft,
                       letterSpacing: .4,
                     ),
@@ -740,7 +719,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
               Text(
                 _phaseHint(state.mode),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: c.inkSoft, height: 1.6),
+                style: context.body(
+                  size: CitroType.caption,
+                  color: c.inkSoft,
+                  height: 1.6,
+                ),
               ),
             ],
           ),
@@ -777,23 +760,19 @@ class _PomodoroCardState extends State<PomodoroCard> {
                       : i == doneInCycle && active
                       ? color.withAlpha(90)
                       : c.line2,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
               ),
           ],
         ),
         Text(
           '第 $current / 4 轮',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            color: c.inkSoft,
-          ),
+          style: context.body(size: CitroType.caption, color: c.inkSoft),
         ),
         if (state.todayCount > 0)
           Text(
             '今日完成 ${state.todayCount} 次',
-            style: TextStyle(fontSize: 12, color: c.inkSoft),
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
       ],
     );
@@ -824,7 +803,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 backgroundColor: c.accent,
                 foregroundColor: _onAccent(c),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                 ),
               ),
               onPressed: state.toggle,
@@ -852,9 +831,10 @@ class _PomodoroCardState extends State<PomodoroCard> {
                 child: Text(
                   label,
                   key: ValueKey(label),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                  style: context.body(
+                    size: CitroType.bodyLg,
+                    weight: CitroType.medium,
+                    color: c.onAccent,
                   ),
                 ),
               ),
@@ -886,11 +866,11 @@ class _PomodoroCardState extends State<PomodoroCard> {
         child: Material(
           color: c.surface2.withAlpha(c.dark ? 40 : 200),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             side: BorderSide(color: c.line2),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             onTap: onTap,
             child: SizedBox(
               width: 56,

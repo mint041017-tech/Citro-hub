@@ -71,11 +71,11 @@ class _FishDialogState extends State<_FishDialog> {
           timePickerTheme: TimePickerThemeData(
             backgroundColor: context.c.surface,
             hourMinuteColor: context.c.surface2,
-            dayPeriodColor: context.c.hl,
+            dayPeriodColor: context.c.accentLt,
             dialBackgroundColor: context.c.surface2,
             dialHandColor: context.c.accent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             ),
           ),
         ),
@@ -159,22 +159,21 @@ class _FishDialogState extends State<_FishDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('摸鱼日历', style: context.heading(size: 18, color: c.accentInk)),
+          Text('摸鱼日历', style: context.heading(size: CitroType.title, color: c.accentInk)),
           const SizedBox(height: 10),
           Text(
             info.type == 'rest' ? '休息中' : status,
-            style: context.display(
-              size: 28,
-              weight: FontWeight.w700,
+            style: context.heading(
+              size: CitroType.heading,
               color: c.ink,
             ),
           ),
           const SizedBox(height: 2),
-          Text(subtitle, style: context.body(size: 12, color: c.inkSoft)),
+          Text(subtitle, style: context.body(size: CitroType.caption, color: c.inkSoft)),
           if (showProgress) ...[
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               child: LinearProgressIndicator(
                 value: pct / 100,
                 minHeight: 7,
@@ -186,7 +185,7 @@ class _FishDialogState extends State<_FishDialog> {
             Text(
               detail,
               textAlign: TextAlign.center,
-              style: context.body(size: 12, color: c.ink2),
+              style: context.body(size: CitroType.caption, color: c.ink2),
             ),
           ] else ...[
             const SizedBox(height: 12),
@@ -196,7 +195,7 @@ class _FishDialogState extends State<_FishDialog> {
               style: context.body(
                 size: detail.startsWith('距上班还有') ? 16 : 12,
                 weight: detail.startsWith('距上班还有')
-                    ? FontWeight.w700
+                    ? CitroType.medium
                     : FontWeight.w400,
                 color: detail.startsWith('距上班还有') ? c.ink : c.ink2,
                 height: detail.startsWith('距上班还有') ? 1.45 : null,
@@ -209,8 +208,8 @@ class _FishDialogState extends State<_FishDialog> {
               countdown,
               textAlign: TextAlign.center,
               style: context.body(
-                size: 16,
-                weight: FontWeight.w700,
+                size: CitroType.bodyLg,
+                weight: CitroType.medium,
                 color: c.accentInk,
                 height: 1.4,
               ),
@@ -239,8 +238,8 @@ class _FishDialogState extends State<_FishDialog> {
         Text(
           '每周休息日（可多选）',
           style: context.body(
-            size: 12,
-            weight: FontWeight.w700,
+            size: CitroType.caption,
+            weight: CitroType.medium,
             color: c.inkSoft,
           ),
         ),
@@ -263,8 +262,8 @@ class _FishDialogState extends State<_FishDialog> {
                   width: 38,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: cfg.rest.contains(i) ? c.hl : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    color: cfg.rest.contains(i) ? c.accentLt.withAlpha(c.dark ? 70 : 170) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
                     border: Border.all(
                       color: cfg.rest.contains(i) ? c.accent : c.line2,
                     ),
@@ -273,8 +272,8 @@ class _FishDialogState extends State<_FishDialog> {
                     child: Text(
                       '${'日一二三四五六'[i]}',
                       style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
+                        size: CitroType.caption,
+                        weight: CitroType.medium,
                         color: cfg.rest.contains(i) ? c.accentInk : c.inkSoft,
                       ),
                     ),
@@ -323,21 +322,21 @@ class _FishDialogState extends State<_FishDialog> {
                 height: 20,
                 decoration: BoxDecoration(
                   color: cfg.breakStart != null ? c.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   border: Border.all(
                     color: cfg.breakStart != null ? c.accent : c.line2,
                   ),
                 ),
                 child: cfg.breakStart != null
-                    ? const Icon(
+                    ? Icon(
                         Icons.check,
                         size: 14,
-                        color: Color(0xFF2E2C22),
+                        color: c.onAccent,
                       )
                     : null,
               ),
               const SizedBox(width: 8),
-              Text('中途有休息（午休等）', style: context.body(size: 12, color: c.ink2)),
+              Text('中途有休息（午休等）', style: context.body(size: CitroType.caption, color: c.ink2)),
             ],
           ),
         ),
@@ -383,18 +382,18 @@ class _FishDialogState extends State<_FishDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: c.line2),
         ),
         child: Row(
           children: [
-            Text(label, style: context.body(size: 11, color: c.inkSoft)),
+            Text(label, style: context.body(size: CitroType.small, color: c.inkSoft)),
             const Spacer(),
             Text(
               value,
-              style: context.display(
-                size: 15,
-                weight: FontWeight.w700,
+              style: context.hand(
+                size: CitroType.body,
+                weight: CitroType.medium,
                 color: c.ink,
               ),
             ),

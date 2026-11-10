@@ -53,15 +53,30 @@ extension MoodKindX on MoodKind {
     MoodKind.anxious => '焦虑',
   };
 
-  /// 低饱和、能落在暖纸 palette 里的六种色。
-  Color get color => switch (this) {
-    MoodKind.happy => const Color(0xFFE0A03E),
-    MoodKind.calm => const Color(0xFF8FA6BE),
-    MoodKind.neutral => const Color(0xFFA79E8C),
-    MoodKind.tired => const Color(0xFF9A8FA6),
-    MoodKind.low => const Color(0xFF7C8AA0),
-    MoodKind.anxious => const Color(0xFFC4855D),
+  /// 低饱和的六种心情色。深色下用同色系更亮的一档，保证在暗表面上仍可读。
+  static const Map<MoodKind, Color> _lightColors = {
+    MoodKind.happy: Color(0xFFE0A03E),
+    MoodKind.calm: Color(0xFF8FA6BE),
+    MoodKind.neutral: Color(0xFFA79E8C),
+    MoodKind.tired: Color(0xFF9A8FA6),
+    MoodKind.low: Color(0xFF7C8AA0),
+    MoodKind.anxious: Color(0xFFC4855D),
   };
+
+  static const Map<MoodKind, Color> _darkColors = {
+    MoodKind.happy: Color(0xFFEBB554),
+    MoodKind.calm: Color(0xFFA5BDD8),
+    MoodKind.neutral: Color(0xFFB8AE9C),
+    MoodKind.tired: Color(0xFFACA2B8),
+    MoodKind.low: Color(0xFF93A2B8),
+    MoodKind.anxious: Color(0xFFD09A72),
+  };
+
+  /// 浅色主题下的心情色。
+  Color get color => _lightColors[this]!;
+
+  /// 按主题取心情色。
+  Color colorFor(bool dark) => (dark ? _darkColors : _lightColors)[this]!;
 
   static MoodKind fromName(String? raw) => MoodKind.values.firstWhere(
     (k) => k.name == raw,

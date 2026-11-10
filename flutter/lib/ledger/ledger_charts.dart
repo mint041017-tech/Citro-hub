@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import 'ledger_theme.dart';
 
 /// 记账看板的两个轻量图表，全部自绘：不引第三方图表库，
 /// 也避免动画每帧重排整页。绘制范围只包在 RepaintBoundary 里。
@@ -36,9 +35,9 @@ class LedgerBarChart extends StatelessWidget {
           painter: _BarPainter(
             data: rows,
             line: c.line2,
-            grid: c.grid,
-            expense: c.accent2,
-            todayColor: c.dark ? const Color(0xFFE7AEB7) : ledgerCoral,
+            grid: c.line,
+            expense: c.accent,
+            todayColor: c.stamp,
             income: c.mintInk,
             inkSoft: c.inkSoft,
             today: DateTime.now(),
@@ -87,7 +86,7 @@ class _BarPainter extends CustomPainter {
     final slot = size.width / data.length;
     final barW = math.max(2.0, slot - gap);
 
-    // 三条很淡的水平参考线，保留手帐纸的格线感。
+    // 三条很淡的水平参考线，给柱状图一个轻量的刻度背景。
     final gridPaint = Paint()
       ..color = grid
       ..strokeWidth = 1;
@@ -144,10 +143,10 @@ class _BarPainter extends CustomPainter {
             text: '${row.day.day}',
             style: TextStyle(
               color: isToday ? expense : inkSoft,
-              fontSize: 9,
-              fontFamily: AppFonts.noto,
+              fontSize: CitroType.micro,
+              fontFamily: AppFonts.rounded,
               fontFamilyFallback: AppFonts.bodyFallback,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+              fontWeight: isToday ? CitroType.strong : CitroType.regular,
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -261,9 +260,9 @@ class _DonutPainter extends CustomPainter {
         style: TextStyle(
           color: ink,
           fontSize: size.shortestSide * .15,
-          fontWeight: FontWeight.w700,
-          fontFamily: AppFonts.kalam,
-          fontFamilyFallback: AppFonts.fallback,
+          fontWeight: CitroType.strong,
+          fontFamily: AppFonts.mono,
+          fontFamilyFallback: AppFonts.bodyFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -275,8 +274,8 @@ class _DonutPainter extends CustomPainter {
         text: centerLabel,
         style: TextStyle(
           color: label,
-          fontSize: 10,
-          fontFamily: AppFonts.noto,
+          fontSize: CitroType.small,
+          fontFamily: AppFonts.rounded,
           fontFamilyFallback: AppFonts.bodyFallback,
         ),
       ),

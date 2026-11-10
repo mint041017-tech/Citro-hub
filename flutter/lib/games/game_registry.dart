@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'game_theme.dart';
 
+/// 游戏中心卡片数据。
+///
+/// [gradient] 是卡片底的两档粉彩渐变（nosh 的留白 + 轻色底），
+/// [art] 是卡片右侧的圆角几何小画；两者都只读 token，不再有旋转 / 胶带 / 便签。
 class GameCardData {
   final String key;
   final String title;
@@ -20,208 +25,103 @@ class GameCardData {
 
 const kGameCards = <GameCardData>[
   GameCardData(key: 'g2048', title: '2048', gradient: _gOrange, art: _art2048),
-  GameCardData(key: 'gmem', title: '记忆卡牌', gradient: _gBrown, art: _artMem),
-  GameCardData(
-    key: 'gsudoku',
-    title: '数独',
-    gradient: _gOrange,
-    art: _artSudoku,
-  ),
+  GameCardData(key: 'gmem', title: '记忆卡牌', gradient: _gOrange, art: _artMem),
+  GameCardData(key: 'gsudoku', title: '数独', gradient: _gOrange, art: _artSudoku),
   GameCardData(key: 'gnono', title: '数织', gradient: _gGreen, art: _artNono),
-  GameCardData(
-    key: 'gslide',
-    title: '数字华容道',
-    gradient: _gBrown,
-    art: _artSlide,
-  ),
-  GameCardData(key: 'gsnake', title: '贪吃蛇', gradient: _gOrange, art: _artSnake),
-  GameCardData(
-    key: 'gsheep',
-    title: '羊了个羊',
-    gradient: _gOrange,
-    art: _artSheep,
-  ),
-  GameCardData(key: 'gjump', title: '跳一跳', gradient: _gBrown, art: _artJump),
-  GameCardData(key: 'gpeng', title: '淘气小球', gradient: _gOrange, art: _artPeng),
-  GameCardData(
-    key: 'gbrake',
-    title: '极限刹车',
-    gradient: _gOrange,
-    art: _artBrake,
-  ),
-  GameCardData(key: 'gidiom', title: '成语接龙', gradient: _gRed, art: _artIdiom),
-  GameCardData(key: 'gfeihua', title: '飞花令', gradient: _gTeal, art: _artFeihua),
-  GameCardData(
-    key: 'gliquid',
-    title: '咕噜果冻',
-    gradient: _gMint,
-    art: _artLiquid,
-  ),
-  GameCardData(
-    key: 'gknockwater',
-    title: '铃渡',
-    gradient: _gJade,
-    art: _artKnockwater,
-  ),
+  GameCardData(key: 'gslide', title: '数字华容道', gradient: _gOrange, art: _artSlide),
+  GameCardData(key: 'gsnake', title: '贪吃蛇', gradient: _gGreen, art: _artSnake),
+  GameCardData(key: 'gsheep', title: '羊了个羊', gradient: _gYellow, art: _artSheep),
+  GameCardData(key: 'gjump', title: '跳一跳', gradient: _gBlue, art: _artJump),
+  GameCardData(key: 'gpeng', title: '淘气小球', gradient: _gPink, art: _artPeng),
+  GameCardData(key: 'gbrake', title: '极限刹车', gradient: _gOrange, art: _artBrake),
+  GameCardData(key: 'gidiom', title: '成语接龙', gradient: _gPink, art: _artIdiom),
+  GameCardData(key: 'gfeihua', title: '飞花令', gradient: _gBlue, art: _artFeihua),
+  GameCardData(key: 'gliquid', title: '咕噜果冻', gradient: _gGreen, art: _artLiquid),
+  GameCardData(key: 'gknockwater', title: '铃渡', gradient: _gNeutral, art: _artKnockwater),
 ];
 
-List<Color> _gOrange(CitroColors c) => const [
-  Color(0x28FE923B),
-  Color(0x14B8924A),
-];
-List<Color> _gBrown(CitroColors c) => const [
-  Color(0x28B8924A),
-  Color(0x14FE923B),
-];
-List<Color> _gGreen(CitroColors c) => const [
-  Color(0x2A568C74),
-  Color(0x14B8924A),
-];
-List<Color> _gRed(CitroColors c) => const [
-  Color(0x24B04A36),
-  Color(0x14B8924A),
-];
-List<Color> _gTeal(CitroColors c) => const [
-  Color(0x242E6B73),
-  Color(0x1AA89154),
-];
-List<Color> _gMint(CitroColors c) => const [
-  Color(0x30A9E5C8),
-  Color(0x18FFC3D6),
-];
-List<Color> _gJade(CitroColors c) => const [
-  Color(0x2A2E6B62),
-  Color(0x16143F3D),
-];
+List<Color> _gOrange(CitroColors c) => [c.tintYellow, c.tintPink];
+List<Color> _gGreen(CitroColors c) => [c.tintGreen, c.tintNeutral];
+List<Color> _gYellow(CitroColors c) => [c.tintYellow, c.tintGreen];
+List<Color> _gBlue(CitroColors c) => [c.tintBlue, c.tintNeutral];
+List<Color> _gPink(CitroColors c) => [c.tintPink, c.tintYellow];
+List<Color> _gNeutral(CitroColors c) => [c.tintBlue, c.tintGreen];
 
+/// 通用圆角小块（卡片艺术的基本形）。
 Widget _tile(
   String text,
   Color bg,
   Color fg, {
   double w = 26,
   double h = 26,
-  double radius = 7,
+  double radius = 8,
   double fontSize = 11,
-  double angle = 0,
 }) {
-  return Transform.rotate(
-    angle: angle,
-    child: Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x332A211C),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontFamily: AppFonts.noto,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          color: fg,
-          height: 1,
-        ),
+  return Container(
+    width: w,
+    height: h,
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(radius),
+      boxShadow: const [
+        BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 3)),
+      ],
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      text,
+      style: TextStyle(
+        fontFamily: AppFonts.rounded,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w700,
+        color: fg,
+        height: 1,
       ),
     ),
   );
 }
 
-Widget _art2048(BuildContext context) => Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    _tile(
-      '2',
-      const Color(0xFFEBE7E1),
-      const Color(0xFF5C524A),
-      w: 20,
-      h: 24,
-      fontSize: 9,
-    ),
-    const SizedBox(width: 2),
-    _tile(
-      '4',
-      const Color(0xFFE8B98A),
-      const Color(0xFF5C3A1E),
-      w: 20,
-      h: 24,
-      fontSize: 9,
-    ),
-    const SizedBox(width: 2),
-    _tile(
-      '8',
-      const Color(0xFFD97E4A),
-      const Color(0xFF3A1C0B),
-      w: 20,
-      h: 24,
-      fontSize: 9,
-    ),
-    const SizedBox(width: 2),
-    _tile(
-      '2048',
-      context.c.accent,
-      const Color(0xFF2A211C),
-      w: 26,
-      h: 24,
-      fontSize: 9,
-    ),
-  ],
-);
-
-Widget _artMem(BuildContext context) => SizedBox(
-  width: 62,
-  height: 46,
-  child: Stack(
-    alignment: Alignment.center,
+Widget _art2048(BuildContext context) {
+  final c = context.c;
+  return Row(
+    mainAxisSize: MainAxisSize.min,
     children: [
-      Positioned(
-        left: 8,
-        child: _tile(
-          '柑',
-          context.c.accent,
-          const Color(0xFF2A211C),
-          w: 26,
-          h: 34,
-          radius: 6,
-          fontSize: 13,
-          angle: -8 * math.pi / 180,
-        ),
-      ),
-      Positioned(
-        right: 8,
-        child: _tile(
-          '橘',
-          context.c.surface2,
-          context.c.accentInk,
-          w: 26,
-          h: 34,
-          radius: 6,
-          fontSize: 13,
-          angle: 6 * math.pi / 180,
-        ),
-      ),
+      _tile('2', c.surface2, c.ink2, w: 20, h: 24, fontSize: 9),
+      const SizedBox(width: 2),
+      _tile('4', c.accentLt, c.accentInk, w: 20, h: 24, fontSize: 9),
+      const SizedBox(width: 2),
+      _tile('8', c.accent, c.accentText, w: 20, h: 24, fontSize: 9),
+      const SizedBox(width: 2),
+      _tile('2048', c.ink, c.bg, w: 26, h: 24, fontSize: 9),
     ],
-  ),
-);
+  );
+}
+
+Widget _artMem(BuildContext context) {
+  final c = context.c;
+  return SizedBox(
+    width: 62,
+    height: 46,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned(left: 8, child: _tile('橘', c.accent, c.accentText, w: 26, h: 34, radius: CitroColors.radii.xs, fontSize: 13)),
+        Positioned(right: 8, child: _tile('福', c.surface2, c.accentInk, w: 26, h: 34, radius: CitroColors.radii.xs, fontSize: 13)),
+      ],
+    ),
+  );
+}
 
 Widget _artSudoku(BuildContext context) {
-  final colors = [context.c.accent, context.c.accentLt, context.c.surface2];
+  final c = context.c;
   const values = ['5', '3', '', '', '7', '', '', '', ''];
   return Container(
     width: 40,
     height: 40,
-    padding: const EdgeInsets.all(2),
+    padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: context.c.surface2.withAlpha(160),
-      borderRadius: BorderRadius.circular(5),
+      color: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
     ),
     child: GridView.count(
       crossAxisCount: 3,
@@ -233,19 +133,17 @@ Widget _artSudoku(BuildContext context) {
           Container(
             decoration: BoxDecoration(
               color: i == 4
-                  ? const Color(0xFFE8B98A)
-                  : (i == 0 ? colors[0] : const Color(0xFFEBE7E1)),
-              borderRadius: BorderRadius.circular(2),
+                  ? c.accentLt
+                  : (i == 0 ? c.accent : c.surface),
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
             alignment: Alignment.center,
             child: Text(
               values[i],
-              style: TextStyle(
-                fontSize: 9,
-                color: i == 0
-                    ? const Color(0xFF2A211C)
-                    : const Color(0xFF5C524A),
-                fontWeight: FontWeight.w700,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.strong,
+                color: i == 0 ? c.accentText : c.ink2,
               ),
             ),
           ),
@@ -255,14 +153,15 @@ Widget _artSudoku(BuildContext context) {
 }
 
 Widget _artNono(BuildContext context) {
+  final c = context.c;
   const filled = [1, 0, 1, 0, 1, 0, 1, 0, 1];
   return Container(
     width: 40,
     height: 40,
-    padding: const EdgeInsets.all(2),
+    padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: context.c.surface2.withAlpha(160),
-      borderRadius: BorderRadius.circular(5),
+      color: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
     ),
     child: GridView.count(
       crossAxisCount: 3,
@@ -273,10 +172,8 @@ Widget _artNono(BuildContext context) {
         for (var i = 0; i < 9; i++)
           Container(
             decoration: BoxDecoration(
-              color: filled[i] == 1
-                  ? const Color(0xFF568C74)
-                  : const Color(0xFFEBE7E1),
-              borderRadius: BorderRadius.circular(2),
+              color: filled[i] == 1 ? c.mint : c.surface,
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
             ),
           ),
       ],
@@ -284,154 +181,144 @@ Widget _artNono(BuildContext context) {
   );
 }
 
-Widget _artSlide(BuildContext context) => Container(
-  width: 40,
-  height: 40,
-  padding: const EdgeInsets.all(2),
-  decoration: BoxDecoration(
-    color: context.c.surface2.withAlpha(160),
-    borderRadius: BorderRadius.circular(4),
-  ),
-  child: GridView.count(
-    crossAxisCount: 3,
-    physics: const NeverScrollableScrollPhysics(),
-    mainAxisSpacing: 2,
-    crossAxisSpacing: 2,
-    children: [
-      for (var i = 1; i <= 8; i++)
-        Container(
-          decoration: BoxDecoration(
-            color: i == 8 ? context.c.accent : const Color(0xFFEBE7E1),
-            borderRadius: BorderRadius.circular(2),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$i',
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              color: i == 8 ? const Color(0xFF2A211C) : const Color(0xFF5C524A),
+Widget _artSlide(BuildContext context) {
+  final c = context.c;
+  return Container(
+    width: 40,
+    height: 40,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+    ),
+    child: GridView.count(
+      crossAxisCount: 3,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 2,
+      crossAxisSpacing: 2,
+      children: [
+        for (var i = 1; i <= 8; i++)
+          Container(
+            decoration: BoxDecoration(
+              color: i == 8 ? c.accent : c.surface,
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$i',
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.strong,
+                color: i == 8 ? c.accentText : c.ink2,
+              ),
             ),
           ),
+        const SizedBox.shrink(),
+      ],
+    ),
+  );
+}
+
+Widget _artSnake(BuildContext context) {
+  final c = context.c;
+  return SizedBox(
+    width: 38,
+    height: 38,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _tile('', c.mint, c.accentText, w: 16, h: 16, radius: 5),
+            const SizedBox(width: 3),
+            _tile('', c.mint, c.accentText, w: 16, h: 16, radius: 5),
+          ],
         ),
-      const SizedBox.shrink(),
-    ],
-  ),
-);
-
-Widget _artSnake(BuildContext context) => SizedBox(
-  width: 38,
-  height: 38,
-  child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _tile(
-            '',
-            const Color(0xFF568C74),
-            Colors.white,
-            w: 16,
-            h: 16,
-            radius: 3,
-            angle: 0,
-          ),
-          const SizedBox(width: 3),
-          _tile(
-            '',
-            const Color(0xFF568C74),
-            Colors.white,
-            w: 16,
-            h: 16,
-            radius: 3,
-          ),
-        ],
-      ),
-      const SizedBox(height: 3),
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _tile(
-            '',
-            const Color(0xFF568C74),
-            Colors.white,
-            w: 16,
-            h: 16,
-            radius: 3,
-          ),
-          const SizedBox(width: 3),
-          _tile('', context.c.accent, Colors.white, w: 16, h: 16, radius: 3),
-        ],
-      ),
-    ],
-  ),
-);
-
-Widget _artSheep(BuildContext context) => SizedBox(
-  width: 74,
-  height: 44,
-  child: Wrap(
-    spacing: 4,
-    runSpacing: 4,
-    children: [
-      for (var i = 0; i < 6; i++)
-        Container(
-          width: 22,
-          height: 20,
-          decoration: BoxDecoration(
-            color: [
-              const Color(0xFFDDE7C9),
-              const Color(0xFFC8D8B2),
-              const Color(0xFFE7E2C4),
-            ][i % 3],
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0x66A8B88C)),
-          ),
+        const SizedBox(height: 3),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _tile('', c.mint, c.accentText, w: 16, h: 16, radius: 5),
+            const SizedBox(width: 3),
+            _tile('', c.accent, c.accentText, w: 16, h: 16, radius: 5),
+          ],
         ),
-    ],
-  ),
-);
+      ],
+    ),
+  );
+}
 
-Widget _artJump(BuildContext context) => SizedBox(
-  width: 70,
-  height: 44,
-  child: Stack(
-    children: [
-      Positioned(left: 6, top: 24, child: _block(context, 22, 20)),
-      Positioned(left: 38, top: 8, child: _block(context, 26, 22)),
-      Positioned(left: 24, top: 8, child: _ball(context, 12)),
-    ],
-  ),
-);
+Widget _artSheep(BuildContext context) {
+  final c = context.c;
+  return SizedBox(
+    width: 74,
+    height: 44,
+    child: Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (var i = 0; i < 6; i++)
+          Container(
+            width: 22,
+            height: 20,
+            decoration: BoxDecoration(
+              color: [
+                c.tintGreen,
+                c.tintYellow,
+                c.tintBlue,
+              ][i % 3],
+              borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+            ),
+          ),
+      ],
+    ),
+  );
+}
 
-Widget _block(BuildContext context, double w, double h) => Container(
-  width: w,
-  height: h,
-  decoration: BoxDecoration(
-    color: const Color(0xFFE8B98A),
-    borderRadius: BorderRadius.circular(4),
-    boxShadow: const [
-      BoxShadow(color: Color(0x332A211C), blurRadius: 4, offset: Offset(0, 2)),
-    ],
-  ),
-);
+Widget _artJump(BuildContext context) {
+  return SizedBox(
+    width: 70,
+    height: 44,
+    child: Stack(
+      children: [
+        Positioned(left: 6, top: 24, child: _block(context, 22, 20)),
+        Positioned(left: 38, top: 8, child: _block(context, 26, 22)),
+        Positioned(left: 24, top: 8, child: _ball(context, 12)),
+      ],
+    ),
+  );
+}
 
-Widget _ball(BuildContext context, double s) => Container(
-  width: s,
-  height: s,
-  decoration: BoxDecoration(
-    color: context.c.accent,
-    shape: BoxShape.circle,
-    border: Border.all(color: const Color(0x662A211C)),
-  ),
-);
+Widget _block(BuildContext context, double w, double h) {
+  final c = context.c;
+  return Container(
+    width: w,
+    height: h,
+    decoration: BoxDecoration(
+      color: c.tintYellow,
+      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+      boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 2))],
+    ),
+  );
+}
 
-Widget _artPeng(BuildContext context) => SizedBox(
-  width: 50,
-  height: 50,
-  child: CustomPaint(painter: _RingPainter(context.c.accent, context.c.ink2)),
-);
+Widget _ball(BuildContext context, double s) {
+  final c = context.c;
+  return Container(
+    width: s,
+    height: s,
+    decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+  );
+}
+
+Widget _artPeng(BuildContext context) {
+  return SizedBox(
+    width: 50,
+    height: 50,
+    child: CustomPaint(painter: _RingPainter(context.c.accent, context.c.ink2)),
+  );
+}
 
 class _RingPainter extends CustomPainter {
   final Color accent;
@@ -474,13 +361,15 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-Widget _artBrake(BuildContext context) => SizedBox(
-  width: 56,
-  height: 46,
-  child: CustomPaint(
-    painter: _SpeedoPainter(context.c.accent, context.c.ink2, context.c.line2),
-  ),
-);
+Widget _artBrake(BuildContext context) {
+  return SizedBox(
+    width: 56,
+    height: 46,
+    child: CustomPaint(
+      painter: _SpeedoPainter(context.c.accent, context.c.ink2, context.c.line2),
+    ),
+  );
+}
 
 class _SpeedoPainter extends CustomPainter {
   final Color accent;
@@ -512,7 +401,8 @@ class _SpeedoPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = const Color(0xFFB04A36),
+        ..color = line
+        ..strokeCap = StrokeCap.round,
     );
     final c = Offset(size.width / 2, size.height * .86);
     final end = Offset(
@@ -534,84 +424,56 @@ class _SpeedoPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-Widget _artIdiom(BuildContext context) => SizedBox(
-  width: 76,
-  height: 42,
-  child: Stack(
-    alignment: Alignment.center,
-    children: [
-      Positioned(left: 4, child: _paperTile(context, '成', -8)),
-      Positioned(left: 26, child: _paperTile(context, '语', 4)),
-      Positioned(left: 48, child: _paperTile(context, '接', -3)),
-    ],
-  ),
-);
-
-Widget _paperTile(BuildContext context, String char, double angle) =>
-    Transform.rotate(
-      angle: angle * math.pi / 180,
-      child: Container(
-        width: 24,
-        height: 30,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF9E8),
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(color: const Color(0x66B04A36)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1F2A211C),
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          char,
-          style: const TextStyle(
-            fontFamily: AppFonts.zcool,
-            fontSize: 12,
-            color: Color(0xFF7A2D12),
-          ),
-        ),
-      ),
-    );
-
-Widget _artFeihua(BuildContext context) => SizedBox(
-  width: 76,
-  height: 46,
-  child: Stack(
-    children: [
-      Positioned(left: 12, top: 14, child: _petal(context, -18)),
-      Positioned(left: 28, top: 4, child: _petal(context, 28)),
-      Positioned(left: 46, top: 16, child: _petal(context, 74)),
-    ],
-  ),
-);
-
-Widget _petal(BuildContext context, double angle) => Transform.rotate(
-  angle: angle * math.pi / 180,
-  child: Container(
-    width: 24,
-    height: 24,
-    decoration: const BoxDecoration(
-      borderRadius: BorderRadius.only(
-        topLeft: Radius.circular(12),
-        bottomRight: Radius.circular(12),
-        topRight: Radius.circular(12),
-        bottomLeft: Radius.zero,
-      ),
-      gradient: LinearGradient(colors: [Color(0xFFE4F2F0), Color(0xFFB7DAD7)]),
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x382E6B73),
-          blurRadius: 8,
-          offset: Offset(0, 3),
-        ),
+Widget _artIdiom(BuildContext context) {
+  final c = context.c;
+  return SizedBox(
+    width: 76,
+    height: 42,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _tile('成', c.accentLt, c.accentInk, w: 22, h: 30, radius: CitroColors.radii.xs, fontSize: 12),
+        const SizedBox(width: 3),
+        _tile('语', c.surface2, c.ink2, w: 22, h: 30, radius: CitroColors.radii.xs, fontSize: 12),
+        const SizedBox(width: 3),
+        _tile('接', c.surface2, c.ink2, w: 22, h: 30, radius: CitroColors.radii.xs, fontSize: 12),
       ],
     ),
-  ),
-);
+  );
+}
+
+Widget _artFeihua(BuildContext context) {
+  final c = context.c;
+  return SizedBox(
+    width: 76,
+    height: 46,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _petal(context, c.tintPink),
+        const SizedBox(width: 4),
+        _petal(context, c.tintBlue),
+        const SizedBox(width: 4),
+        _petal(context, c.tintGreen),
+      ],
+    ),
+  );
+}
+
+Widget _petal(BuildContext context, Color color) {
+  return Container(
+    width: 22,
+    height: 22,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(CitroColors.radii.small),
+        bottomRight: Radius.circular(CitroColors.radii.small),
+        topRight: Radius.circular(CitroColors.radii.small),
+      ),
+    ),
+  );
+}
 
 Widget _artLiquid(BuildContext context) => SizedBox(
   width: 58,
@@ -625,7 +487,8 @@ Widget _artKnockwater(BuildContext context) => SizedBox(
   child: CustomPaint(painter: _KnockwaterArtPainter(context.c)),
 );
 
-/// 青玉水墨小卡：一汪深潭、三片花瓣、湾心与一枚水铃。
+/// 青玉水墨小卡：铃渡的沉浸式深色水面是这款游戏的品牌资产，
+/// 保持自绘深潭 + 金/珊瑚色，不并入全局 token（其余游戏卡片都走 token）。
 class _KnockwaterArtPainter extends CustomPainter {
   _KnockwaterArtPainter(this.c);
 
@@ -747,6 +610,7 @@ class _KnockwaterArtPainter extends CustomPainter {
       oldDelegate.c != c;
 }
 
+/// 咕噜果冻小罐：透明罐 + 果冻波浪 + 小星星，全部走 token。
 class _LiquidJarPainter extends CustomPainter {
   _LiquidJarPainter(this.c);
 
@@ -754,10 +618,9 @@ class _LiquidJarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ink = c.ink;
     final rect = const Rect.fromLTWH(10, 6, 38, 38);
-    final jar = RRect.fromRectAndRadius(rect, const Radius.circular(8));
-    canvas.drawRRect(jar, Paint()..color = const Color(0xFFFFFAF0));
+    final jar = RRect.fromRectAndRadius(rect, Radius.circular(CitroColors.radii.small));
+    canvas.drawRRect(jar, Paint()..color = c.surface);
 
     canvas.save();
     canvas.clipRRect(jar);
@@ -778,43 +641,30 @@ class _LiquidJarPainter extends CustomPainter {
       ..lineTo(rect.right, rect.bottom)
       ..lineTo(rect.left, rect.bottom)
       ..close();
-    canvas.drawPath(wave, Paint()..color = const Color(0xFFA9ECCB));
+    canvas.drawPath(wave, Paint()..color = c.mintSoft);
 
-    const pink = Color(0xFFFFC3D6);
-    const pinkEdge = Color(0xFFAB4F72);
-    canvas.drawCircle(
-      Offset(rect.right - 13, rect.bottom - 16),
-      10.5,
-      Paint()..color = pink,
-    );
+    final jelly = c.accentLt;
+    canvas.drawCircle(Offset(rect.right - 13, rect.bottom - 16), 10.5, Paint()..color = jelly);
     canvas.drawCircle(
       Offset(rect.right - 13, rect.bottom - 16),
       10.5,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2
-        ..color = pinkEdge,
+        ..color = c.accent,
     );
-    canvas.drawCircle(
-      Offset(rect.right - 16.5, rect.bottom - 19),
-      1.6,
-      Paint()..color = ink,
-    );
-    canvas.drawCircle(
-      Offset(rect.right - 9.5, rect.bottom - 19),
-      1.6,
-      Paint()..color = ink,
-    );
+    canvas.drawCircle(Offset(rect.right - 16.5, rect.bottom - 19), 1.6, Paint()..color = c.ink);
+    canvas.drawCircle(Offset(rect.right - 9.5, rect.bottom - 19), 1.6, Paint()..color = c.ink);
 
     final yellow = Offset(rect.left + 15, rect.bottom - 22);
-    canvas.drawCircle(yellow, 7, Paint()..color = const Color(0xFFFFDD7F));
+    canvas.drawCircle(yellow, 7, Paint()..color = c.tintYellow);
     canvas.drawCircle(
       yellow,
       7,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
-        ..color = const Color(0xFF98701A),
+        ..color = c.accentInk,
     );
 
     final star = Path()
@@ -827,7 +677,7 @@ class _LiquidJarPainter extends CustomPainter {
       ..lineTo(rect.left + 3, rect.top + 18)
       ..lineTo(rect.left + 7, rect.top + 16)
       ..close();
-    canvas.drawPath(star, Paint()..color = const Color(0xB3FFFAF0));
+    canvas.drawPath(star, Paint()..color = c.surface2);
     canvas.restore();
 
     canvas.drawRRect(
@@ -835,7 +685,7 @@ class _LiquidJarPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4
-        ..color = ink,
+        ..color = c.ink,
     );
     canvas.drawLine(
       Offset(rect.left - 3, rect.top + 1),
@@ -844,7 +694,7 @@ class _LiquidJarPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round
-        ..color = ink,
+        ..color = c.ink,
     );
     canvas.drawLine(
       Offset(rect.right + 3, rect.top + 1),
@@ -853,10 +703,10 @@ class _LiquidJarPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round
-        ..color = ink,
+        ..color = c.ink,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _LiquidJarPainter oldDelegate) => oldDelegate.c != c;
 }

@@ -67,7 +67,6 @@ class _LanternWelcome extends StatelessWidget {
     return PaperDialog(
       maxWidth: 390,
       showClose: false,
-      tapeColor: c.tape3,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -87,16 +86,16 @@ class _LanternWelcome extends StatelessWidget {
           Text(
             '月圆人圆，灯谜开猜。\n三十道灯谜，答对一题记一分。\n请登录后作答，${window.welcomeDeadline} 收卷。',
             textAlign: TextAlign.center,
-            style: context.body(size: 14, color: c.ink2, height: 1.75),
+            style: context.body(size: CitroType.body, color: c.ink2, height: 1.75),
           ),
           const SizedBox(height: 12),
           Text(
             '请豆姐帮忙的罚一个月饼！！！',
             textAlign: TextAlign.center,
             style: context.body(
-              size: 13,
+              size: CitroType.meta,
               weight: FontWeight.w700,
-              color: const Color(0xFF7A2D12),
+              color: c.stamp,
             ),
           ),
           const SizedBox(height: 22),
@@ -326,7 +325,6 @@ class _LanternDialogState extends State<_LanternDialog> {
         compact ? 16 : 22,
         compact ? 18 : 22,
       ),
-      tapeColor: c.tape3,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -361,7 +359,7 @@ class _LanternDialogState extends State<_LanternDialog> {
               Text('猜灯谜', style: context.heading(size: 24)),
               Text(
                 'Mid-Autumn · Lantern Riddles',
-                style: context.display(size: 12, color: c.inkSoft),
+                style: context.display(size: CitroType.caption, color: c.inkSoft),
               ),
             ],
           ),
@@ -384,7 +382,7 @@ class _LanternDialogState extends State<_LanternDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _open ? c.mintSoft : c.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: _open ? c.mintLine : c.line),
       ),
       child: Text(
@@ -421,7 +419,7 @@ class _LanternDialogState extends State<_LanternDialog> {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         border: Border.all(color: c.line),
       ),
       child: Row(
@@ -450,15 +448,15 @@ class _LanternDialogState extends State<_LanternDialog> {
         height: 36,
         decoration: BoxDecoration(
           color: selected ? c.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         ),
         alignment: Alignment.center,
         child: Text(
           text,
           style: context.body(
-            size: 13,
-            weight: FontWeight.w700,
-            color: selected ? const Color(0xFF2E2C22) : c.inkSoft,
+            size: CitroType.meta,
+            weight: CitroType.medium,
+            color: selected ? c.onAccent : c.inkSoft,
           ),
         ),
       ),
@@ -468,10 +466,9 @@ class _LanternDialogState extends State<_LanternDialog> {
   Widget _buildBoard(CitroColors c) {
     final board = _state?.board ?? const <LanternBoardEntry>[];
     final me = _state?.meName;
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.all(14),
-      color: c.dark ? c.surface2 : c.noteY,
-      shadow: PaperShadow.none,
+      color: c.dark ? c.surface2 : c.tintYellow,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -485,7 +482,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           const SizedBox(height: 4),
           Text(
             '答对一题记 1 分\n同分比谁先解出',
-            style: context.body(size: 11, color: c.inkSoft, height: 1.55),
+            style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.55),
           ),
           const SizedBox(height: 12),
           if (board.isEmpty)
@@ -494,7 +491,7 @@ class _LanternDialogState extends State<_LanternDialog> {
               child: Text(
                 '暂无上榜，来当第一人',
                 textAlign: TextAlign.center,
-                style: context.body(size: 12, color: c.inkSoft),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             )
           else
@@ -513,8 +510,8 @@ class _LanternDialogState extends State<_LanternDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: mine ? c.hl : c.surface.withAlpha(c.dark ? 60 : 170),
-        borderRadius: BorderRadius.circular(9),
+        color: mine ? c.accentLt.withAlpha(c.dark ? 70 : 180) : c.surface,
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: mine ? c.accentLt : c.line),
       ),
       child: Row(
@@ -529,10 +526,10 @@ class _LanternDialogState extends State<_LanternDialog> {
             ),
             child: Text(
               '${index + 1}',
-              style: context.display(
-                size: 12,
-                weight: FontWeight.w700,
-                color: c.ink,
+              style: context.hand(
+                size: CitroType.caption,
+                weight: CitroType.medium,
+                color: index == 0 ? c.onAccent : c.ink,
               ),
             ),
           ),
@@ -605,15 +602,15 @@ class _LanternDialogState extends State<_LanternDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: selected ? c.accent : c.surface2,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: selected ? c.accent2 : c.line2),
         ),
         child: Text(
           label,
           style: context.body(
-            size: 11,
-            weight: FontWeight.w700,
-            color: selected ? const Color(0xFF2E2C22) : c.inkSoft,
+            size: CitroType.small,
+            weight: CitroType.medium,
+            color: selected ? c.onAccent : c.inkSoft,
           ),
         ),
       ),
@@ -651,7 +648,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         child: Text(
           '这个筛选下没有灯谜',
           textAlign: TextAlign.center,
-          style: context.body(size: 12, color: c.inkSoft),
+          style: context.body(size: CitroType.caption, color: c.inkSoft),
         ),
       );
     }
@@ -684,7 +681,7 @@ class _LanternDialogState extends State<_LanternDialog> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: solved ? c.mintSoft : c.surface2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: solved ? c.mintLine : c.line),
       ),
       child: Column(
@@ -695,9 +692,9 @@ class _LanternDialogState extends State<_LanternDialog> {
             children: [
               Text(
                 riddle.id.toString().padLeft(2, '0'),
-                style: context.display(
-                  size: 20,
-                  weight: FontWeight.w700,
+                style: context.hand(
+                  size: CitroType.titleLg,
+                  weight: CitroType.medium,
                   color: solved ? c.mintInk : c.accentInk,
                 ),
               ),
@@ -708,7 +705,7 @@ class _LanternDialogState extends State<_LanternDialog> {
                   child: Text(
                     riddle.question,
                     style: context.body(
-                      size: 13,
+                      size: CitroType.meta,
                       weight: FontWeight.w700,
                       color: c.ink,
                       height: 1.55,
@@ -722,7 +719,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           Text(
             solverText,
             style: context.body(
-              size: 11,
+              size: CitroType.small,
               color: solved ? c.mintInk : c.inkSoft,
             ),
           ),
@@ -756,7 +753,7 @@ class _LanternDialogState extends State<_LanternDialog> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: 11,
+                        size: CitroType.small,
                         color: _messages[riddle.id] == '猜中啦！'
                             ? c.mintInk
                             : c.stamp,
@@ -790,15 +787,15 @@ class _LanternDialogState extends State<_LanternDialog> {
           vertical: 12,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           borderSide: BorderSide(color: c.line2),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           borderSide: BorderSide(color: c.line2),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
           borderSide: BorderSide(color: c.accent),
         ),
       ),
@@ -809,10 +806,9 @@ class _LanternDialogState extends State<_LanternDialog> {
     final emoji = _state?.emoji;
     final solved = emoji?.solved.length ?? 0;
     final total = emoji?.total ?? 30;
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.all(16),
-      color: c.dark ? c.surface2 : c.noteB,
-      shadow: PaperShadow.none,
+      color: c.dark ? c.surface2 : c.tintBlue,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -829,19 +825,19 @@ class _LanternDialogState extends State<_LanternDialog> {
                   const SizedBox(height: 3),
                   Text(
                     '抽取制 · 答对自动下一题 · 每题 0.5 分 · 共 30 题',
-                    style: context.body(size: 11, color: c.inkSoft),
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  HandChip('已解 $solved/$total', size: 11),
+                  CitroChip('已解 $solved/$total', size: CitroType.small),
                   const SizedBox(width: 5),
-                  HandChip(
+                  CitroChip(
                     '附加分 ${_score(emoji?.score ?? 0)}',
-                    size: 11,
-                    bg: c.hl,
+                    size: CitroType.small,
+                    background: c.accentLt.withAlpha(c.dark ? 60 : 150),
                   ),
                 ],
               ),
@@ -849,7 +845,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           ),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             child: LinearProgressIndicator(
               value: total == 0 ? 0 : (solved / total).clamp(0, 1),
               minHeight: 5,
@@ -868,7 +864,7 @@ class _LanternDialogState extends State<_LanternDialog> {
     if (!AppState.instance.loggedIn) {
       return Column(
         children: [
-          Text('登录后参与附加题', style: context.body(size: 12, color: c.inkSoft)),
+          Text('登录后参与附加题', style: context.body(size: CitroType.caption, color: c.inkSoft)),
           const SizedBox(height: 10),
           AccentButton(text: '去登录', outlined: true, height: 38, onTap: _login),
         ],
@@ -880,7 +876,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         child: Text(
           '附加题加载中…',
           textAlign: TextAlign.center,
-          style: context.body(size: 12, color: c.inkSoft),
+          style: context.body(size: CitroType.caption, color: c.inkSoft),
         ),
       );
     }
@@ -893,8 +889,8 @@ class _LanternDialogState extends State<_LanternDialog> {
             padding: const EdgeInsets.symmetric(vertical: 18),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: c.surface.withAlpha(c.dark ? 70 : 170),
-              borderRadius: BorderRadius.circular(12),
+              color: c.surface,
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               border: Border.all(color: c.line),
             ),
             child: Text(
@@ -925,10 +921,10 @@ class _LanternDialogState extends State<_LanternDialog> {
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(9),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(9),
+                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
                         borderSide: BorderSide(color: c.accent),
                       ),
                     ),
@@ -956,7 +952,7 @@ class _LanternDialogState extends State<_LanternDialog> {
               child: Text(
                 _emojiMessage!,
                 style: context.body(
-                  size: 11,
+                  size: CitroType.small,
                   color: _emojiMessage == '猜中 +0.5！' ? c.mintInk : c.stamp,
                 ),
               ),
@@ -965,7 +961,7 @@ class _LanternDialogState extends State<_LanternDialog> {
           Text(
             '答对自动抽取下一题 · 停在本题直到答对',
             textAlign: TextAlign.center,
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           ),
         ],
       );
@@ -977,7 +973,7 @@ class _LanternDialogState extends State<_LanternDialog> {
         Text(
           done ? '附加题已全部解完' : (_open ? '点击下方抽取一题' : '已收卷'),
           textAlign: TextAlign.center,
-          style: context.body(size: 13, color: c.inkSoft),
+          style: context.body(size: CitroType.meta, color: c.inkSoft),
         ),
         if (!done && _open) ...[
           const SizedBox(height: 12),
@@ -993,14 +989,14 @@ class _LanternDialogState extends State<_LanternDialog> {
             child: Text(
               _emojiMessage!,
               textAlign: TextAlign.center,
-              style: context.body(size: 11, color: c.stamp),
+              style: context.body(size: CitroType.small, color: c.stamp),
             ),
           ),
         const SizedBox(height: 8),
         Text(
           '答对自动抽取下一题 · 每题 0.5 分',
           textAlign: TextAlign.center,
-          style: context.body(size: 11, color: c.inkSoft),
+          style: context.body(size: CitroType.small, color: c.inkSoft),
         ),
       ],
     );

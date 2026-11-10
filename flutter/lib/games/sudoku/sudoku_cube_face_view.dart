@@ -78,7 +78,7 @@ class SudokuCubeFaceView extends StatelessWidget {
                   color: c.surface2,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: c.line2),
-                  boxShadow: CitroColors.shadows.paper(c),
+                  boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(11),

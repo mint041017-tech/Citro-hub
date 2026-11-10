@@ -32,7 +32,7 @@ Future<void> showFortuneOverlay(BuildContext context) async {
             onTap: () => Navigator.of(ctx).maybePop(),
             child: CitroBackdropBlur(
               sigma: 14,
-              child: Container(color: const Color(0x8A23211C)),
+              child: Container(color: ctx.c.scrim),
             ),
           ),
         ),
@@ -66,7 +66,7 @@ class _FortuneDialog extends StatefulWidget {
 
 class _FortuneDialogState extends State<_FortuneDialog>
     with TickerProviderStateMixin {
-  static const _cardRadius = BorderRadius.all(Radius.circular(24));
+  static final _cardRadius = BorderRadius.all(Radius.circular(CitroColors.radii.card));
   static const _flipDuration = Duration(milliseconds: 900);
   static const _flipCurve = Cubic(.22, 1.12, .32, 1);
 
@@ -242,8 +242,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: c.dark ? const Color(0x14F2A43C) : const Color(0xFFFFF4E3),
-        borderRadius: BorderRadius.circular(12),
+        color: c.accentLt.withAlpha(c.dark ? 44 : 170),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: c.accent.withAlpha(90)),
       ),
       child: Column(
@@ -278,14 +278,14 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   ),
                   decoration: BoxDecoration(
                     color: c.accent,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                   child: Text(
                     '待使用',
                     style: context.body(
-                      size: 9,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF2E2C22),
+                      size: CitroType.micro,
+                      weight: CitroType.medium,
+                      color: c.onAccent,
                     ),
                   ),
                 ),
@@ -312,7 +312,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                 color: used
                     ? c.surface2
                     : (ready ? c.accent : Colors.transparent),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(
                   color: used
                       ? c.line
@@ -329,7 +329,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                         height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 1.6,
-                          color: ready ? const Color(0xFF2E2C22) : c.accentInk,
+                          color: ready ? c.onAccent : c.accentInk,
                         ),
                       )
                     else
@@ -341,17 +341,17 @@ class _FortuneDialogState extends State<_FortuneDialog>
                         size: 13,
                         color: used
                             ? c.inkSoft
-                            : (ready ? const Color(0xFF2E2C22) : c.accentInk),
+                            : (ready ? c.onAccent : c.accentInk),
                       ),
                     const SizedBox(width: 5),
                     Text(
                       label,
                       style: context.body(
-                        size: 11,
-                        weight: FontWeight.w700,
+                        size: CitroType.small,
+                        weight: CitroType.medium,
                         color: used
                             ? c.inkSoft
-                            : (ready ? const Color(0xFF2E2C22) : c.accentInk),
+                            : (ready ? c.onAccent : c.accentInk),
                       ),
                     ),
                   ],
@@ -401,8 +401,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: c.dark
-          ? [const Color(0xFF312A21), const Color(0xFF1A1611)]
-          : [const Color(0xFFFFFBF2), const Color(0xFFF1E3CD)],
+          ? [c.surface2, c.bg2]
+          : [c.surface, c.tintYellow],
     );
 
     return Listener(
@@ -466,18 +466,22 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     key: _cardKey,
                     width: double.infinity,
                     constraints: const BoxConstraints(maxWidth: 400),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       borderRadius: _cardRadius,
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0x246E5030),
+                          color: c.dark
+                              ? const Color(0x66000000)
+                              : const Color(0x24000000),
                           blurRadius: 60,
-                          offset: Offset(0, 24),
+                          offset: const Offset(0, 24),
                         ),
                         BoxShadow(
-                          color: Color(0x1A6E5030),
+                          color: c.dark
+                              ? const Color(0x40000000)
+                              : const Color(0x1A000000),
                           blurRadius: 22,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -525,7 +529,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               borderRadius:
-                                                  BorderRadius.circular(18),
+                                                  BorderRadius.circular(
+                                                    CitroColors.radii.inner,
+                                                  ),
                                               border: Border.all(
                                                 color: c.accent.withAlpha(
                                                   c.dark ? 42 : 70,
@@ -706,17 +712,21 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                     c.dark ? 26 : 148,
                                                   ),
                                                   borderRadius:
-                                                      BorderRadius.circular(18),
+                                                      BorderRadius.circular(
+                                                        CitroColors.radii.inner,
+                                                      ),
                                                   border: Border.all(
                                                     color: c.accent.withAlpha(
                                                       c.dark ? 40 : 58,
                                                     ),
                                                   ),
-                                                  boxShadow: const [
+                                                  boxShadow: [
                                                     BoxShadow(
-                                                      color: Color(0x0F5A4A2C),
+                                                      color: c.dark
+                                                          ? const Color(0x33000000)
+                                                          : const Color(0x0F000000),
                                                       blurRadius: 12,
-                                                      offset: Offset(0, 5),
+                                                      offset: const Offset(0, 5),
                                                     ),
                                                   ],
                                                 ),
@@ -790,7 +800,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                         ),
                                                                         borderRadius:
                                                                             BorderRadius.circular(
-                                                                              12,
+                                                                              CitroColors.radii.small,
                                                                             ),
                                                                         border: Border.all(
                                                                           color: c
@@ -922,11 +932,11 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                               8,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: c.dark
-                                                  ? const Color(0x0FFFFFFF)
-                                                  : const Color(0x0A5A4A2C),
+                                              color: c.surface2,
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(
+                                                    CitroColors.radii.small,
+                                                  ),
                                               border: Border.all(
                                                 color: c.line2.withAlpha(90),
                                               ),
@@ -1048,18 +1058,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: c.surface.withAlpha(235),
+                                color: c.surface,
                                 shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withAlpha(80),
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x38000000),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
+                                border: Border.all(color: c.line),
+                                boxShadow: CitroColors.shadows.sm(c),
                               ),
                               child: Center(
                                 child: AppIcon(
@@ -1093,19 +1095,13 @@ class _FortuneDialogState extends State<_FortuneDialog>
         height: size,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: c.noteY,
-          borderRadius: BorderRadius.circular(20),
+          color: c.tintYellow,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
           border: Border.all(color: c.accent.withAlpha(86)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A3A2812),
-              blurRadius: 14,
-              offset: Offset(0, 6),
-            ),
-          ],
+          boxShadow: CitroColors.shadows.sm(c),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           child: Image.asset(
             'assets/images/cats/${23757 + catIndex}.webp',
             fit: BoxFit.contain,
@@ -1126,16 +1122,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [stamp, Color.lerp(stamp, Colors.black, .16)!],
+          colors: [stamp, Color.lerp(stamp, c.ink, .16)!],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: stamp.withAlpha(58),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        boxShadow: CitroColors.shadows.sm(c),
       ),
       child: Stack(
         children: [
@@ -1144,8 +1134,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
               padding: const EdgeInsets.all(5),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: const Color(0x66FFF6E4)),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.inner - 1),
+                  border: Border.all(color: c.onAccent.withAlpha(160)),
                 ),
               ),
             ),
@@ -1156,14 +1146,13 @@ class _FortuneDialogState extends State<_FortuneDialog>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     '今日签',
-                    style: TextStyle(
-                      fontFamily: AppFonts.noto,
-                      fontFamilyFallback: AppFonts.bodyFallback,
-                      fontSize: 9,
+                    style: context.body(
+                      size: CitroType.micro,
+                      weight: CitroType.medium,
+                      color: c.onAccent.withAlpha(210),
                       letterSpacing: 2,
-                      color: Color(0xCCFFF6E4),
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -1172,12 +1161,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     child: Text(
                       level,
                       maxLines: 1,
-                      style: const TextStyle(
-                        fontFamily: AppFonts.zcool,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                      style: context.heading(
+                        size: CitroType.titleLg,
+                        color: c.onAccent,
                         letterSpacing: 1,
-                        color: Color(0xFFFFF7E8),
                       ),
                     ),
                   ),
@@ -1198,17 +1185,13 @@ class _FortuneDialogState extends State<_FortuneDialog>
   }) {
     final c = context.c;
     final tone = good ? c.mintInk : c.stamp;
-    final bg = good
-        ? (c.dark ? const Color(0x1AC9D3B2) : const Color(0xFFEAF2E3))
-        : (c.dark ? const Color(0x14E0796A) : const Color(0xFFFBE9E4));
-    final border = good
-        ? c.mintLine
-        : (c.dark ? const Color(0x33E0796A) : const Color(0xFFF0D2C8));
+    final bg = good ? c.mintSoft : c.dangerSoft;
+    final border = good ? c.mintLine : c.danger.withAlpha(90);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
         border: Border.all(color: border),
       ),
       child: Row(
@@ -1219,27 +1202,27 @@ class _FortuneDialogState extends State<_FortuneDialog>
             height: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: good
-                  ? c.mintSoft
-                  : (c.dark
-                        ? const Color(0x33E0796A)
-                        : const Color(0xFFF5DCD4)),
-              borderRadius: BorderRadius.circular(6),
+              color: good ? c.surface : c.dangerSoft,
+              shape: BoxShape.circle,
             ),
             child: Text(
               mark,
               style: context.body(
-                size: 10,
-                weight: FontWeight.w700,
+                size: CitroType.micro,
+                weight: CitroType.medium,
                 color: tone,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.x1),
           Expanded(
             child: Text(
               text,
-              style: context.body(size: 11, color: tone, height: 1.4),
+              style: context.body(
+                size: CitroType.small,
+                color: tone,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -1248,6 +1231,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
   }
 
   Widget _buildBack(BuildContext context) {
+    final c = context.c;
     final card = _card;
     return ClipRRect(
       borderRadius: _cardRadius,
@@ -1262,25 +1246,26 @@ class _FortuneDialogState extends State<_FortuneDialog>
               borderRadius: BorderRadius.zero,
             )
           else
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF3A2B1E), Color(0xFF221811)],
+                  colors: [c.surface2, c.bg2],
                 ),
               ),
             ),
+          // 照片上的暗角只用于保证文字可读，属图片叠加层，不走 token。
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x4D140F0A),
-                  Color(0x00140F0A),
-                  Color(0x00140F0A),
-                  Color(0x66140F0A),
+                  Color(0x4D000000),
+                  Color(0x00000000),
+                  Color(0x00000000),
+                  Color(0x66000000),
                 ],
                 stops: [0, .2, .72, 1],
               ),
@@ -1291,8 +1276,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
               padding: const EdgeInsets.all(10),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: const Color(0x73FFF4DC), width: 1),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.card - 1),
+                  border: Border.all(color: c.accentLt, width: 1),
                 ),
               ),
             ),
@@ -1303,16 +1288,15 @@ class _FortuneDialogState extends State<_FortuneDialog>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0x59000000),
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: const Color(0x33FFFFFF)),
+                color: c.scrim,
+                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
               ),
               child: Text(
                 '轻点翻开',
                 style: context.body(
-                  size: 11,
-                  weight: FontWeight.w700,
-                  color: const Color(0xE6FFF6E4),
+                  size: CitroType.small,
+                  weight: CitroType.medium,
+                  color: c.surface,
                   letterSpacing: 1.4,
                   height: 1,
                 ),
@@ -1329,16 +1313,15 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0x73000000),
-                  borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: const Color(0x2EFFF6E4)),
+                  color: c.scrim,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Text(
                   '${card.categoryName} · ${card.label}',
                   style: context.body(
-                    size: 10,
-                    weight: FontWeight.w700,
-                    color: const Color(0xD9FFF6E4),
+                    size: CitroType.micro,
+                    weight: CitroType.medium,
+                    color: c.surface,
                     letterSpacing: .8,
                     height: 1,
                   ),
@@ -1357,9 +1340,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final Color border;
     switch (type) {
       case 'fest':
-        bg = c.dark ? c.hl : const Color(0x21F2A43C);
+        bg = c.accentLt.withAlpha(c.dark ? 60 : 140);
         fg = c.accentInk;
-        border = const Color(0x38F2A43C);
+        border = c.accent.withAlpha(120);
         break;
       case 'term':
         bg = c.mintSoft;
@@ -1367,7 +1350,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
         border = c.mintLine;
         break;
       default:
-        bg = c.dark ? c.hl : const Color(0x0D23211C);
+        bg = c.surface2;
         fg = c.ink2;
         border = c.line;
     }
@@ -1375,10 +1358,13 @@ class _FortuneDialogState extends State<_FortuneDialog>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
         border: Border.all(color: border),
       ),
-      child: Text(text, style: context.body(size: 11, color: fg)),
+      child: Text(
+        text,
+        style: context.body(size: CitroType.small, color: fg),
+      ),
     );
   }
 
@@ -1460,6 +1446,7 @@ class _FlipShine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -1488,9 +1475,9 @@ class _FlipShine extends StatelessWidget {
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                             colors: [
-                              Colors.white.withAlpha(0),
-                              Colors.white.withAlpha(125),
-                              Colors.white.withAlpha(0),
+                              c.surface.withAlpha(0),
+                              c.surface.withAlpha(125),
+                              c.surface.withAlpha(0),
                             ],
                           ),
                         ),

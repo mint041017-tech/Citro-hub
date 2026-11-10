@@ -5,6 +5,13 @@ import 'package:flutter/material.dart';
 
 import 'engine.dart';
 
+// ---------------------------------------------------------------------------
+// 铃渡的水面 painter。
+//
+// 【设计规则例外】金 / 珊瑚 / 近黑水面是铃渡这款游戏的品牌美术资产（深色水景
+// 本身已接近「深色模式」），不并入全局 token，否则会失去辨识度。页面外壳、
+// 圆角与数字字体已在 knockwater_page.dart 对齐 nosh。
+// ---------------------------------------------------------------------------
 const Color kGold = Color(0xFFE3B878);
 const Color kGlow = Color(0xFFA9F5E6);
 const Color kCoral = Color(0xFFFF9E7A);

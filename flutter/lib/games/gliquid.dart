@@ -20,13 +20,16 @@ import 'game_ui.dart'
         GameIcons,
         GameScaffold,
         GameScorePill,
-        GameTape,
         showGameRank;
 import 'gliquid_game.dart';
 import 'gliquid_physics.dart';
 import 'gliquid_sfx.dart';
 
 // 线上入口已换成 WebView 版；下方旧原生实现仅供物理/预览测试使用。
+//
+// 【设计规则例外】本文件的画布调色板（_LiquidPalette / 场景 painter / 果冻材质）
+// 是这款游戏自己的美术资产，不按全局 token 重绘；仅 golden 预览测试会渲染它，
+// 生产用户看到的是 gliquid_web_native/web 的 WebView 版（已按 nosh 重绘外壳）。
 export 'gliquid_web.dart';
 
 const Color _ink = Color(0xFF26313F);
@@ -1506,16 +1509,6 @@ class _PaperDialog extends StatelessWidget {
               ],
             ),
             child: child,
-          ),
-          const Positioned(
-            top: -8,
-            left: 28,
-            child: GameTape(
-              width: 84,
-              height: 22,
-              color: Color(0xB8FFD696),
-              angle: -3,
-            ),
           ),
         ],
       ),

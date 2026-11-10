@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import 'game_ui.dart';
+import 'game_theme.dart';
 
 /// 记忆卡牌（web `#gmemPage`：index.html:8109-8143 + gmem JS 18096-18239）。
 ///
@@ -314,14 +315,14 @@ class _DiffTabs extends StatelessWidget {
         children: [
           for (var i = 0; i < entries.length; i++) ...[
             if (i > 0) const SizedBox(width: 2),
-            _tab(entries[i].key, entries[i].value.label),
+            _tab(context, c, entries[i].key, entries[i].value.label),
           ],
         ],
       ),
     );
   }
 
-  Widget _tab(String key, String label) {
+  Widget _tab(BuildContext context, CitroColors c, String key, String label) {
     final on = key == value;
     return GameHover(
       enabled: onChanged != null,
@@ -331,30 +332,17 @@ class _DiffTabs extends StatelessWidget {
           width: _tabW,
           height: _tabH,
           alignment: Alignment.center,
-          decoration: on
-              ? const BoxDecoration(
-                  color: Color(0xFF7A9BBE),
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x66FE923B),
-                      offset: Offset(0, 4),
-                      blurRadius: 14,
-                    ),
-                  ],
-                )
-              : null,
+          decoration: BoxDecoration(
+            color: on ? c.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
+          ),
           child: Text(
             label,
             maxLines: 1,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 19 / 12,
-              letterSpacing: 0.2,
-              color: on ? const Color(0xFF2E2C22) : const Color(0xFF4E4A40),
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
+              color: on ? c.accentText : c.ink2,
             ),
           ),
         ),
@@ -457,39 +445,15 @@ class _MemoryBoard extends StatelessWidget {
           Positioned(
             left: 0,
             top: 0,
-            child: CssShadowLayer(
-              radius: 14,
-              shadows: const [
-                CssShadowSpec(
-                  color: Color(0x0E5A4A2C),
-                  offset: Offset(0, 1),
-                  blur: 2,
-                ),
-                CssShadowSpec(
-                  color: Color(0x4D5A4A2C),
-                  offset: Offset(0, 8),
-                  blur: 20,
-                  spread: -12,
-                ),
-              ],
-              child: SizedBox(
-                width: wrapW,
-                height: wrapH,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: c.line),
-                  ),
-                ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                border: Border.all(color: c.line),
+                boxShadow: CitroColors.shadows.card(c),
               ),
+              child: SizedBox(width: wrapW, height: wrapH),
             ),
-          ),
-          // 胶带：web ::before top -11、left 50% + translateX(-50%)，z-index 7 盖在纸卡上
-          Positioned(
-            top: -11,
-            left: (wrapW - 82) / 2,
-            child: const IgnorePointer(child: GameTape()),
           ),
           ...tiles,
           if (over)
@@ -528,34 +492,22 @@ class _MemoryOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
       child: CitroBackdropBlur(
         sigma: 6,
         child: Container(
-          color: c.dark ? c.surface.withAlpha(0xE8) : const Color(0xE0FCF8F0),
+          color: c.surface.withValues(alpha: 0.94),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '配对完成！',
-                style: TextStyle(
-                  fontFamily: AppFonts.zcool,
-                  fontFamilyFallback: AppFonts.fallback,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.68,
-                  color: c.mintInk,
-                ),
+                style: context.heading(size: CitroType.heading, color: c.mintInk),
               ),
               const SizedBox(height: 8),
               Text(
                 '用时 $seconds 秒 · 步数 $moves · 得分 $score',
-                style: TextStyle(
-                  fontFamily: AppFonts.noto,
-                  fontFamilyFallback: AppFonts.bodyFallback,
-                  fontSize: 13,
-                  color: c.ink2,
-                ),
+                style: context.body(size: CitroType.meta, color: c.ink2),
               ),
               const SizedBox(height: 10),
               GameActionButton(label: '再来一局', primary: true, onTap: onRetry),
@@ -637,88 +589,48 @@ class _MemoryTileState extends State<_MemoryTile>
   }
 }
 
-List<CssShadowSpec> _cardShadows(CitroColors c) => [
-  CssShadowSpec(
-    color: c.dark ? const Color(0x33000000) : const Color(0x0E5A4A2C),
-    offset: const Offset(0, 1),
-    blur: 2,
-  ),
-  CssShadowSpec(
-    color: c.dark ? const Color(0x66000000) : const Color(0x4D5A4A2C),
-    offset: const Offset(0, 8),
-    blur: 20,
-    spread: -12,
-  ),
-];
-
-/// 卡背：橙色 + 3px 奶油内环 + 「CITRO」/「橘」（web .gmem-back）。
+/// 卡背：品牌橙纯色 + 大圆角（nosh 的贴纸卡）。
 class _CardBack extends StatelessWidget {
   const _CardBack();
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return CssShadowLayer(
-      radius: 10,
-      shadows: _cardShadows(c),
-      child: SizedBox.expand(
-        child: Container(
-          decoration: BoxDecoration(
-            color: c.dark ? const Color(0xFF4F361C) : c.accent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: c.dark ? const Color(0xFF7A5124) : c.accent2,
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: c.dark
-                    ? const Color(0x33FFD9A0)
-                    : const Color(0x4DFFFDF8),
-                width: 3,
+    return SizedBox.expand(
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.accent,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          boxShadow: CitroColors.shadows.sm(c),
+        ),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'CITRO',
+              style: context.hand(
+                size: CitroType.micro,
+                weight: CitroType.strong,
+                color: c.accentText,
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'CITRO',
-                  style: TextStyle(
-                    fontFamily: AppFonts.kalam,
-                    fontFamilyFallback: AppFonts.fallback,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                    letterSpacing: 1.98,
-                    color: c.dark
-                        ? const Color(0xA6FFD9A0)
-                        : c.ink.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '橘',
-                  style: TextStyle(
-                    fontFamily: AppFonts.zcool,
-                    fontFamilyFallback: AppFonts.fallback,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w400,
-                    height: 1,
-                    color: c.dark ? const Color(0xFFFFE0AE) : c.ink,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 3),
+            Text(
+              '橘',
+              style: context.heading(
+                size: CitroType.titleLg,
+                color: c.accentText,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// 卡正面：纸色 + Kalam 汉字（配成后薄荷绿，web `.matched .gmem-front`）。
+/// 卡正面：白卡 + 圆体汉字（配成后薄荷绿）。
 class _CardFront extends StatelessWidget {
   const _CardFront({required this.char, required this.matched});
 
@@ -728,28 +640,20 @@ class _CardFront extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return CssShadowLayer(
-      radius: 10,
-      shadows: _cardShadows(c),
-      child: SizedBox.expand(
-        child: Container(
-          decoration: BoxDecoration(
-            color: matched ? c.mintSoft : c.surface2,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: matched ? c.mintLine : c.line),
-          ),
-          child: Center(
-            child: Text(
-              char,
-              style: TextStyle(
-                fontFamily: AppFonts.kalam,
-                fontFamilyFallback: AppFonts.fallback,
-                fontSize: 24,
-                fontWeight: FontWeight.w400,
-                height: 38.61 / 23.4,
-                color: matched ? c.mintInk : c.accentInk,
-              ),
-            ),
+    return SizedBox.expand(
+      child: Container(
+        decoration: BoxDecoration(
+          color: matched ? c.mintSoft : c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          border: Border.all(color: matched ? c.mintLine : c.line),
+          boxShadow: CitroColors.shadows.sm(c),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          char,
+          style: context.heading(
+            size: CitroType.display,
+            color: matched ? c.mintInk : c.accentInk,
           ),
         ),
       ),

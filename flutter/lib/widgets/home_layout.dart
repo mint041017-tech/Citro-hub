@@ -267,7 +267,7 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
   };
 }
 
-/// 默认布局：宽屏按「动作条 → 天气/食谱 → 日历/星象 → 一言」四段；
+/// 默认布局：宽屏按「状态条 → 待办/天气 → 食谱/日历 → 星象/心情 → 一言」；
 /// 窄屏保持双卡并排 + 信息卡整宽，缩短滚动长度。
 List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
   if (key.form == HomeForm.wide) {
@@ -281,8 +281,8 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.cook, col: 0, row: 6, w: 6, h: 4),
       HomeSlot(HomeCardId.calendar, col: 6, row: 6, w: 6, h: 5),
       HomeSlot(HomeCardId.zodiac, col: 0, row: 11, w: 6, h: 5),
-      HomeSlot(HomeCardId.quote, col: 6, row: 11, w: 6, h: 3),
-      HomeSlot(HomeCardId.mood, col: 6, row: 14, w: 6, h: 4),
+      HomeSlot(HomeCardId.mood, col: 6, row: 11, w: 6, h: 4),
+      HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 12, h: 3),
     ];
   }
   return const [
@@ -296,8 +296,8 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     HomeSlot(HomeCardId.fish, col: 3, row: 10, w: 3, h: 2),
     HomeSlot(HomeCardId.calendar, col: 0, row: 12, w: 6, h: 6),
     HomeSlot(HomeCardId.zodiac, col: 0, row: 18, w: 6, h: 5),
-    HomeSlot(HomeCardId.quote, col: 0, row: 23, w: 6, h: 4),
-    HomeSlot(HomeCardId.mood, col: 0, row: 27, w: 6, h: 4),
+    HomeSlot(HomeCardId.quote, col: 0, row: 23, w: 6, h: 3),
+    HomeSlot(HomeCardId.mood, col: 0, row: 26, w: 6, h: 3),
   ];
 }
 

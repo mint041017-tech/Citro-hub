@@ -20,6 +20,12 @@ import 'game_ui.dart';
 import 'gbrake_scene.dart';
 
 // ---------------------------------------------------------------------------
+// 极限刹车（gbrake）· 原生复刻
+//
+// 【设计规则例外】生产入口已切换为 WebView 版（gbrake_web_native/web），
+// 本文件与 gbrake_scene.dart 只剩 preview / golden 测试引用，是待删的死代码。
+// 其黄昏 3D 场景调色板是游戏美术资产，保留硬编码，不再逐处 token 化。
+//
 // 极限刹车（gbrake）· web 页 #gbrakePage 的 Flutter 复刻
 //
 // v1.5.9：3D 场景重写为与 web 原版同源的透视投影渲染器（黄昏天光 / 分段雾化
@@ -523,35 +529,39 @@ class GameBrakeView extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 10,
-              height: 1.65,
-              letterSpacing: 0.8,
-              color: _inkSoft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: AppFonts.noto,
+                fontFamilyFallback: AppFonts.bodyFallback,
+                fontSize: 10,
+                height: 1.4,
+                letterSpacing: 0.8,
+                color: _inkSoft,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 15,
-              height: 1.65,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-              color: _accentInk,
-              fontFeatures: [ui.FontFeature.tabularFigures()],
+            Text(
+              value,
+              style: const TextStyle(
+                fontFamily: AppFonts.noto,
+                fontFamilyFallback: AppFonts.bodyFallback,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+                color: _accentInk,
+                fontFeatures: [ui.FontFeature.tabularFigures()],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -986,33 +996,42 @@ class GameBrakeView extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _line),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final spans in rules)
-            Text.rich(
-              TextSpan(
-                style: base,
-                children: [
-                  const WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: SizedBox(
-                      width: 16,
-                      height: 20,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: 1.2, top: 7.4),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: _RuleDiamond(),
+      child: LayoutBuilder(
+        builder: (context, cons) => FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: cons.maxWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final spans in rules)
+                  Text.rich(
+                    TextSpan(
+                      style: base,
+                      children: [
+                        const WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SizedBox(
+                            width: 16,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.only(left: 1.2, top: 7.4),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: _RuleDiamond(),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        ...spans,
+                      ],
                     ),
                   ),
-                  ...spans,
-                ],
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -99,21 +100,21 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Text(
             '注销后，以下数据会被永久删除且无法恢复：',
             textAlign: TextAlign.center,
-            style: context.body(size: 12, color: c.inkSoft),
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             decoration: BoxDecoration(
               color: c.stamp.withAlpha(c.dark ? 18 : 12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.stamp.withAlpha(55)),
             ),
             child: Text(
               '账号与登录信息 · 帖子 / 评论 / 图片 / 语音\n'
               '笔记 · 食谱 / 冰箱 / 购物清单 · 游戏成绩\n'
               '头像 · 星座绑定与相关缓存',
-              style: context.body(size: 11, color: c.ink2, height: 1.75),
+              style: context.body(size: CitroType.small, color: c.ink2, height: 1.75),
             ),
           ),
           const SizedBox(height: 12),
@@ -136,18 +137,18 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                     height: 18,
                     decoration: BoxDecoration(
                       color: _confirmed ? c.stamp : Colors.transparent,
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                       border: Border.all(
                         color: _confirmed ? c.stamp : c.line2,
                         width: 1.2,
                       ),
                     ),
                     child: _confirmed
-                        ? const Center(
+                        ? Center(
                             child: AppIcon(
                               '<path d="M20 6 9 17l-5-5"/>',
                               size: 11,
-                              color: Colors.white,
+                              color: c.onAccent,
                             ),
                           )
                         : null,
@@ -183,8 +184,8 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             Text(
               _error!,
               style: context.body(
-                size: 11,
-                weight: FontWeight.w700,
+                size: CitroType.small,
+                weight: CitroType.medium,
                 color: c.stamp,
               ),
             ),

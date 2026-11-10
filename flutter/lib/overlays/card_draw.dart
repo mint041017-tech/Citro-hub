@@ -61,19 +61,14 @@ class _CardImagePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3A2F24), Color(0xFF241D17)],
-        ),
-      ),
+      decoration: BoxDecoration(color: c.surface2),
       child: Center(
-        child: Icon(
-          Icons.auto_awesome_outlined,
-          size: 18,
-          color: Colors.white.withAlpha(90),
+        child: AppIcon(
+          strokeSvg(AppIcons.sparkle, width: 2),
+          size: 20,
+          color: c.inkSoft,
         ),
       ),
     );
@@ -99,30 +94,29 @@ Future<void> showCardDrawPrompt(
               height: 54,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [c.accent, c.accent2],
-                ),
-                boxShadow: CitroColors.shadows.note(c),
+                color: c.accentLt,
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.sparkle, width: 2),
                   size: 26,
-                  color: const Color(0xFF2E2C22),
+                  color: c.accentInk,
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.x2),
             Text('完成 7 局游戏', style: ctx.heading(size: 20)),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.x1),
             Text(
               '获得一次卡面抽取机会，现在翻开一张吗？\n当前待抽 $credits 次',
               textAlign: TextAlign.center,
-              style: ctx.body(size: 12, color: c.inkSoft, height: 1.6),
+              style: ctx.body(
+                size: CitroType.caption,
+                color: c.inkSoft,
+                height: 1.6,
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.x3),
             Row(
               children: [
                 Expanded(
@@ -132,7 +126,7 @@ Future<void> showCardDrawPrompt(
                     onTap: () => Navigator.pop(ctx, false),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.x1),
                 Expanded(
                   child: AccentButton(
                     text: '立即抽卡',
@@ -269,6 +263,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final aspect = widget.card.aspect.clamp(.6, .85);
     final cardW = math.min(
@@ -280,18 +275,20 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
       type: MaterialType.transparency,
       child: Stack(
         children: [
-          const Positioned.fill(
+          // 抽卡是全屏沉浸时刻：浅色下用暖白聚光，深色下用近黑聚光，
+          // 让卡面成为唯一视觉焦点（nosh 的「舞台」手法）。
+          Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment(0, -.12),
                   radius: 1.05,
                   colors: [
-                    Color(0xFF5B4226),
-                    Color(0xFF2C241C),
-                    Color(0xFF16120F),
+                    c.dark ? c.bg2 : c.surface,
+                    c.dark ? c.bg : c.bg2,
+                    c.dark ? c.bg : c.bg2,
                   ],
-                  stops: [0, .52, 1],
+                  stops: const [0, .52, 1],
                 ),
               ),
             ),
@@ -302,7 +299,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
               builder: (context, _) => CustomPaint(
                 painter: _HaloPainter(
                   t: _glow.value,
-                  color: const Color(0xFF7A9BBE),
+                  color: c.accent,
                 ),
               ),
             ),
@@ -321,17 +318,15 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.black.withAlpha(80),
+                            color: c.surface.withAlpha(180),
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withAlpha(40),
-                            ),
+                            border: Border.all(color: c.line),
                           ),
                           child: Center(
                             child: AppIcon(
                               strokeSvg(AppIcons.close, width: 2),
                               size: 18,
-                              color: Colors.white.withAlpha(220),
+                              color: c.ink2,
                             ),
                           ),
                         ),
@@ -341,14 +336,14 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                   const Spacer(flex: 2),
                   Text(
                     _revealed ? '卡面已收下' : '卡面抽取',
-                    style: context.display(
-                      size: 13,
-                      weight: FontWeight.w700,
-                      color: Colors.white.withAlpha(190),
+                    style: context.body(
+                      size: CitroType.micro,
+                      weight: CitroType.medium,
+                      color: c.inkSoft,
                       letterSpacing: 5,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.x2),
                   AnimatedBuilder(
                     animation: Listenable.merge([_intro, _flip]),
                     builder: (context, _) {
@@ -388,7 +383,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                       );
                     },
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: AppSpacing.x3),
                   AnimatedOpacity(
                     opacity: _revealed ? 1 : 0,
                     duration: const Duration(milliseconds: 360),
@@ -397,21 +392,21 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                         Text(
                           widget.card.categoryName,
                           style: context.body(
-                            size: 11,
-                            weight: FontWeight.w700,
-                            color: const Color(0xFF7A9BBE),
+                            size: CitroType.micro,
+                            weight: CitroType.medium,
+                            color: c.accentInk,
                             letterSpacing: 2.4,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: AppSpacing.x1),
                         Text(
                           widget.wasOwned ? '这张之前已经收集过' : '已收入卡面收藏',
                           style: context.body(
-                            size: 12,
-                            color: Colors.white.withAlpha(185),
+                            size: CitroType.caption,
+                            color: c.ink2,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.x2),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -419,61 +414,52 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                               Pressable(
                                 onTap: _again,
                                 child: Container(
-                                  height: 38,
+                                  height: 40,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 18,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(24),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: Colors.white.withAlpha(70),
+                                    color: c.surface,
+                                    borderRadius: BorderRadius.circular(
+                                      CitroColors.radii.chip,
                                     ),
+                                    border: Border.all(color: c.line2),
                                   ),
                                   child: Center(
                                     child: Text(
                                       '再抽一次 (${AppState.instance.cardCredits})',
                                       style: context.body(
-                                        size: 12,
-                                        weight: FontWeight.w700,
-                                        color: Colors.white.withAlpha(230),
+                                        size: CitroType.caption,
+                                        weight: CitroType.medium,
+                                        color: c.ink,
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: AppSpacing.x1),
                             ],
                             Pressable(
                               onTap: () => Navigator.of(context).maybePop(),
                               child: Container(
-                                height: 38,
+                                height: 40,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
                                 ),
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFF2C46B),
-                                      Color(0xFFE79A3C),
-                                    ],
+                                  color: c.accent,
+                                  borderRadius: BorderRadius.circular(
+                                    CitroColors.radii.chip,
                                   ),
-                                  borderRadius: BorderRadius.circular(999),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x66E79A3C),
-                                      blurRadius: 18,
-                                      offset: Offset(0, 6),
-                                    ),
-                                  ],
+                                  boxShadow: CitroColors.shadows.float(c),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '收下卡面',
                                     style: context.body(
-                                      size: 13,
-                                      weight: FontWeight.w700,
-                                      color: const Color(0xFF2E2C22),
+                                      size: CitroType.meta,
+                                      weight: CitroType.medium,
+                                      color: c.onAccent,
                                     ),
                                   ),
                                 ),
@@ -485,12 +471,12 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                     ),
                   ),
                   if (!_revealed) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.x1),
                     Text(
                       '轻点卡背翻开',
                       style: context.body(
-                        size: 11,
-                        color: Colors.white.withAlpha(150),
+                        size: CitroType.small,
+                        color: c.inkSoft,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -512,6 +498,13 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                     painter: _BurstPainter(
                       t: _burst.value,
                       origin: Offset(size.width / 2, size.height * .46),
+                      colors: [
+                        c.accent,
+                        c.mint,
+                        c.stamp,
+                        c.accentLt,
+                        c.surface,
+                      ],
                     ),
                   );
                 },
@@ -531,33 +524,23 @@ class _CardBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4C3721), Color(0xFF241A12)],
-        ),
-        border: Border.all(color: const Color(0x66F2C46B), width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0xCC000000),
-            blurRadius: 50,
-            offset: Offset(0, 26),
-          ),
-          BoxShadow(color: Color(0x66F2A43C), blurRadius: 40, spreadRadius: -8),
-        ],
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        color: c.surface2,
+        border: Border.all(color: c.accentLt, width: 1.2),
+        boxShadow: CitroColors.shadows.lg(c),
       ),
       child: Stack(
         fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(CitroColors.radii.card),
               child: CustomPaint(
                 painter: _BackPatternPainter(
-                  color: const Color(0xFFF2C46B).withAlpha(26),
+                  color: c.accent.withAlpha(28),
                 ),
               ),
             ),
@@ -566,8 +549,8 @@ class _CardBack extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: const Color(0x4DF2C46B)),
+                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                border: Border.all(color: c.accentLt.withAlpha(120)),
               ),
             ),
           ),
@@ -580,9 +563,12 @@ class _CardBack extends StatelessWidget {
                   height: 92,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0x66F2C46B)),
-                    gradient: const RadialGradient(
-                      colors: [Color(0x33F2C46B), Color(0x00F2C46B)],
+                    border: Border.all(color: c.accentLt),
+                    gradient: RadialGradient(
+                      colors: [
+                        c.accentLt.withAlpha(90),
+                        c.accentLt.withAlpha(0),
+                      ],
                     ),
                   ),
                   child: Center(
@@ -590,17 +576,16 @@ class _CardBack extends StatelessWidget {
                       'assets/images/logo.webp',
                       width: 54,
                       cacheWidth: 108,
-                      opacity: const AlwaysStoppedAnimation(.82),
+                      opacity: const AlwaysStoppedAnimation(.9),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.x2),
                 Text(
                   'CITRO',
-                  style: context.display(
-                    size: 20,
-                    weight: FontWeight.w700,
-                    color: const Color(0xFFF2C46B).withAlpha(220),
+                  style: context.heading(
+                    size: CitroType.titleLg,
+                    color: c.ink,
                     letterSpacing: 8,
                   ),
                 ),
@@ -608,9 +593,9 @@ class _CardBack extends StatelessWidget {
                 Text(
                   'CARD COLLECTION',
                   style: context.body(
-                    size: 9,
-                    weight: FontWeight.w700,
-                    color: const Color(0xFFF2C46B).withAlpha(140),
+                    size: CitroType.micro,
+                    weight: CitroType.medium,
+                    color: c.inkSoft,
                     letterSpacing: 3,
                   ),
                 ),
@@ -623,9 +608,9 @@ class _CardBack extends StatelessWidget {
             child: Text(
               card.categoryName,
               style: context.body(
-                size: 9,
-                weight: FontWeight.w700,
-                color: const Color(0xFFF2C46B).withAlpha(150),
+                size: CitroType.micro,
+                weight: CitroType.medium,
+                color: c.inkSoft,
                 letterSpacing: 2,
               ),
             ),
@@ -643,21 +628,15 @@ class _CardFront extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xA6F2C46B), width: 1.4),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0xCC000000),
-            blurRadius: 52,
-            offset: Offset(0, 28),
-          ),
-          BoxShadow(color: Color(0x80F2A43C), blurRadius: 46, spreadRadius: -6),
-        ],
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        border: Border.all(color: c.accentLt, width: 1.4),
+        boxShadow: CitroColors.shadows.lg(c),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card - 1),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -666,6 +645,7 @@ class _CardFront extends StatelessWidget {
               cacheWidth: 900,
               borderRadius: BorderRadius.zero,
             ),
+            // 照片上的暗角只用于保证底部文字可读，属图片叠加层，不走 token。
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -689,10 +669,9 @@ class _CardFront extends StatelessWidget {
                   Expanded(
                     child: Text(
                       card.categoryName,
-                      style: context.display(
-                        size: 18,
-                        weight: FontWeight.w700,
-                        color: Colors.white.withAlpha(235),
+                      style: context.heading(
+                        size: CitroType.bodyLg,
+                        color: Colors.white,
                         letterSpacing: 1.6,
                       ),
                     ),
@@ -704,15 +683,15 @@ class _CardFront extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(90),
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                       border: Border.all(color: Colors.white.withAlpha(60)),
                     ),
                     child: Text(
                       '#${card.label}',
                       style: context.body(
-                        size: 10,
-                        weight: FontWeight.w700,
-                        color: Colors.white.withAlpha(210),
+                        size: CitroType.micro,
+                        weight: CitroType.medium,
+                        color: Colors.white.withAlpha(230),
                         letterSpacing: .6,
                       ),
                     ),
@@ -796,18 +775,11 @@ class _BackPatternPainter extends CustomPainter {
 }
 
 class _BurstPainter extends CustomPainter {
-  _BurstPainter({required this.t, required this.origin});
+  _BurstPainter({required this.t, required this.origin, required this.colors});
 
   final double t;
   final Offset origin;
-
-  static const _colors = [
-    Color(0xFFF2C46B),
-    Color(0xFF7A9BBE),
-    Color(0xFFE0796A),
-    Color(0xFFC9D3B2),
-    Color(0xFFFFF4DC),
-  ];
+  final List<Color> colors;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -824,7 +796,7 @@ class _BurstPainter extends CustomPainter {
           Offset(math.cos(angle), math.sin(angle) * .82) * dist +
           Offset(0, gravity);
       final paint = Paint()
-        ..color = _colors[i % _colors.length].withAlpha((235 * fade).round());
+        ..color = colors[i % colors.length].withAlpha((235 * fade).round());
       final radius = (i % 3 == 0 ? 3.2 : 2.0) * (0.6 + .4 * fade);
       if (i % 4 == 0) {
         canvas.drawRect(

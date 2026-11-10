@@ -81,8 +81,8 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
             !AppState.instance.popupActiveNotifier.value;
         if (current == null) return const SizedBox.shrink();
         final c = context.c;
-        final bg = c.dark ? c.surface2 : const Color(0xFF2E2A22);
-        final fg = c.dark ? c.ink : const Color(0xFFFBF7EC);
+        final bg = c.ink;
+        final fg = c.bg;
         final reduce = CitroMotion.reduced(context);
         return Positioned(
           left: 14,
@@ -108,7 +108,7 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: bg,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                       border: Border.all(
                         color: c.accent.withAlpha(170),
                         width: 1.2,
@@ -131,9 +131,9 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                           const SizedBox(width: 6),
                           Text(
                             current.timeText,
-                            style: context.display(
-                              size: 18,
-                              weight: FontWeight.w700,
+                            style: context.hand(
+                              size: CitroType.title,
+                              weight: CitroType.medium,
                               color: c.accentLt,
                             ),
                           ),
@@ -150,7 +150,7 @@ class _TimerCapsuleOverlayState extends State<TimerCapsuleOverlay> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.body(
-                                size: 10,
+                                size: CitroType.micro,
                                 color: fg.withAlpha(180),
                               ),
                             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -24,7 +25,7 @@ class _BlockedUsersSheet extends StatelessWidget {
       height: MediaQuery.sizeOf(context).height * .62,
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
         border: Border.all(color: c.line),
       ),
       child: SafeArea(
@@ -37,7 +38,7 @@ class _BlockedUsersSheet extends StatelessWidget {
               margin: const EdgeInsets.only(top: 8),
               decoration: BoxDecoration(
                 color: c.line2,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
             ),
             Padding(
@@ -64,10 +65,10 @@ class _BlockedUsersSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
               child: Text(
                 '黑名单只保存在当前设备。被拉黑昵称的动态、评论和消息会从这里隐藏；匿名内容请使用举报处理。',
-                style: context.body(size: 11, color: c.inkSoft, height: 1.6),
+                style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.6),
               ),
             ),
-            DashedLine(color: c.line2.withAlpha(140)),
+            CitroDivider(color: c.line2.withAlpha(140)),
             Expanded(
               child: AnimatedBuilder(
                 animation: AppState.instance,
@@ -82,12 +83,12 @@ class _BlockedUsersSheet extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             '还没有拉黑任何人',
-                            style: context.body(size: 13, color: c.inkSoft),
+                            style: context.body(size: CitroType.meta, color: c.inkSoft),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '在动态或评论的「…」里可以拉黑',
-                            style: context.body(size: 11, color: c.inkSoft),
+                            style: context.body(size: CitroType.small, color: c.inkSoft),
                           ),
                         ],
                       ),
@@ -98,7 +99,7 @@ class _BlockedUsersSheet extends StatelessWidget {
                     itemCount: users.length,
                     separatorBuilder: (_, __) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: DashedLine(color: c.line2.withAlpha(110)),
+                      child: CitroDivider(color: c.line2.withAlpha(110)),
                     ),
                     itemBuilder: (_, i) {
                       final nick = users[i];
@@ -110,16 +111,15 @@ class _BlockedUsersSheet extends StatelessWidget {
                               width: 34,
                               height: 34,
                               decoration: BoxDecoration(
-                                color: c.hl,
+                                color: c.surface2,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: c.line2),
                               ),
                               child: Center(
                                 child: Text(
                                   nick.isEmpty ? '?' : nick[0],
-                                  style: context.display(
-                                    size: 15,
-                                    weight: FontWeight.w700,
+                                  style: context.heading(
+                                    size: CitroType.bodyLg,
                                     color: c.accentInk,
                                   ),
                                 ),
@@ -132,8 +132,8 @@ class _BlockedUsersSheet extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.body(
-                                  size: 14,
-                                  weight: FontWeight.w700,
+                                  size: CitroType.body,
+                                  weight: CitroType.medium,
                                   color: c.ink,
                                 ),
                               ),
@@ -153,14 +153,14 @@ class _BlockedUsersSheet extends StatelessWidget {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: c.surface2,
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                                   border: Border.all(color: c.line2),
                                 ),
                                 child: Text(
                                   '解除',
                                   style: context.body(
-                                    size: 11,
-                                    weight: FontWeight.w700,
+                                    size: CitroType.small,
+                                    weight: CitroType.medium,
                                     color: c.accentInk,
                                   ),
                                 ),

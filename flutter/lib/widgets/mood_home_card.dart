@@ -26,10 +26,8 @@ class MoodHomeCard extends StatelessWidget {
         final today = [...store.moodsOn(DateTime.now())]
           ..sort((a, b) => a.ts.compareTo(b.ts));
         final latest = today.isEmpty ? null : today.last;
-        return PaperCard(
-          tapeColor: c.tape,
-          tapeAngle: -1.6,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        return CitroCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           onTap: () =>
               showMoodDetail(context, initial: latest?.ts ?? DateTime.now()),
           child: LayoutBuilder(
@@ -52,7 +50,7 @@ class MoodHomeCard extends StatelessWidget {
       const SizedBox(width: 6),
       Text(
         '心情',
-        style: context.heading(size: 13, color: ink, letterSpacing: .3),
+        style: context.heading(size: CitroType.label, color: ink),
       ),
     ],
   );

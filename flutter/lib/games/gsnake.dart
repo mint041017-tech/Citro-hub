@@ -14,9 +14,7 @@ import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'game_common.dart';
 import 'game_ui.dart';
-
-/// 结算卡数字高亮色（与淘气小球 _floatInk 同款金棕）。
-const Color _snakeFloatInk = Color(0xFF35506E);
+import 'game_theme.dart';
 
 class GameSnakePage extends StatefulWidget {
   const GameSnakePage({super.key});
@@ -400,18 +398,15 @@ class GameSnakeView extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: on ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(CitroColors.radii.button),
             border: Border.all(color: Colors.transparent),
           ),
           child: Text(
             item.$2,
-            style: TextStyle(
-              fontFamily: AppFonts.noto,
-              fontFamilyFallback: AppFonts.bodyFallback,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
-              color: on ? const Color(0xFF2E2C22) : c.ink2,
+            style: context.body(
+              size: CitroType.caption,
+              weight: CitroType.strong,
+              color: on ? c.accentText : c.ink2,
             ),
           ),
         ),
@@ -467,22 +462,16 @@ class GameSnakeView extends StatelessWidget {
     final c = context.c;
     return Container(
       decoration: BoxDecoration(
-        color: c.dark ? c.surface.withAlpha(0xF0) : const Color(0xF0FCF8F0),
-        border: Border.all(color: c.dark ? c.line2 : const Color(0x292E2C22)),
-        borderRadius: BorderRadius.circular(22),
+        color: c.surface.withValues(alpha: 0.96),
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             '游戏结束',
-            style: TextStyle(
-              fontFamily: AppFonts.kalam,
-              fontSize: 22,
-              height: 36.3 / 22,
-              letterSpacing: 1.32,
-              color: c.ink,
-            ),
+            style: context.heading(size: CitroType.subtitle, color: c.ink),
           ),
           const SizedBox(height: 10),
           Padding(
@@ -494,7 +483,7 @@ class GameSnakeView extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.dark ? c.accentLt : _snakeFloatInk,
+                      color: c.accentInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -502,13 +491,7 @@ class GameSnakeView extends StatelessWidget {
                 ],
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppFonts.noto,
-                fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 13,
-                height: 22.1 / 13,
-                color: c.ink2,
-              ),
+              style: context.body(size: CitroType.meta, color: c.ink2),
             ),
           ),
           const SizedBox(height: 10),
@@ -607,7 +590,7 @@ class _SnakeBoardPainter extends CustomPainter {
   /// 机型上棋盘被右侧裁掉一截，看起来没居中）。
   final double cell;
 
-  static const double _radius = 14;
+  static const double _radius = 24;
   static const double _pad = 6; // board padding
   static const double _gap = 1;
 
@@ -618,20 +601,6 @@ class _SnakeBoardPainter extends CustomPainter {
     canvas.save();
     canvas.clipRRect(rr);
     canvas.drawRect(rect, Paint()..color = boardBg);
-
-    // inset 0 2px 6px rgba(90,74,44,.09)
-    canvas.saveLayer(rect, Paint());
-    canvas.drawRect(rect, Paint()..color = const Color(0x175A4A2C));
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        rect.shift(const Offset(0, 2)),
-        const Radius.circular(_radius),
-      ),
-      Paint()
-        ..blendMode = BlendMode.dstOut
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-    canvas.restore();
 
     final origin = 1 + _pad;
     final step = cell + _gap;
@@ -651,20 +620,20 @@ class _SnakeBoardPainter extends CustomPainter {
         final isHead = headPt != null && headPt == p;
         if (isHead) {
           canvas.drawRRect(
-            RRect.fromRectAndRadius(cellRect, const Radius.circular(5)),
+            RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
             head,
           );
           continue;
         }
         if (snake.length > 1 && snake.contains(p)) {
           canvas.drawRRect(
-            RRect.fromRectAndRadius(cellRect, const Radius.circular(4)),
+            RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
             body,
           );
           continue;
         }
         canvas.drawRRect(
-          RRect.fromRectAndRadius(cellRect, const Radius.circular(2)),
+          RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
           bg,
         );
       }

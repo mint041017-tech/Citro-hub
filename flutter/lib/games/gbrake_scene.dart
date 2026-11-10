@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 // ---------------------------------------------------------------------------
 // 极限刹车 · 3D 赛道场景（v1.5.9 重写）
 //
+// 【设计规则例外】仅由 gbrake.dart 的原生预览 / golden 测试使用，生产走 WebView。
+// 黄昏天空 / 雾化和车模配色是游戏美术资产，保留硬编码。
+//
 // 对齐 web 原版 index.html 21060-22360 的自绘 Canvas 2D 透视投影渲染器：
 //   · 黄昏天空 / 云带 / 地平线暖光与太阳盘 / 两圈山裙
 //   · 分段雾化的路面 / 路肩 / 路缘石 / 标线 / 车道虚线 / 轮迹磨痕
@@ -2408,7 +2411,7 @@ ui.Paragraph gbParagraph(
           ui.ParagraphStyle(
             fontSize: fontSize,
             fontWeight: weight,
-            fontFamily: 'NotoSC',
+            fontFamily: 'RoundedCN',
             textAlign: TextAlign.center,
           ),
         )
@@ -2417,7 +2420,7 @@ ui.Paragraph gbParagraph(
             color: color,
             fontSize: fontSize,
             fontWeight: weight,
-            fontFamily: 'NotoSC',
+            fontFamily: 'RoundedCN',
           ),
         )
         ..addText(text);

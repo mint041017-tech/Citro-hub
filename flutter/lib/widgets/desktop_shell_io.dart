@@ -19,7 +19,7 @@ class CitroDesktopShell {
   /// 顶部安全留白：让页面 SafeArea 自动避开悬浮窗控。
   static const double titleBarHeight = 30;
 
-  /// 悬浮窗控（三枚 26px 圆钮 + 间距 + 右边距）占用的宽度。
+  /// 悬浮窗控占用的宽度：3 枚 32pt 圆钮 + 2 段 11pt 间距。
   static const double windowControlsWidth = 118;
 
   /// 顶栏内容需要避让的窗控宽度：只有 Windows 悬浮窗控占位，手机/平板等
@@ -36,7 +36,8 @@ class CitroDesktopShell {
       size: Size(1200, 720),
       minimumSize: Size(780, 560),
       center: true,
-      backgroundColor: Color(0xFFFBF7EC),
+      // 透明底：深色用户启动时不会先闪一帧浅色窗口。
+      backgroundColor: Colors.transparent,
       title: 'Citro',
       titleBarStyle: TitleBarStyle.hidden,
       windowButtonVisibility: false,

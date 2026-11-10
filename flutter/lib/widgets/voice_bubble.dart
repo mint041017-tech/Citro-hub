@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import 'paper.dart';
 
 class VoiceBubble extends StatefulWidget {
@@ -68,10 +69,16 @@ class _VoiceBubbleState extends State<VoiceBubble> {
   void didUpdateWidget(covariant VoiceBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      _player.stop();
-      position = Duration.zero;
-      duration = Duration(seconds: widget.seconds);
-      playing = false;
+      // 等 stop 真正结束再重置，避免旧流继续出声、旧回调再触发一帧 setState。
+      () async {
+        await _player.stop();
+        if (!mounted) return;
+        setState(() {
+          position = Duration.zero;
+          duration = Duration(seconds: widget.seconds);
+          playing = false;
+        });
+      }();
     } else if (oldWidget.seconds != widget.seconds) {
       duration = Duration(seconds: widget.seconds);
     }
@@ -114,17 +121,16 @@ class _VoiceBubbleState extends State<VoiceBubble> {
     final pct = total <= 0
         ? 0.0
         : (position.inMilliseconds / total).clamp(0.0, 1.0);
+    final c = context.c;
     return GestureDetector(
       onTap: _toggle,
       child: Container(
         width: widget.width,
         padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
         decoration: BoxDecoration(
-          color: context.c.dark
-              ? const Color(0x22FFFFFF)
-              : const Color(0x14F2A43C),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: context.c.line2.withAlpha(150)),
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+          border: Border.all(color: c.line),
         ),
         child: Row(
           children: [
@@ -132,33 +138,33 @@ class _VoiceBubbleState extends State<VoiceBubble> {
               width: 26,
               height: 26,
               decoration: BoxDecoration(
-                color: context.c.accent,
+                color: c.ink,
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
                   playing ? Icons.pause : Icons.play_arrow,
                   size: 15,
-                  color: const Color(0xFF2E2C22),
+                  color: c.bg,
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(99),
                 child: LinearProgressIndicator(
                   value: pct,
                   minHeight: 4,
-                  backgroundColor: context.c.line2.withAlpha(90),
-                  valueColor: AlwaysStoppedAnimation(context.c.accentInk),
+                  backgroundColor: c.line,
+                  valueColor: AlwaysStoppedAnimation(c.accent),
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               '${widget.seconds}"',
-              style: context.body(size: 10, color: context.c.inkSoft),
+              style: context.hand(size: CitroType.small, color: c.inkSoft),
             ),
           ],
         ),

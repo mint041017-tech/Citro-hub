@@ -18,7 +18,7 @@ Future<List<String>?> showIngredientLibrary(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x8A23211C),
+    barrierColor: context.c.scrim,
     builder: (_) =>
         _IngredientLibrarySheet(title: title, multi: multi, selected: selected),
   );
@@ -86,8 +86,9 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
         height: height,
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-          border: Border.all(color: c.line),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(CitroColors.radii.modal),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -99,7 +100,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
                   color: c.line2,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                 ),
               ),
               Padding(
@@ -110,11 +111,17 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.title, style: context.heading(size: 20)),
+                          Text(
+                            widget.title,
+                            style: context.heading(size: CitroType.titleLg),
+                          ),
                           const SizedBox(height: 1),
                           Text(
                             widget.multi ? '可多选，选完点「加入」' : '选一个食材',
-                            style: context.body(size: 10, color: c.inkSoft),
+                            style: context.body(
+                              size: CitroType.micro,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ],
                       ),
@@ -130,7 +137,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     border: Border.all(color: c.line2),
                   ),
                   child: Row(
@@ -145,12 +152,15 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                         child: TextField(
                           controller: search,
                           onChanged: (_) => setState(() {}),
-                          style: context.body(size: 13),
+                          style: context.body(size: CitroType.meta),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             isDense: true,
                             hintText: '搜食材，如：番茄',
-                            hintStyle: context.body(size: 12, color: c.inkSoft),
+                            hintStyle: context.body(
+                              size: CitroType.caption,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ),
                       ),
@@ -188,9 +198,10 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                           height: 32,
                           padding: const EdgeInsets.fromLTRB(10, 0, 5, 0),
                           decoration: BoxDecoration(
-                            color: c.hl,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: c.accent.withAlpha(110)),
+                            color: c.ink,
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.chip,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -198,8 +209,8 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                               Text(
                                 name,
                                 style: context.body(
-                                  size: 11,
-                                  color: c.accentInk,
+                                  size: CitroType.small,
+                                  color: c.bg,
                                 ),
                               ),
                               const SizedBox(width: 2),
@@ -210,7 +221,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                                   child: AppIcon(
                                     strokeSvg(AppIcons.close, width: 2.2),
                                     size: 11,
-                                    color: c.accentInk,
+                                    color: c.bg,
                                   ),
                                 ),
                               ),
@@ -227,7 +238,10 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                   padding: const EdgeInsets.fromLTRB(18, 4, 18, 4),
                   child: Text(
                     keyword.isEmpty ? '共 $shown 样食材' : '找到 $shown 样食材',
-                    style: context.body(size: 10, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ),
               ),
@@ -240,7 +254,7 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                             '食材库里没有「${search.text.trim()}」\n换个词，或直接在输入框里手打',
                             textAlign: TextAlign.center,
                             style: context.body(
-                              size: 12,
+                              size: CitroType.caption,
                               color: c.inkSoft,
                               height: 1.7,
                             ),
@@ -265,26 +279,26 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                                 child: Row(
                                   children: [
                                     Container(
-                                      width: 5,
-                                      height: 5,
+                                      width: 4,
+                                      height: 14,
                                       decoration: BoxDecoration(
                                         color: c.accent,
-                                        shape: BoxShape.circle,
+                                        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                                       ),
                                     ),
-                                    const SizedBox(width: 5),
+                                    const SizedBox(width: 8),
                                     Text(
                                       entry.key,
                                       style: context.heading(
-                                        size: 14,
-                                        color: c.accentInk,
+                                        size: CitroType.label,
+                                        color: c.ink,
                                       ),
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
                                       '${entry.value.length}',
                                       style: context.body(
-                                        size: 9,
+                                        size: CitroType.micro,
                                         color: c.inkSoft,
                                       ),
                                     ),
@@ -324,14 +338,14 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: c.surface2,
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                             border: Border.all(color: c.line2),
                           ),
                           child: Text(
                             '清空',
                             style: context.body(
-                              size: 12,
-                              weight: FontWeight.w700,
+                              size: CitroType.caption,
+                              weight: CitroType.strong,
                               color: picked.isEmpty ? c.inkSoft : c.ink2,
                             ),
                           ),
@@ -389,26 +403,26 @@ class _IngredientLibrarySheetState extends State<_IngredientLibrarySheet> {
       onTap: () => _toggle(name),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        height: 36,
+        height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: on ? c.accent : c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: on ? c.accent : c.line2),
+          color: on ? c.ink : c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+          border: Border.all(color: on ? c.ink : c.line2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (on) ...[
-              const Icon(Icons.check, size: 13, color: Color(0xFF2E2C22)),
+              Icon(Icons.check, size: 14, color: c.bg),
               const SizedBox(width: 3),
             ],
             Text(
               name,
               style: context.body(
-                size: 12,
-                weight: on ? FontWeight.w700 : FontWeight.w400,
-                color: on ? const Color(0xFF2E2C22) : c.ink2,
+                size: CitroType.caption,
+                weight: on ? CitroType.strong : CitroType.regular,
+                color: on ? c.bg : c.ink2,
               ),
             ),
           ],

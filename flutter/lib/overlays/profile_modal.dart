@@ -78,12 +78,17 @@ class _ProfileDialogState extends State<_ProfileDialog> {
         month: hasBday ? month : null,
         day: hasBday ? day : null,
       );
-      User u = User.fromJson(j['user']) ?? state.user!;
+      final u = User.fromJson(j['user']) ?? state.user;
+      if (u == null) {
+        setState(() => error = '服务端未返回用户信息，请稍后重试');
+        return;
+      }
+      var updated = u;
       if (avatarDataUrl != null) {
         final a = await Api.uploadAvatar(avatarDataUrl!);
-        u = User.fromJson(a['user']) ?? u;
+        updated = User.fromJson(a['user']) ?? updated;
       }
-      await state.updateUser(u);
+      await state.updateUser(updated);
       if (!mounted) return;
       AppToast.show(context, '资料已保存');
       Navigator.of(context).pop();
@@ -112,7 +117,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '点头像换图片，改完点保存',
             textAlign: TextAlign.center,
-            style: context.body(size: 12, color: c.inkSoft),
+            style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
           const SizedBox(height: 18),
           Center(
@@ -123,7 +128,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                 height: 76,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: c.hl,
+                  color: c.surface2,
                   border: Border.all(color: c.line2),
                   image: avatarBytes != null
                       ? DecorationImage(
@@ -161,7 +166,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '点击更换头像',
             textAlign: TextAlign.center,
-            style: context.body(size: 11, color: c.inkSoft),
+            style: context.body(size: CitroType.small, color: c.inkSoft),
           ),
           const SizedBox(height: 16),
           CitroField(
@@ -174,8 +179,8 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           Text(
             '生日（公历）',
             style: context.body(
-              size: 12,
-              weight: FontWeight.w700,
+              size: CitroType.caption,
+              weight: CitroType.medium,
               color: c.inkSoft,
               letterSpacing: .46,
             ),
@@ -194,7 +199,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           ),
           if (error != null) ...[
             const SizedBox(height: 10),
-            Text(error!, style: context.body(size: 12, color: c.stamp)),
+            Text(error!, style: context.body(size: CitroType.caption, color: c.stamp)),
           ],
           const SizedBox(height: 20),
           Row(
@@ -206,14 +211,14 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                     height: 44,
                     decoration: BoxDecoration(
                       border: Border.all(color: c.line2),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     ),
                     child: Center(
                       child: Text(
                         '取消',
                         style: context.body(
-                          size: 14,
-                          weight: FontWeight.w700,
+                          size: CitroType.body,
+                          weight: CitroType.medium,
                           color: c.ink2,
                         ),
                       ),
@@ -252,12 +257,12 @@ class _ProfileDialogState extends State<_ProfileDialog> {
         decoration: BoxDecoration(
           color: c.surface2,
           border: Border.all(color: c.line2),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
         ),
         child: Row(
           children: [
-            Text(value, style: context.body(size: 14, color: c.ink)),
-            Text(suffix, style: context.body(size: 11, color: c.inkSoft)),
+            Text(value, style: context.body(size: CitroType.body, color: c.ink)),
+            Text(suffix, style: context.body(size: CitroType.small, color: c.inkSoft)),
             const Spacer(),
             AppIcon(
               strokeSvg(AppIcons.chevronDown, width: 2),
@@ -288,7 +293,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           height: 280,
           decoration: BoxDecoration(
             color: cc.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
             border: Border.all(color: cc.line),
           ),
           child: SafeArea(
@@ -310,7 +315,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                           padding: const EdgeInsets.all(8),
                           child: Text(
                             '取消',
-                            style: ctx.body(size: 12, color: cc.inkSoft),
+                            style: ctx.body(size: CitroType.caption, color: cc.inkSoft),
                           ),
                         ),
                       ),
@@ -321,8 +326,8 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                           child: Text(
                             '确定',
                             style: ctx.body(
-                              size: 13,
-                              weight: FontWeight.w700,
+                              size: CitroType.meta,
+                              weight: CitroType.medium,
                               color: cc.accentInk,
                             ),
                           ),
@@ -342,10 +347,10 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                           child: Text(
                             isMonth ? '$i 月' : '$i 日',
                             style: ctx.body(
-                              size: 15,
+                              size: CitroType.body,
                               weight: i == selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
+                                  ? CitroType.medium
+                                  : CitroType.regular,
                               color: i == selected ? cc.accentInk : cc.ink2,
                             ),
                           ),

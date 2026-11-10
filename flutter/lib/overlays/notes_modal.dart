@@ -108,11 +108,11 @@ class _NotesDialogState extends State<_NotesDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('删除这条笔记？', style: context.heading(size: 20)),
+            Text('删除这条笔记？', style: context.heading(size: CitroType.titleLg)),
             const SizedBox(height: 8),
             Text(
               '删除后无法恢复',
-              style: context.body(size: 12, color: context.c.inkSoft),
+              style: context.body(size: CitroType.caption, color: context.c.inkSoft),
             ),
             const SizedBox(height: 18),
             Row(
@@ -160,13 +160,13 @@ class _NotesDialogState extends State<_NotesDialog> {
         Text(
           '我的笔记',
           textAlign: TextAlign.center,
-          style: context.heading(size: 22),
+          style: context.heading(size: CitroType.subtitle),
         ),
         const SizedBox(height: 3),
         Text(
           '${notes.length} 条记录 · 每一个灵光乍现',
           textAlign: TextAlign.center,
-          style: context.body(size: 11, color: c.inkSoft),
+          style: context.body(size: CitroType.small, color: c.inkSoft),
         ),
         const SizedBox(height: 14),
         if (loading)
@@ -179,7 +179,7 @@ class _NotesDialogState extends State<_NotesDialog> {
             padding: const EdgeInsets.all(16),
             child: Text(
               error!,
-              style: context.body(size: 12, color: c.stamp),
+              style: context.body(size: CitroType.caption, color: c.stamp),
               textAlign: TextAlign.center,
             ),
           )
@@ -188,7 +188,7 @@ class _NotesDialogState extends State<_NotesDialog> {
             padding: const EdgeInsets.symmetric(vertical: 32),
             decoration: BoxDecoration(
               color: c.surface2,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(CitroColors.radii.small),
               border: Border.all(color: c.line),
             ),
             child: Column(
@@ -197,7 +197,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                 const SizedBox(height: 8),
                 Text(
                   '还没有笔记，点下面新建',
-                  style: context.body(size: 12, color: c.inkSoft),
+                  style: context.body(size: CitroType.caption, color: c.inkSoft),
                 ),
               ],
             ),
@@ -217,7 +217,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
                       border: Border.all(color: c.line),
                     ),
                     child: Column(
@@ -227,7 +227,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                           n.title.isEmpty ? '无标题' : n.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.heading(size: 14, color: c.ink),
+                          style: context.heading(size: CitroType.body, color: c.ink),
                         ),
                         if (n.content.isNotEmpty) ...[
                           const SizedBox(height: 3),
@@ -236,7 +236,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: context.body(
-                              size: 12,
+                              size: CitroType.caption,
                               color: c.inkSoft,
                               height: 1.5,
                             ),
@@ -246,7 +246,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                         Text(
                           _time(n.updated),
                           style: context.body(
-                            size: 10,
+                            size: CitroType.micro,
                             color: c.inkSoft.withAlpha(180),
                           ),
                         ),
@@ -283,7 +283,7 @@ class _NotesDialogState extends State<_NotesDialog> {
                   Text(
                     '返回',
                     style: context.body(
-                      size: 13,
+                      size: CitroType.meta,
                       weight: FontWeight.w700,
                       color: c.accentInk,
                     ),
@@ -294,7 +294,7 @@ class _NotesDialogState extends State<_NotesDialog> {
             const Spacer(),
             Text(
               editingId == null ? '新建笔记' : '编辑笔记',
-              style: context.heading(size: 18),
+              style: context.heading(size: CitroType.title),
             ),
             const Spacer(),
             const SizedBox(width: 44),

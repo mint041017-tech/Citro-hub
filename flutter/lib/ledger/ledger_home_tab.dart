@@ -39,6 +39,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
   String? _insightKey;
   Set<String> _insightEntryIds = {};
   String _insightPlanKey = '';
+  int _insightRevision = -1;
   bool _insightLoading = false;
   bool _insightDirty = false;
 
@@ -57,6 +58,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
       _insightKey = null;
       _insightEntryIds = {};
       _insightPlanKey = '';
+      _insightRevision = -1;
       _refreshInsight();
     }
   }
@@ -70,13 +72,19 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
   void _onStoreChanged() {
     if (!mounted) return;
     final store = LedgerStore.instance;
-    // 新增本月账单，或本月预算/收入目标变化时，才让 cici 重新观察。
+    // 新增、删除、改金额都会改变 revision；只比较「新增 id」会让删除 /
+    // 修改后 cici 的观察停在旧结论上。
     final ids = _monthEntryIds(store);
+    final idsChanged =
+        ids.length != _insightEntryIds.length ||
+        ids.difference(_insightEntryIds).isNotEmpty ||
+        _insightEntryIds.difference(ids).isNotEmpty;
+    final revChanged =
+        _insightKey == widget.monthKey && store.revision != _insightRevision;
     final planChanged =
         _insightKey == widget.monthKey &&
         _monthPlanKey(store) != _insightPlanKey;
-    final entryChanged = ids.difference(_insightEntryIds).isNotEmpty;
-    if (!entryChanged && !planChanged) return;
+    if (!idsChanged && !revChanged && !planChanged) return;
     if (_insightLoading) {
       _insightDirty = true;
       return;
@@ -101,10 +109,13 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
     final month = widget.monthKey;
     final entryIds = _monthEntryIds(store);
     final planKey = _monthPlanKey(store);
+    final sameEntries =
+        entryIds.length == _insightEntryIds.length &&
+        entryIds.containsAll(_insightEntryIds);
     if (!force &&
         _insightKey == month &&
         _insight != null &&
-        entryIds.difference(_insightEntryIds).isEmpty &&
+        sameEntries &&
         planKey == _insightPlanKey) {
       return;
     }
@@ -125,6 +136,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
       });
       return;
     }
+    final revision = store.revision;
     try {
       final text = await LedgerAi.analyze(
         monthKey: month,
@@ -139,6 +151,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
       setState(() {
         _insight = text;
         _insightKey = month;
+        _insightRevision = revision;
       });
     } catch (_) {
       if (!mounted) return;
@@ -146,6 +159,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         // AI 不可用时也要给出可读的本地判断，不把错误直接甩给用户。
         _insight = _fallbackInsight(store, month);
         _insightKey = month;
+        _insightRevision = revision;
       });
     } finally {
       if (mounted) {
@@ -170,11 +184,16 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         '接下来先停掉非必要支出。',
       );
     } else if (summary.budgetCents > 0) {
-      final days = LedgerDates.daysInMonth(month) - DateTime.now().day + 1;
+      // 只有查看当月时「日均可用」才有意义；历史 / 未来月份改用当月天数。
+      final now = DateTime.now();
+      final isCurrentMonth = LedgerDates.monthKey(now) == month;
+      final days = isCurrentMonth
+          ? (LedgerDates.daysInMonth(month) - now.day + 1).clamp(1, 31)
+          : LedgerDates.daysInMonth(month);
       lines.add(
         '· 预算还剩 ${ledgerMoney(summary.budgetRemainingCents)}，'
-        '按 ${days.clamp(1, 31)} 天算每天可用 '
-        '${ledgerMoney((summary.budgetRemainingCents / days.clamp(1, 31)).round())}。',
+        '按 $days 天算每天可用 '
+        '${ledgerMoney((summary.budgetRemainingCents / days).round())}。',
       );
     }
     final spend = summary.categorySpend.entries.toList()
@@ -206,8 +225,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         final plan = store.planFor(month);
         return LayoutBuilder(
           builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 720;
-            final side = wide ? 16.0 : 14.0;
+            final side = AppSpacing.x2;
             return ListView(
               padding: EdgeInsets.fromLTRB(side, 4, side, 28),
               children: [
@@ -261,16 +279,17 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
   ) {
     final c = context.c;
     final balance = summary.balanceCents;
-    final balanceColor = balance >= 0 ? c.mintInk : c.stamp;
-    final daysLeft =
-        (LedgerDates.daysInMonth(widget.monthKey) - DateTime.now().day + 1)
-            .clamp(1, 31);
-    final daily = plan.hasBudget
+    final balanceColor = balance >= 0 ? c.mintInk : c.danger;
+    // 「日均可用」只在查看当月时计算；历史 / 未来月份没有「剩余天数」的概念。
+    final now = DateTime.now();
+    final isCurrentMonth = LedgerDates.monthKey(now) == widget.monthKey;
+    final daysLeft = isCurrentMonth
+        ? (LedgerDates.daysInMonth(widget.monthKey) - now.day + 1).clamp(1, 31)
+        : LedgerDates.daysInMonth(widget.monthKey);
+    final daily = plan.hasBudget && isCurrentMonth
         ? (summary.budgetRemainingCents / daysLeft).round()
-        : 0;
-    return PaperCard(
-      tapeColor: c.tape,
-      tapeAngle: -2.1,
+        : null;
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,9 +320,9 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
             alignment: Alignment.centerLeft,
             child: Text(
               ledgerMoney(balance),
-              style: context.ldisplay(
-                size: 42,
-                weight: FontWeight.w700,
+              style: context.lhand(
+                size: CitroType.hero,
+                weight: CitroType.strong,
                 color: balanceColor,
                 height: 1,
               ),
@@ -317,7 +336,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                   label: '支出',
                   value: ledgerMoney(summary.expenseCents, symbol: false),
                   hint: summary.overBudget ? '已超预算' : null,
-                  color: c.stamp,
+                  color: c.ink,
                 ),
               ),
               Container(width: 1, height: 42, color: c.line),
@@ -364,7 +383,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                   style: context.lui(
                     size: CitroType.small,
                     weight: CitroType.strong,
-                    color: summary.overBudget ? c.stamp : c.ink2,
+                    color: summary.overBudget ? c.danger : c.ink2,
                   ),
                 ),
               ],
@@ -372,8 +391,8 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
             const SizedBox(height: 5),
             LedgerProgress(
               value: summary.budgetProgress,
-              color: ledgerWarm,
-              secondColor: ledgerCoral,
+              color: c.accent,
+              secondColor: c.accent2,
               over: summary.overBudget,
             ),
             const SizedBox(height: 6),
@@ -384,7 +403,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                   style: context.lui(size: CitroType.small, color: c.inkSoft),
                 ),
                 const Spacer(),
-                if (!summary.overBudget)
+                if (!summary.overBudget && daily != null)
                   Text(
                     '日均可用 ${ledgerMoney(daily)}',
                     style: context.lui(size: CitroType.small, color: c.inkSoft),
@@ -398,11 +417,11 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
               scale: .98,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+                  horizontal: 12,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
-                  color: c.hl.withAlpha(120),
+                  color: c.tintYellow,
                   borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                   border: Border.all(color: c.line),
                 ),
@@ -444,10 +463,8 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         .map((e) => e.replaceFirst(RegExp(r'^[·\-\*]\s*'), '').trim())
         .where((e) => e.isNotEmpty)
         .toList();
-    return PaperCard(
-      tapeColor: c.tape2,
-      tapeAngle: 1.9,
-      color: c.noteB,
+    return CitroCard(
+      color: c.tintBlue,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,7 +486,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                 onTap: _insightLoading ? null : () => _refreshInsight(force: true),
                 scale: .9,
                 hoverLift: 0,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                 child: Container(
                   width: 28,
                   height: 28,
@@ -501,7 +518,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
           const SizedBox(height: 6),
           if (lines.isEmpty)
             Text(
-              _insightLoading ? '正在翻你的账本…' : '记两笔之后，cici 会在这里给出观察。',
+              _insightLoading ? '正在分析本月账单…' : '记两笔之后，cici 会在这里给出观察。',
               style: context.lui(
                 size: CitroType.meta,
                 color: c.inkSoft,
@@ -521,7 +538,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                         width: 4,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: ledgerCoral,
+                          color: c.accent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -565,7 +582,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
       data = data.sublist(0, cutoff.clamp(1, data.length));
       if (data.length > 7) data = data.sublist(data.length - 7);
     }
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +614,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                               color: _range == item.$1
                                   ? c.accent.withAlpha(40)
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(99),
+                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                             ),
                             child: Center(
                               child: Text(
@@ -686,7 +703,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         color: c.inkSoft.withAlpha(150),
       ));
     }
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -729,7 +746,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                               height: 8,
                               decoration: BoxDecoration(
                                 color: segment.color,
-                                borderRadius: BorderRadius.circular(2),
+                                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -783,7 +800,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
   Widget _budgetCategoryCard(BuildContext context, LedgerStore store) {
     final c = context.c;
     final rows = store.categoryBudgets(widget.monthKey);
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,7 +843,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                         '${ledgerMoney(row.spent, compact: true)} / ${ledgerMoney(row.budget, compact: true)}',
                         style: context.lui(
                           size: CitroType.small,
-                          color: row.spent > row.budget ? c.stamp : c.inkSoft,
+                          color: row.spent > row.budget ? c.danger : c.inkSoft,
                         ),
                       ),
                     ],
@@ -850,7 +867,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
   Widget _recentCard(BuildContext context, LedgerStore store) {
     final c = context.c;
     final recent = store.recentEntries(limit: 5);
-    return PaperCard(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -882,7 +899,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                 onTap: () => showLedgerEntrySheet(context, entry: entry),
               ),
               if (entry != recent.last)
-                Divider(height: 1, color: c.line.withAlpha(140)),
+                CitroDivider(height: 1, color: c.line.withAlpha(140)),
             ],
         ],
       ),
@@ -910,18 +927,15 @@ class _PlanButton extends StatelessWidget {
           onTap: onTap,
           scale: .94,
           hoverLift: 0,
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
           child: Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [c.accentLt, ledgerWarm.withAlpha(c.dark ? 50 : 34)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              // 预算入口用 accent 软底，深色下不发白。
+              color: c.accent.withAlpha(28),
               shape: BoxShape.circle,
-              border: Border.all(color: c.accent2.withAlpha(110)),
+              border: Border.all(color: c.accent.withAlpha(110)),
             ),
             child: Center(
               child: AppIcon(

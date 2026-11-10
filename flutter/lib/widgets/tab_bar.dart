@@ -31,7 +31,6 @@ class CitroTabBar extends StatelessWidget {
       const _TabSpec('首页', AppIcons.home),
       const _TabSpec('游戏', AppIcons.games),
       _TabSpec('社区', AppIcons.community, badge: unread),
-      if (platform.isWindows) const _TabSpec('资源', AppIcons.library),
       // 「我的」固定在最后一个，手机端也是右侧最后一格。
       const _TabSpec('我的', AppIcons.user),
     ];
@@ -48,13 +47,13 @@ class CitroTabBar extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               // iOS / iPadOS 上是真实背景模糊，Android 是 tonal 表面，
-              // Windows / Web 是半透明纸面——同一块导航，各端用各自的原生材质。
+              // Windows / Web 是半透明中性面——同一块导航，各端用各自的原生材质。
               CitroGlass(
                 height: AppSpacing.navBar,
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
                 shadow: CitroColors.shadows.chrome(c),
                 padding: const EdgeInsets.all(AppSpacing.x1),
-                // 竖屏底部栏使用实色纸面，不透出背后的内容。
+                // 竖屏底部栏使用实色表面，不透出背后的内容。
                 blur: false,
                 highlight: false,
                 tint: c.surface,
@@ -85,9 +84,9 @@ class CitroTabBar extends StatelessWidget {
                                 bottom: 3,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
-                                    color: c.dark
-                                        ? c.hl
-                                        : c.accent.withAlpha(120),
+                                    // nosh 式选中态：实心品牌橙胶囊 + 深字，
+                                    // 深色下不再用荧光黄（那是手账高亮笔语义）。
+                                    color: c.accent,
                                     borderRadius: BorderRadius.circular(99),
                                   ),
                                 ),
@@ -118,36 +117,6 @@ class CitroTabBar extends StatelessWidget {
                       ],
                     ),
                   ],
-                ),
-              ),
-              Positioned(
-                top: -9,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Transform.rotate(
-                    angle: -1.8 * math.pi / 180,
-                    child: ClipPath(
-                      clipper: _TapeClipper(),
-                      child: Container(
-                        width: 112,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: c.tape,
-                          boxShadow: [
-                            BoxShadow(
-                              color: c.dark
-                                  ? const Color(0x30000000)
-                                  : const Color(0x735A4A2C),
-                              blurRadius: 5,
-                              spreadRadius: -3,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -183,8 +152,9 @@ class _TabBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
-    final activeColor = c.accentInk;
-    final idleColor = c.ink2.withAlpha(200);
+    // 选中态跟着胶囊走：胶囊是品牌橙实底，图标用深字（过 AA）。
+    final activeColor = c.onAccent;
+    final idleColor = c.inkSoft;
     return Semantics(
       button: true,
       selected: active,
@@ -236,7 +206,7 @@ class _Badge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
       padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: c.accent,
+        color: c.danger,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Center(
@@ -245,7 +215,7 @@ class _Badge extends StatelessWidget {
           style: context.ui(
             size: 9,
             weight: FontWeight.w700,
-            color: const Color(0xFF2E2C22),
+            color: Colors.white,
             height: 1,
             letterSpacing: 0,
           ),
@@ -253,18 +223,4 @@ class _Badge extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TapeClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(size.width * .02, 0)
-    ..lineTo(size.width * .98, size.height * .06)
-    ..lineTo(size.width, size.height * .92)
-    ..lineTo(size.width * .03, size.height)
-    ..lineTo(0, size.height * .26)
-    ..close();
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

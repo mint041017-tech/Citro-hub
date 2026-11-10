@@ -49,11 +49,12 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
   bool _wasLoggedIn = false;
+  Size? _orientationSize;
 
-  /// Windows 多一个「资源」槽位，其余端（手机 / Web）是四格：
-  /// 首页、游戏、社区、我的。「我的」始终在最后一个。
-  static bool get _showResources => !kIsWeb && platform.isWindows;
-  static int get _tabCount => _showResources ? 5 : 4;
+  /// 四格导航：首页、游戏、社区、我的，全平台一致。
+  /// 资源库不再占一个 Tab，收进「我的」与首页资源卡。
+  static bool get _showResources => false;
+  static int get _tabCount => 4;
 
   @override
   void initState() {
@@ -88,7 +89,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 空闲时按顺序预挂载其余 Tab（Offstage），首次切过去不再整页构建。
     // 错开时间，避免同一次 setState 里连续挂载多个页面。
     _warmPage(1, 1200); // 游戏
-    _warmPage(_showResources ? 4 : 3, 2000); // 我的
+    _warmPage(3, 2000); // 我的
     _warmPage(2, 2800); // 社区（会顺带预取动态，游客不发请求）
     // 让启动路径先跑完，避免更新检查与首帧、权限申请抢带宽/主线程。
     _updateTimer = Timer(const Duration(seconds: 3), () {
@@ -202,6 +203,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       },
       child: child,
     );
+  }
+
+  /// 只有触屏手机响应横滑切 Tab；桌面 Web / Windows 会与文本选择、
+  /// 横向滚动（日历、图表、游戏）冲突。
+  Widget _swipeable(Widget child) {
+    if (kIsWeb || !(platform.isAndroid || platform.isIOS)) return child;
+    return _withSwipe(child);
   }
 
   void switchTo(int i) => unawaited(_switchTab(i));
@@ -335,7 +343,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = constraints.biggest;
-          unawaited(CitroOrientation.sync(size));
+          // 形态同步放到首帧后，且尺寸没变不重复触发平台通道。
+          if (_orientationSize != size) {
+            _orientationSize = size;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) CitroOrientation.sync(size);
+            });
+          }
           final desktop = kIsWeb && size.width >= 1025;
           final duo =
               !kIsWeb && (CitroOrientation.isDuo || CitroForm.duoDevice(size));
@@ -409,7 +423,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                     contentWidth: constraints.maxWidth,
                     tabletNav: false,
                     duo: duo,
-                    child: _withSwipe(_pageStack()),
+                    child: _swipeable(_pageStack()),
                   ),
                 ),
                 if (!desktop && !keyboardOpen)

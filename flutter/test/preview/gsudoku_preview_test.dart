@@ -15,17 +15,13 @@ Future<void> loadFont(String family, List<String> paths) async {
 }
 
 void main() {
-  setUpAll(() async {
-    await loadFont('Kalam', [
-      'assets/fonts/kalam-400-app.ttf',
-      'assets/fonts/kalam-700-app.ttf',
+    setUpAll(() async {
+    await loadFont('RoundedCN', [
+      'assets/fonts/rounded-400-app.ttf',
+      'assets/fonts/rounded-500-app.ttf',
+      'assets/fonts/rounded-700-app.ttf',
     ]);
-    await loadFont('ZCOOL', ['assets/fonts/zcool-app.ttf']);
-    await loadFont('Caveat', ['assets/fonts/caveat-app.ttf']);
-    await loadFont('NotoSC', [
-      'assets/fonts/noto-sc-400-app.ttf',
-      'assets/fonts/noto-sc-700-app.ttf',
-    ]);
+    await loadFont('XiaolaiMono', ['assets/fonts/mono-app.ttf']);
   });
 
   testWidgets('sudoku mode select renders all groups', (tester) async {
