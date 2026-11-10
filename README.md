@@ -126,7 +126,7 @@ flutter run -d windows
 窗口默认 1200×720、最小 780×560；支持完全无边框拖拽、双击标题栏最大化、四周缩放、单实例；
 全站搜索只保留侧栏入口，不显示滚动条；“我的”为圆角浮窗。桌面端数独用 1–9 / 方向键 / 退格，
 贪吃蛇用 WASD / 方向键，跳一跳支持空格；成语接龙与飞花令选好输入法候选词后点“接”提交。
-Windows 版使用 iPad 界面，不使用 Web 的手账桌面布局。
+Windows 版使用 iPad 界面，与其他端共用同一套响应式版式。
 
 ### 3. 查看旧版前端（可选）
 
@@ -194,7 +194,7 @@ node tool/build_windows.js
 # 只出便携版：node tool/build_windows.js --no-installer
 ```
 
-安装器使用 Citro 手账主题和全中文向导：自定义欢迎 / 完成页插画、应用图标、中文语言文件与
+安装器使用 Citro 主题和全中文向导：自定义欢迎 / 完成页插画、应用图标、中文语言文件与
 “创建桌面快捷方式 / 启动 Citro”等全部文案；安装到当前用户目录，无需管理员权限。
 
 安装包支持静默更新：应用内检查到新版本后，下载到临时目录 → 校验 size + SHA-256 → 启动 Inno Setup →
@@ -245,10 +245,9 @@ node build.js release     # 产出 ../APK/Citro-v1.8.0-release.apk
 
 ## 文档
 
-- [设计规范](docs/citro-design.md)
-- **手账桌面 Paper Desk**（当前视觉）：[执行记录](docs/citro-手账桌面-执行记录.md)、[协作简报](docs/citro-手账桌面-改版简报.md)
+- [nosh 风格重设计](docs/citro-nosh-redesign.md)（**当前视觉**，2026-11 起）
+- [旧版设计规范](docs/citro-design.md)（手账 Paper Desk，已退役，仅作历史对照）
 - [素材与字体清单](docs/citro-assets.md)
-- [手账布局](docs/citro-手账布局说明.md)、[毛玻璃](docs/citro-毛玻璃说明.md)、[视觉精修](docs/citro-视觉精修说明.md)
 - [部署上传清单](docs/citro-部署上传清单.md)
 - [Android 发版记录](docs/)（`citro-android-v1.0.*.md`）、[Kotlin 原生版交接](docs/迟暮Crew-Kotlin原生版-交接.md)
 - [功能规格](docs/compose/spec/)
