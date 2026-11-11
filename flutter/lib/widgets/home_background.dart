@@ -142,18 +142,22 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
         // 图按原始比例缩到屏宽（不放大），下边缘就是卡片区的起点。
         if (size != Size.zero) {
           final screenW = MediaQuery.sizeOf(context).width;
+          final screenH = MediaQuery.sizeOf(context).height;
           final displayW = math.min(size.width, screenW);
-          final displayH = size.height * (displayW / size.width);
+          // 图再高也不超过视口的 65%，给卡片区留位置（超出的部分自然被裁掉）。
+          final displayH = math.min(
+            size.height * (displayW / size.width),
+            screenH * 0.65,
+          );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (CitroBlendImage.bottomEdge.value != displayH) {
               CitroBlendImage.bottomEdge.value = displayH;
             }
           });
         }
-        // 图没盖到的下方区域直接用卡片区的同色，不做渐变，
-        // 这样卡片区看起来是「从图下边缘长出来」的一整块。
+        // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
         return ColoredBox(
-          color: context.c.surface,
+          color: context.c.bg,
           child: Stack(
             fit: StackFit.expand,
             children: [

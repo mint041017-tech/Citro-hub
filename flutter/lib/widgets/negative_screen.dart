@@ -86,7 +86,6 @@ class NegativeScreen extends StatelessWidget {
                 child: _QuickGrid(items: _buildItems(context)),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x4)),
           ],
         ),
       ),

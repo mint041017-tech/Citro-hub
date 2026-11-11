@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../calendar/calendar_models.dart';
+import '../calendar/calendar_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
@@ -174,9 +176,20 @@ class _WeekCell extends StatelessWidget {
     final fid = festivalIdOf(date);
     final term = termToday(date);
     final lunar = lunarOf(date);
+    // 倒数日 / 纪念日优先：用户自己记的日子最重要。
+    CalendarMark? mark;
+    for (final m in CalendarStore.instance.marks) {
+      if (CalendarDates.hits(m, date)) {
+        mark = m;
+        break;
+      }
+    }
     String? label;
     Color? labelColor;
-    if (fid != null) {
+    if (mark != null) {
+      label = mark.title;
+      labelColor = c.stamp;
+    } else if (fid != null) {
       label = festivalName(fid);
       labelColor = c.accentInk;
     } else if (term != null) {

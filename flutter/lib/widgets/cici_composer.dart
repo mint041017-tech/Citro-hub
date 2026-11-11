@@ -585,17 +585,7 @@ class _CiciComposerState extends State<CiciComposer> {
                 ),
               ),
             ),
-            // 语音模式下右侧换成「键盘」按钮，点一下切回文字输入。
-            if (_voiceMode)
-              round(
-                AppIcons.keyboard,
-                onTap: widget.sending ? null : () => _toggleVoice(),
-              )
-            else
-              round(
-                AppIcons.send,
-                onTap: widget.sending ? null : widget.onSend,
-              ),
+            // 只留麦克风：发送交给键盘的回车，语音/文字切换也靠它。
           ],
         ),
       ),

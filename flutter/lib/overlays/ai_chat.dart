@@ -742,6 +742,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
           radius: CitroColors.radii.card,
           clipBehavior: Clip.antiAlias,
           child: CitroBackground(
+            // CiCi 页面统一用奶米底。
+            color: const Color(0xFFF9EDD7),
             child: SafeArea(
               top: false,
               child: Column(

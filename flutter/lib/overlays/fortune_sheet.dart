@@ -1135,7 +1135,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(CitroColors.radii.inner - 1),
-                  border: Border.all(color: c.onAccent.withAlpha(160)),
+                  border: Border.all(color: Colors.white.withAlpha(180)),
                 ),
               ),
             ),
@@ -1151,7 +1151,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     style: context.body(
                       size: CitroType.micro,
                       weight: CitroType.medium,
-                      color: c.onAccent.withAlpha(210),
+                      // 棕底配白字，深青在棕上几乎看不见。
+                      color: Colors.white.withAlpha(230),
                       letterSpacing: 2,
                     ),
                   ),
@@ -1163,7 +1164,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                       maxLines: 1,
                       style: context.heading(
                         size: CitroType.titleLg,
-                        color: c.onAccent,
+                        color: Colors.white,
                         letterSpacing: 1,
                       ),
                     ),

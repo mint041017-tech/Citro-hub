@@ -30,7 +30,6 @@ import '../widgets/home_background.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
-import '../widgets/liquid_glass.dart';
 import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
@@ -199,10 +198,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ? math.min(480.0, media.height * .60)
         : (media.height * .68).clamp(440.0, 640.0);
     // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时先按默认英雄区。
+    // 再高也不超过视口的 65%，给卡片区留出位置。
     final bgEdge = CitroBlendImage.bottomEdge.value;
-    final bgHeight = bgEdge > 0
+    final rawBg = bgEdge > 0
         ? math.max(120.0, bgEdge - topBarReserved)
         : math.max(120.0, heroBottom - topBarReserved);
+    final bgHeight = math.min(rawBg, media.height * 0.65);
     _bgHeight = bgHeight;
     // 抽屉（负一屏）高度：够用就好，不要多余空白。
     final negHeight = (media.height * .52).clamp(300.0, 460.0);
@@ -238,99 +239,87 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               offset: Offset(0, progress * travel),
               child: child,
             ),
-            child: Stack(
-              children: [
-                // 背景层：铺满全屏，固定不动，只随下拉整体下移；
-                // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
-                // 首页英雄区是白字，强制深色罩面。
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CitroAmbientBackground(
-                      blurred: true,
-                      blurSigma: _bgCover * 16,
-                      darkScrim: true,
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              // 单击抽屉以外的地方（首页内容）就收起抽屉。
+              onPointerDown: (_) {
+                if (_negProgress.value > 0.02) _animateNegTo(0);
+              },
+              child: Stack(
+                children: [
+                  // 背景层：铺满全屏，固定不动，只随下拉整体下移；
+                  // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
+                  // 首页英雄区是白字，强制深色罩面。
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CitroAmbientBackground(
+                        blurred: true,
+                        blurSigma: _bgCover * 16,
+                        darkScrim: true,
+                      ),
                     ),
                   ),
-                ),
                 // 顶栏固定 + 下方滚动区：卡片永远从顶栏下缘开始滚，
                 // 不会压到账号 / 日期。背景层铺在两者下面。
                 Positioned.fill(
                   child: Column(
                     children: [
                       _HomeTopBar(side: side),
+                      // 背景图区域：固定高度，下拉手势只在这一层生效。
+                      SizedBox(
+                        height: bgHeight,
+                        child: GestureDetector(
+                          key: const ValueKey('home-header-pull'),
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragStart: _onPullStart,
+                          onVerticalDragUpdate: _onPullUpdate,
+                          onVerticalDragEnd: _onPullEnd,
+                          onVerticalDragCancel: _onPullCancel,
+                          child: _HomeHeader(side: side),
+                        ),
+                      ),
+                      // 卡片区：只在自己的区域里滚动。
                       Expanded(
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: _onScrollNotification,
-                          child: LayoutBuilder(
-                            builder: (context, viewport) {
-                              // 卡片面板至少填满剩余视口，
-                              // 保证它的下缘正好盖住背景图没覆盖到的区域。
-                              final cardsMin = viewport.maxHeight - bgHeight;
-                              return SingleChildScrollView(
-                                controller: _scroll,
-                                physics: const BouncingScrollPhysics(
-                                  parent: AlwaysScrollableScrollPhysics(),
+                        child: SingleChildScrollView(
+                          controller: _scroll,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          child: _CardsPanel(
+                            radiusTop: CitroColors.radii.card,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    side,
+                                    8,
+                                    side,
+                                    sideNav ? 92 : 108,
+                                  ),
+                                  child: HomeBento(
+                                    layoutKey: layoutKey,
+                                    editing: false,
+                                    scrollController: _scroll,
+                                    builder: _cardFor,
+                                  ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(
-                                      height: bgHeight,
-                                      child: _HomeHeader(side: side),
-                                    ),
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        minHeight: cardsMin.clamp(
-                                          0.0,
-                                          double.infinity,
-                                        ),
-                                      ),
-                                      child: _CardsPanel(
-                                        radiusTop: CitroColors.radii.card,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            Padding(
-                                              padding: EdgeInsets.fromLTRB(
-                                                side,
-                                                8,
-                                                side,
-                                                sideNav ? 92 : 108,
-                                              ),
-                                              child: HomeBento(
-                                                layoutKey: layoutKey,
-                                                editing: false,
-                                                scrollController: _scroll,
-                                                builder: _cardFor,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 18),
-                                            Center(
-                                              child: Pressable(
-                                                onTap: () =>
-                                                    showAppreciationSheet(
-                                                      context,
-                                                    ),
-                                                child: Text(
-                                                  'Citro · 今天也要开心',
-                                                  style: context.body(
-                                                    size: CitroType.small,
-                                                    color: context.c.inkSoft,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 18),
-                                          ],
-                                        ),
+                                const SizedBox(height: 18),
+                                Center(
+                                  child: Pressable(
+                                    onTap: () => showAppreciationSheet(context),
+                                    child: Text(
+                                      'Citro · 今天也要开心',
+                                      style: context.body(
+                                        size: CitroType.small,
+                                        color: context.c.inkSoft,
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              );
-                            },
+                                const SizedBox(height: 18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -340,6 +329,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ],
             ),
           ),
+        ),
         ),
       ],
     );
@@ -358,55 +348,42 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double _pullProgress() =>
       ((_negPull / _negThreshold) * _negDamping).clamp(0.0, 1.0);
 
-  /// 顶部下拉 / 上滑驱动负一屏（对齐微信首页下拉小程序面板）。
-  ///
-  /// - 关着：列表到顶还继续下拉，首页跟手（带阻尼），走到 [_negOpenAt]
-  ///   直接弹开，不用等松手。
-  /// - 开着：任意位置上滑立刻收起。
-  bool _onScrollNotification(ScrollNotification n) {
-    if (n is ScrollStartNotification) {
+  /// 背景图区域的下拉 / 上滑驱动负一屏（只在背景图那一层挂手势）。
+  void _onPullStart(DragStartDetails details) {
+    _negPull = 0;
+  }
+
+  void _onPullUpdate(DragUpdateDetails details) {
+    if (_negAuto != null) return;
+    _negPull += details.delta.dy;
+    if (_negPull <= 0) {
+      // 上滑：抽屉开着就立刻收起。
+      if (_negProgress.value > 0.02) _animateNegTo(0);
       _negPull = 0;
-    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
-      if (_negAuto != null) return false;
-      final d = n.scrollDelta ?? 0;
-      if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
-        _negPull += -d;
-        final next = _pullProgress();
-        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
-          unawaited(Haptics.breath());
-          _animateNegTo(1);
-          return false;
-        }
-        _setNegProgress(next);
-      } else if (d > 0 && _negProgress.value > 0.02) {
-        _animateNegTo(0);
-      }
-    } else if (n is OverscrollNotification &&
-        n.dragDetails != null &&
-        n.overscroll != 0 &&
-        _scroll.hasClients &&
-        _scroll.offset <= 0.5) {
-      if (_negAuto != null) return false;
-      if (n.overscroll < 0) {
-        _negPull += -n.overscroll;
-        final next = _pullProgress();
-        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
-          unawaited(Haptics.breath());
-          _animateNegTo(1);
-          return false;
-        }
-        _setNegProgress(next);
-      } else if (n.overscroll > 0 && _negProgress.value > 0.02) {
-        _animateNegTo(0);
-      }
-    } else if (n is ScrollEndNotification) {
-      // 松手吸附：超过吸合线弹开，否则收回。
-      if (_negProgress.value > 0 && _negAuto == null) {
-        _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
-      }
-      _negPull = 0;
+      return;
     }
-    return false;
+    final next = _pullProgress();
+    if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
+      unawaited(Haptics.breath());
+      _animateNegTo(1);
+      return;
+    }
+    _setNegProgress(next);
+  }
+
+  void _onPullEnd(DragEndDetails details) {
+    // 松手吸附：超过吸合线弹开，否则立刻收回（不停顿）。
+    if (_negProgress.value > 0 && _negAuto == null) {
+      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
+    }
+    _negPull = 0;
+  }
+
+  void _onPullCancel() {
+    if (_negProgress.value > 0 && _negAuto == null) {
+      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
+    }
+    _negPull = 0;
   }
 
   /// 首页卡片的内容映射：栅格只负责位置，卡片自身保持原来的交互与动效。
@@ -580,6 +557,20 @@ class _HomeHeader extends StatelessWidget {
         : now.hour < 18
         ? '下午好'
         : '晚上好';
+    // 第二句按「月 + 日」轮换，不会每天都一样。
+    const lines = [
+      '今天也要开心',
+      '慢慢来，比较快',
+      '记得好好吃饭',
+      '喝杯水，歇一下',
+      '你已经很棒了',
+      '给自己一点时间',
+      '别急，事情会一件件好起来',
+      '今天也是适合努力的一天',
+      '把今天过好就够了',
+      '照顾好自己',
+    ];
+    final line = lines[(now.month + now.day) % lines.length];
     return Padding(
       padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
       child: Column(
@@ -595,7 +586,7 @@ class _HomeHeader extends StatelessWidget {
             ),
           ),
           Text(
-            '今天也要开心',
+            line,
             style: context.display(
               size: CitroType.hero,
               color: Colors.white,
@@ -621,20 +612,12 @@ class _CardsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 卡片区的「底」是液态玻璃：半透明，能透出背后的背景图，
-    // 而不是像以前那样一抹实色盖上去。顶部圆角让卡片区和背景衔接得更顺；
-    // 玻璃本身无边框（见 CitroLiquidGlass），不再额外压一条顶缘高光。
+    // 卡片区的底就是奶米 #F9EDD7，和上方背景图没盖到的区域连成一整块。
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(radiusTop)),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CitroLiquidGlass(
-              radius: radiusTop,
-              clipBehavior: Clip.antiAlias,
-              child: const SizedBox.shrink(),
-            ),
-          ),
+          Positioned.fill(child: ColoredBox(color: context.c.bg)),
           child,
         ],
       ),
