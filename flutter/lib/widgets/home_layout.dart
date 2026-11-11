@@ -459,6 +459,9 @@ class HomeLayoutStore extends ChangeNotifier {
                 parsed.add(slot);
               }
             }
+            // 日历 / 待办 / 记账 已经搬去「计划」页：老布局里残留的剔掉，
+            // 免得同一个首页里出现两份。
+            parsed.removeWhere((s) => _planOnly.contains(s.id));
             if (parsed.isNotEmpty) stored = parsed;
           }
         }
@@ -473,10 +476,18 @@ class HomeLayoutStore extends ChangeNotifier {
     }
     // 版本升级新增的卡片补到末尾，不覆盖用户已保存的位置。
     for (final slot in defaults) {
+      if (_planOnly.contains(slot.id)) continue;
       if (stored.every((e) => e.id != slot.id)) stored.add(slot);
     }
     _slots[key] = _normalizeAll(key, stored);
   }
+
+  /// 已经搬去「计划」页的三张卡：默认布局和「添加卡片」都不再出现。
+  static const Set<HomeCardId> _planOnly = {
+    HomeCardId.calendar,
+    HomeCardId.todo,
+    HomeCardId.ledger,
+  };
 
   List<HomeSlot> _normalizeAll(HomeLayoutKey key, List<HomeSlot> input) {
     final out = <HomeSlot>[];

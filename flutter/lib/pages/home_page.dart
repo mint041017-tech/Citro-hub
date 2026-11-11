@@ -10,6 +10,7 @@ import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_page.dart';
 import '../calendar/calendar_store.dart';
+import '../services/api.dart';
 import '../services/fish.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/extra_sheets.dart';
@@ -59,6 +60,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
   double _negThreshold = 300;
+
+  /// 本次手势到达过的最大开度，松手时按它吸附。
+  double _negPeak = 0;
 
   /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
   AnimationController? _negAuto;
@@ -235,46 +239,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  /// 顶部下拉驱动负一屏：只在列表已经滚到顶、且用户正在拖拽时响应。
+  /// 顶部下拉驱动负一屏。
   ///
-  /// 必须看 [ScrollNotification.dragDetails]：松手后回弹动画也会产生
-  /// pixels < 0 的更新，不区分的话负一屏会在回弹途中自己关掉。
+  /// 用**增量**累加而不是绝对 pixels：手指拖动过程中 pixels 可能被
+  /// 回弹/重置，用绝对值会让刚拉开的面板又缩回去。同时记下整段手势里
+  /// 到达过的最大开度，松手时按峰值吸附——只要确实拽过半截，就打开。
   bool _onScrollNotification(ScrollNotification n) {
-    if (n is OverscrollNotification) {
-      if (n.dragDetails != null && n.metrics.pixels <= 0 && n.overscroll < 0) {
+    if (n is ScrollStartNotification) {
+      _negPeak = _negProgress;
+    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      final d = n.scrollDelta ?? 0;
+      if (d != 0) {
         _setNegProgress(
-          (_negProgress + (-n.overscroll) / _negThreshold).clamp(0.0, 1.0),
+          (_negProgress + (-d) / _negThreshold).clamp(0.0, 1.0),
         );
+        if (_negProgress > _negPeak) _negPeak = _negProgress;
       }
-    } else if (n is ScrollUpdateNotification &&
+    } else if (n is OverscrollNotification &&
         n.dragDetails != null &&
-        n.metrics.pixels < 0) {
+        n.overscroll < 0) {
       _setNegProgress(
-        ((-n.metrics.pixels) / _negThreshold).clamp(0.0, 1.0),
+        (_negProgress + (-n.overscroll) / _negThreshold).clamp(0.0, 1.0),
       );
+      if (_negProgress > _negPeak) _negPeak = _negProgress;
     } else if (n is ScrollEndNotification && _negProgress > 0) {
-      _setNegProgress(_negProgress > 0.45 ? 1.0 : 0.0);
+      _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
+      _negPeak = 0;
     }
     return false;
   }
 
-  /// 负一屏自身上滑时把它推回顶部：列表已经滚到顶还继续往上拖，
-  /// 就把展开进度往回减，松手时按阈值吸附。
+  /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
-    if (n is OverscrollNotification) {
-      if (n.dragDetails != null && n.metrics.pixels <= 0 && n.overscroll > 0) {
-        _setNegProgress(
-          (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
-        );
+    if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      final d = n.scrollDelta ?? 0;
+      if (d > 0) {
+        _setNegProgress((_negProgress - d / _negThreshold).clamp(0.0, 1.0));
       }
-    } else if (n is ScrollUpdateNotification &&
+    } else if (n is OverscrollNotification &&
         n.dragDetails != null &&
-        n.metrics.pixels < 0) {
+        n.overscroll > 0) {
       _setNegProgress(
-        ((-n.metrics.pixels) / _negThreshold).clamp(0.0, 1.0),
+        (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
       );
-    } else if (n is ScrollEndNotification && _negProgress > 0) {
-      _setNegProgress(_negProgress > 0.45 ? 1.0 : 0.0);
+    } else if (n is ScrollEndNotification &&
+        _negProgress > 0 &&
+        _negProgress < 1) {
+      _setNegProgress(_negProgress > 0.7 ? 1.0 : 0.0);
     }
     return false;
   }
@@ -462,9 +473,9 @@ class _HomeHeader extends StatelessWidget {
         ? '下午好'
         : '晚上好';
     final user = app.user;
-    final avatarUrl = user == null || user.av == null || user.av!.isEmpty
-        ? ''
-        : user.av!;
+    // user.av 可能是相对路径，必须过 Api.imageUrl 拼成完整地址，
+    // 否则 Image.network 直接失败、errorBuilder 返回空——整个圆就是空白。
+    final avatarUrl = Api.imageUrl(user?.av);
     return Padding(
       padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
       child: Column(
@@ -497,21 +508,33 @@ class _HomeHeader extends StatelessWidget {
                           clipBehavior: Clip.antiAlias,
                           child: avatarUrl.isEmpty
                               ? Center(
-                                  child: Text(
-                                    app.loggedIn && user != null && user.name.isNotEmpty
-                                        ? user.name[0]
-                                        : '友',
-                                    style: context.heading(
-                                      size: CitroType.label,
-                                      color: c.ink,
-                                    ),
-                                  ),
+                                  child: app.loggedIn &&
+                                          user != null &&
+                                          user.name.isNotEmpty
+                                      ? Text(
+                                          user.name[0],
+                                          style: context.heading(
+                                            size: CitroType.label,
+                                            color: c.ink,
+                                          ),
+                                        )
+                                      : AppIcon(
+                                          strokeSvg(AppIcons.user, width: 2),
+                                          size: 16,
+                                          color: c.ink2,
+                                        ),
                                 )
                               : Image.network(
                                   avatarUrl,
                                   fit: BoxFit.cover,
                                   cacheWidth: 96,
-                                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                                  errorBuilder: (_, _, _) => Center(
+                                    child: AppIcon(
+                                      strokeSvg(AppIcons.user, width: 2),
+                                      size: 16,
+                                      color: c.ink2,
+                                    ),
+                                  ),
                                 ),
                         ),
                         const SizedBox(width: AppSpacing.x1),
@@ -2270,16 +2293,21 @@ class QuoteCard extends StatelessWidget {
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 250;
             if (!wide) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _quoteLabel(context, c),
-                  const SizedBox(height: AppSpacing.x1),
-                  _quoteText(context, c, q),
-                  const SizedBox(height: AppSpacing.x1),
-                  _quoteEn(context, c, q),
-                ],
+              // 引文长短不一，整块等比缩小，宁可字小一点也不撑爆卡片。
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _quoteLabel(context, c),
+                    const SizedBox(height: AppSpacing.x1),
+                    _quoteText(context, c, q),
+                    const SizedBox(height: AppSpacing.x1),
+                    _quoteEn(context, c, q),
+                  ],
+                ),
               );
             }
             return Row(
@@ -2288,14 +2316,18 @@ class QuoteCard extends StatelessWidget {
                 _quoteLabel(context, c),
                 const SizedBox(width: AppSpacing.x3),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _quoteText(context, c, q),
-                      const SizedBox(height: AppSpacing.x1),
-                      _quoteEn(context, c, q),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _quoteText(context, c, q),
+                        const SizedBox(height: AppSpacing.x1),
+                        _quoteEn(context, c, q),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x2),
@@ -2340,10 +2372,12 @@ class QuoteCard extends StatelessWidget {
       '「${q.cn}」',
       textAlign: TextAlign.left,
       locale: const Locale('zh', 'CN'),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
       style: context.heading(
-        size: CitroType.titleLg,
+        size: CitroType.title,
         color: c.ink,
-        height: 1.55,
+        height: 1.5,
       ),
     );
   }
@@ -2352,7 +2386,7 @@ class QuoteCard extends StatelessWidget {
     return Text(
       '— ${q.en}',
       textAlign: TextAlign.left,
-      maxLines: 3,
+      maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: context.body(size: CitroType.meta, color: c.inkSoft, height: 1.45),
     );

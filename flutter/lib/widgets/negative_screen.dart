@@ -70,8 +70,8 @@ class NegativeScreen extends StatelessWidget {
                         ),
                         child: Center(
                           child: AppIcon(
-                            strokeSvg(AppIcons.chevronDown, width: 2.2),
-                            size: 18,
+                            strokeSvg(AppIcons.close, width: 2.2),
+                            size: 17,
                             color: c.ink2,
                           ),
                         ),

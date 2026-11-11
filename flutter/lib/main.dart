@@ -504,58 +504,92 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return Scaffold(
-        backgroundColor: context.c.bg,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/logo.webp',
-                width: 112,
-                height: 112,
-                cacheWidth: 224,
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: 88,
-                child: LinearProgressIndicator(
-                  minHeight: 3,
-                  color: context.c.accent,
-                  backgroundColor: context.c.surface2,
+    final c = context.c;
+    final size = MediaQuery.sizeOf(context);
+    final landscape = size.width > size.height;
+    // 以 logo 为主的启动页：中间一颗带柔光的 logo +  slogan，
+    // 底部是产品名和版权，留白给系统 home indicator。
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(0, -.4),
+                  radius: 1.15,
+                  colors: [c.tintYellow.withAlpha(120), c.bg],
+                  stops: const [0, .72],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      );
-    }
-    final size = MediaQuery.sizeOf(context);
-    // iPad 固定使用横版启动图，与原生 LaunchImage 的 iPad 资源保持一致；
-    // Windows 桌面端复用同一张 iPad 启动图；iPhone/Duo 仍按窗口方向选择。
-    final desktopSplash = !kIsWeb && platform.isWindows;
-    final isPad = size.shortestSide >= 700;
-    final landscape = desktopSplash || isPad || size.width > size.height;
-    return Scaffold(
-      backgroundColor: context.c.bg,
-      body: SizedBox.expand(
-        child: Image.asset(
-          landscape ? 'assets/splash_landscape.jpg' : 'assets/splash_image.jpg',
-          key: ValueKey(landscape ? 'splash-landscape' : 'splash-portrait'),
-          fit: BoxFit.cover,
-          alignment: landscape ? Alignment.center : Alignment.topCenter,
-          cacheWidth: landscape ? 2000 : 1080,
-          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-            if (wasSynchronouslyLoaded) return child;
-            return AnimatedOpacity(
-              opacity: frame == null ? 0 : 1,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOut,
-              child: child,
-            );
-          },
-        ),
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    key: ValueKey(
+                      landscape ? 'splash-landscape' : 'splash-portrait',
+                    ),
+                    width: 108,
+                    height: 108,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: c.line),
+                      boxShadow: CitroColors.shadows.float(c),
+                    ),
+                    child: Image.asset(
+                      'assets/images/logo.webp',
+                      fit: BoxFit.contain,
+                      cacheWidth: 220,
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  Text(
+                    '今天也要开心',
+                    style: context.body(
+                      size: CitroType.bodyLg,
+                      color: c.inkSoft,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 34,
+            child: Column(
+              children: [
+                Text(
+                  'Citro',
+                  style: context.heading(
+                    size: CitroType.title,
+                    weight: CitroType.strong,
+                    color: c.ink,
+                    letterSpacing: .6,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '© 2026 chimu',
+                  style: context.body(
+                    size: CitroType.micro,
+                    color: c.inkSoft,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
