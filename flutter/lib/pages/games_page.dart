@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
+import '../widgets/home_background.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
@@ -47,67 +48,71 @@ class GamesPage extends StatelessWidget {
           [for (final key in group.$2) games.firstWhere((g) => g.key == key)],
         ),
     ];
-    final content = CitroBackground(
-      child: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            side,
-            AppSpacing.pageTop(width),
-            side,
-            wideDesktop ? 32 : 100,
-          ),
-          child: CitroStagger(
-            step: const Duration(milliseconds: 28),
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
+    final content = Stack(
+      children: [
+        const Positioned.fill(
+          child: CitroAmbientBackground(blurred: true, blurSigma: 18),
+        ),
+        CitroBackground(
+          color: Colors.transparent,
+          child: SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                side,
+                AppSpacing.pageTop(width),
+                side,
+                wideDesktop ? 32 : 100,
+              ),
+              child: CitroStagger(
+                step: const Duration(milliseconds: 28),
                 children: [
-                  CitroCard(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        CitroSectionHeader(
-                          '游戏',
-                          subtitle: '账号同步 · 全站排行',
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CitroCard(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final group in gameGroups) ...[
+                              Text(
+                                group.$1,
+                                style: context.body(
+                                  size: CitroType.label,
+                                  weight: CitroType.medium,
+                                  color: c.ink2,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.x1),
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: gameColumns,
+                                      crossAxisSpacing: AppSpacing.x1,
+                                      mainAxisSpacing: AppSpacing.x1,
+                                      childAspectRatio: 1.06,
+                                    ),
+                                itemCount: group.$2.length,
+                                itemBuilder: (_, i) =>
+                                    _GameCard(entry: group.$2[i]),
+                              ),
+                              const SizedBox(height: AppSpacing.x3),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.x3),
-                        for (final group in gameGroups) ...[
-                          Text(
-                            group.$1,
-                            style: context.body(
-                              size: CitroType.label,
-                              weight: CitroType.medium,
-                              color: c.ink2,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.x1),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: gameColumns,
-                              crossAxisSpacing: AppSpacing.x1,
-                              mainAxisSpacing: AppSpacing.x1,
-                              childAspectRatio: 1.06,
-                            ),
-                            itemCount: group.$2.length,
-                            itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
-                          ),
-                          const SizedBox(height: AppSpacing.x3),
-                        ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
     if (!desktopWeb) return content;
     return Stack(
@@ -121,7 +126,6 @@ class GamesPage extends StatelessWidget {
       ],
     );
   }
-
 }
 
 class _GameCard extends StatelessWidget {

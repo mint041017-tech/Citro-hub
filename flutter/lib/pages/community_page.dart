@@ -21,6 +21,7 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_image.dart';
+import '../widgets/home_background.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
@@ -579,7 +580,6 @@ class _CommunityPageState extends State<CommunityPage>
     final showPosts =
         app.loggedIn && !(loading && !loaded) && filtered.isNotEmpty;
     final prelude = <Widget>[
-      CitroReveal(rise: 8, child: _header(context)),
       if (!app.loggedIn)
         CitroReveal(
           rise: 8,
@@ -615,115 +615,134 @@ class _CommunityPageState extends State<CommunityPage>
         style: context.body(size: CitroType.micro, color: c.inkSoft),
       ),
     );
-    return CitroBackground(
-      child: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RefreshIndicator(
-                color: c.accent,
-                onRefresh: loaded ? _reload : () async {},
-                child: masonry
-                    ? CustomScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        slivers: [
-                          SliverPadding(
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: CitroAmbientBackground(blurred: true, blurSigma: 18),
+        ),
+        CitroBackground(
+          color: Colors.transparent,
+          child: SafeArea(
+            bottom: false,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RefreshIndicator(
+                    color: c.accent,
+                    onRefresh: loaded ? _reload : () async {},
+                    child: masonry
+                        ? CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
+                            slivers: [
+                              SliverPadding(
+                                padding: EdgeInsets.fromLTRB(
+                                  side,
+                                  width >= 700 ? AppSpacing.x6 : AppSpacing.x2,
+                                  side,
+                                  0,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildListDelegate(prelude),
+                                ),
+                              ),
+                              if (showPosts)
+                                SliverPadding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: side,
+                                  ),
+                                  sliver: SliverMasonryGrid.count(
+                                    crossAxisCount: columns,
+                                    mainAxisSpacing: 10,
+                                    crossAxisSpacing: 10,
+                                    childCount: filtered.length,
+                                    itemBuilder: (context, index) =>
+                                        _feedTile(context, filtered[index]),
+                                  ),
+                                ),
+                              if (app.loggedIn)
+                                SliverPadding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    side,
+                                    16,
+                                    side,
+                                    36,
+                                  ),
+                                  sliver: SliverToBoxAdapter(child: footer),
+                                )
+                              else
+                                const SliverToBoxAdapter(
+                                  child: SizedBox(height: 36),
+                                ),
+                            ],
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
                             padding: EdgeInsets.fromLTRB(
                               side,
-                              AppSpacing.pageTop(width),
+                              width >= 700 ? AppSpacing.x6 : AppSpacing.x2,
                               side,
-                              0,
+                              110,
                             ),
-                            sliver: SliverList(
-                              delegate: SliverChildListDelegate(prelude),
-                            ),
+                            itemCount: itemCount,
+                            itemBuilder: (context, index) {
+                              if (index < prelude.length) return prelude[index];
+                              final feedIndex = index - prelude.length;
+                              if (showPosts && feedIndex < filtered.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _feedTile(
+                                    context,
+                                    filtered[feedIndex],
+                                  ),
+                                );
+                              }
+                              return footer;
+                            },
                           ),
-                          if (showPosts)
-                            SliverPadding(
-                              padding: EdgeInsets.symmetric(horizontal: side),
-                              sliver: SliverMasonryGrid.count(
-                                crossAxisCount: columns,
-                                mainAxisSpacing: 10,
-                                crossAxisSpacing: 10,
-                                childCount: filtered.length,
-                                itemBuilder: (context, index) =>
-                                    _feedTile(context, filtered[index]),
-                              ),
-                            ),
-                          if (app.loggedIn)
-                            SliverPadding(
-                              padding: EdgeInsets.fromLTRB(side, 16, side, 36),
-                              sliver: SliverToBoxAdapter(child: footer),
-                            )
-                          else
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 36),
-                            ),
-                        ],
-                      )
-                    : ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
+                  ),
+                ),
+                if (kIsWeb && width >= 1025)
+                  Positioned(
+                    left: 18,
+                    bottom: MediaQuery.paddingOf(context).bottom + 24,
+                    child: const WebHomeBackPill(),
+                  ),
+                if (app.loggedIn &&
+                    MediaQuery.viewInsetsOf(context).bottom == 0)
+                  Positioned(
+                    right: math.max(18.0, (width - maxFeed) / 2 + 18),
+                    bottom:
+                        MediaQuery.paddingOf(context).bottom +
+                        (tabletNav || (kIsWeb && width >= 1025) ? 24 : 96),
+                    child: GestureDetector(
+                      onTap: _compose,
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: c.ink,
+                          shape: BoxShape.circle,
+                          boxShadow: CitroColors.shadows.float(c),
                         ),
-                        padding: EdgeInsets.fromLTRB(
-                          side,
-                          AppSpacing.pageTop(width),
-                          side,
-                          110,
+                        child: Center(
+                          child: AppIcon(
+                            strokeSvg(AppIcons.plus, width: 2.4),
+                            size: 24,
+                            color: c.bg,
+                          ),
                         ),
-                        itemCount: itemCount,
-                        itemBuilder: (context, index) {
-                          if (index < prelude.length) return prelude[index];
-                          final feedIndex = index - prelude.length;
-                          if (showPosts && feedIndex < filtered.length) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _feedTile(context, filtered[feedIndex]),
-                            );
-                          }
-                          return footer;
-                        },
-                      ),
-              ),
-            ),
-            if (kIsWeb && width >= 1025)
-              Positioned(
-                left: 18,
-                bottom: MediaQuery.paddingOf(context).bottom + 24,
-                child: const WebHomeBackPill(),
-              ),
-            if (app.loggedIn && MediaQuery.viewInsetsOf(context).bottom == 0)
-              Positioned(
-                right: math.max(18.0, (width - maxFeed) / 2 + 18),
-                bottom:
-                    MediaQuery.paddingOf(context).bottom +
-                    (tabletNav || (kIsWeb && width >= 1025) ? 24 : 96),
-                child: GestureDetector(
-                  onTap: _compose,
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: c.ink,
-                      shape: BoxShape.circle,
-                      boxShadow: CitroColors.shadows.float(c),
-                    ),
-                    child: Center(
-                      child: AppIcon(
-                        strokeSvg(AppIcons.plus, width: 2.4),
-                        size: 24,
-                        color: c.bg,
                       ),
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -753,31 +772,6 @@ class _CommunityPageState extends State<CommunityPage>
         onReportPost: () => _reportPost(context, p),
         onReportComment: (comment) => _reportComment(context, p, comment),
         onBlockUser: (nick) => _blockNick(context, nick),
-      ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 12),
-      child: Column(
-        children: [
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Citro ',
-                  style: context.display(size: CitroType.heading, color: c.ink),
-                ),
-                TextSpan(
-                  text: '社区',
-                  style: context.heading(size: CitroType.heading, color: c.accent),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -973,9 +967,7 @@ class _CommunityPageState extends State<CommunityPage>
                   decoration: BoxDecoration(
                     color: showSearch ? c.ink : c.surface2,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: showSearch ? c.ink : c.line2,
-                    ),
+                    border: Border.all(color: showSearch ? c.ink : c.line2),
                   ),
                   child: Center(
                     child: AppIcon(
@@ -1022,10 +1014,7 @@ class _CommunityPageState extends State<CommunityPage>
                 border: InputBorder.none,
                 isDense: true,
                 hintText: '搜索动态…',
-                hintStyle: context.body(
-                  size: CitroType.meta,
-                  color: c.inkSoft,
-                ),
+                hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
               ),
             ),
           ),
@@ -1405,7 +1394,11 @@ class _PostCardState extends State<_PostCard> {
             const SizedBox(height: 10),
             Text(
               p.text,
-              style: context.body(size: CitroType.body, color: c.ink, height: 1.75),
+              style: context.body(
+                size: CitroType.body,
+                color: c.ink,
+                height: 1.75,
+              ),
             ),
           ],
           if (p.imgs.isNotEmpty) ...[
@@ -1534,7 +1527,9 @@ class _PostCardState extends State<_PostCard> {
                         ),
                         decoration: BoxDecoration(
                           color: c.dangerSoft,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.small,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -1767,7 +1762,9 @@ class _PostCardState extends State<_PostCard> {
                   child: CitroHero(
                     tag: tag,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                       child: AspectRatio(
                         aspectRatio: 1,
                         child: AppImage(
@@ -1802,9 +1799,7 @@ class _PostCardState extends State<_PostCard> {
     final tablet = (layout?.tabletNav ?? false) || (layout?.duo ?? false);
     // 点赞后换成实心小红心，和「已喜欢」的语义保持一致。
     final liked = active && icon == AppIcons.heart;
-    final fg = liked
-        ? c.stamp
-        : (active ? c.accentInk : c.inkSoft);
+    final fg = liked ? c.stamp : (active ? c.accentInk : c.inkSoft);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -1816,9 +1811,7 @@ class _PostCardState extends State<_PostCard> {
         ),
         decoration: active
             ? BoxDecoration(
-                color: liked
-                    ? c.stamp.withAlpha(24)
-                    : c.accent.withAlpha(28),
+                color: liked ? c.stamp.withAlpha(24) : c.accent.withAlpha(28),
                 borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(
                   color: (liked ? c.stamp : c.accent).withAlpha(90),
@@ -2213,10 +2206,7 @@ class _CommunityAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       foregroundDecoration: border == null
           ? null
           : BoxDecoration(shape: BoxShape.circle, border: border),
@@ -2676,10 +2666,7 @@ class _InboxSheetState extends State<_InboxSheet> {
               padding: const EdgeInsets.fromLTRB(18, 10, 8, 6),
               child: Row(
                 children: [
-                  Text(
-                    '收件箱',
-                    style: context.heading(size: CitroType.title),
-                  ),
+                  Text('收件箱', style: context.heading(size: CitroType.title)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
@@ -2726,7 +2713,9 @@ class _InboxSheetState extends State<_InboxSheet> {
                         final n = widget.items[i];
                         final icon = n.type == 'like'
                             ? AppIcons.heart
-                            : (n.type == 'reply' ? AppIcons.repeat : AppIcons.comment);
+                            : (n.type == 'reply'
+                                  ? AppIcons.repeat
+                                  : AppIcons.comment);
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: n.unread

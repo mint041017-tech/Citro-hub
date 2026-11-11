@@ -37,10 +37,11 @@ enum HomeForm { compact, wide }
 extension HomeFormX on HomeForm {
   int get columns => this == HomeForm.wide ? 12 : 6;
 
-  double get gap => this == HomeForm.wide ? 14 : 10;
+  /// 卡片之间的间隙。手机上 12 让卡片之间有呼吸位，不再贴成一团。
+  double get gap => this == HomeForm.wide ? 14 : 12;
 
   /// 行高按形态固定，卡片高度以「行」为单位，编辑时才能稳定吸附。
-  double get rowUnit => this == HomeForm.wide ? 50 : 48;
+  double get rowUnit => 50;
 
   /// 允许往下拖出的最大行数，避免误拖后页面无限变长。
   int get maxRows => this == HomeForm.wide ? 30 : 44;
@@ -279,14 +280,15 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     ];
   }
   // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
+  // 同行卡片高度成对（3 / 4 / 3 行），不再出现半高半矮的锯齿边。
   return const [
-    HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 4),
-    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 4),
-    HomeSlot(HomeCardId.fish, col: 0, row: 6, w: 3, h: 2),
-    // 星象收小：半宽 + 更矮，只留综合运势和一句星语。
-    HomeSlot(HomeCardId.zodiac, col: 3, row: 6, w: 3, h: 4),
+    HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 3),
+    HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 3),
+    HomeSlot(HomeCardId.weather, col: 0, row: 3, w: 3, h: 4),
+    HomeSlot(HomeCardId.cook, col: 3, row: 3, w: 3, h: 4),
+    HomeSlot(HomeCardId.fish, col: 0, row: 7, w: 3, h: 3),
+    // 星象和摸鱼日历同高，右列不再比左列高出一截。
+    HomeSlot(HomeCardId.zodiac, col: 3, row: 7, w: 3, h: 3),
     HomeSlot(HomeCardId.quote, col: 0, row: 10, w: 6, h: 3),
     HomeSlot(HomeCardId.mood, col: 0, row: 13, w: 6, h: 3),
   ];
@@ -412,6 +414,10 @@ class HomeLayoutStore extends ChangeNotifier {
 
   static const String prefsKey = PrefKeys.homeLayout;
 
+  /// 默认布局版本：默认布局重排过就 +1，让旧版保存的布局回默认。
+  static const String _versionKey = 'homeLayoutVersion';
+  static const int _layoutVersion = 2;
+
   final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
   final Set<HomeLayoutKey> _loaded = {};
   Map<String, Object?> _raw = const {};
@@ -433,6 +439,12 @@ class HomeLayoutStore extends ChangeNotifier {
     if (_loaded.contains(key)) return;
     _loaded.add(key);
     final defaults = defaultHomeLayout(key);
+    // 默认布局重排过：旧版保存的布局不再适用，直接回默认。
+    if (Prefs.getInt(_versionKey) < _layoutVersion) {
+      _slots[key] = List<HomeSlot>.of(defaults);
+      unawaited(Prefs.setInt(_versionKey, _layoutVersion));
+      return;
+    }
     List<HomeSlot>? stored;
     try {
       final raw = Prefs.getString(prefsKey);

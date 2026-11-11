@@ -237,67 +237,91 @@ class _GameScaffoldState extends State<GameScaffold> {
 
   Widget _portraitBody(BuildContext context) {
     final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return Column(
+    return Stack(
       children: [
-        _portraitHeader(context),
-        Expanded(child: _centerArea(context, landscape: false)),
-        if (widget.showLive && !kbOpen)
-          SafeArea(top: false, child: GameLiveBar(list: _live)),
+        Positioned.fill(
+          // 顶栏取消后内容铺满，只给浮动按钮留出顶部 64。
+          child: Padding(
+            padding: const EdgeInsets.only(top: 64),
+            child: Column(
+              children: [
+                Expanded(child: _centerArea(context, landscape: false)),
+                if (widget.showLive && !kbOpen)
+                  SafeArea(top: false, child: GameLiveBar(list: _live)),
+              ],
+            ),
+          ),
+        ),
+        _floatingHeader(context),
       ],
     );
   }
 
-  Widget _portraitHeader(BuildContext context) {
+  /// actions 里的排行榜入口：竖屏挪到顶部圆形按钮，横屏左栏已有。
+  GameActionButton? get _rankButton {
+    for (final item in widget.actions) {
+      if (item is GameActionButton && item.label.contains('排行')) return item;
+      if (item is GameRankAction && item.child is GameActionButton) {
+        final child = item.child as GameActionButton;
+        if (child.label.contains('排行')) return child;
+      }
+    }
+    return null;
+  }
+
+  /// 浮动顶栏：返回 + 标题 + 排行榜，全是圆形/透明，没有整条顶栏。
+  Widget _floatingHeader(BuildContext context) {
     final c = context.c;
-    final duo = CitroForm.duoDevice(MediaQuery.sizeOf(context));
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        height: GameMetrics.headHeight,
-        padding: const EdgeInsets.symmetric(horizontal: GameMetrics.sidePad),
-        decoration: BoxDecoration(
-          color: c.surface,
-          border: Border(bottom: BorderSide(color: c.line)),
-        ),
-        child: Row(
-          children: [
-            if (!duo)
+    final rank = _rankButton;
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: GameMetrics.sidePad,
+            vertical: 6,
+          ),
+          child: Row(
+            children: [
               _RoundIconButton(
                 onTap: widget.onBack ?? () => popOrHome(context),
                 size: 40,
                 child: gameIcon(GameIcons.arrowLeft, size: 18, color: c.ink2),
-              )
-            else
-              const SizedBox(width: 38),
-            const SizedBox(width: 10),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.36,
               ),
-              child: CitroHero(
-                tag: CitroHero.tagOf('game-title', widget.gameKey),
-                child: Text(
-                  widget.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.heading(
-                    size: widget.titleSize ?? CitroType.bodyLg,
-                    color: c.ink,
+              const SizedBox(width: 10),
+              Expanded(
+                child: CitroHero(
+                  tag: CitroHero.tagOf('game-title', widget.gameKey),
+                  child: Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: context.heading(
+                      size: widget.titleSize ?? CitroType.bodyLg,
+                      color: c.ink,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: SizedBox(
-                height: 44,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: _hudCompact(context),
-                ),
-              ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              if (rank != null)
+                _RoundIconButton(
+                  onTap: rank.onTap,
+                  size: 40,
+                  child: gameIcon(
+                    rank.icon ?? GameIcons.trophy,
+                    size: 18,
+                    color: c.ink2,
+                  ),
+                )
+              else
+                const SizedBox(width: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -333,8 +357,11 @@ class _GameScaffoldState extends State<GameScaffold> {
     );
   }
 
-  Widget? _aboveRow() {
-    if (widget.above.isEmpty) return null;
+  /// 棋盘上方的一行：above 槽位 + （竖屏）分数/计时 HUD。
+  /// 顶栏取消后，HUD 从顶栏挪到这里，仍在棋盘上方一眼能看到。
+  Widget? _aboveRow({bool withHud = false}) {
+    final hasHud = withHud && (widget.hud != null || widget.pills.isNotEmpty);
+    if (widget.above.isEmpty && !hasHud) return null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -343,20 +370,24 @@ class _GameScaffoldState extends State<GameScaffold> {
             padding: EdgeInsets.only(top: i == 0 ? 0 : GameMetrics.hudGap),
             child: widget.above[i],
           ),
+        if (hasHud) ...[
+          if (widget.above.isNotEmpty)
+            const SizedBox(height: GameMetrics.hudGap),
+          _hudCompact(context),
+        ],
       ],
     );
   }
 
   Widget? _actionsRow({required bool landscape}) {
-    final actions = landscape
-        ? widget.actions
-              .where(
-                (item) =>
-                    item is! GameRankAction &&
-                    !(item is GameActionButton && item.label.contains('排行')),
-              )
-              .toList()
-        : widget.actions;
+    // 排行榜在竖屏挪到顶部圆形按钮、横屏在左栏常驻，都不再出现在按钮行。
+    final actions = widget.actions
+        .where(
+          (item) =>
+              item is! GameRankAction &&
+              !(item is GameActionButton && item.label.contains('排行')),
+        )
+        .toList();
     if (actions.isEmpty) return null;
     return Wrap(
       alignment: WrapAlignment.center,
@@ -367,7 +398,7 @@ class _GameScaffoldState extends State<GameScaffold> {
   }
 
   Widget _centerArea(BuildContext context, {required bool landscape}) {
-    final above = _aboveRow();
+    final above = _aboveRow(withHud: !landscape);
     final actions = _actionsRow(landscape: landscape);
     return LayoutBuilder(
       builder: (ctx, area) {
@@ -514,7 +545,13 @@ class _GameScaffoldState extends State<GameScaffold> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('数据看板', style: context.body(size: CitroType.micro, color: c.inkSoft)),
+                  Text(
+                    '数据看板',
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -598,7 +635,10 @@ class _GameScaffoldState extends State<GameScaffold> {
                     ? Center(
                         child: Text(
                           '还没有人在玩',
-                          style: context.body(size: CitroType.small, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
+                          ),
                         ),
                       )
                     : ListView.separated(
@@ -680,7 +720,10 @@ class _GameScaffoldState extends State<GameScaffold> {
                     progress,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
               ],
             ),
@@ -1067,7 +1110,9 @@ class GameActionButton extends StatelessWidget {
             color: bg,
             borderRadius: BorderRadius.circular(CitroColors.radii.button),
             border: Border.all(color: border),
-            boxShadow: primary ? CitroColors.shadows.float(c) : CitroColors.shadows.sm(c),
+            boxShadow: primary
+                ? CitroColors.shadows.float(c)
+                : CitroColors.shadows.sm(c),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1198,7 +1243,10 @@ class GameLiveBar extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 8),
                     child: Text(
                       '还没有人在玩',
-                      style: context.body(size: CitroType.caption, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                     ),
                   )
                 : SingleChildScrollView(

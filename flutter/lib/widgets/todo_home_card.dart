@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ledger/ledger_widgets.dart';
 import '../services/pomodoro.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
@@ -18,38 +19,41 @@ import 'paper.dart';
 /// 小票式指标块（专注 / 连续 / 本周）。小卡只保留主指标和进度，
 /// 标准卡补两条任务与指标块，大卡自动列出更多任务。
 class TodoHomeCard extends StatelessWidget {
-  const TodoHomeCard({super.key});
+  /// 计划页里用全局品牌橙，和记账卡保持一致；首页仍保留待办模块的钢青蓝。
+  final bool globalAccent;
+
+  const TodoHomeCard({super.key, this.globalAccent = false});
 
   @override
   Widget build(BuildContext context) {
-    return TodoScope(
-      child: CitroCard(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        onTap: () => _open(context),
-        child: ListenableBuilder(
-          listenable: Listenable.merge([
-            TodoStore.instance,
-            PomodoroState.instance,
-          ]),
-          builder: (context, _) {
-            final store = TodoStore.instance;
-            final tasks = store.todayTasks;
-            final done = tasks.where((t) => t.done).length;
-            final open = tasks.where((t) => !t.done).toList();
-            return LayoutBuilder(
-              builder: (context, cons) {
-                final compact = cons.maxHeight < 150 || cons.maxWidth < 230;
-                if (compact) {
-                  return _compact(context, tasks, done, open);
-                }
-                final large = cons.maxHeight >= 250 || cons.maxWidth >= 420;
-                return _full(context, tasks, done, open, large: large);
-              },
-            );
-          },
-        ),
+    final card = CitroCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      onTap: () => _open(context),
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          TodoStore.instance,
+          PomodoroState.instance,
+        ]),
+        builder: (context, _) {
+          final store = TodoStore.instance;
+          final tasks = store.todayTasks;
+          final done = tasks.where((t) => t.done).length;
+          final open = tasks.where((t) => !t.done).toList();
+          return LayoutBuilder(
+            builder: (context, cons) {
+              final compact = cons.maxHeight < 150 || cons.maxWidth < 230;
+              if (compact) {
+                return _compact(context, tasks, done, open);
+              }
+              final large = cons.maxHeight >= 250 || cons.maxWidth >= 420;
+              return _full(context, tasks, done, open, large: large);
+            },
+          );
+        },
       ),
     );
+    // TodoScope 注入钢青蓝；计划页要的是全局橙，跳过这层。
+    return globalAccent ? card : TodoScope(child: card);
   }
 
   void _open(BuildContext context) {
@@ -336,14 +340,12 @@ class TodoHomeCard extends StatelessWidget {
 
   Widget _progress(BuildContext context, double rate) {
     final c = context.c;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(2),
-      child: LinearProgressIndicator(
-        value: rate.clamp(0.0, 1.0),
-        minHeight: 4,
-        backgroundColor: c.line2.withAlpha(90),
-        valueColor: AlwaysStoppedAnimation(c.accent),
-      ),
+    // 与记账卡同一支进度条：胶囊圆角、同一条轨道 token。
+    return LedgerProgress(
+      value: rate,
+      color: c.accent,
+      secondColor: c.danger,
+      height: 5,
     );
   }
 
@@ -408,7 +410,9 @@ class TodoHomeCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          borderRadius: BorderRadius.circular(9),
+          // 和记账卡的指标块一样带发丝边，两张卡并排时颗粒一致。
+          border: Border.all(color: c.line),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -21,7 +21,6 @@ import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
 import '../services/updater.dart';
 import '../state/app_state.dart';
-import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -267,12 +266,6 @@ class MePage extends StatelessWidget {
           icon: AppIcons.users,
           label: '黑名单',
           onTap: () => showBlockedUsersSheet(context),
-        ),
-        const _RowDivider(),
-        _SettingsRow(
-          icon: AppIcons.library,
-          label: '资源库',
-          onTap: () => openNegativeScreen(),
         ),
         if (web) ...[
           const _RowDivider(),
@@ -1007,7 +1000,7 @@ class _ThemeRow extends StatelessWidget {
     final c = context.c;
     final current = context.app.themeMode;
     return SizedBox(
-      height: 44,
+      height: 56,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -1028,13 +1021,12 @@ class _ThemeRow extends StatelessWidget {
                 color: c.ink,
               ),
             ),
-            // 三段控件只占右侧固定宽度，不再被 Expanded 拉成整行：
-            // 它是一枚分段控件，应该和系统设置里的分段控件一样紧凑。
+            // 右侧一枚图标分段控件：滑块指示当前项，不再是三段各自渐变。
             Expanded(
               child: Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
-                  width: 180,
+                  width: 132,
                   child: _ThemeSegments(
                     current: current,
                     onChanged: context.app.setThemeMode,
@@ -1060,46 +1052,66 @@ class _ThemeSegments extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
+    final modes = _ThemeRow._modes;
+    final currentIndex = modes.indexOf(current).clamp(0, modes.length - 1);
     return Container(
-      height: 30,
-      padding: const EdgeInsets.all(2),
+      height: 38,
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        children: [
-          for (final mode in _ThemeRow._modes)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(mode),
-                child: AnimatedContainer(
-                  duration: reduce ? Duration.zero : CitroMotion.indicator,
-                  curve: CitroMotion.easeColor,
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          final segW = cons.maxWidth / modes.length;
+          return Stack(
+            children: [
+              // 一枚滑块指示当前项：和 App 的胶囊按钮同一套近黑，
+              // 比三段各自渐变更利落，也更像系统分段控件。
+              AnimatedAlign(
+                duration: reduce ? Duration.zero : CitroMotion.indicator,
+                curve: CitroMotion.easeColor,
+                alignment: Alignment(
+                  -1 + 2 * currentIndex / (modes.length - 1),
+                  0,
+                ),
+                child: Container(
+                  width: segW,
                   decoration: BoxDecoration(
-                    // 选中段用品牌橙，和设置页的开关、进度条等选中态一致，
-                    // 不再各画各的（以前是近黑底，和橙色强调对不上）。
-                    color: mode == current ? c.accent : Colors.transparent,
+                    color: c.ink,
                     borderRadius: BorderRadius.circular(999),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _ThemeRow._label(mode),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: CitroType.small,
-                      weight: mode == current
-                          ? CitroType.medium
-                          : CitroType.regular,
-                      color: mode == current ? c.onAccent : c.inkSoft,
-                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+              Row(
+                children: [
+                  for (final mode in modes)
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        selected: mode == current,
+                        label: _ThemeRow._label(mode),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => onChanged(mode),
+                          child: SizedBox(
+                            height: 32,
+                            child: Center(
+                              child: AppIcon(
+                                strokeSvg(_ThemeRow._icon(mode), width: 2),
+                                size: 17,
+                                color: mode == current ? c.bg : c.ink2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -53,7 +53,8 @@ void main() {
     final slots = store.slots(key);
     final checkin = slots.firstWhere((s) => s.id == HomeCardId.checkin);
     expect(checkin.w, 3);
-    expect(checkin.h, 2);
+    // 默认布局里打卡卡是 3×3（和听隅同高，同行卡片高度成对）。
+    expect(checkin.h, 3);
     for (final other in slots) {
       if (other.key == checkin.key) continue;
       expect(checkin.overlaps(other), isFalse);

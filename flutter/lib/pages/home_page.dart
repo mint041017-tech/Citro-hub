@@ -27,6 +27,7 @@ import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
+import '../widgets/home_background.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
@@ -65,6 +66,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 本次手势到达过的最大开度，松手时按它吸附。
   double _negPeak = 0;
+
+  /// 本次下拉累计的拖拽距离：前 [_negDeadZone] 是死区，
+  /// 之后才换算成抽屉开度。避免「轻轻一拖」就误开。
+  double _negPull = 0;
+  static const double _negDeadZone = 22;
 
   /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
@@ -166,7 +172,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       media.width > media.height,
     );
     final sideNav = layout?.tabletNav ?? false;
-    final side = math.max(8.0, (width - maxWidth) / 2);
+    final side = math.max(12.0, (width - maxWidth) / 2);
 
     // 顶栏（账号 + 日期）固定占位，卡片从它下缘开始滚，两者不重叠。
     final topBarReserved = MediaQuery.paddingOf(context).top + 56;
@@ -209,21 +215,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 // 背景层：铺满全屏，固定不动，只随下拉整体下移；
                 // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
+                // 首页英雄区是白字，强制深色罩面。
                 Positioned.fill(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      IgnorePointer(
-                        child: ImageFiltered(
-                          imageFilter: ui.ImageFilter.blur(
-                            sigmaX: _bgCover * 16,
-                            sigmaY: _bgCover * 16,
-                          ),
-                          child: const _RandomCardBackground(),
-                        ),
-                      ),
-                      const IgnorePointer(child: _RandomCardBackground.scrim),
-                    ],
+                  child: IgnorePointer(
+                    child: CitroAmbientBackground(
+                      blurred: true,
+                      blurSigma: _bgCover * 16,
+                      darkScrim: true,
+                    ),
                   ),
                 ),
                 // 顶栏固定 + 下方滚动区：卡片永远从顶栏下缘开始滚，
@@ -256,7 +255,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       Padding(
                                         padding: EdgeInsets.fromLTRB(
                                           side,
-                                          4,
+                                          8,
                                           side,
                                           sideNav ? 92 : 108,
                                         ),
@@ -317,28 +316,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 顶部下拉驱动负一屏。
   ///
-  /// 用**增量**累加而不是绝对 pixels：手指拖动过程中 pixels 可能被
-  /// 回弹/重置，用绝对值会让刚拉开的面板又缩回去。同时记下整段手势里
-  /// 到达过的最大开度，松手时按峰值吸附——只要确实拽过半截，就打开。
+  /// 只有列表已经拉到顶（[_scroll.offset] 为 0）还继续往下拽才算拉手，
+  /// 列表中部往上回滚不会误开；前 [_negDeadZone] 是死区，之后按累计
+  /// 拖拽距离换算开度。松手时峰值过半、或向下的快速轻扫，才吸开。
   bool _onScrollNotification(ScrollNotification n) {
     if (n is ScrollStartNotification) {
       _negPeak = _negProgress;
-    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      _negPull = 0;
+    } else if (n is ScrollUpdateNotification &&
+        n.dragDetails != null &&
+        _scroll.hasClients &&
+        _scroll.offset <= 0.5) {
+      // 列表已到顶还继续往下拖：与 Overscroll 同一套累计。
       final d = n.scrollDelta ?? 0;
-      if (d != 0) {
-        _setNegProgress((_negProgress + (-d) / _negThreshold).clamp(0.0, 1.0));
-        if (_negProgress > _negPeak) _negPeak = _negProgress;
+      if (d < 0) {
+        _negPull += -d;
+        final target = ((_negPull - _negDeadZone) / _negThreshold).clamp(
+          0.0,
+          1.0,
+        );
+        _setNegProgress(target);
+        if (target > _negPeak) _negPeak = target;
       }
     } else if (n is OverscrollNotification &&
         n.dragDetails != null &&
-        n.overscroll < 0) {
-      _setNegProgress(
-        (_negProgress + (-n.overscroll) / _negThreshold).clamp(0.0, 1.0),
+        n.overscroll < 0 &&
+        _scroll.hasClients &&
+        _scroll.offset <= 0.5) {
+      _negPull += -n.overscroll;
+      final target = ((_negPull - _negDeadZone) / _negThreshold).clamp(
+        0.0,
+        1.0,
       );
-      if (_negProgress > _negPeak) _negPeak = _negProgress;
+      _setNegProgress(target);
+      if (target > _negPeak) _negPeak = target;
     } else if (n is ScrollEndNotification && _negProgress > 0) {
-      _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
+      final velocity = n.dragDetails?.velocity.pixelsPerSecond.dy ?? 0;
+      final open = _negPeak > 0.45 || velocity > 420;
+      _setNegProgress(open ? 1.0 : 0.0);
       _negPeak = 0;
+      _negPull = 0;
     }
     return false;
   }
@@ -359,130 +376,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     HomeCardId.game => HomeGameCard(gameKey: slot.item ?? ''),
     HomeCardId.res => HomeResCard(item: slot.item ?? ''),
   };
-}
-
-/// 首页背景：随机一张「已收藏」的卡面。
-///
-/// 没有收藏时退回 [_TimeBackground]。卡面是竖构图，
-/// BoxFit.cover 会裁掉两侧，当地图用正合适。
-class _RandomCardBackground extends StatefulWidget {
-  const _RandomCardBackground();
-
-  /// 顶部深色罩面：保证浅色文字在任意卡面上都可读。
-  /// 中间留出大面积给背景本身，上下只压出文字的对比，
-  /// 否则整张背景会被灰罩面糊成一片。
-  static const Widget scrim = DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0x80000000), Color(0x1A000000), Color(0x59000000)],
-        stops: [0, .5, 1],
-      ),
-    ),
-  );
-
-  @override
-  State<_RandomCardBackground> createState() => _RandomCardBackgroundState();
-}
-
-class _RandomCardBackgroundState extends State<_RandomCardBackground> {
-  CardFace? _face;
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_pick());
-  }
-
-  Future<void> _pick() async {
-    await CardCatalog.ensureLoaded();
-    if (!mounted) return;
-    final owned = context.app.ownedCards
-        .map((id) => CardCatalog.byId(id))
-        .whereType<CardFace>()
-        .toList();
-    setState(() {
-      _face = owned.isEmpty ? null : owned[math.Random().nextInt(owned.length)];
-      _ready = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final face = _face;
-    if (!_ready || face == null) return const _TimeBackground();
-    return Image.network(
-      face.url,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, _, _) => const _TimeBackground(),
-    );
-  }
-}
-
-/// 首页上半部分的背景：随时段变化的柔光背景图。
-///
-/// 清晨 / 白天 / 傍晚 / 夜晚四张，跨小时自动换。图很柔，
-/// 作用是给「打招呼」一块有情绪的地方，不是主角。
-class _TimeBackground extends StatefulWidget {
-  const _TimeBackground();
-
-  static String assetFor(DateTime now) {
-    final h = now.hour;
-    if (h >= 5 && h < 8) return 'assets/images/backgrounds/dawn.webp';
-    if (h >= 8 && h < 17) return 'assets/images/backgrounds/day.webp';
-    if (h >= 17 && h < 20) return 'assets/images/backgrounds/dusk.webp';
-    return 'assets/images/backgrounds/night.webp';
-  }
-
-  /// 背景图还没解码出来时的底色，顺便保证任何主题下都不会闪黑。
-  static Color baseColor() {
-    final h = DateTime.now().hour;
-    if (h >= 5 && h < 8) return const Color(0xFFFDE3C8);
-    if (h >= 8 && h < 17) return const Color(0xFFFAEEDC);
-    if (h >= 17 && h < 20) return const Color(0xFFF8C4A8);
-    return const Color(0xFF2A2E40);
-  }
-
-  @override
-  State<_TimeBackground> createState() => _TimeBackgroundState();
-}
-
-class _TimeBackgroundState extends State<_TimeBackground> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // 每分钟看一眼，跨小时就换图。
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: _TimeBackground.baseColor(),
-      child: Image.asset(
-        _TimeBackground.assetFor(DateTime.now()),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        cacheWidth: 512,
-        errorBuilder: (_, _, _) => const SizedBox.shrink(),
-      ),
-    );
-  }
 }
 
 /// 固定的顶部栏：账号入口 + 日期。

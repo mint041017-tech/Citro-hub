@@ -236,7 +236,9 @@ class TingyuPomoTicker extends StatelessWidget {
                     color: p.soft,
                     borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.chip,
+                      ),
                       onTap: onOpen,
                       child: Padding(
                         padding: EdgeInsets.symmetric(
@@ -415,10 +417,7 @@ class _TingyuTopClockState extends State<TingyuTopClock> {
       height: 1.1,
       color: p.text,
     );
-    final dateStyle = TextStyle(
-      fontSize: CitroType.caption,
-      color: p.muted,
-    );
+    final dateStyle = TextStyle(fontSize: CitroType.caption, color: p.muted);
     final timeWidth = _measureText(context, timeStyle, '88:88:88');
     final dateWidth =
         _measureText(context, dateStyle, '88.88') +
@@ -553,140 +552,147 @@ IconData categoryIcon(String category) => switch (category) {
 ThemeData buildNookTheme(bool dark) {
   final p = Palette(dark ? CitroColors.darkColors : CitroColors.light);
   final scheme =
-        ColorScheme.fromSeed(
-          seedColor: p.accent,
-          brightness: dark ? Brightness.dark : Brightness.light,
-        ).copyWith(
-          primary: p.accent,
-          onPrimary: p.onAccent,
-          surface: p.surface,
-          onSurface: p.text,
-          outline: p.border,
-        );
-    return ThemeData(
-      useMaterial3: true,
-      fontFamily: AppFonts.noto,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: p.bg,
-      textTheme: TextTheme(
-        bodyMedium: TextStyle(color: p.text, fontSize: CitroType.bodyLg, height: 1.5),
-        bodySmall: TextStyle(color: p.muted, fontSize: CitroType.label, height: 1.5),
+      ColorScheme.fromSeed(
+        seedColor: p.accent,
+        brightness: dark ? Brightness.dark : Brightness.light,
+      ).copyWith(
+        primary: p.accent,
+        onPrimary: p.onAccent,
+        surface: p.surface,
+        onSurface: p.text,
+        outline: p.border,
+      );
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: AppFonts.noto,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: p.bg,
+    textTheme: TextTheme(
+      bodyMedium: TextStyle(
+        color: p.text,
+        fontSize: CitroType.bodyLg,
+        height: 1.5,
       ),
-      dividerColor: p.border,
-      splashFactory: NoSplash.splashFactory,
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: AppFonts.noto,
-            fontSize: CitroType.bodyLg,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+      bodySmall: TextStyle(
+        color: p.muted,
+        fontSize: CitroType.label,
+        height: 1.5,
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          foregroundColor: p.text,
-          side: BorderSide(color: p.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          textStyle: const TextStyle(
-            fontFamily: AppFonts.noto,
-            fontSize: CitroType.body,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          foregroundColor: p.accent,
-          textStyle: const TextStyle(
-            fontFamily: AppFonts.noto,
-            fontSize: CitroType.body,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-      iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          foregroundColor: p.muted,
-        ),
-      ),
-      sliderTheme: SliderThemeData(
-        trackHeight: 3,
-        activeTrackColor: p.accent,
-        inactiveTrackColor: p.border,
-        thumbColor: p.accent,
-        overlayColor: p.accent.withValues(alpha: .1),
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: 15),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: p.surface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
-        hintStyle: TextStyle(color: p.muted, fontSize: CitroType.body),
-        labelStyle: TextStyle(color: p.muted, fontSize: CitroType.label),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          borderSide: BorderSide(color: p.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          borderSide: BorderSide(color: p.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          borderSide: BorderSide(color: p.accent, width: 1.5),
-        ),
-      ),
-      tooltipTheme: TooltipThemeData(
-        decoration: BoxDecoration(
-          color: p.text,
-          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
-        ),
-        textStyle: TextStyle(
-          color: p.bg,
-          fontFamily: AppFonts.noto,
-          fontSize: CitroType.caption,
-        ),
-      ),
-      popupMenuTheme: PopupMenuThemeData(
-        color: p.surface,
-        elevation: 2,
+    ),
+    dividerColor: p.border,
+    splashFactory: NoSplash.splashFactory,
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          side: BorderSide(color: p.border),
         ),
-        textStyle: TextStyle(
-          color: p.text,
+        textStyle: const TextStyle(
+          fontFamily: AppFonts.noto,
+          fontSize: CitroType.bodyLg,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        foregroundColor: p.text,
+        side: BorderSide(color: p.border),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        textStyle: const TextStyle(
           fontFamily: AppFonts.noto,
           fontSize: CitroType.body,
+          fontWeight: FontWeight.w400,
         ),
       ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: p.text,
-        contentTextStyle: TextStyle(
-          color: p.bg,
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        foregroundColor: p.accent,
+        textStyle: const TextStyle(
           fontFamily: AppFonts.noto,
-          fontSize: CitroType.label,
+          fontSize: CitroType.body,
+          fontWeight: FontWeight.w400,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CitroColors.radii.small)),
       ),
-    );
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        foregroundColor: p.muted,
+      ),
+    ),
+    sliderTheme: SliderThemeData(
+      trackHeight: 3,
+      activeTrackColor: p.accent,
+      inactiveTrackColor: p.border,
+      thumbColor: p.accent,
+      overlayColor: p.accent.withValues(alpha: .1),
+      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+      overlayShape: const RoundSliderOverlayShape(overlayRadius: 15),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: p.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      hintStyle: TextStyle(color: p.muted, fontSize: CitroType.body),
+      labelStyle: TextStyle(color: p.muted, fontSize: CitroType.label),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        borderSide: BorderSide(color: p.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        borderSide: BorderSide(color: p.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        borderSide: BorderSide(color: p.accent, width: 1.5),
+      ),
+    ),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: p.text,
+        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+      ),
+      textStyle: TextStyle(
+        color: p.bg,
+        fontFamily: AppFonts.noto,
+        fontSize: CitroType.caption,
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: p.surface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        side: BorderSide(color: p.border),
+      ),
+      textStyle: TextStyle(
+        color: p.text,
+        fontFamily: AppFonts.noto,
+        fontSize: CitroType.body,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: p.text,
+      contentTextStyle: TextStyle(
+        color: p.bg,
+        fontFamily: AppFonts.noto,
+        fontSize: CitroType.label,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+      ),
+    ),
+  );
 }
 
 class NookHome extends StatefulWidget {
@@ -751,7 +757,9 @@ class _NookHomeState extends State<NookHome> {
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CitroColors.radii.small)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+        ),
       ),
     );
   }
@@ -818,7 +826,10 @@ class _NookHomeState extends State<NookHome> {
       await showCitroDialog<bool>(
         context,
         builder: (ctx) => AlertDialog(
-          title: Text(title, style: const TextStyle(fontSize: CitroType.titleLg)),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: CitroType.titleLg),
+          ),
           content: Text(body, style: const TextStyle(height: 1.7)),
           actions: [
             TextButton(
@@ -839,7 +850,10 @@ class _NookHomeState extends State<NookHome> {
     final choice = await showCitroDialog<String>(
       context,
       builder: (ctx) => AlertDialog(
-        title: const Text('保存这份声音配方？', style: TextStyle(fontSize: CitroType.titleLg)),
+        title: const Text(
+          '保存这份声音配方？',
+          style: TextStyle(fontSize: CitroType.titleLg),
+        ),
         content: const Text('当前混音有未保存的调整。保存后，下次就能直接回来。'),
         actions: [
           TextButton(
@@ -947,7 +961,10 @@ class _NookHomeState extends State<NookHome> {
         builder: (ctx, setLocal) => sheet(ctx, '保存一份安静', [
           Text(
             '把喜欢的声音比例留下来，下次一键播放。',
-            style: TextStyle(color: Palette.of(ctx).muted, fontSize: CitroType.label),
+            style: TextStyle(
+              color: Palette.of(ctx).muted,
+              fontSize: CitroType.label,
+            ),
           ),
           const SizedBox(height: 24),
           TextField(
@@ -978,10 +995,16 @@ class _NookHomeState extends State<NookHome> {
           if (c.hasTimer)
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('保存建议计时', style: TextStyle(fontSize: CitroType.bodyLg)),
+              title: const Text(
+                '保存建议计时',
+                style: TextStyle(fontSize: CitroType.bodyLg),
+              ),
               subtitle: Text(
                 '保存时长与淡出，不保存剩余时间',
-                style: TextStyle(fontSize: CitroType.label, color: Palette.of(ctx).muted),
+                style: TextStyle(
+                  fontSize: CitroType.label,
+                  color: Palette.of(ctx).muted,
+                ),
               ),
               value: withTimer,
               onChanged: (v) => setLocal(() => withTimer = v),
@@ -989,10 +1012,16 @@ class _NookHomeState extends State<NookHome> {
           if (c.favoriteId != null)
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('更新原组合', style: TextStyle(fontSize: CitroType.bodyLg)),
+              title: const Text(
+                '更新原组合',
+                style: TextStyle(fontSize: CitroType.bodyLg),
+              ),
               subtitle: Text(
                 '关闭后另存为新组合',
-                style: TextStyle(fontSize: CitroType.label, color: Palette.of(ctx).muted),
+                style: TextStyle(
+                  fontSize: CitroType.label,
+                  color: Palette.of(ctx).muted,
+                ),
               ),
               value: update,
               onChanged: (v) => setLocal(() => update = v),
@@ -1032,7 +1061,9 @@ class _NookHomeState extends State<NookHome> {
     return Container(
       decoration: BoxDecoration(
         color: p.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.card),
+        ),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(ctx).height * .92,
@@ -1180,7 +1211,10 @@ class _NookHomeState extends State<NookHome> {
             const SizedBox(height: 22),
             const Text(
               '结束前渐弱',
-              style: TextStyle(fontSize: CitroType.bodyLg, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: CitroType.bodyLg,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -1232,7 +1266,10 @@ class _NookHomeState extends State<NookHome> {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   validation!,
-                  style: TextStyle(fontSize: CitroType.label, color: Palette.of(ctx).error),
+                  style: TextStyle(
+                    fontSize: CitroType.label,
+                    color: Palette.of(ctx).error,
+                  ),
                 ),
               ),
             const SizedBox(height: 22),
@@ -1383,6 +1420,9 @@ class _NookHomeState extends State<NookHome> {
       builder: (context, constraints) {
         final desktop = constraints.maxWidth >= 850;
         final wide = constraints.maxWidth >= 1200;
+        // 迷你播放器：手机上「此刻」页不显示（内容里已有大播放钮），
+        // 其余页常驻；桌面 850–1200 有左侧栏时也常驻。
+        final showMini = (desktop && !wide) || (!desktop && page != 0);
         return Scaffold(
           body: SafeArea(
             top: !desktop,
@@ -1441,14 +1481,16 @@ class _NookHomeState extends State<NookHome> {
                                                   desktop ? 34 : 20,
                                                   desktop ? 32 : 14,
                                                   desktop ? 34 : 20,
-                                                  // 手机上有浮动玻璃导航条，底部多留一截。
-                                                  desktop ? 34 : 72,
+                                                  // 手机上浮动玻璃条 + 迷你播放器都要让开。
+                                                  desktop
+                                                      ? 34
+                                                      : (showMini ? 160 : 72),
                                                 ),
                                                 child: ConstrainedBox(
                                                   constraints:
                                                       const BoxConstraints(
-                                                    maxWidth: 1050,
-                                                  ),
+                                                        maxWidth: 1050,
+                                                      ),
                                                   child: switch (page) {
                                                     1 => pomodoroPage(
                                                       context,
@@ -1456,13 +1498,24 @@ class _NookHomeState extends State<NookHome> {
                                                     ),
                                                     2 => libraryPage(context),
                                                     4 => settingsPage(context),
-                                                    _ => homePage(context, wide),
+                                                    _ => homePage(
+                                                      context,
+                                                      wide,
+                                                    ),
                                                   },
                                                 ),
                                               ),
                                       ),
                               ),
                             ),
+                            // 迷你播放器浮在玻璃条上方，跟着页面走。
+                            if (showMini)
+                              Positioned(
+                                left: 16,
+                                right: 16,
+                                bottom: !desktop ? 72 : 8,
+                                child: miniPlayer(context),
+                              ),
                             if (!desktop)
                               GlassTabBar(
                                 tabs: const [],
@@ -1511,9 +1564,6 @@ class _NookHomeState extends State<NookHome> {
                           ],
                         ),
                       ),
-                      // 迷你播放器在玻璃条上方，跟着页面走（桌面窄栏也保留）。
-                      if ((desktop && !wide) || (!desktop && page != 0))
-                        miniPlayer(context),
                     ],
                   ),
                 ),
@@ -1673,9 +1723,13 @@ class _NookHomeState extends State<NookHome> {
                   selected: page == i,
                   child: Material(
                     color: page == i ? p.soft : Colors.transparent,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.small,
+                    ),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                       onTap: () => setState(() => page = i),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1760,7 +1814,10 @@ class _NookHomeState extends State<NookHome> {
                 Expanded(
                   child: Text(
                     '呼吸',
-                    style: TextStyle(fontSize: CitroType.bodyLg, color: p.muted),
+                    style: TextStyle(
+                      fontSize: CitroType.bodyLg,
+                      color: p.muted,
+                    ),
                   ),
                 ),
                 Container(
@@ -1814,9 +1871,13 @@ class _NookHomeState extends State<NookHome> {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Material(
                     color: p.soft,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.inner,
+                    ),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.inner,
+                      ),
                       onTap: () => openPage(1),
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
@@ -1901,7 +1962,11 @@ class _NookHomeState extends State<NookHome> {
                 const SizedBox(height: 8),
                 Text(
                   subtitle,
-                  style: TextStyle(color: p.muted, fontSize: CitroType.label, height: 1.45),
+                  style: TextStyle(
+                    color: p.muted,
+                    fontSize: CitroType.label,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -2038,7 +2103,11 @@ class _NookHomeState extends State<NookHome> {
             const SizedBox(height: 8),
             Text(
               '提示：计时在切换到其他页面或后台后仍会继续；系统仍可能因省电策略暂停音频，请勿将计时用作系统闹钟。',
-              style: TextStyle(fontSize: CitroType.caption, color: p.muted, height: 1.7),
+              style: TextStyle(
+                fontSize: CitroType.caption,
+                color: p.muted,
+                height: 1.7,
+              ),
             ),
           ],
         );
@@ -2230,11 +2299,18 @@ class _NookHomeState extends State<NookHome> {
         secondary: Icon(icon, size: 20, color: p.muted),
         title: Text(
           title,
-          style: const TextStyle(fontSize: CitroType.body, fontWeight: FontWeight.w400),
+          style: const TextStyle(
+            fontSize: CitroType.body,
+            fontWeight: FontWeight.w400,
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: CitroType.meta, color: p.muted, height: 1.5),
+          style: TextStyle(
+            fontSize: CitroType.meta,
+            color: p.muted,
+            height: 1.5,
+          ),
         ),
         value: value,
         onChanged: onChanged,
@@ -2310,7 +2386,10 @@ class _NookHomeState extends State<NookHome> {
           ),
         ),
         const SizedBox(height: 3),
-        Text(label, style: TextStyle(fontSize: CitroType.caption, color: p.muted)),
+        Text(
+          label,
+          style: TextStyle(fontSize: CitroType.caption, color: p.muted),
+        ),
       ],
     );
   }
@@ -2349,7 +2428,9 @@ class _NookHomeState extends State<NookHome> {
                             : i == 6
                             ? color
                             : color.withValues(alpha: .45),
-                        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.xs,
+                        ),
                       ),
                     ),
                   ),
@@ -2507,12 +2588,19 @@ class _NookHomeState extends State<NookHome> {
                 children: [
                   const Text(
                     '长休息间隔',
-                    style: TextStyle(fontSize: CitroType.body, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: CitroType.body,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '每完成 ${state.longEvery} 轮专注，进入一次长休息。',
-                    style: TextStyle(fontSize: CitroType.meta, color: p.muted, height: 1.5),
+                    style: TextStyle(
+                      fontSize: CitroType.meta,
+                      color: p.muted,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -2571,7 +2659,10 @@ class _NookHomeState extends State<NookHome> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: CitroType.body, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            fontSize: CitroType.body,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -2600,7 +2691,10 @@ class _NookHomeState extends State<NookHome> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               '当前为自定义时长',
-              style: TextStyle(fontSize: CitroType.caption, color: Palette.of(context).muted),
+              style: TextStyle(
+                fontSize: CitroType.caption,
+                color: Palette.of(context).muted,
+              ),
             ),
           ),
       ],
@@ -2755,7 +2849,10 @@ class _NookHomeState extends State<NookHome> {
               const Expanded(
                 child: Text(
                   '当前声音',
-                  style: TextStyle(fontSize: CitroType.title, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: CitroType.title,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Text(
@@ -2781,7 +2878,10 @@ class _NookHomeState extends State<NookHome> {
             const Expanded(
               child: Text(
                 '为此刻，选一套声音',
-                style: TextStyle(fontSize: CitroType.title, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: CitroType.title,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             TextButton(
@@ -2826,7 +2926,11 @@ class _NookHomeState extends State<NookHome> {
                 kIsWeb
                     ? '网页版在锁屏或切换应用后可能暂停声音；请勿将计时用作闹钟。'
                     : '离开此页后声音仍会继续；锁屏与后台表现取决于系统省电策略，请勿将计时用作闹钟。',
-                style: TextStyle(fontSize: CitroType.caption, color: p.muted, height: 1.6),
+                style: TextStyle(
+                  fontSize: CitroType.caption,
+                  color: p.muted,
+                  height: 1.6,
+                ),
               ),
             ),
           ],
@@ -2923,7 +3027,10 @@ class _NookHomeState extends State<NookHome> {
                   const Spacer(),
                   Text(
                     '${scene.minutes} 分钟',
-                    style: TextStyle(color: p.muted, fontSize: CitroType.caption),
+                    style: TextStyle(
+                      color: p.muted,
+                      fontSize: CitroType.caption,
+                    ),
                   ),
                 ],
               ),
@@ -2940,7 +3047,10 @@ class _NookHomeState extends State<NookHome> {
                   const SizedBox(height: 5),
                   Text(
                     scene.subtitle,
-                    style: TextStyle(fontSize: CitroType.caption, color: p.muted),
+                    style: TextStyle(
+                      fontSize: CitroType.caption,
+                      color: p.muted,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2968,7 +3078,10 @@ class _NookHomeState extends State<NookHome> {
             Icon(icon, size: 14, color: p.muted),
             const SizedBox(width: 5),
           ],
-          Text(text, style: TextStyle(fontSize: CitroType.caption, color: p.muted)),
+          Text(
+            text,
+            style: TextStyle(fontSize: CitroType.caption, color: p.muted),
+          ),
         ],
       ),
     );
@@ -3024,7 +3137,10 @@ class _NookHomeState extends State<NookHome> {
               const Expanded(
                 child: Text(
                   '当前混音',
-                  style: TextStyle(fontSize: CitroType.title, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: CitroType.title,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               playButton(context, size: 48),
@@ -3060,7 +3176,11 @@ class _NookHomeState extends State<NookHome> {
             padding: const EdgeInsets.symmetric(vertical: 22),
             child: Text(
               '还没有声音。\n选几种，调成自己的环境。',
-              style: TextStyle(color: p.muted, fontSize: CitroType.label, height: 1.7),
+              style: TextStyle(
+                color: p.muted,
+                fontSize: CitroType.label,
+                height: 1.7,
+              ),
             ),
           ),
         ...c.tracks.map((t) => trackRow(context, t)),
@@ -3136,7 +3256,10 @@ class _NookHomeState extends State<NookHome> {
                           if (c.hasTimer)
                             Text(
                               '${endClockText(c.remaining)} 结束',
-                              style: TextStyle(fontSize: CitroType.caption, color: p.accent),
+                              style: TextStyle(
+                                fontSize: CitroType.caption,
+                                color: p.accent,
+                              ),
                             ),
                         ],
                       ),
@@ -3282,7 +3405,10 @@ class _NookHomeState extends State<NookHome> {
           }
 
           return sheet(ctx, sound.name, [
-            Text('精确调整这一轨的音量', style: TextStyle(color: p.muted, fontSize: CitroType.label)),
+            Text(
+              '精确调整这一轨的音量',
+              style: TextStyle(color: p.muted, fontSize: CitroType.label),
+            ),
             const SizedBox(height: 22),
             Center(
               child: Text(
@@ -3368,7 +3494,9 @@ class _NookHomeState extends State<NookHome> {
               children: [
                 Expanded(
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.small,
+                    ),
                     onTap: () => setState(() => page = 0),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -3488,7 +3616,10 @@ class _NookHomeState extends State<NookHome> {
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          label: Text(v, style: const TextStyle(fontSize: CitroType.label)),
+                          label: Text(
+                            v,
+                            style: const TextStyle(fontSize: CitroType.label),
+                          ),
                           selected: category == v,
                           showCheckmark: false,
                           selectedColor: p.soft,
@@ -3553,7 +3684,11 @@ class _NookHomeState extends State<NookHome> {
                   c.supportsImport
                       ? '音频只保存在${kIsWeb ? "此浏览器" : "此设备"}，不会上传。支持常见音频格式，单个文件不超过 50 MB，时长 5 秒到 10 分钟。'
                       : '当前客户端暂未开放本地导入；内置自然录音、合成噪声和场景预设都可以直接使用。',
-                  style: TextStyle(fontSize: CitroType.label, color: p.muted, height: 1.6),
+                  style: TextStyle(
+                    fontSize: CitroType.label,
+                    color: p.muted,
+                    height: 1.6,
+                  ),
                 ),
                 if (c.supportsImport) ...[
                   const SizedBox(height: 16),
@@ -3613,7 +3748,11 @@ class _NookHomeState extends State<NookHome> {
         const SizedBox(height: 22),
         Text(
           '环境录音与合成音色已分别标注。试听会暂时暂停当前混音，8 秒后恢复。',
-          style: TextStyle(fontSize: CitroType.caption, color: p.muted, height: 1.6),
+          style: TextStyle(
+            fontSize: CitroType.caption,
+            color: p.muted,
+            height: 1.6,
+          ),
         ),
       ],
     );
@@ -3653,7 +3792,9 @@ class _NookHomeState extends State<NookHome> {
                     height: 44,
                     decoration: BoxDecoration(
                       color: p.subtle,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                     ),
                     child: Icon(sound.icon, size: 26, color: tint),
                   ),
@@ -3675,7 +3816,11 @@ class _NookHomeState extends State<NookHome> {
               const SizedBox(height: 4),
               Text(
                 sound.description,
-                style: TextStyle(fontSize: CitroType.label, color: p.muted, height: 1.4),
+                style: TextStyle(
+                  fontSize: CitroType.label,
+                  color: p.muted,
+                  height: 1.4,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -3792,7 +3937,10 @@ class _NookHomeState extends State<NookHome> {
                     const SizedBox(height: 6),
                     Text(
                       '${sound.category} · $source',
-                      style: TextStyle(fontSize: CitroType.label, color: p.muted),
+                      style: TextStyle(
+                        fontSize: CitroType.label,
+                        color: p.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -3887,13 +4035,20 @@ class _NookHomeState extends State<NookHome> {
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(fontSize: CitroType.titleLg, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: CitroType.titleLg,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: p.muted, fontSize: CitroType.label, height: 1.6),
+              style: TextStyle(
+                color: p.muted,
+                fontSize: CitroType.label,
+                height: 1.6,
+              ),
             ),
           ],
         ),
@@ -3955,7 +4110,8 @@ class _NookHomeState extends State<NookHome> {
               horizontal,
               0,
               horizontal,
-              desktop ? 34 : 72,
+              // 迷你播放器浮在玻璃条上方，收藏页也要给它让开。
+              desktop ? 34 : 160,
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1050),
@@ -4035,7 +4191,9 @@ class _NookHomeState extends State<NookHome> {
                             height: 48,
                             decoration: BoxDecoration(
                               color: p.subtle,
-                              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                              borderRadius: BorderRadius.circular(
+                                CitroColors.radii.inner,
+                              ),
                             ),
                             child: Icon(
                               tracks.isEmpty
@@ -4134,7 +4292,9 @@ class _NookHomeState extends State<NookHome> {
                               ),
                               decoration: BoxDecoration(
                                 color: p.subtle,
-                                borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.xs,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -4185,7 +4345,10 @@ class _NookHomeState extends State<NookHome> {
       context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('重命名', style: TextStyle(fontSize: CitroType.titleLg)),
+          title: const Text(
+            '重命名',
+            style: TextStyle(fontSize: CitroType.titleLg),
+          ),
           content: TextField(
             controller: input,
             autofocus: true,
@@ -4233,12 +4396,19 @@ class _NookHomeState extends State<NookHome> {
         settingSection(context, '播放', [
           const Text(
             '默认渐弱',
-            style: TextStyle(fontSize: CitroType.body, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: CitroType.body,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             '新建计时时默认使用，只影响新计时，不改变正在运行的计时。',
-            style: TextStyle(fontSize: CitroType.label, color: p.muted, height: 1.5),
+            style: TextStyle(
+              fontSize: CitroType.label,
+              color: p.muted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -4294,7 +4464,11 @@ class _NookHomeState extends State<NookHome> {
               c.supportsImport
                   ? '还没有导入声音。你可以把自己的环境音收进来。'
                   : '当前客户端使用内置声音；本地导入在 Web 端可用。',
-              style: TextStyle(fontSize: CitroType.label, color: p.muted, height: 1.6),
+              style: TextStyle(
+                fontSize: CitroType.label,
+                color: p.muted,
+                height: 1.6,
+              ),
             ),
           ...c.locals.map(
             (l) => ListTile(
@@ -4330,7 +4504,11 @@ class _NookHomeState extends State<NookHome> {
           const SizedBox(height: 12),
           Text(
             '清除网站数据会删除收藏和导入副本。不同浏览器或不同端口的数据不互通。',
-            style: TextStyle(fontSize: CitroType.caption, color: p.muted, height: 1.6),
+            style: TextStyle(
+              fontSize: CitroType.caption,
+              color: p.muted,
+              height: 1.6,
+            ),
           ),
         ]),
         settingSection(context, '关于听隅', [
@@ -4351,7 +4529,10 @@ class _NookHomeState extends State<NookHome> {
                 children: [
                   const Text(
                     '听隅',
-                    style: TextStyle(fontSize: CitroType.bodyLg, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: CitroType.bodyLg,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -4420,7 +4601,10 @@ class _NookHomeState extends State<NookHome> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: CitroType.title, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: CitroType.title,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 18),
           ...children,
@@ -4455,7 +4639,11 @@ class _NookHomeState extends State<NookHome> {
               const SizedBox(height: 6),
               Text(
                 content,
-                style: TextStyle(fontSize: CitroType.label, color: p.muted, height: 1.7),
+                style: TextStyle(
+                  fontSize: CitroType.label,
+                  color: p.muted,
+                  height: 1.7,
+                ),
               ),
             ],
           ),
@@ -4724,7 +4912,9 @@ class _BreathingPageState extends State<BreathingPage>
                               ),
                               decoration: BoxDecoration(
                                 color: p.surface.withValues(alpha: .72),
-                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.chip,
+                                ),
                                 border: Border.all(color: p.border),
                               ),
                               child: Row(
@@ -4854,7 +5044,8 @@ class _BreathingPageState extends State<BreathingPage>
                                                       textAlign:
                                                           TextAlign.center,
                                                       style: TextStyle(
-                                                        fontSize: CitroType.display,
+                                                        fontSize:
+                                                            CitroType.display,
                                                         fontWeight:
                                                             FontWeight.w400,
                                                         letterSpacing: 4,
@@ -4883,7 +5074,8 @@ class _BreathingPageState extends State<BreathingPage>
                                                     phaseHint,
                                                     textAlign: TextAlign.center,
                                                     style: TextStyle(
-                                                      fontSize: CitroType.caption,
+                                                      fontSize:
+                                                          CitroType.caption,
                                                       height: 1.65,
                                                       color: p.muted,
                                                     ),
@@ -4966,7 +5158,9 @@ class _BreathingPageState extends State<BreathingPage>
                           ),
                           decoration: BoxDecoration(
                             color: p.surface.withValues(alpha: .82),
-                            borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.card,
+                            ),
                             border: Border.all(color: p.border),
                             boxShadow: [
                               BoxShadow(

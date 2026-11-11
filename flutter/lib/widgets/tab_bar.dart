@@ -186,10 +186,11 @@ class _TabContent extends StatelessWidget {
   }
 }
 
-/// CICI 的圆形头像按钮：整个 App 唯一的 AI 入口。
+/// CICI 的圆形玻璃入口：整个 App 唯一的 AI 入口。
 ///
-/// 头像是 CICI 自己的（`assets/images/cici_avatar.webp`），不是登录用户的，
-/// 这样它在任何账号下都是同一个助手形象。
+/// 用品牌橙的火花图标，不再放头像：头像是「人」的形象，
+/// 放在导航栏里会和右侧的用户头像混淆；火花是 CiCi 的视觉符号，
+/// 在弹层回退与网页入口也用的是它。
 class CiciAvatarButton extends StatelessWidget {
   final double size;
   final VoidCallback onTap;
@@ -208,22 +209,16 @@ class CiciAvatarButton extends StatelessWidget {
         hoverLift: 0,
         hoverShadow: false,
         borderRadius: BorderRadius.circular(size / 2),
-        // 头像按钮也做成玻璃：圆形玻璃底 + 头像，无边框（见 CitroLiquidGlass）。
         child: CitroLiquidGlass(
           width: size,
           height: size,
           radius: size / 2,
           clipBehavior: Clip.antiAlias,
-          child: Image.asset(
-            'assets/images/cici_avatar.webp',
-            fit: BoxFit.cover,
-            cacheWidth: (size * 2).round(),
-            errorBuilder: (_, _, _) => Center(
-              child: AppIcon(
-                strokeSvg(AppIcons.sparkle, width: 2),
-                size: size * .38,
-                color: c.accent,
-              ),
+          child: Center(
+            child: AppIcon(
+              strokeSvg(AppIcons.sparkle, width: 2),
+              size: size * .38,
+              color: c.accentInk,
             ),
           ),
         ),
