@@ -56,6 +56,8 @@ flutter:
     - assets/images/cats/
     # 首页上半部分的时间背景图（清晨 / 白天 / 傍晚 / 夜晚）
     - assets/images/backgrounds/
+    # 卡面原图（1728×2304 压到 1200×1600 WebP，共 111 张）
+    - assets/card/
     - assets/cards_index.json
     # 极限刹车原始版（shache.org，three.js 构建产物）——用 WebView 内嵌
     - assets/shache/

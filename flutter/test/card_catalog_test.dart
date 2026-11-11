@@ -18,8 +18,9 @@ void main() {
     expect(CardCatalog.all.length, greaterThan(100));
     expect(CardCatalog.inCategory('cici').length, 30);
     expect(CardCatalog.byId('cici/1'), isNotNull);
-    expect(CardCatalog.byId('cici/1')!.url,
-        'https://obs.chimu-claw.xyz/card/cici/1.webp');
+    // 卡面原图已打包进包内，目录里指向 assets/card/。
+    expect(CardCatalog.byId('cici/1')!.isAsset, isTrue);
+    expect(CardCatalog.byId('cici/1')!.asset, 'assets/card/cici_1.webp');
   });
 
   test('today card stays stable and transfer rerolls it', () async {

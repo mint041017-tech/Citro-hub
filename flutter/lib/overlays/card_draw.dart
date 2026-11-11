@@ -30,27 +30,44 @@ class CardFaceImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.network(
-      card.url,
-      fit: fit,
-      cacheWidth: cacheWidth?.round(),
-      filterQuality: FilterQuality.medium,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, sync) {
-        if (sync) return child;
-        return AnimatedOpacity(
-          opacity: frame == null ? 0 : 1,
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-          child: child,
-        );
-      },
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return const _CardImagePlaceholder();
-      },
-      errorBuilder: (_, __, ___) => const _CardImagePlaceholder(),
-    );
+    // 卡面原图已打包进包内（assets/card/），直接读本地，不再走网络。
+    final ImageFrameBuilder frameBuilder =
+        (BuildContext context, Widget child, int? frame, bool sync) {
+      if (sync) return child;
+      return AnimatedOpacity(
+        opacity: frame == null ? 0 : 1,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        child: child,
+      );
+    };
+    final errorBuilder = (_, __, ___) => const _CardImagePlaceholder();
+    final Image image;
+    if (card.isAsset) {
+      image = Image.asset(
+        card.asset,
+        fit: fit,
+        cacheWidth: cacheWidth?.round(),
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        frameBuilder: frameBuilder,
+        errorBuilder: errorBuilder,
+      );
+    } else {
+      image = Image.network(
+        card.url,
+        fit: fit,
+        cacheWidth: cacheWidth?.round(),
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        frameBuilder: frameBuilder,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const _CardImagePlaceholder();
+        },
+        errorBuilder: errorBuilder,
+      );
+    }
     if (borderRadius == null) return image;
     return ClipRRect(borderRadius: borderRadius!, child: image);
   }

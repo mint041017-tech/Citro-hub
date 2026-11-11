@@ -465,8 +465,8 @@ class _CiciComposerState extends State<CiciComposer> {
       scale: .92,
       borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
       child: Container(
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: active ? c.ink : Colors.transparent,
           shape: BoxShape.circle,
@@ -491,7 +491,7 @@ class _CiciComposerState extends State<CiciComposer> {
             onPointerUp: (_) => _endHold(),
             onPointerCancel: (_) => _endHold(abort: true),
             child: Container(
-              height: 34,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: _slideCancel
@@ -514,7 +514,7 @@ class _CiciComposerState extends State<CiciComposer> {
         : TextField(
             controller: widget.controller,
             textInputAction: TextInputAction.send,
-            style: context.ui(size: CitroType.body),
+            style: context.ui(size: CitroType.bodyLg),
             decoration: InputDecoration(
               isDense: true,
               border: InputBorder.none,
@@ -537,7 +537,7 @@ class _CiciComposerState extends State<CiciComposer> {
         MediaQuery.paddingOf(context).bottom + 8,
       ),
       child: Container(
-        height: 44,
+        height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           // 输入框固定白色（深色主题下用浅卡面），和四色底拉开层次。
@@ -585,7 +585,13 @@ class _CiciComposerState extends State<CiciComposer> {
                 ),
               ),
             ),
-            if (!_voiceMode)
+            // 语音模式下右侧换成「键盘」按钮，点一下切回文字输入。
+            if (_voiceMode)
+              round(
+                AppIcons.keyboard,
+                onTap: widget.sending ? null : () => _toggleVoice(),
+              )
+            else
               round(
                 AppIcons.send,
                 onTap: widget.sending ? null : widget.onSend,

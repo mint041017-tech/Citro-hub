@@ -24,6 +24,12 @@ class CardFace {
   final int width;
   final int height;
 
+  /// 是否已打包进安装包（assets/ 开头）。
+  bool get isAsset => file.startsWith('assets/');
+
+  /// 本地资源路径；网络图为空。
+  String get asset => isAsset ? file : '';
+
   String get url {
     final encoded = file.split('/').map(Uri.encodeComponent).join('/');
     return '${CardCatalog.base}/$encoded';

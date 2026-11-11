@@ -69,14 +69,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 本次下拉累计的拖拽距离。
   double _negPull = 0;
 
-  /// 阻尼系数：抽屉行程只走手指的 85%，手感更「沉」，不会一点就飞。
-  static const double _negDamping = 0.85;
+  /// 阻尼系数：抽屉行程走手指的 95%，几乎跟手但略带重量。
+  static const double _negDamping = 0.95;
 
-  /// 到达这个开度就自动弹开（不用再松手）。
-  static const double _negOpenAt = 0.6;
+  /// 到达这个开度就自动弹开（不用再松手）——很低，轻轻一拖就开。
+  static const double _negOpenAt = 0.35;
 
-  /// 松手时超过这个开度就吸开，否则吸回。
-  static const double _negSnapAt = 0.4;
+  /// 松手时超过这个开度就吸开，否则立刻吸回（不停顿）。
+  static const double _negSnapAt = 0.3;
 
   /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
@@ -156,7 +156,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _negAuto = controller;
     controller.addListener(() => _setNegProgress(controller.value));
     final simulation = SpringSimulation(
-      SpringDescription(mass: 1, stiffness: 220, damping: 28),
+      // 回弹要快、要干脆：刚度大、阻尼略低于临界，几乎不停顿。
+      SpringDescription(mass: 1, stiffness: 340, damping: 32),
       from,
       target,
       0,

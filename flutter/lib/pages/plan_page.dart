@@ -80,11 +80,11 @@ class PlanPage extends StatelessWidget {
   }
 }
 
-/// 计划页的「今天」卡：只显示当天，不铺整月格子。
+/// 计划页的「今天」卡：本周 7 天 + 节日 / 节气 / 农历 / 倒数日。
 ///
-/// 横排布局：左边大日期，右边星期 / 农历 / 节日，整卡固定 108 高，
-/// 点一下进完整月历。以前这里塞的是整宽月历（330–470 高），
-/// 在竖排计划页里过于抢戏，现在收缩成一条日期条。
+/// 以前只放一条日期条，看不出「今天是这一周的第几天」，也看不到邻近几天
+/// 有什么节日。现在改成横排一周：每天一格，格下写节日 / 节气 / 农历，
+/// 有倒数日 / 纪念日的小圆点也标出来。
 class _TodayCard extends StatelessWidget {
   const _TodayCard();
 
@@ -92,99 +92,138 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final now = DateTime.now();
-    final lunar = lunarOf(now);
+    final today = DateTime(now.year, now.month, now.day);
+    // 本周日 → 本周六
+    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
     final fid = festivalIdOf(now);
     final term = termToday(now);
-    final weekday = weekdayChinese(now);
-    final headline = fid != null ? festivalName(fid) : (term ?? weekday);
-    final lunarText = lunar?.name ?? '';
-    final sub = [weekday, lunarText].where((s) => s.isNotEmpty).join(' · ');
+    final headline = (fid != null ? festivalName(fid) : null) ??
+        term ??
+        weekdayChinese(now);
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       onTap: () => Navigator.of(context).pushNamed('/calendar'),
-      child: SizedBox(
-        height: 84,
-        child: Row(
-          children: [
-            // 和记账卡一样用一枚品牌橙的图标开场，颜色语言统一。
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: c.accentLt.withAlpha(c.dark ? 70 : 170),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(AppIcons.calendar, width: 2),
-                  size: 17,
-                  color: c.accentInk,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: AppIcon(
+                    strokeSvg(AppIcons.calendar, width: 2),
+                    size: 15,
+                    color: c.accentInk,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.x2),
-            SizedBox(
-              width: 88,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${now.day}',
-                    style: context.hand(
-                      size: 44,
-                      weight: CitroType.strong,
-                      color: c.ink,
-                      height: .95,
-                    ),
-                  ),
-                  Text(
-                    '${now.year} / ${now.month}',
-                    style: context.body(
-                      size: CitroType.micro,
-                      color: c.inkSoft,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: AppSpacing.x2),
+              Text(
+                '${now.month} 月 ${now.day} 日 · $headline',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.body(
+                  size: CitroType.bodyLg,
+                  weight: CitroType.medium,
+                  color: c.ink,
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.x2),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    headline,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: CitroType.bodyLg,
-                      weight: CitroType.medium,
-                      color: c.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: CitroType.small,
-                      color: c.inkSoft,
-                    ),
-                  ),
-                ],
+              const Spacer(),
+              AppIcon(
+                strokeSvg(AppIcons.chevronRight, width: 2),
+                size: 16,
+                color: c.inkSoft,
               ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (var i = 0; i < 7; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: _WeekCell(date: startOfWeek.add(Duration(days: i)), today: today),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 一周里的一天：日期 + 节日 / 节气 / 农历，今天高亮。
+class _WeekCell extends StatelessWidget {
+  const _WeekCell({required this.date, required this.today});
+
+  final DateTime date;
+  final DateTime today;
+
+  static const _wd = ['日', '一', '二', '三', '四', '五', '六'];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final isToday = date == today;
+    final fid = festivalIdOf(date);
+    final term = termToday(date);
+    final lunar = lunarOf(date);
+    String? label;
+    Color? labelColor;
+    if (fid != null) {
+      label = festivalName(fid);
+      labelColor = c.accentInk;
+    } else if (term != null) {
+      label = term;
+      labelColor = c.mintInk;
+    } else if (lunar != null) {
+      label = lunar.day == 1
+          ? lunar.name
+          : lunar.name.substring(lunar.name.length - 2);
+      labelColor = c.inkSoft;
+    }
+    final fg = isToday ? c.onAccent : c.ink;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: isToday ? c.accent : c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        border: Border.all(color: isToday ? c.accent : c.line),
+      ),
+      child: Column(
+        children: [
+          Text(
+            _wd[date.weekday % 7],
+            style: context.body(
+              size: CitroType.micro,
+              color: isToday ? c.onAccent.withAlpha(200) : c.inkSoft,
             ),
-            const SizedBox(width: AppSpacing.x1),
-            AppIcon(
-              strokeSvg(AppIcons.chevronRight, width: 2),
-              size: 18,
-              color: c.inkSoft,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${date.day}',
+            style: context.heading(
+              size: CitroType.bodyLg,
+              color: fg,
+            ).copyWith(fontWeight: isToday ? CitroType.strong : CitroType.medium),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.body(
+              size: CitroType.micro,
+              color: isToday ? c.onAccent : labelColor ?? c.inkSoft,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

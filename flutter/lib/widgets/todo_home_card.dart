@@ -102,7 +102,8 @@ class TodoHomeCard extends StatelessWidget {
             Text(
               '待办',
               style: context.heading(
-                size: 13,
+                // 和记账卡标题同档（记账用 label+2 = 16）。
+                size: CitroType.bodyLg,
                 color: c.accentInk,
                 letterSpacing: .3,
               ),
@@ -211,7 +212,7 @@ class TodoHomeCard extends StatelessWidget {
             Text(
               '待办',
               style: context.heading(
-                size: 13,
+                size: CitroType.bodyLg,
                 color: c.accentInk,
                 letterSpacing: .3,
               ),

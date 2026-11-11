@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 
 import '../data/cards.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
 
 /// 背景图的信息：资源、原始尺寸、底部提取色。
 class _BgInfo {
@@ -24,15 +25,18 @@ class _BgInfo {
 /// 图只占上半部（按原始比例缩到屏宽，绝不放大），
 /// 未覆盖的下方区域从图底颜色渐变到主题底，避免直接一刀切。
 class CitroBlendImage extends StatefulWidget {
-  const CitroBlendImage({super.key, this.networkUrl});
+  const CitroBlendImage({super.key, this.networkUrl, this.asset});
 
   /// 背景图下边缘相对屏幕顶部的距离（像素）。
   ///
   /// 首页用它决定卡片区的起始高度：卡片区正好从图的下边缘开始。
   static final ValueNotifier<double> bottomEdge = ValueNotifier(0);
 
-  /// 为空时用时段背景图（asset）。
+  /// 网络图地址；为空时用 [asset] 或时段背景图。
   final String? networkUrl;
+
+  /// 包内资源路径（assets/card/...）；优先于 [networkUrl]。
+  final String? asset;
 
   @override
   State<CitroBlendImage> createState() => _CitroBlendImageState();
@@ -54,14 +58,16 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   @override
   void didUpdateWidget(CitroBlendImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.networkUrl != widget.networkUrl) {
+    if (oldWidget.networkUrl != widget.networkUrl ||
+        oldWidget.asset != widget.asset) {
       _future = _load();
     }
   }
 
   Future<_BgInfo> _load() async {
-    final url = widget.networkUrl;
-    final key = url ?? CitroTimeBackground.assetFor(DateTime.now());
+    final key = widget.asset ??
+        widget.networkUrl ??
+        CitroTimeBackground.assetFor(DateTime.now());
     final hit = _cache[key];
     if (hit != null) return Future.value(hit);
     final info = await _decode(key);
@@ -126,14 +132,13 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
 
   @override
   Widget build(BuildContext context) {
-    final base = CitroTimeBackground.baseColor();
     return FutureBuilder<_BgInfo>(
       future: _future,
       builder: (context, snap) {
         final info = snap.data;
-        final bottom = info?.bottom ?? base;
         final size = info?.size ?? Size.zero;
         final url = widget.networkUrl;
+        final asset = widget.asset;
         // 图按原始比例缩到屏宽（不放大），下边缘就是卡片区的起点。
         if (size != Size.zero) {
           final screenW = MediaQuery.sizeOf(context).width;
@@ -145,12 +150,22 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
             }
           });
         }
+        // 图没盖到的下方区域直接用卡片区的同色，不做渐变，
+        // 这样卡片区看起来是「从图下边缘长出来」的一整块。
         return ColoredBox(
-          color: base,
+          color: context.c.surface,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (url != null)
+              if (asset != null)
+                Image.asset(
+                  asset,
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  cacheWidth: 512,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                )
+              else if (url != null)
                 Image.network(
                   url,
                   fit: BoxFit.scaleDown,
@@ -165,17 +180,6 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
                   alignment: Alignment.topCenter,
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              if (size != Size.zero)
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [bottom.withAlpha(0), bottom, base],
-                      stops: const [0.5, 0.78, 1],
-                    ),
-                  ),
                 ),
             ],
           ),
@@ -334,7 +338,12 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = CitroBlendImage(networkUrl: _ready ? _face?.url : null);
+    // 卡面原图已打包进包内，优先用本地资源；否则退回网络图 / 时段背景。
+    final face = _ready ? _face : null;
+    Widget image = CitroBlendImage(
+      asset: face?.isAsset == true ? face!.asset : null,
+      networkUrl: face?.isAsset == true ? null : face?.url,
+    );
     if (widget.blurred) {
       image = ImageFiltered(
         imageFilter: ui.ImageFilter.blur(
