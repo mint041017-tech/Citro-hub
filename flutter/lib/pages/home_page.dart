@@ -198,12 +198,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ? math.min(480.0, media.height * .60)
         : (media.height * .68).clamp(440.0, 640.0);
     // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时先按默认英雄区。
-    // 再高也不超过视口的 65%，给卡片区留出位置。
+    // 再抬高一点：从图的下边缘再往下 16px 开始，顶多占视口 78%。
     final bgEdge = CitroBlendImage.bottomEdge.value;
     final rawBg = bgEdge > 0
         ? math.max(120.0, bgEdge - topBarReserved)
         : math.max(120.0, heroBottom - topBarReserved);
-    final bgHeight = math.min(rawBg, media.height * 0.7);
+    final bgHeight = math.min(rawBg + 16.0, media.height * 0.78);
     _bgHeight = bgHeight;
     // 抽屉（负一屏）高度：够用就好，不要多余空白。
     final negHeight = (media.height * .52).clamp(300.0, 460.0);

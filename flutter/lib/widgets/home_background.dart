@@ -147,7 +147,7 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
           // 图再高也不超过视口的 65%，给卡片区留位置（超出的部分自然被裁掉）。
           final displayH = math.min(
             size.height * (displayW / size.width),
-            screenH * 0.7,
+            screenH * 0.78,
           );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (CitroBlendImage.bottomEdge.value != displayH) {
@@ -364,6 +364,8 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     if (!widget.scrim) return image;
     final useDark =
         widget.darkScrim || Theme.maybeBrightnessOf(context) == Brightness.dark;
+    // 「压暗」只看真实主题：只有深色模式才加，浅色模式背景图保持原样。
+    final isDark = Theme.maybeBrightnessOf(context) == Brightness.dark;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -371,8 +373,7 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
         useDark
             ? CitroAmbientBackground.scrimDark
             : CitroAmbientBackground.scrimLight,
-        // 深色主题下再压一档，背景图不会刺眼。
-        if (widget.dim > 0 && useDark)
+        if (widget.dim > 0 && isDark)
           ColoredBox(
             color: Colors.black.withAlpha((widget.dim * 255).round()),
           ),

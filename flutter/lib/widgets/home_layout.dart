@@ -425,7 +425,7 @@ class HomeLayoutStore extends ChangeNotifier {
 
   /// 默认布局版本：默认布局重排过就 +1，让旧版保存的布局回默认。
   static const String _versionKey = 'homeLayoutVersion';
-  static const int _layoutVersion = 4;
+  static const int _layoutVersion = 5;
 
   final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
   final Set<HomeLayoutKey> _loaded = {};
