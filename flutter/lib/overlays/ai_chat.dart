@@ -1243,10 +1243,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
     // 手机端统一用胶囊输入栏：按住说话、松开发送。
     if (platform.isAndroid || platform.isIOS) {
       return Container(
-        decoration: BoxDecoration(
-          color: c.surface.withAlpha(235),
-          border: Border(top: BorderSide(color: c.line)),
-        ),
+        // 输入栏下方不再垫底色，直接落在页面底上。
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1308,10 +1305,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
-      decoration: BoxDecoration(
-        color: c.surface.withAlpha(235),
-        border: Border(top: BorderSide(color: c.line)),
-      ),
+      // 输入栏下方不再垫底色，直接落在页面底上。
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

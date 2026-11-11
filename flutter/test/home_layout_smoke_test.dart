@@ -147,7 +147,10 @@ void main() {
     expect(_drawerShift(tester), 0);
 
     // 在上半屏（背景图区域）往下拖，首页整体跟着走，抽屉从下面露出来。
-    await tester.drag(find.text('今天也要开心'), const Offset(0, 260));
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, 260),
+    );
     await tester.pump();
     expect(_drawerShift(tester), greaterThan(0));
     await tester.pumpAndSettle();
@@ -214,8 +217,8 @@ void main() {
     expect(follow, greaterThan(0));
     expect(follow, lessThanOrEqualTo(100));
 
-    // 继续下拉过半后松手：吸到全开。
-    await gesture.moveBy(const Offset(0, 200));
+    // 继续下拉越过自动弹开点（带阻尼，实际行程更短）。
+    await gesture.moveBy(const Offset(0, 400));
     await tester.pump();
     await gesture.up();
     await tester.pumpAndSettle();

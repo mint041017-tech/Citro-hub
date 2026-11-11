@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
@@ -11,6 +11,7 @@ import '../calendar/calendar_page.dart';
 import '../calendar/calendar_store.dart';
 import '../services/api.dart';
 import '../services/fish.dart';
+import '../services/haptics.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/card_collection.dart';
 import '../overlays/extra_sheets.dart';
@@ -57,31 +58,45 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final ScrollController _scroll = ScrollController();
 
   /// 负一屏展开进度（0..1）。
-  double _negProgress = 0;
+  ///
+  /// 用 [ValueNotifier] 而不是 `setState`：拖拽每帧只重建那一层 Transform，
+  /// 不重建整棵首页（否则卡片、背景、栅格每帧都要重新 layout，必然掉帧）。
+  final ValueNotifier<double> _negProgress = ValueNotifier(0);
 
   /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
   double _negThreshold = 300;
 
-  /// 本次下拉累计的拖拽距离，用来换算抽屉开度（跟手 1:1，封顶在抽屉高度）。
+  /// 本次下拉累计的拖拽距离。
   double _negPull = 0;
+
+  /// 阻尼系数：抽屉行程只走手指的 85%，手感更「沉」，不会一点就飞。
+  static const double _negDamping = 0.85;
+
+  /// 到达这个开度就自动弹开（不用再松手）。
+  static const double _negOpenAt = 0.6;
+
+  /// 松手时超过这个开度就吸开，否则吸回。
+  static const double _negSnapAt = 0.4;
 
   /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
     if (n is ScrollUpdateNotification && n.dragDetails != null) {
       final d = n.scrollDelta ?? 0;
       if (d > 0) {
-        _setNegProgress((_negProgress - d / _negThreshold).clamp(0.0, 1.0));
+        _setNegProgress(
+          (_negProgress.value - d / _negThreshold).clamp(0.0, 1.0),
+        );
       }
     } else if (n is OverscrollNotification &&
         n.dragDetails != null &&
         n.overscroll > 0) {
       _setNegProgress(
-        (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
+        (_negProgress.value - n.overscroll / _negThreshold).clamp(0.0, 1.0),
       );
     } else if (n is ScrollEndNotification &&
-        _negProgress > 0 &&
-        _negProgress < 1) {
-      _setNegProgress(_negProgress > 0.7 ? 1.0 : 0.0);
+        _negProgress.value > 0 &&
+        _negProgress.value < 1) {
+      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
     }
     return false;
   }
@@ -97,11 +112,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     negativeScreenSignal.addListener(_onNegativeSignal);
+    CitroBlendImage.bottomEdge.addListener(_onBgEdge);
     _scroll.addListener(_onScrollOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showLanternWelcomeIfNeeded(context);
       HomeLayoutStore.instance.syncFromAccount();
     });
+  }
+
+  /// 背景图解码完成后，卡片区起点跟着图的下边缘走。
+  void _onBgEdge() {
+    if (mounted) setState(() {});
   }
 
   void _onScrollOffset() {
@@ -114,9 +135,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    CitroBlendImage.bottomEdge.removeListener(_onBgEdge);
     _scroll.removeListener(_onScrollOffset);
     negativeScreenSignal.removeListener(_onNegativeSignal);
     _negAuto?.dispose();
+    _negProgress.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -127,7 +150,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _animateNegTo(double target) {
     if (!mounted) return;
     _negAuto?.dispose();
-    final from = _negProgress;
+    final from = _negProgress.value;
     if ((target - from).abs() < 0.001) return;
     final controller = AnimationController(vsync: this, value: from);
     _negAuto = controller;
@@ -174,7 +197,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final heroBottom = wide
         ? math.min(480.0, media.height * .60)
         : (media.height * .68).clamp(440.0, 640.0);
-    final bgHeight = math.max(120.0, heroBottom - topBarReserved);
+    // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时先按默认英雄区。
+    final bgEdge = CitroBlendImage.bottomEdge.value;
+    final bgHeight = bgEdge > 0
+        ? math.max(120.0, bgEdge - topBarReserved)
+        : math.max(120.0, heroBottom - topBarReserved);
     _bgHeight = bgHeight;
     // 抽屉（负一屏）高度：够用就好，不要多余空白。
     final negHeight = (media.height * .52).clamp(300.0, 460.0);
@@ -190,8 +217,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           left: 0,
           right: 0,
           height: negHeight,
-          child: IgnorePointer(
-            ignoring: _negProgress < .95,
+          child: ValueListenableBuilder<double>(
+            valueListenable: _negProgress,
+            builder: (context, progress, child) =>
+                IgnorePointer(ignoring: progress < .95, child: child),
             child: NotificationListener<ScrollNotification>(
               onNotification: _onNegativeScroll,
               child: NegativeScreen(onClose: () => _animateNegTo(0)),
@@ -201,9 +230,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
         // ── 2. 整个首页：下拉时一起往下走（抽屉） ──
         Positioned.fill(
-          child: Transform.translate(
-            key: const ValueKey('home-drawer-shift'),
-            offset: Offset(0, _negProgress * travel),
+          child: ValueListenableBuilder<double>(
+            valueListenable: _negProgress,
+            builder: (context, progress, child) => Transform.translate(
+              key: const ValueKey('home-drawer-shift'),
+              offset: Offset(0, progress * travel),
+              child: child,
+            ),
             child: Stack(
               children: [
                 // 背景层：铺满全屏，固定不动，只随下拉整体下移；
@@ -313,23 +346,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 滚动通知偶尔会在帧内（布局/动画回调）派发，那时直接 setState 会触发
   /// 「Build scheduled during frame」。这种情况挂到帧末再更新。
+  /// 直接写 [ValueNotifier]：只在帧末由 Flutter 统一重建监听它的那几层，
+  /// 不像 `setState` 那样把整棵首页连同卡片栅格一起重新 layout。
   void _setNegProgress(double value) {
-    if (_negProgress == value) return;
-    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
-      setState(() => _negProgress = value);
-      return;
-    }
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _negProgress == value) return;
-      setState(() => _negProgress = value);
-    });
+    if (_negProgress.value == value) return;
+    _negProgress.value = value;
   }
 
-  /// 顶部下拉 / 上滑驱动负一屏（微信小程式那种「跟手 + 松手吸附」）。
+  /// 把累计下拉距离换算成带阻尼的开度（0..1）。
+  double _pullProgress() =>
+      ((_negPull / _negThreshold) * _negDamping).clamp(0.0, 1.0);
+
+  /// 顶部下拉 / 上滑驱动负一屏（对齐微信首页下拉小程序面板）。
   ///
-  /// - 抽屉关着：列表拉到顶还继续下拉，首页整体跟着手指走（1:1），
-  ///   最多走到抽屉全高；松手后按过半与否吸到全开 / 全关。
-  /// - 抽屉开着：任意位置上滑都把它推回去（动画到全关）。
+  /// - 关着：列表到顶还继续下拉，首页跟手（带阻尼），走到 [_negOpenAt]
+  ///   直接弹开，不用等松手。
+  /// - 开着：任意位置上滑立刻收起。
   bool _onScrollNotification(ScrollNotification n) {
     if (n is ScrollStartNotification) {
       _negPull = 0;
@@ -337,11 +369,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (_negAuto != null) return false;
       final d = n.scrollDelta ?? 0;
       if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
-        // 下拉：跟手 1:1，封顶在抽屉高度。
         _negPull += -d;
-        _setNegProgress((_negPull / _negThreshold).clamp(0.0, 1.0));
-      } else if (d > 0 && _negProgress > 0.02) {
-        // 抽屉已经出来一点：上滑立刻收起。
+        final next = _pullProgress();
+        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
+          unawaited(Haptics.breath());
+          _animateNegTo(1);
+          return false;
+        }
+        _setNegProgress(next);
+      } else if (d > 0 && _negProgress.value > 0.02) {
         _animateNegTo(0);
       }
     } else if (n is OverscrollNotification &&
@@ -352,14 +388,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (_negAuto != null) return false;
       if (n.overscroll < 0) {
         _negPull += -n.overscroll;
-        _setNegProgress((_negPull / _negThreshold).clamp(0.0, 1.0));
-      } else if (n.overscroll > 0 && _negProgress > 0.02) {
+        final next = _pullProgress();
+        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
+          unawaited(Haptics.breath());
+          _animateNegTo(1);
+          return false;
+        }
+        _setNegProgress(next);
+      } else if (n.overscroll > 0 && _negProgress.value > 0.02) {
         _animateNegTo(0);
       }
     } else if (n is ScrollEndNotification) {
-      // 松手吸附：过半全开，否则全关。
-      if (_negProgress > 0 && _negAuto == null) {
-        _setNegProgress(_negProgress > 0.5 ? 1.0 : 0.0);
+      // 松手吸附：超过吸合线弹开，否则收回。
+      if (_negProgress.value > 0 && _negAuto == null) {
+        _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
       }
       _negPull = 0;
     }

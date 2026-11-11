@@ -540,7 +540,8 @@ class _CiciComposerState extends State<CiciComposer> {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: c.surface2,
+          // 输入框固定白色（深色主题下用浅卡面），和四色底拉开层次。
+          color: c.dark ? c.surface : Colors.white,
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
         ),

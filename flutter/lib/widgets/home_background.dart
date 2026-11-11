@@ -26,6 +26,11 @@ class _BgInfo {
 class CitroBlendImage extends StatefulWidget {
   const CitroBlendImage({super.key, this.networkUrl});
 
+  /// 背景图下边缘相对屏幕顶部的距离（像素）。
+  ///
+  /// 首页用它决定卡片区的起始高度：卡片区正好从图的下边缘开始。
+  static final ValueNotifier<double> bottomEdge = ValueNotifier(0);
+
   /// 为空时用时段背景图（asset）。
   final String? networkUrl;
 
@@ -129,6 +134,17 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
         final bottom = info?.bottom ?? base;
         final size = info?.size ?? Size.zero;
         final url = widget.networkUrl;
+        // 图按原始比例缩到屏宽（不放大），下边缘就是卡片区的起点。
+        if (size != Size.zero) {
+          final screenW = MediaQuery.sizeOf(context).width;
+          final displayW = math.min(size.width, screenW);
+          final displayH = size.height * (displayW / size.width);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (CitroBlendImage.bottomEdge.value != displayH) {
+              CitroBlendImage.bottomEdge.value = displayH;
+            }
+          });
+        }
         return ColoredBox(
           color: base,
           child: Stack(

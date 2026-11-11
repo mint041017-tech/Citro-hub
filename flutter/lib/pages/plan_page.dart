@@ -53,20 +53,14 @@ class PlanPage extends StatelessWidget {
                           children: [
                             const CitroPageTitle('计划', '今天的安排，一目了然'),
                             const SizedBox(height: AppSpacing.x3),
-                            const _SectionLabel('日历', '今天 · 农历 · 节日'),
-                            const SizedBox(height: AppSpacing.x1),
                             const _TodayCard(),
                             const SizedBox(height: AppSpacing.x3),
-                            const _SectionLabel('待办', '今天的任务与专注'),
-                            const SizedBox(height: AppSpacing.x1),
                             SizedBox(
                               height: (w * .82).clamp(250.0, 380.0),
                               // 计划页的待办卡用全局品牌色，和下面的记账卡同一套强调色。
                               child: const TodoHomeCard(globalAccent: true),
                             ),
                             const SizedBox(height: AppSpacing.x3),
-                            const _SectionLabel('记账', '本月收支'),
-                            const SizedBox(height: AppSpacing.x1),
                             SizedBox(
                               height: (w * .64).clamp(190.0, 280.0),
                               child: const LedgerHomeCard(),
@@ -82,39 +76,6 @@ class PlanPage extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String title;
-  final String hint;
-
-  const _SectionLabel(this.title, this.hint);
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.x1),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            title,
-            style: context.heading(size: CitroType.titleLg, color: c.ink),
-          ),
-          const SizedBox(width: AppSpacing.x1),
-          Expanded(
-            child: Text(
-              hint,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.body(size: CitroType.small, color: c.inkSoft),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
