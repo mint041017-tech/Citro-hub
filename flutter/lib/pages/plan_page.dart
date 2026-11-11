@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
-import '../widgets/home_background.dart';
 import '../widgets/ledger_home_card.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -28,9 +27,8 @@ class PlanPage extends StatelessWidget {
     final sideNav = layout?.tabletNav ?? false;
     return Stack(
       children: [
-        const Positioned.fill(
-          child: CitroAmbientBackground(blurred: true, blurSigma: 18),
-        ),
+        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
+        Positioned.fill(child: ColoredBox(color: context.c.bg)),
         CitroBackground(
           color: Colors.transparent,
           child: SafeArea(

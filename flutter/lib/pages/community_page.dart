@@ -21,7 +21,6 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_image.dart';
-import '../widgets/home_background.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
@@ -624,9 +623,8 @@ class _CommunityPageState extends State<CommunityPage>
     );
     return Stack(
       children: [
-        const Positioned.fill(
-          child: CitroAmbientBackground(blurred: true, blurSigma: 18),
-        ),
+        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
+        Positioned.fill(child: ColoredBox(color: context.c.bg)),
         CitroBackground(
           color: Colors.transparent,
           child: SafeArea(

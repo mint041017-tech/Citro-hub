@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../data/quotes.dart';
@@ -20,7 +21,6 @@ import '../services/models.dart';
 import '../state/app_state.dart';
 import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
-import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/card_flight.dart';
@@ -122,26 +122,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   /// 平滑把负一屏推进 / 推回（外部入口与关闭按钮用）。
+  ///
+  /// 用弹簧而不是定时曲线：弹簧带一点过冲再回落，回弹不生硬。
   void _animateNegTo(double target) {
     if (!mounted) return;
     _negAuto?.dispose();
     final from = _negProgress;
     if ((target - from).abs() < 0.001) return;
-    final opening = target > from;
-    final controller = AnimationController(
-      vsync: this,
-      duration: opening ? CitroMotion.sheet : CitroMotion.sheetReverse,
-      value: 0,
-    );
-    final curve = opening ? CitroMotion.drawer : CitroMotion.exit;
-    controller.addListener(() {
-      _setNegProgress(
-        from + (target - from) * curve.transform(controller.value),
-      );
-    });
+    final controller = AnimationController(vsync: this, value: from);
     _negAuto = controller;
-    controller.forward().whenComplete(() {
+    controller.addListener(() => _setNegProgress(controller.value));
+    final simulation = SpringSimulation(
+      SpringDescription(mass: 1, stiffness: 220, damping: 28),
+      from,
+      target,
+      0,
+    );
+    controller.animateWith(simulation).whenComplete(() {
       if (identical(_negAuto, controller)) _negAuto = null;
+      // 弹簧停在容差内，最后补一刀精确落到目标值。
+      _setNegProgress(target);
       controller.dispose();
     });
   }
@@ -227,60 +227,76 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       Expanded(
                         child: NotificationListener<ScrollNotification>(
                           onNotification: _onScrollNotification,
-                          child: SingleChildScrollView(
-                            controller: _scroll,
-                            physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  height: bgHeight,
-                                  child: _HomeHeader(side: side),
+                          child: LayoutBuilder(
+                            builder: (context, viewport) {
+                              // 卡片面板至少填满剩余视口，
+                              // 保证它的下缘正好盖住背景图没覆盖到的区域。
+                              final cardsMin = viewport.maxHeight - bgHeight;
+                              return SingleChildScrollView(
+                                controller: _scroll,
+                                physics: const BouncingScrollPhysics(
+                                  parent: AlwaysScrollableScrollPhysics(),
                                 ),
-                                _CardsPanel(
-                                  radiusTop: CitroColors.radii.card,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Padding(
-                                        padding: EdgeInsets.fromLTRB(
-                                          side,
-                                          8,
-                                          side,
-                                          sideNav ? 92 : 108,
-                                        ),
-                                        child: GlassCardsScope(
-                                          child: HomeBento(
-                                            layoutKey: layoutKey,
-                                            editing: false,
-                                            scrollController: _scroll,
-                                            builder: _cardFor,
-                                          ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    SizedBox(
+                                      height: bgHeight,
+                                      child: _HomeHeader(side: side),
+                                    ),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight: cardsMin.clamp(
+                                          0.0,
+                                          double.infinity,
                                         ),
                                       ),
-                                      const SizedBox(height: 18),
-                                      Center(
-                                        child: Pressable(
-                                          onTap: () =>
-                                              showAppreciationSheet(context),
-                                          child: Text(
-                                            'Citro · 今天也要开心',
-                                            style: context.body(
-                                              size: CitroType.small,
-                                              color: context.c.inkSoft,
+                                      child: _CardsPanel(
+                                        radiusTop: CitroColors.radii.card,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Padding(
+                                              padding: EdgeInsets.fromLTRB(
+                                                side,
+                                                8,
+                                                side,
+                                                sideNav ? 92 : 108,
+                                              ),
+                                              child: HomeBento(
+                                                layoutKey: layoutKey,
+                                                editing: false,
+                                                scrollController: _scroll,
+                                                builder: _cardFor,
+                                              ),
                                             ),
-                                          ),
+                                            const SizedBox(height: 18),
+                                            Center(
+                                              child: Pressable(
+                                                onTap: () =>
+                                                    showAppreciationSheet(
+                                                      context,
+                                                    ),
+                                                child: Text(
+                                                  'Citro · 今天也要开心',
+                                                  style: context.body(
+                                                    size: CitroType.small,
+                                                    color: context.c.inkSoft,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 18),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(height: 18),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ),

@@ -1,5 +1,3 @@
-import 'liquid_glass.dart';
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -89,26 +87,19 @@ class CitroCard extends StatelessWidget {
     final c = context.c;
     final r = radius == 0 ? CitroColors.radii.card : radius;
     final br = BorderRadius.circular(r);
-    final useGlass = glass ?? GlassCardsScope.maybeOf(context);
-    Widget box = useGlass
-        ? // 液态玻璃自带描边与投影，颜色由 GlassThemeData.ios27() 统一给。
-          CitroLiquidGlass(
-            radius: r,
-            clipBehavior: Clip.antiAlias,
-            child: Padding(padding: padding, child: child),
-          )
-        : Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: color ?? c.surface,
-              borderRadius: br,
-              border: border,
-              boxShadow: shadow ?? CitroColors.shadows.card(c),
-            ),
-            child: clip == Clip.none
-                ? child
-                : ClipRRect(borderRadius: br, child: child),
-          );
+    // 统一实色表面：玻璃已全线取消，卡片就是奶青底上的浅卡 + 描边 + 投影。
+    Widget box = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color ?? c.surface,
+        borderRadius: br,
+        border: border,
+        boxShadow: shadow ?? CitroColors.shadows.card(c),
+      ),
+      child: clip == Clip.none
+          ? child
+          : ClipRRect(borderRadius: br, child: child),
+    );
     if (onTap != null || onLongPress != null) {
       box = Pressable(
         onTap: onTap,
@@ -125,7 +116,7 @@ class CitroCard extends StatelessWidget {
 
 /// 打开后，子树里所有 [CitroCard] 都改用液态玻璃表面。
 ///
-/// 首页 Bento 用它把一整格卡片统一切成玻璃，而不必逐张传 `glass: true`。
+/// 玻璃已全线取消，这里保留成空操作，避免各处调用点报错。
 class GlassCardsScope extends InheritedWidget {
   final bool glass;
 

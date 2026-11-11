@@ -486,12 +486,16 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (widget.goodDeed || widget.recipe != null) {
       return const SizedBox.shrink();
     }
-    // 空对话在欢迎页里已经给了「记待办 / 建议」两张卡，输入框上方不再重复。
+    // 空对话在欢迎页里已经给了「记待办 / 记账」两张卡，输入框上方不再重复。
     if (_messages.isEmpty) return const SizedBox.shrink();
     final c = context.c;
     final items = <(String, Widget, void Function())>[
       ('记待办', _capIcon(AppIcons.check, c), () => _runCapability(_addTodo)),
-      ('建议', _capIcon(AppIcons.sparkle, c), () => _runCapability(_suggest)),
+      (
+        '记账',
+        _capIcon(AppIcons.book, c),
+        () => Navigator.of(context).pushNamed('/ledger'),
+      ),
     ];
     return SizedBox(
       height: 38,
@@ -558,13 +562,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
     );
     if (title == null || title.isEmpty || !mounted) return;
     _ciciSay('已加入今日待办：$title');
-  }
-
-  /// 快捷「建议」：把预设请求直接送进对话流，让 CiCi 结合当前上下文
-  /// （待办、心情、专注时长等）回一条最值得去做的事；走正常的流式回复，
-  /// 输入框里已经打了一半的话保留不动。
-  Future<void> _suggest() async {
-    await _send('看看我今天的情况，给我一条最值得去做的事', true);
   }
 
   /// 转运分享的好事同步成一条社区动态（图片一并带上），不再写进笔记。
@@ -990,10 +987,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
               Expanded(
                 child: _welcomeAction(
                   context,
-                  icon: AppIcons.sparkle,
-                  label: '建议',
-                  desc: '看看今天最值得做的一件事',
-                  onTap: () => _runCapability(_suggest),
+                  icon: AppIcons.book,
+                  label: '记账',
+                  desc: '记一笔今天的收支',
+                  onTap: () => Navigator.of(context).pushNamed('/ledger'),
                 ),
               ),
             ],

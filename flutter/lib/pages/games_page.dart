@@ -9,7 +9,6 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
-import '../widgets/home_background.dart';
 import '../widgets/liquid_glass.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
@@ -51,9 +50,8 @@ class GamesPage extends StatelessWidget {
     ];
     final content = Stack(
       children: [
-        const Positioned.fill(
-          child: CitroAmbientBackground(blurred: true, blurSigma: 18),
-        ),
+        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
+        Positioned.fill(child: ColoredBox(color: context.c.bg)),
         CitroBackground(
           color: Colors.transparent,
           child: SafeArea(
