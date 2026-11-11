@@ -203,7 +203,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final rawBg = bgEdge > 0
         ? math.max(120.0, bgEdge - topBarReserved)
         : math.max(120.0, heroBottom - topBarReserved);
-    final bgHeight = math.min(rawBg, media.height * 0.65);
+    final bgHeight = math.min(rawBg, media.height * 0.7);
     _bgHeight = bgHeight;
     // 抽屉（负一屏）高度：够用就好，不要多余空白。
     final negHeight = (media.height * .52).clamp(300.0, 460.0);
@@ -256,6 +256,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         blurred: true,
                         blurSigma: _bgCover * 16,
                         darkScrim: true,
+                        // 深色主题下把背景图再压暗一点。
+                        dim: 0.18,
                       ),
                     ),
                   ),

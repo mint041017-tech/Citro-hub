@@ -280,12 +280,12 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 3),
-      HomeSlot(HomeCardId.mood, col: 0, row: 2, w: 6, h: 3),
+      HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 3),
       // 星象和天气错开一行，避免右列重叠。
       HomeSlot(HomeCardId.zodiac, col: 6, row: 3, w: 6, h: 3),
       HomeSlot(HomeCardId.cardCollection, col: 0, row: 6, w: 12, h: 2),
       HomeSlot(HomeCardId.quote, col: 0, row: 8, w: 12, h: 2),
-      HomeSlot(HomeCardId.cook, col: 0, row: 10, w: 12, h: 3),
+      HomeSlot(HomeCardId.mood, col: 0, row: 10, w: 12, h: 3),
     ];
   }
   // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
@@ -294,12 +294,12 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 3),
-    HomeSlot(HomeCardId.mood, col: 3, row: 2, w: 3, h: 3),
+    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 3),
     HomeSlot(HomeCardId.fish, col: 0, row: 5, w: 3, h: 2),
     HomeSlot(HomeCardId.zodiac, col: 3, row: 5, w: 3, h: 2),
     HomeSlot(HomeCardId.cardCollection, col: 0, row: 7, w: 6, h: 2),
     HomeSlot(HomeCardId.quote, col: 0, row: 9, w: 6, h: 2),
-    HomeSlot(HomeCardId.cook, col: 0, row: 11, w: 6, h: 3),
+    HomeSlot(HomeCardId.mood, col: 0, row: 11, w: 6, h: 3),
   ];
 }
 
@@ -425,7 +425,7 @@ class HomeLayoutStore extends ChangeNotifier {
 
   /// 默认布局版本：默认布局重排过就 +1，让旧版保存的布局回默认。
   static const String _versionKey = 'homeLayoutVersion';
-  static const int _layoutVersion = 3;
+  static const int _layoutVersion = 4;
 
   final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
   final Set<HomeLayoutKey> _loaded = {};

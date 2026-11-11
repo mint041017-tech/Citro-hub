@@ -147,7 +147,7 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
           // 图再高也不超过视口的 65%，给卡片区留位置（超出的部分自然被裁掉）。
           final displayH = math.min(
             size.height * (displayW / size.width),
-            screenH * 0.65,
+            screenH * 0.7,
           );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (CitroBlendImage.bottomEdge.value != displayH) {
@@ -263,12 +263,16 @@ class CitroAmbientBackground extends StatefulWidget {
   /// 强制使用深色罩面（白字场景，比如首页英雄区）。
   final bool darkScrim;
 
+  /// 深色模式下再压暗一档（0..1），让深色主题的背景图更沉稳。
+  final double dim;
+
   const CitroAmbientBackground({
     super.key,
     this.blurred = false,
     this.blurSigma = 18,
     this.scrim = true,
     this.darkScrim = false,
+    this.dim = 0,
   });
 
   /// 浅色主题罩面：压白，深色文字读得清。
@@ -367,7 +371,12 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
         useDark
             ? CitroAmbientBackground.scrimDark
             : CitroAmbientBackground.scrimLight,
-      ],
+        // 深色主题下再压一档，背景图不会刺眼。
+        if (widget.dim > 0 && useDark)
+          ColoredBox(
+            color: Colors.black.withAlpha((widget.dim * 255).round()),
+          ),
+    ],
     );
   }
 }
