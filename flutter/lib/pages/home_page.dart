@@ -202,12 +202,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             offset: Offset(0, _negProgress * travel),
             child: Stack(
               children: [
-                // 背景层：固定不动，只随下拉整体下移；清晰度随卡片覆盖下降
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: bgHeight,
+                // 背景层：铺满全屏（卡片面板是玻璃，得有点东西透出来），
+                // 固定不动，只随下拉整体下移；清晰度随卡片覆盖下降
+                Positioned.fill(
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -225,24 +222,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ),
                       // 背景层不滚动，所以上半屏的下拉直接当抽屉拉手用：
                       // 手指拖多少，首页就往下走多少。
-                      GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragUpdate: (d) {
-                          _setNegProgress(
-                            (_negProgress + d.primaryDelta! / _negThreshold)
-                                .clamp(0.0, 1.0),
-                          );
-                          if (_negProgress > _negPeak) {
-                            _negPeak = _negProgress;
-                          }
-                        },
-                        onVerticalDragEnd: (_) {
-                          _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
-                          _negPeak = 0;
-                        },
-                        child: SafeArea(
-                          bottom: false,
-                          child: _HomeHeader(side: side),
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: bgHeight,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onVerticalDragUpdate: (d) {
+                            _setNegProgress(
+                              (_negProgress + d.primaryDelta! / _negThreshold)
+                                  .clamp(0.0, 1.0),
+                            );
+                            if (_negProgress > _negPeak) {
+                              _negPeak = _negProgress;
+                            }
+                          },
+                          onVerticalDragEnd: (_) {
+                            _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
+                            _negPeak = 0;
+                          },
+                          child: SafeArea(
+                            bottom: false,
+                            child: _HomeHeader(side: side),
+                          ),
                         ),
                       ),
                     ],
