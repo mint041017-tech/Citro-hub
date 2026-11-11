@@ -274,30 +274,26 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     return const [
       HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.ledger, col: 6, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.fish, col: 9, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.todo, col: 0, row: 2, w: 6, h: 4),
-      HomeSlot(HomeCardId.weather, col: 6, row: 2, w: 6, h: 4),
-      HomeSlot(HomeCardId.cook, col: 0, row: 6, w: 6, h: 4),
-      HomeSlot(HomeCardId.calendar, col: 6, row: 6, w: 6, h: 5),
-      HomeSlot(HomeCardId.zodiac, col: 0, row: 11, w: 6, h: 5),
-      HomeSlot(HomeCardId.mood, col: 6, row: 11, w: 6, h: 4),
-      HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 12, h: 3),
+      HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 4),
+      HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 4),
+      // 星象比以前矮一档，不再占掉半个首页。
+      HomeSlot(HomeCardId.zodiac, col: 6, row: 2, w: 6, h: 4),
+      HomeSlot(HomeCardId.quote, col: 0, row: 6, w: 12, h: 3),
+      HomeSlot(HomeCardId.mood, col: 0, row: 9, w: 12, h: 3),
     ];
   }
+  // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
   return const [
     HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.todo, col: 0, row: 2, w: 6, h: 4),
-    HomeSlot(HomeCardId.weather, col: 0, row: 6, w: 3, h: 4),
-    HomeSlot(HomeCardId.cook, col: 3, row: 6, w: 3, h: 4),
-    // 默认小档：与摸鱼日历并排，不把首屏撑高。
-    HomeSlot(HomeCardId.ledger, col: 0, row: 10, w: 3, h: 2),
-    HomeSlot(HomeCardId.fish, col: 3, row: 10, w: 3, h: 2),
-    HomeSlot(HomeCardId.calendar, col: 0, row: 12, w: 6, h: 6),
-    HomeSlot(HomeCardId.zodiac, col: 0, row: 18, w: 6, h: 5),
-    HomeSlot(HomeCardId.quote, col: 0, row: 23, w: 6, h: 3),
-    HomeSlot(HomeCardId.mood, col: 0, row: 26, w: 6, h: 3),
+    HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 4),
+    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 4),
+    HomeSlot(HomeCardId.fish, col: 0, row: 6, w: 3, h: 2),
+    // 星象收小：半宽 + 更矮，只留综合运势和一句星语。
+    HomeSlot(HomeCardId.zodiac, col: 3, row: 6, w: 3, h: 4),
+    HomeSlot(HomeCardId.quote, col: 0, row: 10, w: 6, h: 3),
+    HomeSlot(HomeCardId.mood, col: 0, row: 13, w: 6, h: 3),
   ];
 }
 

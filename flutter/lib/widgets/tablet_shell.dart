@@ -14,8 +14,6 @@ import 'motion_widgets.dart';
 import 'app_image.dart';
 import 'paper.dart';
 import 'shared_element.dart';
-import '../state/custom_tab.dart';
-import 'tab_bar.dart';
 
 class CitroLayoutScope extends InheritedWidget {
   final double contentWidth;
@@ -46,13 +44,10 @@ class CitroLayoutScope extends InheritedWidget {
 class CitroTabletSidebar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
-  final CustomTabModule customModule;
-
   const CitroTabletSidebar({
     super.key,
     required this.index,
     required this.onChanged,
-    this.customModule = CustomTabModule.todo,
   });
 
   @override
@@ -184,12 +179,11 @@ class CitroTabletSidebar extends StatelessWidget {
                               onTap: () => onChanged(2),
                             ),
                             _SidebarItem(
-                              label: customModule.label,
-                              icon: customModule.icon,
+                              label: '计划',
+                              icon: AppIcons.calendar,
                               active: index == 3,
                               showHighlight: false,
                               onTap: () => onChanged(3),
-                              onLongPress: () => showCustomTabPicker(context),
                             ),
                           ],
                         ),
@@ -371,11 +365,10 @@ class CitroDuoRightRail extends StatelessWidget {
                         onTap: () => onChanged(2),
                       ),
                       CitroDuoRailItem(
-                        label: '自定义',
-                        icon: context.app.customTabModule.icon,
+                        label: '计划',
+                        icon: AppIcons.calendar,
                         active: index == 3,
                         onTap: () => onChanged(3),
-                        onLongPress: () => showCustomTabPicker(context),
                       ),
                     ],
                   ),
@@ -578,7 +571,6 @@ class CitroDuoRailItem extends StatelessWidget {
   final bool active;
   final int badge;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
 
   const CitroDuoRailItem({
     super.key,
@@ -587,7 +579,6 @@ class CitroDuoRailItem extends StatelessWidget {
     this.active = false,
     this.badge = 0,
     required this.onTap,
-    this.onLongPress,
   });
 
   @override
@@ -598,7 +589,6 @@ class CitroDuoRailItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Pressable(
         onTap: onTap,
-        onLongPress: onLongPress,
         hoverLift: 0,
         child: SizedBox(
           height: 58,
@@ -741,7 +731,6 @@ class _SidebarItem extends StatelessWidget {
   final bool active;
   final int badge;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
   final bool showHighlight;
 
   const _SidebarItem({
@@ -749,7 +738,6 @@ class _SidebarItem extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
-    this.onLongPress,
     this.badge = 0,
     this.showHighlight = true,
   });
@@ -763,7 +751,6 @@ class _SidebarItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.x1),
       child: Pressable(
         onTap: onTap,
-        onLongPress: onLongPress,
         child: AnimatedContainer(
           duration: reduce ? Duration.zero : CitroMotion.indicatorLength,
           curve: CitroMotion.emphasized,

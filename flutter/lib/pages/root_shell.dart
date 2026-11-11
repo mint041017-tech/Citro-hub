@@ -19,12 +19,11 @@ import '../ledger/ledger_store.dart';
 import '../calendar/calendar_store.dart';
 import '../widgets/home_layout.dart';
 import '../widgets/tab_bar.dart';
-import '../state/custom_tab.dart';
 import '../state/negative_screen.dart';
 import '../games/gbrake_web.dart';
 import '../widgets/tablet_shell.dart';
 import '../overlays/ai_chat.dart';
-import 'custom_tab_page.dart';
+import 'plan_page.dart';
 import 'home_page.dart';
 import 'games_page.dart';
 import 'community_page.dart';
@@ -51,24 +50,15 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   Timer? _cardPromptTimer;
   double _swipeDx = 0;
   bool _wasLoggedIn = false;
-  CustomTabModule _lastCustomModule = AppState.instance.customTabModule;
   Size? _orientationSize;
 
   /// 四格导航：首页、游戏、社区、自定义（默认待办，长按可切模块）。
   /// 资源库收进首页下拉负一屏与「我的」，不再占独立 Tab。
   static int get _tabCount => 4;
 
-  /// 当前页是否自己渲染左侧 rail（待办 / 记账 / 食谱）。
-  /// 是的话，平板的全局侧栏要让位给页面自己的 tab。
-  bool get _pageOwnsRail {
-    if (index != 3) return false;
-    return switch (AppState.instance.customTabModule) {
-      CustomTabModule.todo ||
-      CustomTabModule.ledger ||
-      CustomTabModule.cook => true,
-      CustomTabModule.tingyu => false,
-    };
-  }
+  /// 当前页是否自己渲染左侧 rail。计划页把待办/记账/日历竖排在一页里，
+  /// 不带 rail，所以恒为 false。
+  bool get _pageOwnsRail => false;
 
   @override
   void initState() {
@@ -82,8 +72,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
     _wasLoggedIn = AppState.instance.loggedIn;
     AppState.instance.addListener(_onAuthChanged);
-    // 自定义 Tab 的模块会被长按切换，页面实例需要跟着换。
-    AppState.instance.addListener(_onCustomTabChanged);
     // 负一屏的展开信号：先回到首页，HomePage 自己会把负一屏展开。
     negativeScreenSignal.addListener(_onNegativeScreenRequest);
     _tabAnim = AnimationController(
@@ -175,7 +163,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
     AppState.instance.removeListener(_onAuthChanged);
-    AppState.instance.removeListener(_onCustomTabChanged);
     negativeScreenSignal.removeListener(_onNegativeScreenRequest);
     _tabAnim.dispose();
     if (instance == this) instance = null;
@@ -204,12 +191,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   }
 
   /// 长按自定义 Tab 改了模块：替换该页实例，让新模块立刻生效。
-  void _onCustomTabChanged() {    if (!mounted) return;
-    if (AppState.instance.customTabModule == _lastCustomModule) return;
-    _lastCustomModule = AppState.instance.customTabModule;
-    _pages[3] = const CustomTabPage();
-    setState(() {});
-  }
 
   void _onCardPrompt() {
     _cardPromptTimer?.cancel();
@@ -271,8 +252,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       index = i;
     });
     if (kIsWeb) {
-      const routes = ['/home', '/games', '/trash'];
-      syncWebRoute(i < routes.length ? routes[i] : AppState.instance.customTabModule.route);
+      const routes = ['/home', '/games', '/trash', '/plan'];
+      syncWebRoute(i < routes.length ? routes[i] : '/plan');
     }
     if (reduce) {
       _tabAnim.value = 1;
@@ -357,7 +338,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       case 2:
         return const CommunityPage();
       case 3:
-        return const CustomTabPage();
+        return const PlanPage();
       default:
         return HomePage(onSwitchTab: switchTo);
     }
@@ -434,7 +415,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                       width: _sidebarWidth,
                       child: CitroTabletSidebar(
                         index: index,
-                        customModule: AppState.instance.customTabModule,
                         onChanged: switchTo,
                       ),
                     ),
@@ -467,8 +447,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                   CitroTabBar(
                     index: index,
                     onChanged: switchTo,
-                    customModule: AppState.instance.customTabModule,
-                    onCustomTabLongPress: () => showCustomTabPicker(context),
                     onCiciTap: () => showAiChat(context),
                   ),
               ],

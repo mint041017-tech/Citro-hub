@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import '../data/cards.dart';
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_page.dart';
@@ -55,7 +56,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 负一屏展开进度（0..1）。
   double _negProgress = 0;
-  static const double _negThreshold = 300;
+
+  /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
+  double _negThreshold = 300;
 
   /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
   AnimationController? _negAuto;
@@ -123,105 +126,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(8.0, (width - maxWidth) / 2);
-    // 上半部分：随时间变化的背景图 + 打招呼 + 我的入口。
+    // 背景占掉上半屏的大部分；它就在滚动内容里，上滑时跟着一起往上走。
     final heroHeight = wide
-        ? math.min(300.0, media.height * .38)
-        : (media.height * .42).clamp(250.0, 400.0);
+        ? math.min(380.0, media.height * .44)
+        : (media.height * .58).clamp(340.0, 540.0);
+    // 负一屏只拉出「够用」的高度，行程 = 面板高度：
+    // 手指拖多少面板就走多少，不再有被拽飞的感觉。
+    final negHeight = (media.height * .62).clamp(360.0, 560.0);
+    _negThreshold = negHeight;
 
     return Stack(
       children: [
-        // ── 上半：时间背景图 ──────────────────────────────────────
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: const _TimeBackground(),
-        ),
-        // 顶部压一层由深到浅的罩面，保证白色/墨色文字在背景图上可读。
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: IgnorePointer(child: _TimeBackground.scrim(heroHeight)),
-        ),
-
-        // ── 上半：打招呼 + 我的入口 ──────────────────────────────
-        // 这块也接管下拉：上半屏是首页最大的可点区域，只让下半滚动区
-        // 响应下拉会让人以为负一屏坏了。
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: SafeArea(
-            bottom: false,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onVerticalDragUpdate: (d) => _setNegProgress(
-                (_negProgress + d.primaryDelta! / _negThreshold).clamp(0.0, 1.0),
-              ),
-              onVerticalDragEnd: (_) => _setNegProgress(
-                _negProgress > 0.45 ? 1.0 : 0.0,
-              ),
-              child: _HomeHeader(side: side, heroHeight: heroHeight),
+        NotificationListener<ScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: SingleChildScrollView(
+            controller: _scroll,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
-          ),
-        ),
-
-        // ── 下半：卡片区（圆角顶 + 模糊过渡）────────────────────
-        Positioned(
-          top: heroHeight - CitroColors.radii.card,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: _CardsPanel(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: SingleChildScrollView(
-                controller: _scroll,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── 背景：随机一张已收藏的卡面 + 打招呼 + 我的入口 ──
+                SizedBox(
+                  height: heroHeight,
+                  child: _HomeHeader(side: side),
                 ),
-                // 底部多留一点，让最后一张卡片能滚到 Tab 栏上面。
-                padding: EdgeInsets.fromLTRB(side, 4, side, sideNav ? 92 : 108),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    HomeBento(
-                      layoutKey: layoutKey,
-                      editing: false,
-                      scrollController: _scroll,
-                      builder: _cardFor,
-                    ),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: Pressable(
-                        onTap: () => showAppreciationSheet(context),
-                        child: Text(
-                          'Citro · 今天也要开心',
-                          style: context.body(
-                            size: CitroType.small,
-                            color: context.c.inkSoft,
+                // ── 卡片区：圆角顶 + 模糊过渡，向上叠住背景下缘 ──
+                Transform.translate(
+                  offset: const Offset(0, -24),
+                  child: _CardsPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          // 底部多留一点，让最后一张卡片能滚到 Tab 栏上面。
+                          padding: EdgeInsets.fromLTRB(
+                            side,
+                            4,
+                            side,
+                            sideNav ? 92 : 108,
+                          ),
+                          child: HomeBento(
+                            layoutKey: layoutKey,
+                            editing: false,
+                            scrollController: _scroll,
+                            builder: _cardFor,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 18),
+                        Center(
+                          child: Pressable(
+                            onTap: () => showAppreciationSheet(context),
+                            child: Text(
+                              'Citro · 今天也要开心',
+                              style: context.body(
+                                size: CitroType.small,
+                                color: context.c.inkSoft,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
 
-        // 负一屏：从顶部下滑展开，覆盖在首页之上。
+        // 负一屏：从顶部向下滑出，只占一部分高度。
         if (_negProgress > 0.001)
-          Positioned.fill(
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: negHeight,
             child: IgnorePointer(
               ignoring: _negProgress < 0.95,
               child: Transform.translate(
-                offset: Offset(0, -media.height * (1 - _negProgress)),
+                offset: Offset(0, -negHeight * (1 - _negProgress)),
                 child: NotificationListener<ScrollNotification>(
                   onNotification: _onNegativeScroll,
                   child: NegativeScreen(
@@ -311,6 +297,66 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   };
 }
 
+/// 首页背景：随机一张「已收藏」的卡面。
+///
+/// 没有收藏时退回 [_TimeBackground]。卡面是竖构图，
+/// BoxFit.cover 会裁掉两侧，当地图用正合适。
+class _RandomCardBackground extends StatefulWidget {
+  const _RandomCardBackground();
+
+  /// 顶部深色罩面：保证浅色文字在任意卡面上都可读。
+  static const Widget scrim = DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xA8000000), Color(0x66000000), Color(0x00000000)],
+        stops: [0, .55, 1],
+      ),
+    ),
+  );
+
+  @override
+  State<_RandomCardBackground> createState() => _RandomCardBackgroundState();
+}
+
+class _RandomCardBackgroundState extends State<_RandomCardBackground> {
+  CardFace? _face;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_pick());
+  }
+
+  Future<void> _pick() async {
+    await CardCatalog.ensureLoaded();
+    if (!mounted) return;
+    final owned = context.app.ownedCards
+        .map((id) => CardCatalog.byId(id))
+        .whereType<CardFace>()
+        .toList();
+    setState(() {
+      _face = owned.isEmpty ? null : owned[math.Random().nextInt(owned.length)];
+      _ready = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final face = _face;
+    if (!_ready || face == null) return const _TimeBackground();
+    return Image.network(
+      face.url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, _, _) => const _TimeBackground(),
+    );
+  }
+}
+
 /// 首页上半部分的背景：随时段变化的柔光背景图。
 ///
 /// 清晨 / 白天 / 傍晚 / 夜晚四张，跨小时自动换。图很柔，
@@ -324,29 +370,6 @@ class _TimeBackground extends StatefulWidget {
     if (h >= 8 && h < 17) return 'assets/images/backgrounds/day.webp';
     if (h >= 17 && h < 20) return 'assets/images/backgrounds/dusk.webp';
     return 'assets/images/backgrounds/night.webp';
-  }
-
-  /// 夜晚那张是深色的，上面的文字要翻成浅色。
-  static bool get isDarkNow {
-    final h = DateTime.now().hour;
-    return h >= 20 || h < 5;
-  }
-
-  /// 顶部罩面：让压在背景图上的文字始终可读。
-  static Widget scrim(double height) {
-    final dark = isDarkNow;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: dark
-              ? [const Color(0x66000000), const Color(0x00000000)]
-              : [const Color(0x38FFFFFF), const Color(0x00FFFFFF)],
-          stops: const [0, .7],
-        ),
-      ),
-    );
   }
 
   /// 背景图还没解码出来时的底色，顺便保证任何主题下都不会闪黑。
@@ -399,16 +422,33 @@ class _TimeBackgroundState extends State<_TimeBackground> {
 /// 上半部分的文字层：账号入口 + 日期 + 打招呼。
 class _HomeHeader extends StatelessWidget {
   final double side;
-  final double heroHeight;
 
-  const _HomeHeader({required this.side, required this.heroHeight});
+  const _HomeHeader({required this.side});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final app = context.app;
     final now = DateTime.now();
-    final dark = _TimeBackground.isDarkNow;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const _RandomCardBackground(),
+        // 顶部压一层深色罩面：卡面普遍偏亮且花色随机，
+        // 固定用浅色文字比「猜底色」稳得多。
+        const IgnorePointer(child: _RandomCardBackground.scrim),
+        SafeArea(bottom: false, child: _headerBody(context, c, app, now, true)),
+      ],
+    );
+  }
+
+  Widget _headerBody(
+    BuildContext context,
+    CitroColors c,
+    AppState app,
+    DateTime now,
+    bool dark,
+  ) {
     final onBg = dark ? Colors.white : c.ink;
     final onSoft = dark ? Colors.white70 : c.inkSoft;
     final greeting = now.hour < 6
@@ -457,12 +497,12 @@ class _HomeHeader extends StatelessWidget {
                           child: avatarUrl.isEmpty
                               ? Center(
                                   child: Text(
-                                    app.loggedIn && user!.name.isNotEmpty
+                                    app.loggedIn && user != null && user.name.isNotEmpty
                                         ? user.name[0]
                                         : '友',
                                     style: context.heading(
                                       size: CitroType.label,
-                                      color: onBg,
+                                      color: c.ink,
                                     ),
                                   ),
                                 )
@@ -558,6 +598,8 @@ class _CardsPanel extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
             height: radius,
@@ -576,7 +618,7 @@ class _CardsPanel extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: ColoredBox(color: c.bg, child: child)),
+          ColoredBox(color: c.bg, child: child),
         ],
       ),
     );
@@ -633,7 +675,7 @@ class WeatherCard extends StatelessWidget {
     final c = context.c;
     final w = state.weather;
     return CitroCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       onTap: () => showWeatherSheet(context),
       // 小尺寸 bento 格里整体等比缩小，避免固定内容把卡片撑爆。
       child: LayoutBuilder(
@@ -707,7 +749,7 @@ class WeatherCard extends StatelessWidget {
                       Text(
                         '${w.temp.round()}°',
                         style: context.hand(
-                          size: 40,
+                          size: 50,
                           weight: CitroType.strong,
                           color: c.ink,
                           height: 1,
@@ -720,7 +762,10 @@ class WeatherCard extends StatelessWidget {
                 Text(
                   w.desc,
                   textAlign: TextAlign.center,
-                  style: context.heading(size: CitroType.title, color: c.ink2),
+                  style: context.heading(
+                    size: CitroType.titleLg,
+                    color: c.ink2,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.x2),
                 const CitroDivider(),
@@ -816,7 +861,7 @@ class CookCard extends StatelessWidget {
                 ),
               ],
             );
-            if (cons.maxWidth < 150) {
+            if (cons.maxWidth < 190) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -2239,7 +2284,17 @@ class QuoteCard extends StatelessWidget {
               children: [
                 _quoteLabel(context, c),
                 const SizedBox(width: AppSpacing.x3),
-                Expanded(child: _quoteText(context, c, q)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _quoteText(context, c, q),
+                      const SizedBox(height: AppSpacing.x1),
+                      _quoteEn(context, c, q),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.x2),
               ],
             );
