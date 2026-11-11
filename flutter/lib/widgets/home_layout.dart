@@ -287,9 +287,9 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.mood, col: 9, row: 0, w: 3, h: 3),
       HomeSlot(HomeCardId.tingyu, col: 0, row: 3, w: 6, h: 3),
       HomeSlot(HomeCardId.cook, col: 6, row: 3, w: 6, h: 3),
-      HomeSlot(HomeCardId.zodiac, col: 0, row: 6, w: 12, h: 3),
-      HomeSlot(HomeCardId.cardCollection, col: 0, row: 9, w: 12, h: 2),
-      HomeSlot(HomeCardId.quote, col: 0, row: 11, w: 12, h: 2),
+      HomeSlot(HomeCardId.zodiac, col: 0, row: 6, w: 12, h: 5),
+      HomeSlot(HomeCardId.cardCollection, col: 0, row: 11, w: 12, h: 3),
+      HomeSlot(HomeCardId.quote, col: 0, row: 14, w: 12, h: 2),
     ];
   }
   // 窄屏：每排两卡或整宽，行距按 8pt 栅格。
@@ -300,9 +300,9 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     HomeSlot(HomeCardId.mood, col: 3, row: 2, w: 3, h: 3),
     HomeSlot(HomeCardId.tingyu, col: 0, row: 5, w: 3, h: 3),
     HomeSlot(HomeCardId.cook, col: 3, row: 5, w: 3, h: 3),
-    HomeSlot(HomeCardId.zodiac, col: 0, row: 8, w: 6, h: 3),
-    HomeSlot(HomeCardId.cardCollection, col: 0, row: 11, w: 6, h: 2),
-    HomeSlot(HomeCardId.quote, col: 0, row: 13, w: 6, h: 2),
+    HomeSlot(HomeCardId.zodiac, col: 0, row: 8, w: 6, h: 5),
+    HomeSlot(HomeCardId.cardCollection, col: 0, row: 13, w: 6, h: 3),
+    HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 6, h: 2),
   ];
 }
 

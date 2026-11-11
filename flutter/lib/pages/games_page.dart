@@ -9,7 +9,6 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
-import '../widgets/liquid_glass.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
@@ -76,7 +75,6 @@ class GamesPage extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       CitroCard(
-                        glass: true,
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -163,10 +161,11 @@ class _GameCard extends StatelessWidget {
           builder: (_) => buildGamePage(entry.key),
         );
       },
-      // 卡片底改成液态玻璃：透出底下模糊的背景，和全站玻璃语言一致。
-      child: CitroLiquidGlass(
+      // 卡片底用实心表面（玻璃已全线取消，仅 Tab 栏保留）。
+      child: CitroCard(
         radius: 14,
-        clipBehavior: Clip.antiAlias,
+        padding: EdgeInsets.zero,
+        clip: Clip.antiAlias,
         child: Column(
           children: [
             Expanded(

@@ -19,7 +19,6 @@ import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/cici_composer.dart';
-import '../widgets/liquid_glass.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -737,13 +736,11 @@ class _AiChatSheetState extends State<_AiChatSheet>
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(CitroColors.radii.card),
         ),
-        child: CitroLiquidGlass(
-          height: height,
-          radius: CitroColors.radii.card,
-          clipBehavior: Clip.antiAlias,
-          child: CitroBackground(
-            // CiCi 页面统一用奶米底。
-            color: const Color(0xFFF9EDD7),
+        child: ColoredBox(
+          // CiCi 页面统一用奶米底（玻璃已取消，实心即可）。
+          color: const Color(0xFFF9EDD7),
+          child: SizedBox(
+            height: height,
             child: SafeArea(
               top: false,
               child: Column(
