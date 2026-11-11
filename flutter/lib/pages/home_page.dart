@@ -678,10 +678,9 @@ class _CardsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     // 卡片区的「底」是液态玻璃：半透明，能透出背后的背景图，
-    // 而不是像以前那样一抹实色盖上去。顶部圆角 + 一条柔光过渡，
-    // 让卡片区和背景衔接得更顺。
+    // 而不是像以前那样一抹实色盖上去。顶部圆角让卡片区和背景衔接得更顺；
+    // 玻璃本身无边框（见 CitroLiquidGlass），不再额外压一条顶缘高光。
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(radiusTop)),
       child: Stack(
@@ -691,26 +690,6 @@ class _CardsPanel extends StatelessWidget {
               radius: radiusTop,
               clipBehavior: Clip.antiAlias,
               child: const SizedBox.shrink(),
-            ),
-          ),
-          // 顶缘一条很浅的高光，像玻璃的切边
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    c.bg.withAlpha(0),
-                    c.surface.withAlpha(200),
-                    c.bg.withAlpha(0),
-                  ],
-                ),
-              ),
             ),
           ),
           child,

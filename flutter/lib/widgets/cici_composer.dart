@@ -56,6 +56,11 @@ class _CiciComposerState extends State<CiciComposer> {
   // 录音启动中的 Future：松手时先等它落地，避免 finish() 在 _startedAt 为 null 时空转。
   Future<bool>? _starting;
 
+  /// 麦克风按钮的「长按直接说话」：按下超过 0.42s 就开始录音，
+  /// 松手发送； quick tap 仍然只切换语音模式。
+  Timer? _micTimer;
+  bool _micLongPressed = false;
+
   static const String _voicePrefKey = 'citro_cici_voice_mode';
   static const double _cancelDistance = 54;
 
@@ -89,10 +94,30 @@ class _CiciComposerState extends State<CiciComposer> {
     }
   }
 
-  Future<void> _startHold(PointerDownEvent event) async {
+  /// 麦克风机按下：先起一个 0.42s 的计时器，超时才算长按说话；
+  /// 短按在松手时取消计时器，只切换语音模式。
+  void _micDown() {
+    if (widget.sending) return;
+    _micLongPressed = false;
+    _micTimer?.cancel();
+    _micTimer = Timer(const Duration(milliseconds: 420), () {
+      _micLongPressed = true;
+      unawaited(_startHold());
+    });
+  }
+
+  void _micUp() {
+    _micTimer?.cancel();
+    _micTimer = null;
+    if (_micLongPressed) {
+      unawaited(_endHold());
+    }
+  }
+
+  Future<void> _startHold([double downY = 0]) async {
     if (_holding || widget.sending) return;
     HapticFeedback.lightImpact();
-    _downY = event.position.dy;
+    _downY = downY;
     setState(() {
       _holding = true;
       _recognizing = false;
@@ -421,6 +446,7 @@ class _CiciComposerState extends State<CiciComposer> {
 
   @override
   void dispose() {
+    _micTimer?.cancel();
     _hideOverlay();
     VoiceRecorder.cancel();
     super.dispose();
@@ -460,7 +486,7 @@ class _CiciComposerState extends State<CiciComposer> {
     final input = _voiceMode
         ? Listener(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: _startHold,
+            onPointerDown: (e) => _startHold(e.position.dy),
             onPointerMove: _onHoldMove,
             onPointerUp: (_) => _endHold(),
             onPointerCancel: (_) => _endHold(abort: true),
@@ -537,10 +563,26 @@ class _CiciComposerState extends State<CiciComposer> {
                   : null,
             ),
             Expanded(child: input),
-            round(
-              AppIcons.mic,
-              active: _voiceMode,
-              onTap: widget.sending ? null : _toggleVoice,
+            // 麦克风：短按切换「按住说话」模式，长按直接开始录音。
+            Listener(
+              onPointerDown: (_) => _micDown(),
+              onPointerUp: (_) => _micUp(),
+              onPointerCancel: (_) => _micUp(),
+              child: Semantics(
+                label: '点按切换语音，长按说话',
+                button: true,
+                child: round(
+                  AppIcons.mic,
+                  active: _voiceMode,
+                  onTap: () {
+                    if (_micLongPressed) {
+                      _micLongPressed = false;
+                      return;
+                    }
+                    if (!widget.sending) _toggleVoice();
+                  },
+                ),
+              ),
             ),
             if (!_voiceMode)
               round(

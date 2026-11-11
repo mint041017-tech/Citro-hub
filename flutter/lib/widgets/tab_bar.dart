@@ -208,26 +208,21 @@ class CiciAvatarButton extends StatelessWidget {
         hoverLift: 0,
         hoverShadow: false,
         borderRadius: BorderRadius.circular(size / 2),
-        child: Container(
+        // 头像按钮也做成玻璃：圆形玻璃底 + 头像，无边框（见 CitroLiquidGlass）。
+        child: CitroLiquidGlass(
           width: size,
           height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: c.surface,
-            border: Border.all(color: c.accent, width: 2),
-            boxShadow: CitroColors.shadows.float(c),
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/cici_avatar.webp',
-              fit: BoxFit.cover,
-              cacheWidth: (size * 2).round(),
-              errorBuilder: (_, _, _) => Center(
-                child: AppIcon(
-                  strokeSvg(AppIcons.sparkle, width: 2),
-                  size: size * .38,
-                  color: c.accent,
-                ),
+          radius: size / 2,
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset(
+            'assets/images/cici_avatar.webp',
+            fit: BoxFit.cover,
+            cacheWidth: (size * 2).round(),
+            errorBuilder: (_, _, _) => Center(
+              child: AppIcon(
+                strokeSvg(AppIcons.sparkle, width: 2),
+                size: size * .38,
+                color: c.accent,
               ),
             ),
           ),

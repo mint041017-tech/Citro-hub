@@ -152,7 +152,8 @@ class CitroGlass extends StatelessWidget {
     this.sigma = 20,
     this.tint,
     this.borderColor,
-    this.highlight = true,
+    // 玻璃统一无边框：默认不再描边、不再压内高光。
+    this.highlight = false,
     this.shadow,
     this.padding,
     this.height,
@@ -171,7 +172,7 @@ class CitroGlass extends StatelessWidget {
         color: tintColor,
         borderRadius: radius,
         border: Border.all(
-          color: borderColor ?? colors.glassBorder,
+          color: borderColor ?? Colors.transparent,
           width: line,
         ),
         boxShadow: shadow,

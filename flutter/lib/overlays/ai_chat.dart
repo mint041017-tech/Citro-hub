@@ -88,6 +88,11 @@ class _AiChatSheetState extends State<_AiChatSheet>
   /// 快捷能力执行期间挡住重复点击，避免连按叠出两个弹层。
   bool _acting = false;
 
+  /// 桌面端麦克风按钮的长按说话：按下超过 0.42s 开始听写，松手停止；
+  /// 短按仍然只是开关。
+  Timer? _micTimer;
+  bool _micLongPressed = false;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +107,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
 
   @override
   void dispose() {
+    _micTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     SpeechInput.cancel();
     _input.dispose();
@@ -176,6 +182,23 @@ class _AiChatSheetState extends State<_AiChatSheet>
       },
     );
     if (!started && mounted) setState(() => _listening = false);
+  }
+
+  /// 桌面端麦克风机按下：0.42s 后开始听写，松手停止；短按只切换开关。
+  void _micDown() {
+    if (_sending || _picking) return;
+    _micLongPressed = false;
+    _micTimer?.cancel();
+    _micTimer = Timer(const Duration(milliseconds: 420), () {
+      _micLongPressed = true;
+      if (!_listening) _toggleVoice();
+    });
+  }
+
+  void _micUp() {
+    _micTimer?.cancel();
+    _micTimer = null;
+    if (_micLongPressed && _listening) _toggleVoice();
   }
 
   /// [keepInput] 为 true 时（快捷「建议」）发送预设文案，但保留输入框里
@@ -1409,32 +1432,49 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: _sending || _picking ? null : _toggleVoice,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 34,
-                  height: 34,
-                  margin: const EdgeInsets.only(right: 8, bottom: 2),
-                  decoration: BoxDecoration(
-                    color: _listening ? c.accent.withAlpha(36) : c.surface2,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: _listening ? c.accent : c.line2),
-                  ),
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation,
-                        child: FadeTransition(opacity: animation, child: child),
+              Listener(
+                onPointerDown: (_) => _micDown(),
+                onPointerUp: (_) => _micUp(),
+                onPointerCancel: (_) => _micUp(),
+                child: GestureDetector(
+                  onTap: () {
+                    if (_micLongPressed) {
+                      _micLongPressed = false;
+                      return;
+                    }
+                    if (!_sending && !_picking) _toggleVoice();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 34,
+                    height: 34,
+                    margin: const EdgeInsets.only(right: 8, bottom: 2),
+                    decoration: BoxDecoration(
+                      color: _listening ? c.accent.withAlpha(36) : c.surface2,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _listening ? c.accent : c.line2,
                       ),
-                      child: Icon(
-                        _listening
-                            ? Icons.stop_rounded
-                            : Icons.mic_none_rounded,
-                        key: ValueKey(_listening),
-                        size: 20,
-                        color: _listening ? c.accent : c.accentInk,
+                    ),
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(
+                              scale: animation,
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                            ),
+                        child: Icon(
+                          _listening
+                              ? Icons.stop_rounded
+                              : Icons.mic_none_rounded,
+                          key: ValueKey(_listening),
+                          size: 20,
+                          color: _listening ? c.accent : c.accentInk,
+                        ),
                       ),
                     ),
                   ),
