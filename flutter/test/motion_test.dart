@@ -1,6 +1,5 @@
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
-import 'package:citro/state/custom_tab.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/motion.dart';
 import 'package:citro/theme/tokens.dart';
@@ -65,9 +64,7 @@ void main() {
               children: [
                 CitroTabBar(
                   index: index,
-                  customModule: CustomTabModule.todo,
                   onChanged: (i) => setter(() => index = i),
-                  onCustomTabLongPress: () {},
                   onCiciTap: () {},
                 ),
               ],
@@ -88,51 +85,6 @@ void main() {
     expect(index, 2);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('long-press custom tab picks another module', (tester) async {
-    final app = AppState.instance;
-    await app.setCustomTabModule(CustomTabModule.todo);
-    var index = 0;
-    await tester.pumpWidget(
-      host(
-        StatefulBuilder(
-          builder: (context, setter) {
-            return ListenableBuilder(
-              listenable: app,
-              builder: (context, _) {
-                return Stack(
-                  children: [
-                    CitroTabBar(
-                      index: index,
-                      customModule: app.customTabModule,
-                      onChanged: (i) => setter(() => index = i),
-                      onCustomTabLongPress: () => showCustomTabPicker(context),
-                      onCiciTap: () {},
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-    await tester.pump();
-    expect(find.text('待办'), findsOneWidget);
-
-    await tester.longPress(find.text('待办'));
-    await tester.pumpAndSettle();
-    for (final label in ['待办', '听隅', '记账', '食谱']) {
-      expect(find.text(label), findsWidgets, reason: label);
-    }
-
-    await tester.tap(find.text('记账').last);
-    await tester.pumpAndSettle();
-    expect(app.customTabModule, CustomTabModule.ledger);
-    // 面板关掉后，Tab 名跟着模块走。
-    expect(find.text('记账'), findsOneWidget);
-    await app.setCustomTabModule(CustomTabModule.todo);
   });
 
   testWidgets('sheet motion is shared and honours reduced motion', (

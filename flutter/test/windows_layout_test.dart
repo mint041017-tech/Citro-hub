@@ -3,7 +3,6 @@ import 'package:citro/pages/res_page.dart';
 import 'package:citro/services/platform.dart' as platform;
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
-import 'package:citro/state/custom_tab.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/paper.dart';
@@ -87,7 +86,6 @@ void main() {
       _host(
         CitroTabletSidebar(
           index: 3,
-          customModule: CustomTabModule.todo,
           onChanged: _noop,
         ),
       ),
@@ -96,7 +94,7 @@ void main() {
     expect(find.text('首页'), findsOneWidget);
     expect(find.text('游戏'), findsOneWidget);
     expect(find.text('社区'), findsOneWidget);
-    expect(find.text('待办'), findsOneWidget);
+    expect(find.text('计划'), findsOneWidget);
     // 资源库已收进首页下拉负一屏，不再占侧栏一格。
     expect(find.text('资源库'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -138,9 +136,7 @@ void main() {
             children: [
               CitroTabBar(
                 index: 3,
-                customModule: CustomTabModule.todo,
                 onChanged: _noop,
-                onCustomTabLongPress: _noopVoid,
                 onCiciTap: _noopVoid,
               ),
             ],
