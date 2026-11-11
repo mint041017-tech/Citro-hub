@@ -3037,7 +3037,12 @@ class _CookPageState extends State<CookPage> {
 
   Widget _shoppingView(BuildContext context) {
     final c = context.c;
-    return Column(
+    // 底部输入条要让开浮在上面的玻璃 Tab 栏（56 高 + 8 边距 + 安全区），
+    // 否则「添加」按钮正好被 Tab 栏盖住。
+    final clearBottom = MediaQuery.paddingOf(context).bottom + 64;
+    return Padding(
+      padding: EdgeInsets.only(bottom: clearBottom),
+      child: Column(
       children: [
         Expanded(
           child: ListView(
@@ -3212,6 +3217,7 @@ class _CookPageState extends State<CookPage> {
           ),
         ),
       ],
+      ),
     );
   }
 

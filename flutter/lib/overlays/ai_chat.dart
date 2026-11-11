@@ -5,9 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../games/game_registry.dart';
-import '../ledger/ledger_models.dart';
-import '../ledger/ledger_store.dart';
 import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/cici_persona.dart';
@@ -16,7 +13,6 @@ import '../services/platform.dart' as platform;
 import '../services/speech.dart';
 import '../state/app_state.dart';
 import '../services/models.dart';
-import '../tingyu/tingyu_controller.dart';
 import '../todo/todo_ai.dart';
 import '../todo/todo_models.dart';
 import '../todo/todo_store.dart';
@@ -182,12 +178,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (!started && mounted) setState(() => _listening = false);
   }
 
-  Future<void> _send([String? preset]) async {
+  /// [keepInput] 为 true 时（快捷「建议」）发送预设文案，但保留输入框里
+  /// 用户已经打了一半的内容，不清空。
+  Future<void> _send([String? preset, bool keepInput = false]) async {
     if (_sending) return;
     final text = (preset ?? _input.text).trim();
     final image = preset == null ? _pendingImage : null;
     if (text.isEmpty && image == null) return;
-    _input.clear();
+    if (!keepInput) _input.clear();
     _error = null;
     final user = _ChatMessage(user: true, text: text, image: image);
     setState(() {
@@ -401,38 +399,15 @@ class _AiChatSheetState extends State<_AiChatSheet>
     final c = context.c;
     final items = <(String, Widget, void Function())>[
       (
-        '记一笔',
-        _capIcon(AppIcons.wallet, c),
-        () => _runCapability(_addLedgerEntry),
-      ),
-      (
-        '删记账',
-        _capIcon(AppIcons.trash, c),
-        () => _runCapability(_removeLedgerEntry),
-      ),
-      (
         '记待办',
-        _capIcon(AppIcons.note, c),
+        _capIcon(AppIcons.check, c),
         () => _runCapability(_addTodo),
       ),
       (
-        '删待办',
-        _capIcon(AppIcons.minus, c),
-        () => _runCapability(_removeTodo),
+        '建议',
+        _capIcon(AppIcons.sparkle, c),
+        () => _runCapability(_suggest),
       ),
-      (
-        '播放白噪音',
-        _capIcon(AppIcons.play, c),
-        () => _runCapability(_playNook),
-      ),
-      (
-        '暂停白噪音',
-        Icon(Icons.pause_rounded, size: 14, color: c.accentInk),
-        () => _runCapability(_pauseNook),
-      ),
-      ('天气', _capIcon(AppIcons.sun, c), _showWeather),
-      ('游戏', _capIcon(AppIcons.games, c), _showGame),
-      ('星象', _capIcon(AppIcons.star, c), _showZodiac),
     ];
     return SizedBox(
       height: 46,
@@ -487,55 +462,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
     );
   }
 
-  /// 记一笔账：直接在弹层里录入并写入 [LedgerStore]。
-  Future<void> _addLedgerEntry() async {
-    await LedgerStore.instance.ensureInit();
-    if (!mounted) return;
-    final result = await showCitroDialog<
-        ({LedgerKind kind, int cents, String category, String note})>(
-      context,
-      builder: (_) => const PaperDialog(
-        maxWidth: 360,
-        child: _LedgerQuickAddDialog(),
-      ),
-    );
-    if (result == null || !mounted) return;
-    final note = result.note.isEmpty ? '' : ' · ${result.note}';
-    _ciciSay(
-      '已记下${result.kind.label} ${ledgerMoney(result.cents)}'
-      ' · ${result.category}$note',
-    );
-  }
-
-  /// 删除最近一条账单（按发生时间倒序取第一条）。
-  Future<void> _removeLedgerEntry() async {
-    final store = LedgerStore.instance;
-    await store.ensureInit();
-    if (!mounted) return;
-    final recent = store.recentEntries(limit: 1);
-    if (recent.isEmpty) {
-      _ciciSay('账本还是空的，没有可删除的账单。');
-      return;
-    }
-    final entry = recent.first;
-    final detail = '${entry.kind.label} ${ledgerMoney(entry.amountCents)}'
-        '${entry.note.isEmpty ? '' : ' · ${entry.note}'}';
-    final ok = await showCitroDialog<bool>(
-      context,
-      builder: (_) => PaperDialog(
-        maxWidth: 340,
-        child: _ConfirmDialog(
-          title: '删除最近一笔账单？',
-          body: '$detail，删除后本月统计会立即变化。',
-          confirmText: '删除',
-        ),
-      ),
-    );
-    if (ok != true || !mounted) return;
-    store.removeEntry(entry.id);
-    _ciciSay('已删除最近一笔账单：$detail');
-  }
-
   /// 记一条今日待办：写入 [TodoStore]，当天 23:59 截止。
   Future<void> _addTodo() async {
     await TodoStore.instance.ensureInit();
@@ -551,116 +477,12 @@ class _AiChatSheetState extends State<_AiChatSheet>
     _ciciSay('已加入今日待办：$title');
   }
 
-  /// 删除最近一条未完成的待办；没有未完成的就直说。
-  Future<void> _removeTodo() async {
-    final store = TodoStore.instance;
-    await store.ensureInit();
-    if (!mounted) return;
-    final open = store.tasks.where((t) => !t.done).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    if (open.isEmpty) {
-      _ciciSay('没有未完成的待办可以删除。');
-      return;
-    }
-    final target = open.first;
-    final ok = await showCitroDialog<bool>(
-      context,
-      builder: (_) => PaperDialog(
-        maxWidth: 340,
-        child: _ConfirmDialog(
-          title: '删除这条待办？',
-          body: '「${target.title}」删除后不能恢复。',
-          confirmText: '删除',
-        ),
-      ),
-    );
-    if (ok != true || !mounted) return;
-    store.deleteTask(target.id);
-    _ciciSay('已删除待办：${target.title}');
+  /// 快捷「建议」：把预设请求直接送进对话流，让 CiCi 结合当前上下文
+  /// （待办、心情、专注时长等）回一条最值得去做的事；走正常的流式回复，
+  /// 输入框里已经打了一半的话保留不动。
+  Future<void> _suggest() async {
+    await _send('看看我今天的情况，给我一条最值得去做的事', true);
   }
-
-  Future<void> _playNook() async {
-    final ok = await NookController.instance.send('play');
-    if (!mounted) return;
-    if (ok) {
-      final title = NookController.instance.title;
-      _ciciSay('白噪音已播放${title.isEmpty ? '' : ' · 《$title》'}');
-    } else {
-      _ciciSay(
-        '白噪音没能播放：${NookController.instance.error ?? '请稍后再试'}',
-      );
-    }
-  }
-
-  Future<void> _pauseNook() async {
-    await NookController.instance.send('pause');
-    if (!mounted) return;
-    _ciciSay('白噪音已暂停');
-  }
-
-  void _showWeather() {
-    final w = AppState.instance.weather;
-    _ciciSay(
-      '${w.city} · ${w.desc} ${w.emoji}\n'
-      '${w.temp.round()}°C（体感 ${w.feels.round()}°C）',
-    );
-  }
-
-  void _showGame() {
-    final cards = kGameCards;
-    if (cards.isEmpty) {
-      _ciciSay('游戏中心还没准备好，稍后再来看看。');
-      return;
-    }
-    final pick = cards[math.Random().nextInt(cards.length)];
-    _ciciSay(
-      '今天可以玩：${pick.title}\n'
-      '分类：${_gameCategoryOf[pick.key] ?? '休闲'} · 想换一个就再点我一次',
-    );
-  }
-
-  void _showZodiac() {
-    final state = AppState.instance;
-    final sign = zodiacById(state.zodiacSign);
-    if (sign == null) {
-      _ciciSay('还没设置星座，去「我的」填生日后我就能报每日运势啦。');
-      return;
-    }
-    final f = state.zodiacFortune;
-    if (f == null) {
-      _ciciSay(
-        '${sign.name} ${sign.symbol} · ${sign.range}\n'
-        '今日运势还在生成中，稍后再来问问。',
-      );
-      return;
-    }
-    _ciciSay(
-      '${sign.name} ${sign.symbol} · ${sign.range}\n'
-      '综合运势 ${f.score} · ${f.tag}\n'
-      '${f.text}\n'
-      '幸运色 ${f.color} · 幸运数字 ${f.number} · 幸运物 ${f.item}\n'
-      '爱情 ${f.love} · 事业 ${f.work} · 财富 ${f.wealth} · 健康 ${f.health}',
-    );
-  }
-
-  /// 游戏中心只有名称，没有分类字段，这里按游戏性质给个本地映射。
-  static const _gameCategoryOf = <String, String>{
-    'g2048': '益智数字',
-    'gmem': '记忆益智',
-    'gsudoku': '益智数字',
-    'gnono': '逻辑益智',
-    'gslide': '益智数字',
-    'gsnake': '休闲反应',
-    'gsheep': '休闲消除',
-    'gjump': '休闲反应',
-    'gpeng': '休闲物理解谜',
-    'gbrake': '休闲反应',
-    'gidiom': '文字',
-    'gfeihua': '文字',
-    'gliquid': '休闲物理解谜',
-    'gknockwater': '沉浸式',
-  };
-
 
   /// 转运分享的好事同步成一条社区动态（图片一并带上），不再写进笔记。
   Future<void> _recordDeed(
@@ -1827,230 +1649,6 @@ class _PersonaSheetState extends State<_PersonaSheet> {
   }
 }
 
-/// 记一笔账的轻量弹层：金额 + 收支 + 分类 + 备注，确认后直接写入账本。
-class _LedgerQuickAddDialog extends StatefulWidget {
-  const _LedgerQuickAddDialog();
-
-  @override
-  State<_LedgerQuickAddDialog> createState() => _LedgerQuickAddDialogState();
-}
-
-class _LedgerQuickAddDialogState extends State<_LedgerQuickAddDialog> {
-  final TextEditingController _amount = TextEditingController();
-  final TextEditingController _note = TextEditingController();
-  LedgerKind _kind = LedgerKind.expense;
-  late String _categoryId;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    LedgerStore.instance.ensureInit();
-    final cats = LedgerStore.instance.categoriesFor(LedgerKind.expense);
-    _categoryId = cats.isNotEmpty ? cats.first.id : 'food';
-  }
-
-  @override
-  void dispose() {
-    _amount.dispose();
-    _note.dispose();
-    super.dispose();
-  }
-
-  void _switchKind(LedgerKind kind) {
-    final cats = LedgerStore.instance.categoriesFor(kind);
-    setState(() {
-      _kind = kind;
-      if (cats.isNotEmpty) _categoryId = cats.first.id;
-    });
-  }
-
-  void _save() {
-    final cents = ledgerParseAmount(_amount.text) ?? 0;
-    if (cents <= 0) {
-      setState(() => _error = '金额需要大于 0');
-      return;
-    }
-    final store = LedgerStore.instance;
-    final category = store.categoryOf(_categoryId, kind: _kind);
-    final note = _note.text.trim();
-    store.addEntry(
-      kind: _kind,
-      amountCents: cents,
-      categoryId: category.id,
-      note: note,
-      source: LedgerSource.cici,
-    );
-    Navigator.of(context).pop(
-      (kind: _kind, cents: cents, category: category.name, note: note),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final categories = LedgerStore.instance.categoriesFor(_kind);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '记一笔',
-          style: context.heading(size: CitroType.subtitle, color: c.ink),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            for (final kind in LedgerKind.values)
-              Padding(
-                padding: EdgeInsets.only(
-                  right: kind == LedgerKind.expense ? 8 : 0,
-                ),
-                child: _kindChip(context, kind),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: c.surface2,
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-            border: Border.all(color: c.line2),
-          ),
-          child: Row(
-            children: [
-              Text(
-                '¥',
-                style: context.heading(size: CitroType.titleLg, color: c.inkSoft),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: TextField(
-                  controller: _amount,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: context.heading(size: CitroType.titleLg, color: c.ink),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    hintText: '0.00',
-                    hintStyle: context.heading(
-                      size: CitroType.titleLg,
-                      color: c.inkSoft.withAlpha(90),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (final cat in categories) _categoryChip(context, cat),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _note,
-          style: context.body(size: CitroType.meta, color: c.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: c.surface2,
-            hintText: '备注（可选）',
-            hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.line2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.accent),
-            ),
-          ),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _error!,
-            style: context.body(size: CitroType.caption, color: c.stamp),
-          ),
-        ],
-        const SizedBox(height: 14),
-        AccentButton(text: '记下来', onTap: _save),
-      ],
-    );
-  }
-
-  Widget _kindChip(BuildContext context, LedgerKind kind) {
-    final c = context.c;
-    final selected = kind == _kind;
-    return Pressable(
-      onTap: () => _switchKind(kind),
-      scale: .96,
-      hoverLift: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? c.accentLt.withAlpha(c.dark ? 70 : 170)
-              : c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: selected ? c.accent : c.line2),
-        ),
-        child: Text(
-          kind.label,
-          style: context.body(
-            size: CitroType.meta,
-            weight: selected ? CitroType.medium : CitroType.regular,
-            color: selected ? c.accentInk : c.ink2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _categoryChip(BuildContext context, LedgerCategory cat) {
-    final c = context.c;
-    final selected = cat.id == _categoryId;
-    return Pressable(
-      onTap: () => setState(() {
-        _categoryId = cat.id;
-        _error = null;
-      }),
-      scale: .96,
-      hoverLift: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? c.accentLt.withAlpha(c.dark ? 70 : 170)
-              : c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: selected ? c.accent : c.line2),
-        ),
-        child: Text(
-          cat.name,
-          style: context.body(
-            size: CitroType.caption,
-            weight: selected ? CitroType.medium : CitroType.regular,
-            color: selected ? c.accentInk : c.ink2,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 记一条今日待办的轻量弹层。
 class _TodoQuickAddDialog extends StatefulWidget {
   const _TodoQuickAddDialog();
@@ -2160,59 +1758,6 @@ class _TodoQuickAddDialogState extends State<_TodoQuickAddDialog> {
         ],
         const SizedBox(height: 14),
         AccentButton(text: '加入待办', onTap: _save),
-      ],
-    );
-  }
-}
-
-/// 删除类能力的二次确认。
-class _ConfirmDialog extends StatelessWidget {
-  const _ConfirmDialog({
-    required this.title,
-    required this.body,
-    required this.confirmText,
-  });
-
-  final String title;
-  final String body;
-  final String confirmText;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: context.heading(size: CitroType.subtitle, color: c.ink),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          body,
-          style: context.body(size: CitroType.meta, color: c.inkSoft, height: 1.5),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: AccentButton(
-                text: '取消',
-                outlined: true,
-                onTap: () => Navigator.of(context).pop(false),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: AccentButton(
-                text: confirmText,
-                danger: true,
-                onTap: () => Navigator.of(context).pop(true),
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }

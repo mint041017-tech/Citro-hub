@@ -411,10 +411,7 @@ class _HomeBentoState extends State<HomeBento> {
   Widget _cell(HomeSlot slot) {
     final card = RepaintBoundary(
       key: ValueKey('card-${slot.key}'),
-      // 首页的卡片统一走液态玻璃，和底部导航同一套材质。
-      child: GlassCardsScope(
-        child: widget.builder(slot),
-      ),
+      child: widget.builder(slot),
     );
     if (!widget.editing) return card;
 

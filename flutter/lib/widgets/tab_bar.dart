@@ -30,9 +30,9 @@ class CitroTabBar extends StatelessWidget {
 
     final specs = <_TabSpec>[
       const _TabSpec('首页', AppIcons.home),
+      const _TabSpec('计划', AppIcons.calendar),
       const _TabSpec('游戏', AppIcons.games),
       _TabSpec('社区', AppIcons.community, badge: unread),
-      const _TabSpec('计划', AppIcons.calendar),
     ];
 
     return Positioned(

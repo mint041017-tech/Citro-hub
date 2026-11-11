@@ -29,6 +29,7 @@ import '../widgets/card_morph.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
+import '../widgets/liquid_glass.dart';
 import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
@@ -64,6 +65,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 本次手势到达过的最大开度，松手时按它吸附。
   double _negPeak = 0;
 
+  /// 负一屏自身上滑时把它推回顶部（同样按增量）。
+  bool _onNegativeScroll(ScrollNotification n) {
+    if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      final d = n.scrollDelta ?? 0;
+      if (d > 0) {
+        _setNegProgress((_negProgress - d / _negThreshold).clamp(0.0, 1.0));
+      }
+    } else if (n is OverscrollNotification &&
+        n.dragDetails != null &&
+        n.overscroll > 0) {
+      _setNegProgress(
+        (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
+      );
+    } else if (n is ScrollEndNotification &&
+        _negProgress > 0 &&
+        _negProgress < 1) {
+      _setNegProgress(_negProgress > 0.7 ? 1.0 : 0.0);
+    }
+    return false;
+  }
+
+  /// 当前背景露出高度与卡片覆盖比例（驱动背景模糊）。
+  double _bgHeight = 400;
+  double _bgCover = 0;
+
   /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
   AnimationController? _negAuto;
 
@@ -71,14 +97,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     negativeScreenSignal.addListener(_onNegativeSignal);
+    _scroll.addListener(_onScrollOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showLanternWelcomeIfNeeded(context);
       HomeLayoutStore.instance.syncFromAccount();
     });
   }
 
+  void _onScrollOffset() {
+    if (!_scroll.hasClients) return;
+    final cover = (_scroll.offset / _bgHeight).clamp(0.0, 1.0);
+    if ((cover - _bgCover).abs() > .01) {
+      setState(() => _bgCover = cover);
+    }
+  }
+
   @override
   void dispose() {
+    _scroll.removeListener(_onScrollOffset);
     negativeScreenSignal.removeListener(_onNegativeSignal);
     _negAuto?.dispose();
     _scroll.dispose();
@@ -130,69 +166,136 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(8.0, (width - maxWidth) / 2);
-    // 背景占掉上半屏的大部分；它就在滚动内容里，上滑时跟着一起往上走。
-    final heroHeight = wide
-        ? math.min(380.0, media.height * .44)
-        : (media.height * .58).clamp(340.0, 540.0);
-    // 负一屏只拉出「够用」的高度，行程 = 面板高度：
-    // 手指拖多少面板就走多少，不再有被拽飞的感觉。
-    final negHeight = (media.height * .62).clamp(360.0, 560.0);
+
+    // 背景固定不动，露出这么高；卡片面板从它下缘开始，上滑时盖上来。
+    final bgHeight = wide
+        ? math.min(420.0, media.height * .46)
+        : (media.height * .56).clamp(320.0, 520.0);
+    _bgHeight = bgHeight;
+    // 抽屉（负一屏）高度：够用就好，不要多余空白。
+    final negHeight = (media.height * .52).clamp(300.0, 460.0);
     _negThreshold = negHeight;
+    // 下拉行程 = 抽屉高度，手指拖多少首页就往下走多少。
+    final travel = negHeight;
 
     return Stack(
       children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: _onScrollNotification,
-          child: SingleChildScrollView(
-            controller: _scroll,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
+        // ── 1. 抽屉（负一屏）：固定在最底层，下拉时从首页下面露出来 ──
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: negHeight,
+          child: IgnorePointer(
+            ignoring: _negProgress < .95,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onNegativeScroll,
+              child: NegativeScreen(onClose: () => _animateNegTo(0)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          ),
+        ),
+
+        // ── 2. 整个首页：下拉时一起往下走（抽屉），上滑时卡片盖住背景 ──
+        Positioned.fill(
+          child: Transform.translate(
+            key: const ValueKey('home-drawer-shift'),
+            offset: Offset(0, _negProgress * travel),
+            child: Stack(
               children: [
-                // ── 背景：随机一张已收藏的卡面 + 打招呼 + 我的入口 ──
-                SizedBox(
-                  height: heroHeight,
-                  child: _HomeHeader(side: side),
+                // 背景层：固定不动，只随下拉整体下移；清晰度随卡片覆盖下降
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: bgHeight,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      IgnorePointer(
+                        child: ImageFiltered(
+                          imageFilter: ui.ImageFilter.blur(
+                            sigmaX: _bgCover * 16,
+                            sigmaY: _bgCover * 16,
+                          ),
+                          child: const _RandomCardBackground(),
+                        ),
+                      ),
+                      const IgnorePointer(
+                        child: _RandomCardBackground.scrim,
+                      ),
+                      // 背景层不滚动，所以上半屏的下拉直接当抽屉拉手用：
+                      // 手指拖多少，首页就往下走多少。
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragUpdate: (d) {
+                          _setNegProgress(
+                            (_negProgress + d.primaryDelta! / _negThreshold)
+                                .clamp(0.0, 1.0),
+                          );
+                          if (_negProgress > _negPeak) {
+                            _negPeak = _negProgress;
+                          }
+                        },
+                        onVerticalDragEnd: (_) {
+                          _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
+                          _negPeak = 0;
+                        },
+                        child: SafeArea(
+                          bottom: false,
+                          child: _HomeHeader(side: side),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                // ── 卡片区：圆角顶 + 模糊过渡，向上叠住背景下缘 ──
-                Transform.translate(
-                  offset: const Offset(0, -24),
-                  child: _CardsPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          // 底部多留一点，让最后一张卡片能滚到 Tab 栏上面。
-                          padding: EdgeInsets.fromLTRB(
-                            side,
-                            4,
-                            side,
-                            sideNav ? 92 : 108,
-                          ),
-                          child: HomeBento(
-                            layoutKey: layoutKey,
-                            editing: false,
-                            scrollController: _scroll,
-                            builder: _cardFor,
-                          ),
+                // 卡片层：玻璃底，从背景下缘开始，可滚动
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: bgHeight - 24),
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: _onScrollNotification,
+                      child: SingleChildScrollView(
+                        controller: _scroll,
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
                         ),
-                        const SizedBox(height: 18),
-                        Center(
-                          child: Pressable(
-                            onTap: () => showAppreciationSheet(context),
-                            child: Text(
-                              'Citro · 今天也要开心',
-                              style: context.body(
-                                size: CitroType.small,
-                                color: context.c.inkSoft,
+                        child: _CardsPanel(
+                          radiusTop: CitroColors.radii.card,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  side,
+                                  4,
+                                  side,
+                                  sideNav ? 92 : 108,
+                                ),
+                                child: HomeBento(
+                                  layoutKey: layoutKey,
+                                  editing: false,
+                                  scrollController: _scroll,
+                                  builder: _cardFor,
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 18),
+                              Center(
+                                child: Pressable(
+                                  onTap: () => showAppreciationSheet(context),
+                                  child: Text(
+                                    'Citro · 今天也要开心',
+                                    style: context.body(
+                                      size: CitroType.small,
+                                      color: context.c.inkSoft,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 18),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -200,27 +303,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
         ),
-
-        // 负一屏：从顶部向下滑出，只占一部分高度。
-        if (_negProgress > 0.001)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: negHeight,
-            child: IgnorePointer(
-              ignoring: _negProgress < 0.95,
-              child: Transform.translate(
-                offset: Offset(0, -negHeight * (1 - _negProgress)),
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _onNegativeScroll,
-                  child: NegativeScreen(
-                    onClose: () => _animateNegTo(0),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -265,27 +347,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } else if (n is ScrollEndNotification && _negProgress > 0) {
       _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
       _negPeak = 0;
-    }
-    return false;
-  }
-
-  /// 负一屏自身上滑时把它推回顶部（同样按增量）。
-  bool _onNegativeScroll(ScrollNotification n) {
-    if (n is ScrollUpdateNotification && n.dragDetails != null) {
-      final d = n.scrollDelta ?? 0;
-      if (d > 0) {
-        _setNegProgress((_negProgress - d / _negThreshold).clamp(0.0, 1.0));
-      }
-    } else if (n is OverscrollNotification &&
-        n.dragDetails != null &&
-        n.overscroll > 0) {
-      _setNegProgress(
-        (_negProgress - n.overscroll / _negThreshold).clamp(0.0, 1.0),
-      );
-    } else if (n is ScrollEndNotification &&
-        _negProgress > 0 &&
-        _negProgress < 1) {
-      _setNegProgress(_negProgress > 0.7 ? 1.0 : 0.0);
     }
     return false;
   }
@@ -612,37 +673,48 @@ class _HomeHeader extends StatelessWidget {
 /// 于是卡片区像是从背景里「长」出来的，而不是一刀切上去。
 class _CardsPanel extends StatelessWidget {
   final Widget child;
+  final double radiusTop;
 
-  const _CardsPanel({required this.child});
+  const _CardsPanel({required this.child, required this.radiusTop});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    const double radius = 24;
+    // 卡片区的「底」是液态玻璃：半透明，能透出背后的背景图，
+    // 而不是像以前那样一抹实色盖上去。顶部圆角 + 一条柔光过渡，
+    // 让卡片区和背景衔接得更顺。
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(radiusTop)),
+      child: Stack(
         children: [
-          SizedBox(
-            height: radius,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [c.bg.withAlpha(215), c.bg.withAlpha(0)],
-                    ),
-                  ),
+          Positioned.fill(
+            child: CitroLiquidGlass(
+              radius: radiusTop,
+              clipBehavior: Clip.antiAlias,
+              child: const SizedBox.shrink(),
+            ),
+          ),
+          // 顶缘一条很浅的高光，像玻璃的切边
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    c.bg.withAlpha(0),
+                    c.surface.withAlpha(200),
+                    c.bg.withAlpha(0),
+                  ],
                 ),
               ),
             ),
           ),
-          ColoredBox(color: c.bg, child: child),
+          child,
         ],
       ),
     );
@@ -941,9 +1013,9 @@ class FishCard extends StatelessWidget {
     final infoText = FishStateView.chipText;
     // 把「距休息日 N 天」里的数字单独放大，避免小卡片缩放后数字看不清。
     final match = RegExp(r'^(.*?)(\d+)(\s*天.*)$').firstMatch(infoText);
-    final lead = (match?.group(1) ?? infoText).trimRight();
+    final lead = match == null ? '' : match.group(1)!.trimRight();
     final days = match?.group(2);
-    final tail = (match?.group(3) ?? '').trimLeft();
+    final tail = match == null ? '' : match.group(3)!.trimLeft();
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       onTap: () => showFishSheet(context),
@@ -1015,7 +1087,10 @@ class FishCard extends StatelessWidget {
 }
 
 class CalendarCard extends StatefulWidget {
-  const CalendarCard({super.key});
+  /// 计划页只需要「今天」：大日期 + 星期 + 农历，不铺整月格子。
+  final bool compact;
+
+  const CalendarCard({super.key, this.compact = false});
 
   @override
   State<CalendarCard> createState() => _CalendarCardState();
@@ -1099,8 +1174,9 @@ class _CalendarCardState extends State<CalendarCard> {
           builder: (context, constraints) {
             // 3×3 起的小卡片只保留「今天」：大日期 + 星期 + 农历，
             // 不再铺整月日期格，避免小尺寸里 42 个日期挤成一团。
-            final mini =
-                constraints.maxHeight < 210 || constraints.maxWidth < 210;
+            final mini = widget.compact ||
+                constraints.maxHeight < 210 ||
+                constraints.maxWidth < 210;
             if (mini) return _todayOnly(context, current);
             final fill = constraints.hasBoundedHeight;
             // 迷你尺寸：收紧标题与字号，把空间留给 6 行日期。
@@ -2283,112 +2359,71 @@ class QuoteCard extends StatelessWidget {
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     final q = kQuotes[dayOfYear % kQuotes.length];
     return CitroCard(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       onTap: () =>
           copyText('${q.cn} — ${q.en}', context: context, tip: '已复制每日一言'),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 112),
-        // 宽卡片横排（引文占满），窄卡片竖排居中，左右不留大白边。
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 250;
-            if (!wide) {
-              // 引文长短不一，整块等比缩小，宁可字小一点也不撑爆卡片。
-              return FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Column(
+            final narrow = constraints.maxWidth < 250;
+            final body = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _quoteLabel(context, c),
-                    const SizedBox(height: AppSpacing.x1),
-                    _quoteText(context, c, q),
-                    const SizedBox(height: AppSpacing.x1),
-                    _quoteEn(context, c, q),
+                    AppIcon(
+                      strokeSvg(AppIcons.book, width: 2),
+                      size: 13,
+                      color: c.accent,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '每日一言',
+                      style: context.body(
+                        size: CitroType.micro,
+                        weight: CitroType.medium,
+                        color: c.inkSoft,
+                      ),
+                    ),
                   ],
                 ),
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _quoteLabel(context, c),
-                const SizedBox(width: AppSpacing.x3),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _quoteText(context, c, q),
-                        const SizedBox(height: AppSpacing.x1),
-                        _quoteEn(context, c, q),
-                      ],
-                    ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  '「${q.cn}」',
+                  textAlign: TextAlign.center,
+                  locale: const Locale('zh', 'CN'),
+                  style: context.heading(
+                    size: narrow ? CitroType.title : CitroType.titleLg,
+                    color: c.ink,
+                    height: 1.5,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.x2),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  '— ${q.en}',
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: CitroType.meta,
+                    color: c.inkSoft,
+                    height: 1.45,
+                  ),
+                ),
               ],
+            );
+            // 引文长短不一，整块等比缩小，宁可字小一点也不撑爆卡片。
+            return FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: body,
             );
           },
         ),
       ),
-    );
-  }
-
-  /// 左侧竖排的「每日一言」+ 引号，给右边的正文一个起点。
-  Widget _quoteLabel(BuildContext context, CitroColors c) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppIcon(
-          strokeSvg(AppIcons.book, width: 2),
-          size: 16,
-          color: c.accent,
-        ),
-        const SizedBox(height: AppSpacing.x1),
-        for (final ch in '每日一言'.split(''))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(
-              ch,
-              style: context.body(
-                size: CitroType.micro,
-                weight: CitroType.medium,
-                color: c.inkSoft,
-                height: 1.15,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _quoteText(BuildContext context, CitroColors c, Quote q) {
-    return Text(
-      '「${q.cn}」',
-      textAlign: TextAlign.left,
-      locale: const Locale('zh', 'CN'),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: context.heading(
-        size: CitroType.title,
-        color: c.ink,
-        height: 1.5,
-      ),
-    );
-  }
-
-  Widget _quoteEn(BuildContext context, CitroColors c, Quote q) {
-    return Text(
-      '— ${q.en}',
-      textAlign: TextAlign.left,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: context.body(size: CitroType.meta, color: c.inkSoft, height: 1.45),
     );
   }
 }

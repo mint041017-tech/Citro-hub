@@ -94,9 +94,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     );
     // 空闲时按顺序预挂载其余 Tab（Offstage），首次切过去不再整页构建。
     // 错开时间，避免同一次 setState 里连续挂载多个页面。
-    _warmPage(1, 1200); // 游戏
-    _warmPage(3, 2000); // 自定义
-    _warmPage(2, 2800); // 社区（会顺带预取动态，游客不发请求）
+    _warmPage(1, 1200); // 计划
+    _warmPage(2, 2000); // 游戏
+    _warmPage(3, 2800); // 社区（会顺带预取动态，游客不发请求）
     // 让启动路径先跑完，避免更新检查与首帧、权限申请抢带宽/主线程。
     _updateTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) unawaited(checkForUpdates(context, manual: false));
@@ -252,7 +252,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       index = i;
     });
     if (kIsWeb) {
-      const routes = ['/home', '/games', '/trash', '/plan'];
+      const routes = ['/home', '/plan', '/games', '/trash'];
       syncWebRoute(i < routes.length ? routes[i] : '/plan');
     }
     if (reduce) {
@@ -334,11 +334,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   Widget _pageAt(int i) {
     switch (i) {
       case 1:
-        return const GamesPage();
-      case 2:
-        return const CommunityPage();
-      case 3:
         return const PlanPage();
+      case 2:
+        return const GamesPage();
+      case 3:
+        return const CommunityPage();
       default:
         return HomePage(onSwitchTab: switchTo);
     }

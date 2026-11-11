@@ -6,13 +6,20 @@ import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/home_entries.dart';
 import 'package:citro/widgets/home_layout.dart';
-import 'package:citro/widgets/negative_screen.dart';
 import 'package:citro/widgets/tablet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void _noop(int _) {}
+
+/// 首页整体下移的距离，用来判断抽屉有没有被拉开。
+double _drawerShift(WidgetTester tester) {
+  final t = tester.widget<Transform>(
+    find.byKey(const ValueKey('home-drawer-shift')),
+  );
+  return t.transform.getTranslation().y;
+}
 
 Widget _host(Widget child) => AppScope(
   state: AppState.instance,
@@ -140,16 +147,14 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(NegativeScreen), findsNothing);
+    expect(_drawerShift(tester), 0);
 
-    // 在上半屏（背景图 + 打招呼）往下拖，同样要能唤出负一屏。
-    await tester.drag(
-      find.text('今天也要开心'),
-      const Offset(0, 260),
-    );
+    // 在上半屏（背景图区域）往下拖，首页整体跟着走，抽屉从下面露出来。
+    await tester.drag(find.text('今天也要开心'), const Offset(0, 260));
     await tester.pump();
-    expect(find.byType(NegativeScreen), findsOneWidget);
+    expect(_drawerShift(tester), greaterThan(0));
     await tester.pumpAndSettle();
+    expect(_drawerShift(tester), greaterThan(0));
     expect(tester.takeException(), isNull);
   });
 
@@ -159,17 +164,18 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(NegativeScreen), findsNothing);
+    expect(_drawerShift(tester), 0);
 
     await tester.drag(
       find.byType(SingleChildScrollView),
       const Offset(0, 320),
     );
     await tester.pump();
-    expect(find.byType(NegativeScreen), findsOneWidget);
+    expect(_drawerShift(tester), greaterThan(0));
+    await tester.pumpAndSettle();
     expect(find.text('快捷工具'), findsOneWidget);
     expect(find.text('灵敏度'), findsOneWidget);
-    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
 }

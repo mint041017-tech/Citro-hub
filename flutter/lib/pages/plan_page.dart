@@ -49,7 +49,7 @@ class PlanPage extends StatelessWidget {
                       const SizedBox(height: AppSpacing.x1),
                       SizedBox(
                         height: (w * .95).clamp(330.0, 470.0),
-                        child: const CalendarCard(),
+                        child: const CalendarCard(compact: true),
                       ),
                       const SizedBox(height: AppSpacing.x3),
                       const _SectionLabel('待办', '今天的任务与专注'),

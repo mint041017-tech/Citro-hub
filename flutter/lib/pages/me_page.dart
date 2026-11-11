@@ -15,7 +15,6 @@ import '../overlays/profile_modal.dart';
 import '../overlays/scan_modal.dart';
 import '../overlays/update_dialog.dart';
 import '../services/api.dart';
-import '../services/device_settings.dart';
 import '../services/models.dart';
 import '../services/notifications.dart';
 import '../services/orientation.dart';
@@ -164,6 +163,7 @@ class MePage extends StatelessWidget {
 
   Widget _header(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final showScan = !kIsWeb && (platform.isAndroid || platform.isIOS);
     return Row(
       children: [
         Expanded(
@@ -174,9 +174,20 @@ class MePage extends StatelessWidget {
             ),
           ),
         ),
+        if (showScan) ...[
+          const SizedBox(width: AppSpacing.x1),
+          _CircleIconButton(
+            icon: AppIcons.scan,
+            strokeWidth: 2,
+            onTap: () => showScanLogin(context),
+          ),
+        ],
         if (!embedded) ...[
           const SizedBox(width: AppSpacing.x1),
-          _CloseButton(onTap: () => Navigator.of(context).maybePop()),
+          _CircleIconButton(
+            icon: AppIcons.close,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ],
       ],
     );
@@ -212,7 +223,7 @@ class MePage extends StatelessWidget {
     );
   }
 
-  /// 偏好设置：主题、通知、动态效果与设备相关的开关。
+  /// 偏好设置：主题、通知与动态效果。
   Widget _preferencesGroup(BuildContext context, AppState state) {
     return _GroupCard(
       children: [
@@ -233,20 +244,11 @@ class MePage extends StatelessWidget {
           value: state.reduceMotion,
           onChanged: (v) => state.setReduceMotion(v),
         ),
-        if (!kIsWeb && DeviceSettings.canOpenAppSettings) ...[
-          const _RowDivider(),
-          _SettingsRow(
-            icon: AppIcons.refresh,
-            label: '后台运行设置',
-            value: 'HyperOS',
-            onTap: () => _openBackgroundSettings(context),
-          ),
-        ],
       ],
     );
   }
 
-  /// 资源与工具：卡面收藏 + 笔记 / 黑名单 / 资源库 / 下载 / 扫一扫。
+  /// 资源与工具：卡面收藏 + 笔记 / 黑名单 / 资源库 / 下载。
   Widget _resourcesGroup(BuildContext context, {required bool web}) {
     return _GroupCard(
       children: [
@@ -285,14 +287,6 @@ class MePage extends StatelessWidget {
             icon: AppIcons.refresh,
             label: '检查更新',
             onTap: () => checkForUpdates(context, manual: true),
-          ),
-        ],
-        if (!kIsWeb && (platform.isAndroid || platform.isIOS)) ...[
-          const _RowDivider(),
-          _SettingsRow(
-            icon: AppIcons.scan,
-            label: '扫一扫',
-            onTap: () => showScanLogin(context),
           ),
         ],
       ],
@@ -403,53 +397,6 @@ class MePage extends StatelessWidget {
     if (context.mounted) AppToast.show(context, '通知提醒已开启');
   }
 
-  Future<void> _openBackgroundSettings(BuildContext context) async {
-    final go = await showCitroDialog<bool>(
-      context,
-      builder: (ctx) => PaperDialog(
-        showClose: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('后台运行设置', style: context.heading(size: CitroType.titleLg)),
-            const SizedBox(height: AppSpacing.x1),
-            Text(
-              'HyperOS / MIUI 的省电策略可能限制后台计时、定位与音频。'
-              '若提醒不准时或听隅被暂停，请在本应用的「省电策略」中选择「无限制」。',
-              style: context.body(
-                size: CitroType.caption,
-                color: context.c.inkSoft,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x3),
-            Row(
-              children: [
-                Expanded(
-                  child: AccentButton(
-                    text: '稍后',
-                    outlined: true,
-                    onTap: () => Navigator.pop(ctx, false),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.x1),
-                Expanded(
-                  child: AccentButton(
-                    text: '去设置',
-                    onTap: () => Navigator.pop(ctx, true),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    if (go != true) return;
-    final ok = await DeviceSettings.openAppSettings();
-    if (context.mounted && !ok) AppToast.show(context, '未能打开系统设置');
-  }
-
   Future<void> _confirmLogout(BuildContext context) async {
     final ok = await showCitroDialog<bool>(
       context,
@@ -545,11 +492,17 @@ class _BlockDivider extends StatelessWidget {
   );
 }
 
-/// 圆形关闭按钮：白底 + 1px 描边 + × 图标。
-class _CloseButton extends StatelessWidget {
+/// 圆形图标按钮：白底 + 1px 描边，标题栏右侧的关闭 / 扫一扫共用。
+class _CircleIconButton extends StatelessWidget {
+  final String icon;
+  final double strokeWidth;
   final VoidCallback onTap;
 
-  const _CloseButton({required this.onTap});
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+    this.strokeWidth = 2.2,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -567,7 +520,7 @@ class _CloseButton extends StatelessWidget {
         ),
         child: Center(
           child: AppIcon(
-            strokeSvg(AppIcons.close, width: 2.2),
+            strokeSvg(icon, width: strokeWidth),
             size: 16,
             color: c.ink2,
           ),
@@ -1027,204 +980,117 @@ class _SettingsSwitchRowState extends State<_SettingsSwitchRow> {
   }
 }
 
-/// 主题行：一行 + 右侧当前值 + 箭头，点按弹出三选一。
-class _ThemeRow extends StatefulWidget {
+/// 主题行：左侧图标 + 标题，右侧一行内嵌的三段式分段控件。
+class _ThemeRow extends StatelessWidget {
   const _ThemeRow();
 
-  @override
-  State<_ThemeRow> createState() => _ThemeRowState();
-}
-
-class _ThemeRowState extends State<_ThemeRow> {
   static const _modes = <ThemeMode>[
+    ThemeMode.system,
     ThemeMode.light,
     ThemeMode.dark,
-    ThemeMode.system,
   ];
 
   static String _label(ThemeMode mode) => switch (mode) {
+    ThemeMode.system => '跟随系统',
     ThemeMode.light => '浅色',
     ThemeMode.dark => '深色',
-    ThemeMode.system => '跟随系统',
   };
 
   static String _icon(ThemeMode mode) => switch (mode) {
+    ThemeMode.system => AppIcons.monitor,
     ThemeMode.light => AppIcons.sun,
     ThemeMode.dark => AppIcons.moon,
-    ThemeMode.system => AppIcons.monitor,
   };
-
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _entry;
-
-  @override
-  void dispose() {
-    _removeEntry();
-    super.dispose();
-  }
-
-  void _toggle() {
-    if (_entry == null) {
-      _show();
-    } else {
-      _close();
-    }
-  }
-
-  void _show() {
-    final overlay = Overlay.of(context, rootOverlay: true);
-    _entry = OverlayEntry(
-      builder: (overlayContext) {
-        final c = overlayContext.c;
-        final current = AppScope.of(overlayContext).themeMode;
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _close,
-              ),
-            ),
-            CompositedTransformFollower(
-              link: _link,
-              showWhenUnlinked: false,
-              targetAnchor: Alignment.bottomRight,
-              followerAnchor: Alignment.topRight,
-              offset: const Offset(0, 6),
-              child: _menu(overlayContext, c, current),
-            ),
-          ],
-        );
-      },
-    );
-    overlay.insert(_entry!);
-    setState(() {});
-  }
-
-  void _close() {
-    _removeEntry();
-    if (mounted) setState(() {});
-  }
-
-  void _removeEntry() {
-    _entry?.remove();
-    _entry = null;
-  }
-
-  void _select(ThemeMode mode) {
-    _close();
-    AppScope.of(context).setThemeMode(mode);
-  }
-
-  Widget _menu(BuildContext context, CitroColors c, ThemeMode current) {
-    final width = kIsWeb ? 152.0 : 144.0;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) => Opacity(
-        opacity: t,
-        child: Transform.scale(
-          scale: .96 + .04 * t,
-          alignment: Alignment.topRight,
-          child: child,
-        ),
-      ),
-      child: Material(
-        color: c.surface,
-        elevation: 16,
-        shadowColor: c.scrim,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(CitroColors.radii.card),
-          side: BorderSide(color: c.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          key: const ValueKey('me-theme-menu'),
-          width: width,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final mode in _modes) _item(context, c, mode, current),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _item(
-    BuildContext context,
-    CitroColors c,
-    ThemeMode mode,
-    ThemeMode current,
-  ) {
-    final active = mode == current;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: InkWell(
-        onTap: () => _select(mode),
-        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        hoverColor: c.surface2,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: active ? c.accentLt.withAlpha(120) : Colors.transparent,
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          ),
-          child: Row(
-            children: [
-              AppIcon(
-                strokeSvg(_icon(mode), width: 2),
-                size: 18,
-                color: active ? c.accentInk : c.inkSoft,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _label(mode),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(
-                    size: CitroType.meta,
-                    weight: active ? CitroType.medium : CitroType.regular,
-                    color: active ? c.accentInk : c.ink2,
-                  ),
-                ),
-              ),
-              if (active)
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final current = context.app.themeMode;
-    return CompositedTransformTarget(
-      link: _link,
-      child: _SettingsRow(
-        icon: _icon(current),
-        label: '主题',
-        value: _label(current),
-        onTap: _toggle,
+    return SizedBox(
+      height: 44,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            AppIcon(
+              strokeSvg(_icon(current), width: 2),
+              size: 24,
+              color: c.ink,
+            ),
+            const SizedBox(width: 14),
+            Text(
+              '主题',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.bodyLg,
+                weight: CitroType.medium,
+                color: c.ink,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x1),
+            Expanded(
+              child: _ThemeSegments(
+                current: current,
+                onChanged: context.app.setThemeMode,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 三段式分段控件：surface2 容器 + 999 圆角；选中段 ink 底 + bg 字。
+class _ThemeSegments extends StatelessWidget {
+  final ThemeMode current;
+  final ValueChanged<ThemeMode> onChanged;
+
+  const _ThemeSegments({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final reduce = CitroMotion.reduced(context);
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          for (final mode in _ThemeRow._modes)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(mode),
+                child: AnimatedContainer(
+                  duration: reduce ? Duration.zero : CitroMotion.indicator,
+                  curve: CitroMotion.easeColor,
+                  decoration: BoxDecoration(
+                    color: mode == current ? c.ink : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _ThemeRow._label(mode),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.meta,
+                      weight: mode == current
+                          ? CitroType.medium
+                          : CitroType.regular,
+                      color: mode == current ? c.bg : c.inkSoft,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
