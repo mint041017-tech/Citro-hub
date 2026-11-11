@@ -310,8 +310,9 @@ class _RandomCardBackground extends StatefulWidget {
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xA8000000), Color(0x66000000), Color(0x00000000)],
-        stops: [0, .55, 1],
+        // 只在顶栏和底下的打招呼处压深，中间留出来给卡面本身。
+        colors: [Color(0x8C000000), Color(0x24000000), Color(0x80000000)],
+        stops: [0, .5, 1],
       ),
     ),
   );

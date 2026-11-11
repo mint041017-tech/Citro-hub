@@ -36,21 +36,38 @@ class PlanPage extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _SectionLabel('日历', '月历 · 农历 · 节日'),
-                  SizedBox(height: AppSpacing.x1),
-                  CalendarCard(),
-                  SizedBox(height: AppSpacing.x3),
-                  _SectionLabel('待办', '今天的任务与专注'),
-                  SizedBox(height: AppSpacing.x1),
-                  TodoHomeCard(),
-                  SizedBox(height: AppSpacing.x3),
-                  _SectionLabel('记账', '本月收支'),
-                  SizedBox(height: AppSpacing.x1),
-                  LedgerHomeCard(),
-                ],
+              child: LayoutBuilder(
+                builder: (context, cons) {
+                  final w = cons.maxWidth;
+                  // 这三张卡原本是 Bento 格子里的固定档位，内部大量用
+                  // Expanded / Spacer；竖排时得显式给高度，否则在
+                  // 「高度不受限的滚动视图」里会直接报 flex 冲突。
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _SectionLabel('日历', '月历 · 农历 · 节日'),
+                      const SizedBox(height: AppSpacing.x1),
+                      SizedBox(
+                        height: (w * .95).clamp(330.0, 470.0),
+                        child: const CalendarCard(),
+                      ),
+                      const SizedBox(height: AppSpacing.x3),
+                      const _SectionLabel('待办', '今天的任务与专注'),
+                      const SizedBox(height: AppSpacing.x1),
+                      SizedBox(
+                        height: (w * .82).clamp(250.0, 380.0),
+                        child: const TodoHomeCard(),
+                      ),
+                      const SizedBox(height: AppSpacing.x3),
+                      const _SectionLabel('记账', '本月收支'),
+                      const SizedBox(height: AppSpacing.x1),
+                      SizedBox(
+                        height: (w * .64).clamp(190.0, 280.0),
+                        child: const LedgerHomeCard(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
