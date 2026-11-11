@@ -235,9 +235,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   /// 导航栏和页面壳不会跟着重挂载，切换因此连贯不割裂。
   Future<void> _switchTab(int i) async {
     if (i == index || i < 0 || i >= _tabCount) return;
-    if (!kIsWeb && (platform.isAndroid || platform.isIOS)) {
-      HapticFeedback.selectionClick();
-    }
     // 可中断：上一段还没走完就收尾，再从当前位置开始新的一段。
     if (_tabAnim.isAnimating) _tabAnim.value = 1;
     _dir = i > index ? 1.0 : -1.0;

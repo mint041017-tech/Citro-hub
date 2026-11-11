@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
 import '../overlays/notes_modal.dart';
-import '../overlays/pomodoro_sheet.dart';
 import '../pages/web_resource_actions.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'paper.dart';
 
-/// 首页下拉「负一屏」：只放 6 个真正常用的快捷入口。
+/// 首页下拉「负一屏」：只放 5 个真正常用的快捷入口。
 ///
 /// 资源库（Mod / 驱动）已经从首页撤掉，这里也不再重复；
 /// 需要下载资源时去游戏页的「资源库」或「我的」页面。
@@ -94,7 +93,7 @@ class NegativeScreen extends StatelessWidget {
     );
   }
 
-  /// 固定的 6 项：灵敏度 / 玩法抽签 / 视野live / 屏幕分享 / 便签 / 番茄钟。
+  /// 固定的 5 项：灵敏度 / 玩法抽签 / 视野live / 屏幕分享 / 便签。
   List<_QuickItem?> _buildItems(BuildContext context) {
     final byName = {for (final t in kTools) t.name: t};
     return [
@@ -108,20 +107,10 @@ class NegativeScreen extends StatelessWidget {
         icon: AppIcons.note,
         onTap: () => showNotesModal(context),
       ),
-      _QuickItem(
-        name: '番茄钟',
-        desc: '专注计时与休息提醒',
-        icon: AppIcons.target,
-        onTap: () => showPomodoroOverlay(context),
-      ),
     ];
   }
 
-  _QuickItem? _item(
-    BuildContext context,
-    ToolItem? tool,
-    String fallbackIcon,
-  ) {
+  _QuickItem? _item(BuildContext context, ToolItem? tool, String fallbackIcon) {
     if (tool == null) return null;
     return _QuickItem(
       name: tool.name,
@@ -228,7 +217,10 @@ class _QuickTile extends StatelessWidget {
                     item.desc,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ],
               ),

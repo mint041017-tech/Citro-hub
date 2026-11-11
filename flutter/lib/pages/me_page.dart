@@ -8,9 +8,7 @@ import '../app_version.dart';
 import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
-import '../overlays/card_collection.dart';
 import '../overlays/delete_account.dart';
-import '../overlays/notes_modal.dart';
 import '../overlays/profile_modal.dart';
 import '../overlays/scan_modal.dart';
 import '../overlays/update_dialog.dart';
@@ -247,21 +245,10 @@ class MePage extends StatelessWidget {
     );
   }
 
-  /// 资源与工具：卡面收藏 + 笔记 / 黑名单 / 资源库 / 下载。
+  /// 资源与工具：黑名单 / 下载。卡面收藏与笔记已分别挪进首页卡片区和删除。
   Widget _resourcesGroup(BuildContext context, {required bool web}) {
     return _GroupCard(
       children: [
-        const Padding(
-          padding: EdgeInsets.all(12),
-          child: CardCollectionEntry(compact: true),
-        ),
-        const _BlockDivider(),
-        _SettingsRow(
-          icon: AppIcons.note,
-          label: '我的笔记',
-          onTap: () => showNotesModal(context),
-        ),
-        const _RowDivider(),
         _SettingsRow(
           icon: AppIcons.users,
           label: '黑名单',

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../data/cards.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
 
 /// 随时段变化的柔光背景图（清晨 / 白天 / 傍晚 / 夜晚）。
 ///

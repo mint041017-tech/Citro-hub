@@ -178,4 +178,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('swipe up anywhere closes the negative screen', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(_drawerShift(tester), 0);
+
+    // 先下拉把抽屉拉开。
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(_drawerShift(tester), greaterThan(0));
+
+    // 抽屉开着时，在首页任意位置（这里取下半屏）上滑都把它推回去。
+    final gesture = await tester.startGesture(const Offset(195, 700));
+    await gesture.moveBy(const Offset(0, -240));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(_drawerShift(tester), 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('negative screen pops at a threshold instead of tracking the finger', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(_drawerShift(tester), 0);
+
+    // 累计下拉未到阈值：只露一小截，不跟手 1:1。
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(SingleChildScrollView)),
+    );
+    await gesture.moveBy(const Offset(0, 100));
+    await tester.pump();
+    final peek = _drawerShift(tester);
+    expect(peek, greaterThan(0));
+    expect(peek, lessThan(100));
+
+    // 累计超过阈值：松手后自动弹出到全开。
+    await gesture.moveBy(const Offset(0, 60));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(_drawerShift(tester), greaterThan(200));
+    expect(tester.takeException(), isNull);
+  });
+
 }

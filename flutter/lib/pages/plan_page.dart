@@ -52,6 +52,8 @@ class PlanPage extends StatelessWidget {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          const CitroPageTitle('计划', '今天的安排，一目了然'),
+                          const SizedBox(height: AppSpacing.x3),
                           const _SectionLabel('日历', '今天 · 农历 · 节日'),
                           const SizedBox(height: AppSpacing.x1),
                           const _TodayCard(),

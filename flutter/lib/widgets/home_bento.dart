@@ -1487,6 +1487,7 @@ String _homeCardIcon(HomeCardId id) => switch (id) {
   HomeCardId.calendar => AppIcons.calendar,
   HomeCardId.zodiac => AppIcons.star,
   HomeCardId.quote => AppIcons.book,
+  HomeCardId.cardCollection => AppIcons.sparkle,
   HomeCardId.game => AppIcons.games,
   HomeCardId.res => AppIcons.download,
 };

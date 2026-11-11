@@ -1,4 +1,5 @@
 import 'liquid_glass.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -91,7 +92,7 @@ class CitroCard extends StatelessWidget {
     final useGlass = glass ?? GlassCardsScope.maybeOf(context);
     Widget box = useGlass
         ? // 液态玻璃自带描边与投影，颜色由 GlassThemeData.ios27() 统一给。
-        CitroLiquidGlass(
+          CitroLiquidGlass(
             radius: r,
             clipBehavior: Clip.antiAlias,
             child: Padding(padding: padding, child: child),
@@ -128,18 +129,15 @@ class CitroCard extends StatelessWidget {
 class GlassCardsScope extends InheritedWidget {
   final bool glass;
 
-  const GlassCardsScope({
-    super.key,
-    this.glass = true,
-    required super.child,
-  });
+  const GlassCardsScope({super.key, this.glass = true, required super.child});
 
   static bool maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<GlassCardsScope>()?.glass ??
       false;
 
   @override
-  bool updateShouldNotify(GlassCardsScope oldWidget) => oldWidget.glass != glass;
+  bool updateShouldNotify(GlassCardsScope oldWidget) =>
+      oldWidget.glass != glass;
 }
 
 /// 胶囊按钮。主按钮是近黑（深色主题近白），品牌橙只做强调变体。
@@ -172,12 +170,32 @@ class CitroButton extends StatelessWidget {
     final c = context.c;
     final (bg, fg, border) = switch (style) {
       CitroButtonStyle.primary => (c.ink, c.bg, Border.all(color: c.ink)),
-      CitroButtonStyle.accent => (c.accent, c.onAccent, Border.all(color: c.accent)),
+      CitroButtonStyle.accent => (
+        c.accent,
+        c.onAccent,
+        Border.all(color: c.accent),
+      ),
       CitroButtonStyle.mint => (c.mint, c.onAccent, Border.all(color: c.mint)),
-      CitroButtonStyle.danger => (c.danger, c.onAccent, Border.all(color: c.danger)),
-      CitroButtonStyle.outline => (Colors.transparent, c.ink, Border.all(color: c.line2)),
-      CitroButtonStyle.ghost => (Colors.transparent, c.ink2, Border.all(color: Colors.transparent)),
-      CitroButtonStyle.surface => (c.surface2, c.ink, Border.all(color: c.line)),
+      CitroButtonStyle.danger => (
+        c.danger,
+        c.onAccent,
+        Border.all(color: c.danger),
+      ),
+      CitroButtonStyle.outline => (
+        Colors.transparent,
+        c.ink,
+        Border.all(color: c.line2),
+      ),
+      CitroButtonStyle.ghost => (
+        Colors.transparent,
+        c.ink2,
+        Border.all(color: Colors.transparent),
+      ),
+      CitroButtonStyle.surface => (
+        c.surface2,
+        c.ink,
+        Border.all(color: c.line),
+      ),
     };
     final enabled = onPressed != null && !busy;
     final content = Row(
@@ -191,14 +209,21 @@ class CitroButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2, color: fg),
           )
         else if (icon != null)
-          IconTheme(data: IconThemeData(color: fg, size: 18), child: icon!),
+          IconTheme(
+            data: IconThemeData(color: fg, size: 18),
+            child: icon!,
+          ),
         if (busy || icon != null) const SizedBox(width: 8),
         Flexible(
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: context.body(size: CitroType.label, weight: CitroType.medium, color: fg),
+            style: context.body(
+              size: CitroType.label,
+              weight: CitroType.medium,
+              color: fg,
+            ),
           ),
         ),
         if (trailing != null) ...[const SizedBox(width: 8), trailing!],
@@ -214,7 +239,10 @@ class CitroButton extends StatelessWidget {
           height: height,
           width: width,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(border: border, borderRadius: BorderRadius.circular(999)),
+          decoration: BoxDecoration(
+            border: border,
+            borderRadius: BorderRadius.circular(999),
+          ),
           alignment: Alignment.center,
           child: content,
         ),
@@ -286,6 +314,35 @@ class CitroChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 页面大标题：计划 / 游戏 / 社区共用，字号与首页打招呼一致。
+class CitroPageTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const CitroPageTitle(this.title, this.subtitle, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: context.display(size: CitroType.hero, color: c.ink),
+        ),
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: context.body(size: CitroType.meta, color: c.inkSoft),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -412,7 +469,10 @@ class CitroTextField extends StatelessWidget {
         suffixIcon: suffix,
         filled: true,
         fillColor: fillColor ?? c.surface2,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         enabledBorder: border,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(CitroColors.radii.field),
@@ -433,7 +493,14 @@ class CitroStat extends StatelessWidget {
   final Color? color;
   final bool center;
 
-  const CitroStat(this.label, this.value, {super.key, this.unit, this.color, this.center = true});
+  const CitroStat(
+    this.label,
+    this.value, {
+    super.key,
+    this.unit,
+    this.color,
+    this.center = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -441,11 +508,17 @@ class CitroStat extends StatelessWidget {
     final valueColor = color ?? c.ink;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: center
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.1),
+          style: context.body(
+            size: CitroType.small,
+            color: c.inkSoft,
+            height: 1.1,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -455,10 +528,16 @@ class CitroStat extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(value, style: context.hand(size: CitroType.bodyLg, color: valueColor)),
+            Text(
+              value,
+              style: context.hand(size: CitroType.bodyLg, color: valueColor),
+            ),
             if (unit != null) ...[
               const SizedBox(width: 1),
-              Text(unit!, style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                unit!,
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
             ],
           ],
         ),
@@ -493,7 +572,9 @@ class StickerFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final br = circle ? BorderRadius.circular(size / 2) : BorderRadius.circular(radius);
+    final br = circle
+        ? BorderRadius.circular(size / 2)
+        : BorderRadius.circular(radius);
     return Container(
       width: size,
       height: size,
@@ -519,7 +600,11 @@ class _DashPainter extends CustomPainter {
   final Color color;
   final BorderRadius radius;
   final double width;
-  _DashPainter({required this.color, required this.radius, required this.width});
+  _DashPainter({
+    required this.color,
+    required this.radius,
+    required this.width,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -554,7 +639,13 @@ class CitroAvatar extends StatelessWidget {
   final double size;
   final Color? color;
 
-  const CitroAvatar({super.key, this.text, this.child, this.size = 40, this.color});
+  const CitroAvatar({
+    super.key,
+    this.text,
+    this.child,
+    this.size = 40,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -567,7 +658,8 @@ class CitroAvatar extends StatelessWidget {
         color: color ?? c.surface2,
         shape: BoxShape.circle,
       ),
-      child: child ??
+      child:
+          child ??
           (text == null
               ? null
               : Text(
@@ -1154,14 +1246,27 @@ class PaperCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? c.surface,
-        borderRadius: borderRadius ?? BorderRadius.circular(radius == 14 ? CitroColors.radii.card : radius),
+        borderRadius:
+            borderRadius ??
+            BorderRadius.circular(
+              radius == 14 ? CitroColors.radii.card : radius,
+            ),
         border: borderColor == null ? null : Border.all(color: borderColor!),
-        boxShadow: shadow == PaperShadow.none ? const [] : CitroColors.shadows.card(c),
+        boxShadow: shadow == PaperShadow.none
+            ? const []
+            : CitroColors.shadows.card(c),
       ),
-      child: clip ? ClipRRect(borderRadius: BorderRadius.circular(radius), child: child) : child,
+      child: clip
+          ? ClipRRect(borderRadius: BorderRadius.circular(radius), child: child)
+          : child,
     );
     if (onTap != null) {
-      box = Pressable(onTap: onTap, scale: .98, borderRadius: BorderRadius.circular(radius), child: box);
+      box = Pressable(
+        onTap: onTap,
+        scale: .98,
+        borderRadius: BorderRadius.circular(radius),
+        child: box,
+      );
     }
     if (margin != null) return Padding(padding: margin!, child: box);
     return box;
@@ -1205,11 +1310,19 @@ class SectionTitle extends StatelessWidget {
   final double size;
   final EdgeInsetsGeometry padding;
 
-  const SectionTitle(this.text, {super.key, this.size = 23, this.padding = const EdgeInsets.symmetric(horizontal: 4)});
+  const SectionTitle(
+    this.text, {
+    super.key,
+    this.size = 23,
+    this.padding = const EdgeInsets.symmetric(horizontal: 4),
+  });
 
   @override
-  Widget build(BuildContext context) =>
-      CitroSectionHeader(text, size: size < 23 ? size : CitroType.title, padding: padding);
+  Widget build(BuildContext context) => CitroSectionHeader(
+    text,
+    size: size < 23 ? size : CitroType.title,
+    padding: padding,
+  );
 }
 
 /// @deprecated 用 [CitroChip]。
@@ -1234,13 +1347,13 @@ class HandChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CitroChip(
-        text,
-        color: color,
-        background: bg,
-        padding: padding,
-        size: size,
-        borderColor: border?.top.color,
-      );
+    text,
+    color: color,
+    background: bg,
+    padding: padding,
+    size: size,
+    borderColor: border?.top.color,
+  );
 }
 
 /// @deprecated 用 [CitroDivider]。

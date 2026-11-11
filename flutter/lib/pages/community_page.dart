@@ -580,6 +580,13 @@ class _CommunityPageState extends State<CommunityPage>
     final showPosts =
         app.loggedIn && !(loading && !loaded) && filtered.isNotEmpty;
     final prelude = <Widget>[
+      const CitroReveal(
+        rise: 8,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: AppSpacing.x2),
+          child: CitroPageTitle('社区', '在清爽的汽水里，与同频的灵魂相遇'),
+        ),
+      ),
       if (!app.loggedIn)
         CitroReveal(
           rise: 8,

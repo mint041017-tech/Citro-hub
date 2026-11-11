@@ -27,6 +27,7 @@ enum HomeCardId {
   calendar,
   zodiac,
   quote,
+  cardCollection,
   game,
   res,
 }
@@ -97,6 +98,7 @@ const Map<HomeCardId, HomeCardInfo> kHomeCardInfo = {
   HomeCardId.calendar: HomeCardInfo('日历', '月历、农历与节日'),
   HomeCardId.zodiac: HomeCardInfo('今日星象', '本命星座与今日运势'),
   HomeCardId.quote: HomeCardInfo('每日一言', '每天一句，随手可复制'),
+  HomeCardId.cardCollection: HomeCardInfo('卡面收藏', '已收集的卡面与抽卡入口'),
   HomeCardId.game: HomeCardInfo('小游戏', '把常玩的小游戏放到首页'),
   HomeCardId.res: HomeCardInfo('资源', '工具与驱动，随手打开'),
 };
@@ -258,6 +260,12 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
       maxH: 12,
     ),
     HomeCardId.quote => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
+    HomeCardId.cardCollection => HomeCardSpec(
+      minW: 3,
+      maxW: cols,
+      minH: 2,
+      maxH: 3,
+    ),
     HomeCardId.game => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 5),
     HomeCardId.res => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
   };
@@ -271,26 +279,27 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 4),
+      HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 3),
       HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 3),
-      // 星象比以前矮一档，不再占掉半个首页。
-      HomeSlot(HomeCardId.zodiac, col: 6, row: 4, w: 6, h: 3),
-      HomeSlot(HomeCardId.quote, col: 0, row: 7, w: 12, h: 3),
-      HomeSlot(HomeCardId.mood, col: 0, row: 10, w: 12, h: 3),
+      // 星象和天气错开一行，避免右列重叠。
+      HomeSlot(HomeCardId.zodiac, col: 6, row: 3, w: 6, h: 3),
+      HomeSlot(HomeCardId.cardCollection, col: 0, row: 6, w: 12, h: 2),
+      HomeSlot(HomeCardId.quote, col: 0, row: 8, w: 12, h: 2),
+      HomeSlot(HomeCardId.mood, col: 0, row: 10, w: 12, h: 2),
     ];
   }
   // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
-  // 同行卡片高度成对（3 / 4 / 3 行），不再出现半高半矮的锯齿边。
+  // 卡片高度按内容收得更紧（2–3 行），卡与卡之间不再留大空白。
   return const [
-    HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 3),
-    HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 3),
-    HomeSlot(HomeCardId.weather, col: 0, row: 3, w: 3, h: 4),
-    HomeSlot(HomeCardId.cook, col: 3, row: 3, w: 3, h: 4),
-    HomeSlot(HomeCardId.fish, col: 0, row: 7, w: 3, h: 3),
-    // 星象和摸鱼日历同高，右列不再比左列高出一截。
-    HomeSlot(HomeCardId.zodiac, col: 3, row: 7, w: 3, h: 3),
-    HomeSlot(HomeCardId.quote, col: 0, row: 10, w: 6, h: 3),
-    HomeSlot(HomeCardId.mood, col: 0, row: 13, w: 6, h: 3),
+    HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
+    HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
+    HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 3),
+    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 3),
+    HomeSlot(HomeCardId.fish, col: 0, row: 5, w: 3, h: 2),
+    HomeSlot(HomeCardId.zodiac, col: 3, row: 5, w: 3, h: 2),
+    HomeSlot(HomeCardId.cardCollection, col: 0, row: 7, w: 6, h: 2),
+    HomeSlot(HomeCardId.quote, col: 0, row: 9, w: 6, h: 2),
+    HomeSlot(HomeCardId.mood, col: 0, row: 11, w: 6, h: 2),
   ];
 }
 
@@ -416,7 +425,7 @@ class HomeLayoutStore extends ChangeNotifier {
 
   /// 默认布局版本：默认布局重排过就 +1，让旧版保存的布局回默认。
   static const String _versionKey = 'homeLayoutVersion';
-  static const int _layoutVersion = 2;
+  static const int _layoutVersion = 3;
 
   final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
   final Set<HomeLayoutKey> _loaded = {};
@@ -713,6 +722,7 @@ class HomeLayoutStore extends ChangeNotifier {
       HomeCardId.calendar,
       HomeCardId.zodiac,
       HomeCardId.quote,
+      HomeCardId.cardCollection,
     ]) {
       if (planOnly.contains(id) || taken(id)) continue;
       final info = kHomeCardInfo[id]!;

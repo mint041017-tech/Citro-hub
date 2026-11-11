@@ -1,12 +1,9 @@
-import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../data/cards.dart';
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_page.dart';
@@ -14,6 +11,7 @@ import '../calendar/calendar_store.dart';
 import '../services/api.dart';
 import '../services/fish.dart';
 import '../overlays/appreciation_sheet.dart';
+import '../overlays/card_collection.dart';
 import '../overlays/extra_sheets.dart';
 import '../overlays/lantern_sheet.dart';
 import '../overlays/zodiac_modal.dart';
@@ -64,13 +62,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
   double _negThreshold = 300;
 
-  /// 本次手势到达过的最大开度，松手时按它吸附。
-  double _negPeak = 0;
-
-  /// 本次下拉累计的拖拽距离：前 [_negDeadZone] 是死区，
-  /// 之后才换算成抽屉开度。避免「轻轻一拖」就误开。
+  /// 本次下拉累计的拖拽距离：到达 [_negOpenThreshold] 就「弹出」，
+  /// 不再跟手 1:1（拉多少出多少）。
   double _negPull = 0;
-  static const double _negDeadZone = 22;
+
+  /// 触发弹出所需的下拉距离。
+  static const double _negOpenThreshold = 140;
 
   /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
@@ -314,47 +311,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  /// 顶部下拉驱动负一屏。
+  /// 顶部下拉 / 上滑驱动负一屏。
   ///
-  /// 只有列表已经拉到顶（[_scroll.offset] 为 0）还继续往下拽才算拉手，
-  /// 列表中部往上回滚不会误开；前 [_negDeadZone] 是死区，之后按累计
-  /// 拖拽距离换算开度。松手时峰值过半、或向下的快速轻扫，才吸开。
+  /// - 抽屉关着：只有列表拉到顶还继续下拉才算拉手；累计下拉到达
+  ///   [_negOpenThreshold] 就直接「弹出」（动画到全开），不再跟手 1:1。
+  /// - 抽屉开着：任意位置上滑都把它推回去（动画到全关）。
   bool _onScrollNotification(ScrollNotification n) {
     if (n is ScrollStartNotification) {
-      _negPeak = _negProgress;
       _negPull = 0;
-    } else if (n is ScrollUpdateNotification &&
-        n.dragDetails != null &&
-        _scroll.hasClients &&
-        _scroll.offset <= 0.5) {
-      // 列表已到顶还继续往下拖：与 Overscroll 同一套累计。
+    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      if (_negAuto != null) return false;
       final d = n.scrollDelta ?? 0;
-      if (d < 0) {
+      if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
+        // 下拉：累计到阈值就直接弹出，不再跟手 1:1。
         _negPull += -d;
-        final target = ((_negPull - _negDeadZone) / _negThreshold).clamp(
-          0.0,
-          1.0,
-        );
-        _setNegProgress(target);
-        if (target > _negPeak) _negPeak = target;
+        if (_negPull >= _negOpenThreshold) {
+          _animateNegTo(1);
+        } else {
+          _setNegProgress(
+            (_negPull / _negOpenThreshold).clamp(0.0, 1.0) * 0.15,
+          );
+        }
+      } else if (d > 0 && _negProgress > 0.02) {
+        // 抽屉已经出来一点：上滑立刻收起。
+        _animateNegTo(0);
       }
     } else if (n is OverscrollNotification &&
         n.dragDetails != null &&
-        n.overscroll < 0 &&
+        n.overscroll != 0 &&
         _scroll.hasClients &&
         _scroll.offset <= 0.5) {
-      _negPull += -n.overscroll;
-      final target = ((_negPull - _negDeadZone) / _negThreshold).clamp(
-        0.0,
-        1.0,
-      );
-      _setNegProgress(target);
-      if (target > _negPeak) _negPeak = target;
-    } else if (n is ScrollEndNotification && _negProgress > 0) {
-      final velocity = n.dragDetails?.velocity.pixelsPerSecond.dy ?? 0;
-      final open = _negPeak > 0.45 || velocity > 420;
-      _setNegProgress(open ? 1.0 : 0.0);
-      _negPeak = 0;
+      if (_negAuto != null) return false;
+      if (n.overscroll < 0) {
+        _negPull += -n.overscroll;
+        if (_negPull >= _negOpenThreshold) {
+          _animateNegTo(1);
+        } else {
+          _setNegProgress(
+            (_negPull / _negOpenThreshold).clamp(0.0, 1.0) * 0.15,
+          );
+        }
+      } else if (n.overscroll > 0 && _negProgress > 0.02) {
+        _animateNegTo(0);
+      }
+    } else if (n is ScrollEndNotification) {
+      if (_negProgress > 0 && _negProgress < 1 && _negAuto == null) {
+        _setNegProgress(0.0);
+      }
       _negPull = 0;
     }
     return false;
@@ -373,6 +376,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     HomeCardId.calendar => const CalendarCard(),
     HomeCardId.zodiac => const ZodiacCard(),
     HomeCardId.quote => const QuoteCard(),
+    HomeCardId.cardCollection => const CardCollectionEntry(compact: true),
     HomeCardId.game => HomeGameCard(gameKey: slot.item ?? ''),
     HomeCardId.res => HomeResCard(item: slot.item ?? ''),
   };

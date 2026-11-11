@@ -10,6 +10,7 @@ import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
 import '../widgets/home_background.dart';
+import '../widgets/liquid_glass.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
@@ -68,6 +69,11 @@ class GamesPage extends StatelessWidget {
               child: CitroStagger(
                 step: const Duration(milliseconds: 28),
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x1),
+                    child: CitroPageTitle('游戏', '挑一个，玩一会儿'),
+                  ),
+                  const SizedBox(height: AppSpacing.x2),
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -158,13 +164,9 @@ class _GameCard extends StatelessWidget {
           builder: (_) => buildGamePage(entry.key),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.card(c),
-        ),
+      // 卡片底改成液态玻璃：透出底下模糊的背景，和全站玻璃语言一致。
+      child: CitroLiquidGlass(
+        radius: 14,
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
