@@ -280,12 +280,12 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 3),
-      HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 3),
+      HomeSlot(HomeCardId.mood, col: 0, row: 2, w: 6, h: 3),
       // 星象和天气错开一行，避免右列重叠。
       HomeSlot(HomeCardId.zodiac, col: 6, row: 3, w: 6, h: 3),
       HomeSlot(HomeCardId.cardCollection, col: 0, row: 6, w: 12, h: 2),
       HomeSlot(HomeCardId.quote, col: 0, row: 8, w: 12, h: 2),
-      HomeSlot(HomeCardId.mood, col: 0, row: 10, w: 12, h: 3),
+      HomeSlot(HomeCardId.cook, col: 0, row: 10, w: 12, h: 3),
     ];
   }
   // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
@@ -294,12 +294,12 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 3),
-    HomeSlot(HomeCardId.cook, col: 3, row: 2, w: 3, h: 3),
+    HomeSlot(HomeCardId.mood, col: 3, row: 2, w: 3, h: 3),
     HomeSlot(HomeCardId.fish, col: 0, row: 5, w: 3, h: 2),
     HomeSlot(HomeCardId.zodiac, col: 3, row: 5, w: 3, h: 2),
     HomeSlot(HomeCardId.cardCollection, col: 0, row: 7, w: 6, h: 2),
     HomeSlot(HomeCardId.quote, col: 0, row: 9, w: 6, h: 2),
-    HomeSlot(HomeCardId.mood, col: 0, row: 11, w: 6, h: 3),
+    HomeSlot(HomeCardId.cook, col: 0, row: 11, w: 6, h: 3),
   ];
 }
 
@@ -427,7 +427,6 @@ class HomeLayoutStore extends ChangeNotifier {
   final Set<HomeLayoutKey> _loaded = {};
   Map<String, Object?> _raw = const {};
   Timer? _pushTimer;
-  static bool _accountSynced = false;
 
   bool get _signedIn =>
       AppState.instance.user != null && (Api.token?.isNotEmpty ?? false);
@@ -446,61 +445,6 @@ class HomeLayoutStore extends ChangeNotifier {
     // 自定义布局已下线：永远用默认布局，不再读本地 / 云端保存的旧布局。
     // 旧布局里卡片位置是几版前的，会把默认值盖掉（表现就是「卡片一直不换」）。
     _slots[key] = List<HomeSlot>.of(defaultHomeLayout(key));
-  }
-
-  /// 已经搬去「计划」页的三张卡：默认布局和「添加卡片」都不再出现。
-  static const Set<HomeCardId> _planOnly = {
-    HomeCardId.calendar,
-    HomeCardId.todo,
-    HomeCardId.ledger,
-  };
-
-  List<HomeSlot> _normalizeAll(HomeLayoutKey key, List<HomeSlot> input) {
-    final out = <HomeSlot>[];
-    for (final raw in input) {
-      if (!raw.visible) continue;
-      var slot = _normalizeSlot(key, raw);
-      if (!_isFree(out, slot)) {
-        final moved = _nearestFree(out, slot, key.form);
-        if (moved != null) slot = moved;
-      }
-      out.add(slot);
-    }
-    return _compact(out);
-  }
-
-  /// 去掉空行：每张卡尽量上移，直到贴住上面的卡或到顶。
-  ///
-  /// 用户手动排布时经常在两组卡之间留下整行空白，视觉上像「断了一截」；
-  /// 读入时统一收拢，卡与卡之间只保留栅格本身的间距。
-  List<HomeSlot> _compact(List<HomeSlot> slots) {
-    // 记录原始顺序：收拢后按原顺序返回，避免影响卡片绘制层级。
-    final order = <String, int>{
-      for (var i = 0; i < slots.length; i++) slots[i].key: i,
-    };
-    final sorted = [...slots]
-      ..sort((a, b) {
-        if (a.row != b.row) return a.row - b.row;
-        return a.col - b.col;
-      });
-    final placed = <HomeSlot>[];
-    for (final slot in sorted) {
-      var row = slot.row;
-      while (row > 0 && _isFreeAt(placed, slot, row - 1)) {
-        row--;
-      }
-      placed.add(slot.copyWith(row: row));
-    }
-    placed.sort((a, b) => (order[a.key] ?? 0).compareTo(order[b.key] ?? 0));
-    return placed;
-  }
-
-  bool _isFreeAt(List<HomeSlot> placed, HomeSlot slot, int row) {
-    final candidate = slot.copyWith(row: row);
-    for (final other in placed) {
-      if (other.overlaps(candidate)) return false;
-    }
-    return true;
   }
 
   /// 旧版本可能保存过小于当前最小尺寸的卡片；读入时统一收进合法范围，
@@ -817,51 +761,9 @@ class HomeLayoutStore extends ChangeNotifier {
   // 账号同步
   // ---------------------------------------------------------------------------
 
-  /// 登录后拉取云端布局；远端为空时保留本地，并把本地推上去。
-  Future<void> syncFromAccount({bool force = false}) async {
-    if (!force && _accountSynced) return;
-    if (!_signedIn) return;
-    _accountSynced = true;
-    try {
-      final json = await Api.homeLayoutGet();
-      final remote = json['layout'];
-      if (remote is Map && remote.isNotEmpty) {
-        _applyRemote(remote);
-        return;
-      }
-      _schedulePush(immediate: true);
-    } catch (_) {
-      // 离线或旧服务端：继续使用本地布局。
-    }
-  }
-
-  void _applyRemote(Map remote) {
-    var changed = false;
-    for (final key in HomeLayoutKey.values) {
-      final list = remote[key.name];
-      if (list is! List) continue;
-      final parsed = <HomeSlot>[];
-      for (final item in list) {
-        final slot = HomeSlot.fromJson(item, key.form);
-        // 老账号的云端布局里还留着日历 / 待办 / 记账：这三张已经搬去
-        // 「计划」页，同步下来时必须剔掉，否则首页会冒出来两份。
-        if (slot == null || _planOnly.contains(slot.id)) continue;
-        if (parsed.every((e) => e.key != slot.key)) parsed.add(slot);
-      }
-      if (parsed.isEmpty) continue;
-      for (final slot in defaultHomeLayout(key)) {
-        if (parsed.every((e) => e.id != slot.id)) parsed.add(slot);
-      }
-      _loaded.add(key);
-      _slots[key] = _normalizeAll(key, parsed);
-      changed = true;
-    }
-    if (!changed) return;
-    try {
-      Prefs.setString(prefsKey, jsonEncode(exportLayout()));
-    } catch (_) {}
-    notifyListeners();
-  }
+  /// 自定义布局已下线：云端不再保存布局，这里不再拉取远程布局
+  /// （拉回来的是几版前的旧位置，会把默认值盖掉）。
+  Future<void> syncFromAccount({bool force = false}) async {}
 
   void _schedulePush({bool immediate = false}) {
     if (!_signedIn) return;
