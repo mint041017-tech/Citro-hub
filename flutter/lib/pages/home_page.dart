@@ -62,12 +62,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
   double _negThreshold = 300;
 
-  /// 本次下拉累计的拖拽距离：到达 [_negOpenThreshold] 就「弹出」，
-  /// 不再跟手 1:1（拉多少出多少）。
+  /// 本次下拉累计的拖拽距离，用来换算抽屉开度（跟手 1:1，封顶在抽屉高度）。
   double _negPull = 0;
-
-  /// 触发弹出所需的下拉距离。
-  static const double _negOpenThreshold = 140;
 
   /// 负一屏自身上滑时把它推回顶部（同样按增量）。
   bool _onNegativeScroll(ScrollNotification n) {
@@ -256,11 +252,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           side,
                                           sideNav ? 92 : 108,
                                         ),
-                                        child: HomeBento(
-                                          layoutKey: layoutKey,
-                                          editing: false,
-                                          scrollController: _scroll,
-                                          builder: _cardFor,
+                                        child: GlassCardsScope(
+                                          child: HomeBento(
+                                            layoutKey: layoutKey,
+                                            editing: false,
+                                            scrollController: _scroll,
+                                            builder: _cardFor,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 18),
@@ -311,10 +309,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  /// 顶部下拉 / 上滑驱动负一屏。
+  /// 顶部下拉 / 上滑驱动负一屏（微信小程式那种「跟手 + 松手吸附」）。
   ///
-  /// - 抽屉关着：只有列表拉到顶还继续下拉才算拉手；累计下拉到达
-  ///   [_negOpenThreshold] 就直接「弹出」（动画到全开），不再跟手 1:1。
+  /// - 抽屉关着：列表拉到顶还继续下拉，首页整体跟着手指走（1:1），
+  ///   最多走到抽屉全高；松手后按过半与否吸到全开 / 全关。
   /// - 抽屉开着：任意位置上滑都把它推回去（动画到全关）。
   bool _onScrollNotification(ScrollNotification n) {
     if (n is ScrollStartNotification) {
@@ -323,15 +321,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (_negAuto != null) return false;
       final d = n.scrollDelta ?? 0;
       if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
-        // 下拉：累计到阈值就直接弹出，不再跟手 1:1。
+        // 下拉：跟手 1:1，封顶在抽屉高度。
         _negPull += -d;
-        if (_negPull >= _negOpenThreshold) {
-          _animateNegTo(1);
-        } else {
-          _setNegProgress(
-            (_negPull / _negOpenThreshold).clamp(0.0, 1.0) * 0.15,
-          );
-        }
+        _setNegProgress((_negPull / _negThreshold).clamp(0.0, 1.0));
       } else if (d > 0 && _negProgress > 0.02) {
         // 抽屉已经出来一点：上滑立刻收起。
         _animateNegTo(0);
@@ -344,19 +336,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (_negAuto != null) return false;
       if (n.overscroll < 0) {
         _negPull += -n.overscroll;
-        if (_negPull >= _negOpenThreshold) {
-          _animateNegTo(1);
-        } else {
-          _setNegProgress(
-            (_negPull / _negOpenThreshold).clamp(0.0, 1.0) * 0.15,
-          );
-        }
+        _setNegProgress((_negPull / _negThreshold).clamp(0.0, 1.0));
       } else if (n.overscroll > 0 && _negProgress > 0.02) {
         _animateNegTo(0);
       }
     } else if (n is ScrollEndNotification) {
-      if (_negProgress > 0 && _negProgress < 1 && _negAuto == null) {
-        _setNegProgress(0.0);
+      // 松手吸附：过半全开，否则全关。
+      if (_negProgress > 0 && _negAuto == null) {
+        _setNegProgress(_negProgress > 0.5 ? 1.0 : 0.0);
       }
       _negPull = 0;
     }

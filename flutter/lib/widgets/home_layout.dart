@@ -516,7 +516,41 @@ class HomeLayoutStore extends ChangeNotifier {
       }
       out.add(slot);
     }
-    return out;
+    return _compact(out);
+  }
+
+  /// 去掉空行：每张卡尽量上移，直到贴住上面的卡或到顶。
+  ///
+  /// 用户手动排布时经常在两组卡之间留下整行空白，视觉上像「断了一截」；
+  /// 读入时统一收拢，卡与卡之间只保留栅格本身的间距。
+  List<HomeSlot> _compact(List<HomeSlot> slots) {
+    // 记录原始顺序：收拢后按原顺序返回，避免影响卡片绘制层级。
+    final order = <String, int>{
+      for (var i = 0; i < slots.length; i++) slots[i].key: i,
+    };
+    final sorted = [...slots]
+      ..sort((a, b) {
+        if (a.row != b.row) return a.row - b.row;
+        return a.col - b.col;
+      });
+    final placed = <HomeSlot>[];
+    for (final slot in sorted) {
+      var row = slot.row;
+      while (row > 0 && _isFreeAt(placed, slot, row - 1)) {
+        row--;
+      }
+      placed.add(slot.copyWith(row: row));
+    }
+    placed.sort((a, b) => (order[a.key] ?? 0).compareTo(order[b.key] ?? 0));
+    return placed;
+  }
+
+  bool _isFreeAt(List<HomeSlot> placed, HomeSlot slot, int row) {
+    final candidate = slot.copyWith(row: row);
+    for (final other in placed) {
+      if (other.overlaps(candidate)) return false;
+    }
+    return true;
   }
 
   /// 旧版本可能保存过小于当前最小尺寸的卡片；读入时统一收进合法范围，

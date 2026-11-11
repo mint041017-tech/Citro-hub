@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 /// 设计令牌 —— nosh 风格重设计（2026-11）。
 ///
 /// 方向：干净、圆润、留白充足。圆角无衬线字体 + 大圆角卡片 + 粉彩分区底 +
-/// 近黑胶囊主按钮 + 品牌橙强调。手账风（网格纸 / 胶带 / 便签 / 印章 / 手写体）全部退役。
+/// 近黑胶囊主按钮。手账风（网格纸 / 胶带 / 便签 / 印章 / 手写体）全部退役。
+///
+/// 四色搭配：奶青底 #FDEBD3 + 蓝紫品牌 #6B7BB4 + 橄榄语义 #89A411 + 橙强调 #F58E3C。
 ///
 /// 浅色与深色是两套完整值，不是「浅色 + 滤镜」：深色的表面抬升、描边、
 /// 阴影都按暗色下的实际观感单独调过，新增颜色时两边都要给。
@@ -35,35 +37,35 @@ class CitroColors {
   /// 分割线/更强的描边。
   final Color line2;
 
-  /// 品牌橙：主行动、选中、图标、链接。
+  /// 品牌蓝紫：主行动、选中、图标、链接。
   final Color accent;
 
-  /// 按压/更深的橙。
+  /// 按压/更深的蓝紫。
   final Color accent2;
 
-  /// 浅橙：标签底、软强调。
+  /// 浅蓝紫：标签底、软强调。
   final Color accentLt;
 
-  /// 浅底上的橙字（过 AA）。
+  /// 浅底上的蓝紫字（过 AA）。
   final Color accentInk;
 
-  /// 橙底上的文字/图标。
+  /// 蓝紫底上的文字/图标。
   final Color onAccent;
 
-  /// 薄荷绿：成功、收藏、次要语义。
+  /// 橄榄绿：成功、收藏、次要语义。
   final Color mint;
   final Color mintInk;
   final Color mintSoft;
   final Color mintLine;
 
-  /// 朱砂红：日历「宜」、提醒、游戏强调。
+  /// 橙：日历「宜」、提醒、游戏强调。
   final Color stamp;
 
   /// 危险/删除。
   final Color danger;
   final Color dangerSoft;
 
-  /// 荧光黄：标记重点。
+  /// 橙：标记重点。
   final Color hl;
   final Color hlInk;
 
@@ -181,76 +183,77 @@ class CitroColors {
 
   /// 浅色（默认）。
   ///
-  /// 底是暖白偏灰（nosh 的 App 内底），卡片纯白，文字近黑，
-  /// 强调只用品牌橙 + 朱砂红两个暖色，薄荷绿做小面积语义。
+  /// 底是奶青（#FDEBD3），卡片浅奶青，文字近黑，
+  /// 强调用蓝紫（#6B7BB4）+ 橄榄（#89A411）+ 橙（#F58E3C）三色搭配。
   static const light = CitroColors(
-    bg: Color(0xFFF4F3EF),
-    bg2: Color(0xFFE9E7E1),
-    surface: Color(0xFFFFFFFF),
-    surface2: Color(0xFFF4F3EF),
-    ink: Color(0xFF171614),
-    ink2: Color(0xFF57544D),
-    // 11-13px 的元信息用墨：对白底 4.6:1，过 AA（再浅就只剩 3.5:1）。
-    inkSoft: Color(0xFF78756C),
-    line: Color(0xFFECEAE4),
-    line2: Color(0xFFDDD9D0),
-    // 品牌色：深青绿（teal）。和暖奶油底是互补色，比原来的亮橙更耐看，
-    // 也更区别于薄荷绿（成功）与朱砂红（提醒）两个语义色。
-    accent: Color(0xFF0E9488),
-    accent2: Color(0xFF0B7A70),
-    accentLt: Color(0xFFC7F0EA),
-    accentInk: Color(0xFF085F57),
-    // 青绿底上的文字用深墨（对比度约 8:1）。
-    onAccent: Color(0xFF04302B),
-    mint: Color(0xFF2F9E6B),
-    mintInk: Color(0xFF1F7A50),
-    mintSoft: Color(0xFFE6F5EC),
-    mintLine: Color(0xFFCBE7D8),
-    stamp: Color(0xFFC4452C),
-    danger: Color(0xFFDE3B40),
+    bg: Color(0xFFFDEBD3),
+    bg2: Color(0xFFF3E2C6),
+    surface: Color(0xFFFFF9EE),
+    surface2: Color(0xFFF7E7CE),
+    ink: Color(0xFF2A2A33),
+    ink2: Color(0xFF4A4A55),
+    // 11-13px 的元信息用墨：对卡面 5:1，过 AA。
+    inkSoft: Color(0xFF6B6760),
+    line: Color(0xFFEBDCC3),
+    line2: Color(0xFFDCC9A8),
+    // 品牌色：蓝紫（#6B7BB4）。奶青底 + 蓝紫 + 橄榄 + 橙四色搭配。
+    accent: Color(0xFF6B7BB4),
+    accent2: Color(0xFF5868A0),
+    accentLt: Color(0xFFDCE2F2),
+    accentInk: Color(0xFF3E4A7A),
+    // 蓝紫底上的文字用白（对比度约 4:1，标题/加粗足够）。
+    onAccent: Color(0xFFFFFFFF),
+    // 橄榄绿：成功、收藏、次要语义。
+    mint: Color(0xFF89A411),
+    mintInk: Color(0xFF3F4D0A),
+    mintSoft: Color(0xFFEEF2DA),
+    mintLine: Color(0xFFD5DDA8),
+    // 橙：标记、提醒、游戏强调。
+    stamp: Color(0xFFF58E3C),
+    danger: Color(0xFFD94F4F),
     dangerSoft: Color(0xFFFDECEC),
-    hl: Color(0x66FFD166),
-    hlInk: Color(0xCCFFB43A),
-    tintYellow: Color(0xFFFEF3D5),
+    hl: Color(0x66F58E3C),
+    hlInk: Color(0xCCF58E3C),
+    tintYellow: Color(0xFFFDEBD3),
     tintPink: Color(0xFFFDECEF),
-    tintBlue: Color(0xFFE9F2F9),
-    tintGreen: Color(0xFFF0F8EA),
-    tintNeutral: Color(0xFFF1F1F1),
+    tintBlue: Color(0xFFE4EAF7),
+    tintGreen: Color(0xFFEFF4DA),
+    tintNeutral: Color(0xFFF1EDE4),
     dark: false,
   );
 
   /// 深色（近黑表面 + 同强调色）。
   ///
-  /// 三级表面：底 #0E0F11 → 卡 #17181B → 内嵌 #1F2125；
+  /// 三级表面：底 #1A1C26 → 卡 #232636 → 内嵌 #2B2E40；
   /// 描边用白透明而非灰，避免暗面上发脏；阴影一律纯黑。
   static const darkColors = CitroColors(
-    bg: Color(0xFF0E0F11),
-    bg2: Color(0xFF090A0C),
-    surface: Color(0xFF17181B),
-    surface2: Color(0xFF1F2125),
+    bg: Color(0xFF1A1C26),
+    bg2: Color(0xFF12141C),
+    surface: Color(0xFF232636),
+    surface2: Color(0xFF2B2E40),
     ink: Color(0xFFF2F1EC),
     ink2: Color(0xFFC7C5BD),
-    inkSoft: Color(0xFF8E8C84),
+    inkSoft: Color(0xFF9E9C94),
     line: Color(0x1AFFFFFF),
     line2: Color(0x29FFFFFF),
-    accent: Color(0xFF4CC9B8),
-    accent2: Color(0xFF0E9488),
-    accentLt: Color(0xFF10332E),
-    accentInk: Color(0xFF8FE0D4),
-    onAccent: Color(0xFF04211D),
-    mint: Color(0xFF5CC98E),
-    mintInk: Color(0xFF8FE0B4),
-    mintSoft: Color(0xFF17281F),
-    mintLine: Color(0xFF2A4034),
-    stamp: Color(0xFFE0796A),
+    accent: Color(0xFF8B9BD4),
+    accent2: Color(0xFF6B7BB4),
+    accentLt: Color(0xFF2A3050),
+    accentInk: Color(0xFFC4CEF0),
+    onAccent: Color(0xFF1A1C26),
+    mint: Color(0xFFA8C43A),
+    mintInk: Color(0xFFD0E08A),
+    mintSoft: Color(0xFF232A10),
+    mintLine: Color(0xFF3A4618),
+    stamp: Color(0xFFF58E3C),
     danger: Color(0xFFFF6E73),
     dangerSoft: Color(0xFF2A1718),
-    hl: Color(0x40FFD166),
-    hlInk: Color(0x66FFD166),
-    tintYellow: Color(0xFF241F11),
-    tintPink: Color(0xFF251719),
-    tintBlue: Color(0xFF152029),
-    tintGreen: Color(0xFF16211A),
+    hl: Color(0x40F58E3C),
+    hlInk: Color(0x66F58E3C),
+    tintYellow: Color(0xFF2A2410),
+    tintPink: Color(0xFF2A1719),
+    tintBlue: Color(0xFF1A2030),
+    tintGreen: Color(0xFF1C2410),
     tintNeutral: Color(0xFF17181B),
     dark: true,
   );

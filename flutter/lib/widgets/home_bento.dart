@@ -105,11 +105,24 @@ class _HomeBentoState extends State<HomeBento> {
 
   double _y(int row) => row * (_form.rowUnit + _form.gap);
 
+  /// 同一行里最高的卡片高度：同行的卡片一律拉齐到这一档，
+  /// 避免出现「左卡短、右卡长」的锯齿边。
+  int _stretchedH(HomeSlot slot) {
+    final slots = HomeLayoutStore.instance.visibleSlots(widget.layoutKey);
+    var h = slot.h;
+    for (final other in slots) {
+      if (other.key != slot.key && other.row == slot.row && other.h > h) {
+        h = other.h;
+      }
+    }
+    return h;
+  }
+
   Rect _rectOf(HomeSlot slot) => Rect.fromLTWH(
     _x(slot.col),
     _y(slot.row),
     slot.w * _cellW + (slot.w - 1) * _form.gap,
-    slot.h * _form.rowUnit + (slot.h - 1) * _form.gap,
+    _stretchedH(slot) * _form.rowUnit + (_stretchedH(slot) - 1) * _form.gap,
   );
 
   HomeSlot _snap(Rect rect, HomeSlot base) {
@@ -129,7 +142,7 @@ class _HomeBentoState extends State<HomeBento> {
     if (slots.isEmpty) return 180;
     var bottom = 0;
     for (final slot in slots) {
-      bottom = math.max(bottom, slot.bottom);
+      bottom = math.max(bottom, slot.row + _stretchedH(slot));
     }
     final preview = _previewSlot();
     if (preview != null) bottom = math.max(bottom, preview.bottom);

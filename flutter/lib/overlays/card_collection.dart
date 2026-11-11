@@ -144,7 +144,10 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       const SizedBox(height: 2),
                       Text(
                         '已收集 $unlocked / $total · 抽到才会点亮',
-                        style: context.body(size: CitroType.small, color: c.inkSoft),
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.inkSoft,
+                        ),
                       ),
                     ],
                   ),
@@ -157,7 +160,9 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(colors: [c.accent, c.accent2]),
-                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
                         boxShadow: CitroColors.shadows.sm(c),
                       ),
                       child: Row(
@@ -221,7 +226,10 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                   const SizedBox(width: 8),
                   Text(
                     '${category.cards.where((e) => owned.contains(e.id)).length}/${category.cards.length}',
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: CitroDivider(color: c.line2.withAlpha(140))),
@@ -252,7 +260,11 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
             child: Text(
               '卡面通过每日打卡、转运、完成游戏、发图文动态、公开菜谱和找 CiCi 聊天获得',
               textAlign: TextAlign.center,
-              style: context.body(size: CitroType.micro, color: c.inkSoft, height: 1.6),
+              style: context.body(
+                size: CitroType.micro,
+                color: c.inkSoft,
+                height: 1.6,
+              ),
             ),
           ),
         ),
@@ -340,7 +352,9 @@ class _CardTile extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: c.scrim,
                               shape: BoxShape.circle,
-                              border: Border.all(color: c.surface.withAlpha(160)),
+                              border: Border.all(
+                                color: c.surface.withAlpha(160),
+                              ),
                             ),
                             child: Center(
                               child: Icon(
@@ -456,7 +470,9 @@ class _CardZoom extends StatelessWidget {
                 child: CitroHero(
                   tag: CitroHero.tagOf('card', card.id),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.inner,
+                    ),
                     child: CardFaceImage(
                       card: card,
                       cacheWidth: 1200,
@@ -526,151 +542,145 @@ class CardCollectionEntry extends StatelessWidget {
     ];
     final preview = unlockedCards.take(3).toList();
     final total = CardCatalog.all.length;
-    return Pressable(
+    return CitroCard(
+      glass: true,
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       onTap: () => showCardCollection(context),
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          compact ? 14 : 16,
-          12,
-          compact ? 14 : 16,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          color: c.accentLt.withAlpha(c.dark ? 60 : 170),
-          border: Border.all(color: c.accent.withAlpha(90)),
-          boxShadow: CitroColors.shadows.card(c),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: compact ? 40 : 46,
-              height: compact ? 40 : 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [c.accent, c.accent2]),
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(AppIcons.sparkle, width: 2),
-                  size: compact ? 19 : 22,
-                  color: c.onAccent,
-                ),
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 40 : 46,
+            height: compact ? 40 : 46,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: [c.accent, c.accent2]),
+            ),
+            child: Center(
+              child: AppIcon(
+                strokeSvg(AppIcons.sparkle, width: 2),
+                size: compact ? 19 : 22,
+                color: c.onAccent,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '卡面收藏',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.display(
-                            size: compact ? 16 : 18,
-                            weight: CitroType.medium,
-                            color: c.ink,
-                          ),
-                        ),
-                      ),
-                      if (state.cardCredits > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.accent,
-                            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                          ),
-                          child: Text(
-                            '可抽 ${state.cardCredits}',
-                            maxLines: 1,
-                            style: context.body(
-                              size: CitroType.micro,
-                              weight: CitroType.medium,
-                              color: c.onAccent,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    total == 0
-                        ? '正在整理卡面…'
-                        : '已收集 ${unlockedCards.length} / $total · 抽到才会点亮',
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            SizedBox(
-              width: compact ? 88 : 104,
-              height: compact ? 58 : 68,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (var i = 0; i < 3; i++)
-                    Positioned(
-                      left: i * (compact ? 22 : 27),
-                      top: i.isOdd ? 3 : 0,
-                      child: Transform.rotate(
-                        angle: (i - 1) * .1,
-                        child: Container(
-                          width: compact ? 38 : 45,
-                          height: compact ? 51 : 60,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
-                            border: Border.all(color: c.surface, width: 1.4),
-                            boxShadow: CitroColors.shadows.card(c),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
-                            child: i < preview.length
-                                ? CardFaceImage(
-                                    card: preview[i],
-                                    cacheWidth: 120,
-                                    borderRadius: BorderRadius.zero,
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          c.accent.withAlpha(80),
-                                          c.ink.withAlpha(60),
-                                        ],
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.lock_outline_rounded,
-                                      size: 13,
-                                      color: c.surface.withAlpha(200),
-                                    ),
-                                  ),
-                          ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '卡面收藏',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.display(
+                          size: compact ? 16 : 18,
+                          weight: CitroType.medium,
+                          color: c.ink,
                         ),
                       ),
                     ),
-                ],
-              ),
+                    if (state.cardCredits > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.accent,
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
+                        ),
+                        child: Text(
+                          '可抽 ${state.cardCredits}',
+                          maxLines: 1,
+                          style: context.body(
+                            size: CitroType.micro,
+                            weight: CitroType.medium,
+                            color: c.onAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  total == 0
+                      ? '正在整理卡面…'
+                      : '已收集 ${unlockedCards.length} / $total · 抽到才会点亮',
+                  style: context.body(size: CitroType.micro, color: c.inkSoft),
+                ),
+              ],
             ),
-            AppIcon(
-              strokeSvg(AppIcons.chevronRight, width: 2),
-              size: 15,
-              color: c.inkSoft.withAlpha(160),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: compact ? 88 : 104,
+            height: compact ? 58 : 68,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (var i = 0; i < 3; i++)
+                  Positioned(
+                    left: i * (compact ? 22 : 27),
+                    top: i.isOdd ? 3 : 0,
+                    child: Transform.rotate(
+                      angle: (i - 1) * .1,
+                      child: Container(
+                        width: compact ? 38 : 45,
+                        height: compact ? 51 : 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.xs,
+                          ),
+                          border: Border.all(color: c.surface, width: 1.4),
+                          boxShadow: CitroColors.shadows.card(c),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.xs,
+                          ),
+                          child: i < preview.length
+                              ? CardFaceImage(
+                                  card: preview[i],
+                                  cacheWidth: 120,
+                                  borderRadius: BorderRadius.zero,
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        c.accent.withAlpha(80),
+                                        c.ink.withAlpha(60),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 13,
+                                    color: c.surface.withAlpha(200),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+          AppIcon(
+            strokeSvg(AppIcons.chevronRight, width: 2),
+            size: 15,
+            color: c.inkSoft.withAlpha(160),
+          ),
+        ],
       ),
     );
   }

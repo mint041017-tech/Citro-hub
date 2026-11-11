@@ -1,11 +1,173 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
+import 'package:image/image.dart' as img;
 
 import '../data/cards.dart';
 import '../state/app_state.dart';
+
+/// 背景图的信息：资源、原始尺寸、底部提取色。
+class _BgInfo {
+  final String asset;
+  final Size size;
+  final Color bottom;
+
+  const _BgInfo(this.asset, this.size, this.bottom);
+}
+
+/// 把背景图按「不放大、不裁切」的方式铺在顶部，下方用提取色混色过渡。
+///
+/// 图只占上半部（按原始比例缩到屏宽，绝不放大），
+/// 未覆盖的下方区域从图底颜色渐变到主题底，避免直接一刀切。
+class CitroBlendImage extends StatefulWidget {
+  const CitroBlendImage({super.key, this.networkUrl});
+
+  /// 为空时用时段背景图（asset）。
+  final String? networkUrl;
+
+  @override
+  State<CitroBlendImage> createState() => _CitroBlendImageState();
+}
+
+class _CitroBlendImageState extends State<CitroBlendImage> {
+  /// 解码结果按资源地址缓存：计划 / 游戏 / 社区共用同一张背景，
+  /// 不能每进一页就重解码一次。
+  static final Map<String, _BgInfo> _cache = {};
+
+  Future<_BgInfo>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(CitroBlendImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.networkUrl != widget.networkUrl) {
+      _future = _load();
+    }
+  }
+
+  Future<_BgInfo> _load() async {
+    final url = widget.networkUrl;
+    final key = url ?? CitroTimeBackground.assetFor(DateTime.now());
+    final hit = _cache[key];
+    if (hit != null) return Future.value(hit);
+    final info = await _decode(key);
+    _cache[key] = info;
+    return info;
+  }
+
+  static Future<_BgInfo> _decode(String key) async {
+    if (key.startsWith('http')) {
+      try {
+        final bytes = await _loadNetwork(key);
+        final decoded = img.decodeImage(bytes);
+        if (decoded != null) {
+          return _BgInfo(
+            key,
+            Size(decoded.width.toDouble(), decoded.height.toDouble()),
+            _sampleBottom(decoded),
+          );
+        }
+      } catch (_) {}
+      return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
+    }
+    try {
+      final data = await rootBundle.load(key);
+      final decoded = img.decodeImage(data.buffer.asUint8List());
+      if (decoded != null) {
+        return _BgInfo(
+          key,
+          Size(decoded.width.toDouble(), decoded.height.toDouble()),
+          _sampleBottom(decoded),
+        );
+      }
+    } catch (_) {}
+    return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
+  }
+
+  static Future<Uint8List> _loadNetwork(String url) async {
+    final bundle = NetworkAssetBundle(Uri.parse(url));
+    final data = await bundle.load(url);
+    return data.buffer.asUint8List();
+  }
+
+  /// 取底部 15% 的平均色，作为下方混色的起点。
+  static Color _sampleBottom(img.Image decoded) {
+    final w = decoded.width;
+    final h = decoded.height;
+    if (w == 0 || h == 0) return CitroTimeBackground.baseColor();
+    var r = 0, g = 0, b = 0, n = 0;
+    final y0 = (h * 0.85).floor();
+    for (var y = y0; y < h; y++) {
+      for (var x = 0; x < w; x += 3) {
+        final p = decoded.getPixel(x, y);
+        r += p.r.toInt();
+        g += p.g.toInt();
+        n++;
+        b += p.b.toInt();
+      }
+    }
+    if (n == 0) return CitroTimeBackground.baseColor();
+    return Color.fromRGBO(r ~/ n, g ~/ n, b ~/ n, 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = CitroTimeBackground.baseColor();
+    return FutureBuilder<_BgInfo>(
+      future: _future,
+      builder: (context, snap) {
+        final info = snap.data;
+        final bottom = info?.bottom ?? base;
+        final size = info?.size ?? Size.zero;
+        final url = widget.networkUrl;
+        return ColoredBox(
+          color: base,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (url != null)
+                Image.network(
+                  url,
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  cacheWidth: 512,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                )
+              else
+                Image.asset(
+                  info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  cacheWidth: 512,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              if (size != Size.zero)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [bottom.withAlpha(0), bottom, base],
+                      stops: const [0.5, 0.78, 1],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 /// 随时段变化的柔光背景图（清晨 / 白天 / 傍晚 / 夜晚）。
 ///
@@ -55,17 +217,7 @@ class _CitroTimeBackgroundState extends State<CitroTimeBackground> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: CitroTimeBackground.baseColor(),
-      child: Image.asset(
-        CitroTimeBackground.assetFor(DateTime.now()),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        cacheWidth: 512,
-        errorBuilder: (_, _, _) => const SizedBox.shrink(),
-      ),
-    );
+    return const CitroBlendImage();
   }
 }
 
@@ -166,16 +318,7 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = (_ready && _face != null)
-        ? Image.network(
-            _face!.url,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            cacheWidth: 512,
-            errorBuilder: (_, _, _) => const CitroTimeBackground(),
-          )
-        : const CitroTimeBackground();
+    Widget image = CitroBlendImage(networkUrl: _ready ? _face?.url : null);
     if (widget.blurred) {
       image = ImageFiltered(
         imageFilter: ui.ImageFilter.blur(

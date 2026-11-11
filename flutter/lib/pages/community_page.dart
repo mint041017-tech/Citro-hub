@@ -789,6 +789,7 @@ class _CommunityPageState extends State<CommunityPage>
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: CitroCard(
+          glass: true,
           radius: CitroColors.radii.page,
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 36),
           child: Column(
@@ -843,6 +844,7 @@ class _CommunityPageState extends State<CommunityPage>
     final c = context.c;
     final user = app.user!;
     return CitroCard(
+      glass: true,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Row(
         children: [
@@ -1033,6 +1035,7 @@ class _CommunityPageState extends State<CommunityPage>
   Widget _empty(BuildContext context) {
     final c = context.c;
     return CitroCard(
+      glass: true,
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       child: Column(
         children: [
@@ -1319,6 +1322,7 @@ class _PostCardState extends State<_PostCard> {
         ? visibleComments
         : visibleComments.take(2).toList();
     return CitroCard(
+      glass: true,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

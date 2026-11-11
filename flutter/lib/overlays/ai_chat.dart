@@ -19,6 +19,7 @@ import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/cici_composer.dart';
+import '../widgets/liquid_glass.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
@@ -739,12 +740,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(CitroColors.radii.card),
         ),
-        child: Container(
+        child: CitroLiquidGlass(
           height: height,
-          decoration: BoxDecoration(
-            color: c.surface,
-            border: Border(top: BorderSide(color: c.line)),
-          ),
+          radius: CitroColors.radii.card,
+          clipBehavior: Clip.antiAlias,
           child: CitroBackground(
             child: SafeArea(
               top: false,

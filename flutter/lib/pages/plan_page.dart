@@ -49,30 +49,32 @@ class PlanPage extends StatelessWidget {
                       // 这三张卡原本是 Bento 格子里的固定档位，内部大量用
                       // Expanded / Spacer；竖排时得显式给高度，否则在
                       // 「高度不受限的滚动视图」里会直接报 flex 冲突。
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const CitroPageTitle('计划', '今天的安排，一目了然'),
-                          const SizedBox(height: AppSpacing.x3),
-                          const _SectionLabel('日历', '今天 · 农历 · 节日'),
-                          const SizedBox(height: AppSpacing.x1),
-                          const _TodayCard(),
-                          const SizedBox(height: AppSpacing.x3),
-                          const _SectionLabel('待办', '今天的任务与专注'),
-                          const SizedBox(height: AppSpacing.x1),
-                          SizedBox(
-                            height: (w * .82).clamp(250.0, 380.0),
-                            // 计划页的待办卡用全局橙，和下面的记账卡同一套强调色。
-                            child: const TodoHomeCard(globalAccent: true),
-                          ),
-                          const SizedBox(height: AppSpacing.x3),
-                          const _SectionLabel('记账', '本月收支'),
-                          const SizedBox(height: AppSpacing.x1),
-                          SizedBox(
-                            height: (w * .64).clamp(190.0, 280.0),
-                            child: const LedgerHomeCard(),
-                          ),
-                        ],
+                      return GlassCardsScope(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const CitroPageTitle('计划', '今天的安排，一目了然'),
+                            const SizedBox(height: AppSpacing.x3),
+                            const _SectionLabel('日历', '今天 · 农历 · 节日'),
+                            const SizedBox(height: AppSpacing.x1),
+                            const _TodayCard(),
+                            const SizedBox(height: AppSpacing.x3),
+                            const _SectionLabel('待办', '今天的任务与专注'),
+                            const SizedBox(height: AppSpacing.x1),
+                            SizedBox(
+                              height: (w * .82).clamp(250.0, 380.0),
+                              // 计划页的待办卡用全局品牌色，和下面的记账卡同一套强调色。
+                              child: const TodoHomeCard(globalAccent: true),
+                            ),
+                            const SizedBox(height: AppSpacing.x3),
+                            const _SectionLabel('记账', '本月收支'),
+                            const SizedBox(height: AppSpacing.x1),
+                            SizedBox(
+                              height: (w * .64).clamp(190.0, 280.0),
+                              child: const LedgerHomeCard(),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),

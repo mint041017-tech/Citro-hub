@@ -133,10 +133,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     // 固定布局：不再有编辑入口、拖拽圆柄和添加卡片面板。
     expect(find.byKey(const ValueKey('home-layout-edit')), findsNothing);
-    expect(
-      find.text('拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小'),
-      findsNothing,
-    );
+    expect(find.text('拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小'), findsNothing);
     expect(find.byIcon(Icons.open_in_full_rounded), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -166,10 +163,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(_drawerShift(tester), 0);
 
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, 320),
-    );
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
     await tester.pump();
     expect(_drawerShift(tester), greaterThan(0));
     await tester.pumpAndSettle();
@@ -200,7 +194,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('negative screen pops at a threshold instead of tracking the finger', (
+  testWidgets('negative screen follows the finger and snaps open', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -210,23 +204,22 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(_drawerShift(tester), 0);
 
-    // 累计下拉未到阈值：只露一小截，不跟手 1:1。
+    // 下拉 100px：抽屉跟手走 1:1（封顶在抽屉高度）。
     final gesture = await tester.startGesture(
       tester.getCenter(find.byType(SingleChildScrollView)),
     );
     await gesture.moveBy(const Offset(0, 100));
     await tester.pump();
-    final peek = _drawerShift(tester);
-    expect(peek, greaterThan(0));
-    expect(peek, lessThan(100));
+    final follow = _drawerShift(tester);
+    expect(follow, greaterThan(0));
+    expect(follow, lessThanOrEqualTo(100));
 
-    // 累计超过阈值：松手后自动弹出到全开。
-    await gesture.moveBy(const Offset(0, 60));
+    // 继续下拉过半后松手：吸到全开。
+    await gesture.moveBy(const Offset(0, 200));
     await tester.pump();
     await gesture.up();
     await tester.pumpAndSettle();
     expect(_drawerShift(tester), greaterThan(200));
     expect(tester.takeException(), isNull);
   });
-
 }

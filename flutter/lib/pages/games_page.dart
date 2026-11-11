@@ -78,6 +78,7 @@ class GamesPage extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       CitroCard(
+                        glass: true,
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
