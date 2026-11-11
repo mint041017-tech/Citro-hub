@@ -116,11 +116,12 @@ class _LedgerPageState extends State<LedgerPage>
                             ],
                           ),
                         ),
-                        // 键盘弹起时收起底栏（玻璃条浮在内容之上，直接不挂载）。
+                        // 键盘弹起时收起底栏（下滑 + 淡出，逻辑同以前）。
                         if (!wide)
-                          MediaQuery.viewInsetsOf(context).bottom == 0
-                              ? _bottomBar(context)
-                              : const SizedBox.shrink(),
+                          _bottomBar(
+                            context,
+                            visible: MediaQuery.viewInsetsOf(context).bottom == 0,
+                          ),
                       ],
                     ),
                   ),
@@ -263,7 +264,7 @@ class _LedgerPageState extends State<LedgerPage>
     );
   }
 
-  Widget _bottomBar(BuildContext context) {
+  Widget _bottomBar(BuildContext context, {bool visible = true}) {
     return GlassTabBar(
       tabs: const [
         GlassTab(
@@ -281,6 +282,7 @@ class _LedgerPageState extends State<LedgerPage>
       onChanged: _switchTab,
       showCici: true,
       onCiciTap: () => showAiChat(context),
+      visible: visible,
     );
   }
 }

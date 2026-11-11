@@ -24,6 +24,9 @@ class GlassTab {
   /// 状态点（听隅专注倒计时时用），和角标互不影响。
   final bool dot;
 
+  /// 状态点颜色，缺省用选中色（听隅暂停时是灰色、运行时是绿色）。
+  final Color? dotColor;
+
   /// 读屏用语，缺省用 [label]（听隅专注页要播「专注 25:00」而不是只念时间）。
   final String? semanticsLabel;
 
@@ -36,6 +39,7 @@ class GlassTab {
     this.icon,
     this.badge = 0,
     this.dot = false,
+    this.dotColor,
     this.semanticsLabel,
     this.key,
   });
@@ -57,6 +61,9 @@ class GlassTabBar extends StatelessWidget {
   final Color? activeColor;
   final Color? inactiveColor;
 
+  /// 键盘弹起时收起来（保留原来的隐藏逻辑，附带下滑 + 淡出）。
+  final bool visible;
+
   /// 直接给颜色，绕开 `context.c`（听隅子树没有 CitroSkin 扩展时用）。
   final CitroColors? colors;
 
@@ -73,6 +80,7 @@ class GlassTabBar extends StatelessWidget {
     this.onCiciTap,
     this.activeColor,
     this.inactiveColor,
+    this.visible = true,
     this.colors,
     this.tabsBuilder,
     this.listenable,
@@ -130,17 +138,33 @@ class GlassTabBar extends StatelessWidget {
       left: AppSpacing.x1,
       right: AppSpacing.x1,
       bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.x1,
-      // 子树统一补上 CitroSkin：听隅的 Theme 没有这个扩展，
-      // 里面的 Pressable / CiciAvatarButton 都依赖 context.c。
-      child: Theme(
-        data: Theme.of(context).copyWith(extensions: [CitroSkin(c)]),
-        child: RepaintBoundary(
-          child: listenable == null
-              ? bar(context)
-              : ListenableBuilder(
-                  listenable: listenable!,
-                  builder: (context, _) => bar(context),
+      child: AnimatedSlide(
+        offset: visible ? Offset.zero : const Offset(0, 1.5),
+        duration: reduce ? Duration.zero : const Duration(milliseconds: 180),
+        curve: CitroMotion.easeOut,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: reduce ? Duration.zero : const Duration(milliseconds: 180),
+          child: IgnorePointer(
+            ignoring: !visible,
+            // 子树统一补上 CitroSkin：听隅的 Theme 没有这个扩展，
+            // 里面的 Pressable / CiciAvatarButton 都依赖 context.c。
+            child: Theme(
+              data: Theme.of(context).copyWith(extensions: [CitroSkin(c)]),
+              child: RepaintBoundary(
+                // Builder 保证 bar 拿到的是 Theme 之下的 context（听隅子树没有
+                // CitroSkin，slot 里的 context.body / context.c 都依赖它）。
+                child: Builder(
+                  builder: (context) => listenable == null
+                      ? bar(context)
+                      : ListenableBuilder(
+                          listenable: listenable!,
+                          builder: (context, _) => bar(context),
+                        ),
                 ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -248,7 +272,7 @@ class GlassTabBar extends StatelessWidget {
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: active,
+                        color: tab.dotColor ?? active,
                         shape: BoxShape.circle,
                       ),
                     ),

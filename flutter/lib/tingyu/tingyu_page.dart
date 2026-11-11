@@ -1401,63 +1401,67 @@ class _NookHomeState extends State<NookHome> {
                       Expanded(
                         child: Stack(
                           children: [
-                            AnimatedSwitcher(
-                              duration: CitroMotion.reduced(context)
-                                  ? Duration.zero
-                                  : const Duration(milliseconds: 280),
-                              switchInCurve: CitroMotion.easeOut,
-                              switchOutCurve: Curves.easeInCubic,
-                              transitionBuilder: (child, animation) {
-                                final slide = Tween<Offset>(
-                                  begin: const Offset(.06, 0),
-                                  end: Offset.zero,
-                                ).animate(animation);
-                                // 旧页与新页各自独立图层，过渡时只合成不重绘整页。
-                                return RepaintBoundary(
-                                  child: FadeTransition(
-                                    opacity: animation,
-                                    child: SlideTransition(
-                                      position: slide,
-                                      child: child,
+                            Positioned.fill(
+                              child: AnimatedSwitcher(
+                                duration: CitroMotion.reduced(context)
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 280),
+                                switchInCurve: CitroMotion.easeOut,
+                                switchOutCurve: Curves.easeInCubic,
+                                transitionBuilder: (child, animation) {
+                                  final slide = Tween<Offset>(
+                                    begin: const Offset(.06, 0),
+                                    end: Offset.zero,
+                                  ).animate(animation);
+                                  // 旧页与新页各自独立图层，过渡时只合成不重绘整页。
+                                  return RepaintBoundary(
+                                    child: FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: slide,
+                                        child: child,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                              child: !c.ready
-                                  ? KeyedSubtree(
-                                      key: const ValueKey('nook-loading'),
-                                      child: loadingView(context),
-                                    )
-                                  : KeyedSubtree(
-                                      key: ValueKey('nook-page-$page'),
-                                      child: page == 3
-                                          ? favoritesTab(context, desktop)
-                                          : SingleChildScrollView(
-                                              key: PageStorageKey('page-$page'),
-                                              padding: EdgeInsets.fromLTRB(
-                                                desktop ? 34 : 20,
-                                                desktop ? 32 : 14,
-                                                desktop ? 34 : 20,
-                                                // 手机上有浮动玻璃导航条，底部多留一截。
-                                                desktop ? 34 : 72,
-                                              ),
-                                              child: ConstrainedBox(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                      maxWidth: 1050,
-                                                    ),
-                                                child: switch (page) {
-                                                  1 => pomodoroPage(
-                                                    context,
-                                                    wide,
+                                  );
+                                },
+                                child: !c.ready
+                                    ? KeyedSubtree(
+                                        key: const ValueKey('nook-loading'),
+                                        child: loadingView(context),
+                                      )
+                                    : KeyedSubtree(
+                                        key: ValueKey('nook-page-$page'),
+                                        child: page == 3
+                                            ? favoritesTab(context, desktop)
+                                            : SingleChildScrollView(
+                                                key: PageStorageKey(
+                                                  'page-$page',
+                                                ),
+                                                padding: EdgeInsets.fromLTRB(
+                                                  desktop ? 34 : 20,
+                                                  desktop ? 32 : 14,
+                                                  desktop ? 34 : 20,
+                                                  // 手机上有浮动玻璃导航条，底部多留一截。
+                                                  desktop ? 34 : 72,
+                                                ),
+                                                child: ConstrainedBox(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    maxWidth: 1050,
                                                   ),
-                                                  2 => libraryPage(context),
-                                                  4 => settingsPage(context),
-                                                  _ => homePage(context, wide),
-                                                },
+                                                  child: switch (page) {
+                                                    1 => pomodoroPage(
+                                                      context,
+                                                      wide,
+                                                    ),
+                                                    2 => libraryPage(context),
+                                                    4 => settingsPage(context),
+                                                    _ => homePage(context, wide),
+                                                  },
+                                                ),
                                               ),
-                                            ),
-                                    ),
+                                      ),
+                              ),
                             ),
                             if (!desktop)
                               GlassTabBar(
@@ -1479,6 +1483,9 @@ class _NookHomeState extends State<NookHome> {
                                           : '专注',
                                       icon: Icons.timer_outlined,
                                       dot: ticking,
+                                      dotColor: pomo.running
+                                          ? p.accent
+                                          : p.muted,
                                     ),
                                     const GlassTab(
                                       label: '声音',
