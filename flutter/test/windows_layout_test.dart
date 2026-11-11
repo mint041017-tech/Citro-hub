@@ -146,7 +146,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
     final semantics = tester.ensureSemantics();
-    for (final label in ['首页', '游戏', '社区', '待办', 'CICI 智能助手']) {
+    for (final label in ['首页', '游戏', '社区', '计划', 'CICI 智能助手']) {
       expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
     // 文字直接画在玻璃条上，不再只靠 Semantics 暴露。

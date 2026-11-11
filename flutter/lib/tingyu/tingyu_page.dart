@@ -14,6 +14,7 @@ import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/active_listenable.dart';
 import '../widgets/desktop_shell.dart';
+import '../widgets/glass_tab_bar.dart';
 import '../widgets/modal.dart';
 import 'tingyu_controller.dart';
 import 'tingyu_models.dart';
@@ -1385,7 +1386,9 @@ class _NookHomeState extends State<NookHome> {
         return Scaffold(
           body: SafeArea(
             top: !desktop,
-            bottom: false,
+            // 底部安全区由这里统一吃掉：玻璃导航条和迷你播放器都贴在
+            // 安全区之上，内容区不会被系统手势条挡住。
+            bottom: true,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1396,61 +1399,114 @@ class _NookHomeState extends State<NookHome> {
                       if (widget.landscapeHeader)
                         _landscapeHeader(context, desktop),
                       Expanded(
-                        child: AnimatedSwitcher(
-                          duration: CitroMotion.reduced(context)
-                              ? Duration.zero
-                              : const Duration(milliseconds: 280),
-                          switchInCurve: CitroMotion.easeOut,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            final slide = Tween<Offset>(
-                              begin: const Offset(.06, 0),
-                              end: Offset.zero,
-                            ).animate(animation);
-                            // 旧页与新页各自独立图层，过渡时只合成不重绘整页。
-                            return RepaintBoundary(
-                              child: FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: slide,
-                                  child: child,
-                                ),
-                              ),
-                            );
-                          },
-                          child: !c.ready
-                              ? KeyedSubtree(
-                                  key: const ValueKey('nook-loading'),
-                                  child: loadingView(context),
-                                )
-                              : KeyedSubtree(
-                                  key: ValueKey('nook-page-$page'),
-                                  child: page == 3
-                                      ? favoritesTab(context, desktop)
-                                      : SingleChildScrollView(
-                                          key: PageStorageKey('page-$page'),
-                                          padding: EdgeInsets.fromLTRB(
-                                            desktop ? 34 : 20,
-                                            desktop ? 32 : 14,
-                                            desktop ? 34 : 20,
-                                            34,
-                                          ),
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 1050,
+                        child: Stack(
+                          children: [
+                            AnimatedSwitcher(
+                              duration: CitroMotion.reduced(context)
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 280),
+                              switchInCurve: CitroMotion.easeOut,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) {
+                                final slide = Tween<Offset>(
+                                  begin: const Offset(.06, 0),
+                                  end: Offset.zero,
+                                ).animate(animation);
+                                // 旧页与新页各自独立图层，过渡时只合成不重绘整页。
+                                return RepaintBoundary(
+                                  child: FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: slide,
+                                      child: child,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: !c.ready
+                                  ? KeyedSubtree(
+                                      key: const ValueKey('nook-loading'),
+                                      child: loadingView(context),
+                                    )
+                                  : KeyedSubtree(
+                                      key: ValueKey('nook-page-$page'),
+                                      child: page == 3
+                                          ? favoritesTab(context, desktop)
+                                          : SingleChildScrollView(
+                                              key: PageStorageKey('page-$page'),
+                                              padding: EdgeInsets.fromLTRB(
+                                                desktop ? 34 : 20,
+                                                desktop ? 32 : 14,
+                                                desktop ? 34 : 20,
+                                                // 手机上有浮动玻璃导航条，底部多留一截。
+                                                desktop ? 34 : 72,
+                                              ),
+                                              child: ConstrainedBox(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      maxWidth: 1050,
+                                                    ),
+                                                child: switch (page) {
+                                                  1 => pomodoroPage(
+                                                    context,
+                                                    wide,
+                                                  ),
+                                                  2 => libraryPage(context),
+                                                  4 => settingsPage(context),
+                                                  _ => homePage(context, wide),
+                                                },
+                                              ),
                                             ),
-                                            child: switch (page) {
-                                              1 => pomodoroPage(context, wide),
-                                              2 => libraryPage(context),
-                                              4 => settingsPage(context),
-                                              _ => homePage(context, wide),
-                                            },
-                                          ),
-                                        ),
-                                ),
+                                    ),
+                            ),
+                            if (!desktop)
+                              GlassTabBar(
+                                tabs: const [],
+                                tabsBuilder: (context) {
+                                  final pomo = PomodoroState.instance;
+                                  final ticking = pomo.active;
+                                  return [
+                                    GlassTab(
+                                      label: '此刻',
+                                      icon: Icons.grid_view_outlined,
+                                    ),
+                                    GlassTab(
+                                      label: ticking && pomo.running
+                                          ? pomo.timeText
+                                          : '专注',
+                                      semanticsLabel: ticking
+                                          ? '专注 ${pomo.timeText}'
+                                          : '专注',
+                                      icon: Icons.timer_outlined,
+                                      dot: ticking,
+                                    ),
+                                    const GlassTab(
+                                      label: '声音',
+                                      icon: Icons.graphic_eq_outlined,
+                                    ),
+                                    const GlassTab(
+                                      label: '收藏',
+                                      icon: Icons.bookmark_border_rounded,
+                                    ),
+                                    const GlassTab(
+                                      label: '设置',
+                                      icon: Icons.tune_rounded,
+                                    ),
+                                  ];
+                                },
+                                index: page,
+                                onChanged: (i) => setState(() => page = i),
+                                activeColor: p.accent,
+                                inactiveColor: p.muted,
+                                colors: p.c,
+                                listenable: PomodoroState.instance,
+                              ),
+                          ],
                         ),
                       ),
-                      if (desktop && !wide) miniPlayer(context),
+                      // 迷你播放器在玻璃条上方，跟着页面走（桌面窄栏也保留）。
+                      if ((desktop && !wide) || (!desktop && page != 0))
+                        miniPlayer(context),
                     ],
                   ),
                 ),
@@ -1469,116 +1525,6 @@ class _NookHomeState extends State<NookHome> {
               ],
             ),
           ),
-          bottomNavigationBar: desktop
-              ? null
-              : Container(
-                  decoration: BoxDecoration(
-                    color: p.surface,
-                    border: Border(top: BorderSide(color: p.border)),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (page != 0) miniPlayer(context),
-                        SizedBox(
-                          height: 64,
-                          child: Row(
-                            children: List.generate(
-                              nav.length,
-                              (i) => Expanded(
-                                child: ListenableBuilder(
-                                  listenable: PomodoroState.instance,
-                                  builder: (context, _) {
-                                    final pomo = PomodoroState.instance;
-                                    final ticking = i == 1 && pomo.active;
-                                    return Semantics(
-                                      selected: page == i,
-                                      label: ticking
-                                          ? '专注 ${pomo.timeText}'
-                                          : nav[i],
-                                      child: _NookPressScale(
-                                        scale: .94,
-                                        child: InkWell(
-                                          onTap: () => setState(() => page = i),
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Stack(
-                                                clipBehavior: Clip.none,
-                                                children: [
-                                                  AnimatedScale(
-                                                    scale: page == i ? 1.05 : 1,
-                                                    duration: const Duration(
-                                                      milliseconds: 220,
-                                                    ),
-                                                    curve: Curves.easeOutCubic,
-                                                    child: Icon(
-                                                      navIcons[i],
-                                                      size: 22,
-                                                      color: page == i
-                                                          ? p.accent
-                                                          : p.muted,
-                                                    ),
-                                                  ),
-                                                  if (ticking)
-                                                    Positioned(
-                                                      right: -6,
-                                                      top: -2,
-                                                      child: Container(
-                                                        width: 6,
-                                                        height: 6,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                              color:
-                                                                  pomo.running
-                                                                  ? p.accent
-                                                                  : p.muted,
-                                                              shape: BoxShape
-                                                                  .circle,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 5),
-                                              AnimatedDefaultTextStyle(
-                                                duration: const Duration(
-                                                  milliseconds: 220,
-                                                ),
-                                                style: TextStyle(
-                                                  fontFamily: AppFonts.noto,
-                                                  fontSize: CitroType.caption,
-                                                  fontWeight: page == i
-                                                      ? FontWeight.w700
-                                                      : FontWeight.w400,
-                                                  color: page == i
-                                                      ? p.accent
-                                                      : p.muted,
-                                                ),
-                                                child: Text(
-                                                  ticking && pomo.running
-                                                      ? pomo.timeText
-                                                      : nav[i],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
         );
       },
     );
@@ -3998,7 +3944,12 @@ class _NookHomeState extends State<NookHome> {
         Expanded(
           child: SingleChildScrollView(
             key: const PageStorageKey('page-2'),
-            padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 34),
+            padding: EdgeInsets.fromLTRB(
+              horizontal,
+              0,
+              horizontal,
+              desktop ? 34 : 72,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1050),
               child: favoritesPage(context),

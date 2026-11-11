@@ -225,7 +225,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
           builder: (context, constraints) {
             final side = AppSpacing.x2;
             return ListView(
-              padding: EdgeInsets.fromLTRB(side, 4, side, 28),
+              padding: EdgeInsets.fromLTRB(side, 4, side, 96),
               children: [
                 _monthRow(context, summary, plan),
                 const SizedBox(height: 10),

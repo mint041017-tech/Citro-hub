@@ -27,10 +27,14 @@ void main() {
   });
 
   test('默认布局覆盖全部常驻卡片且互不重叠', () {
-    // 小游戏 / 资源卡片默认收起，需要手动添加，不在默认布局里。
-    final core = HomeCardId.values
-        .where((id) => id != HomeCardId.game && id != HomeCardId.res)
-        .toSet();
+    // 小游戏 / 资源卡片默认收起；日历 / 待办 / 记账已经搬去「计划」页。
+    final core = HomeCardId.values.where((id) {
+      return id != HomeCardId.game &&
+          id != HomeCardId.res &&
+          id != HomeCardId.calendar &&
+          id != HomeCardId.todo &&
+          id != HomeCardId.ledger;
+    }).toSet();
     for (final form in HomeLayoutKey.values) {
       final slots = store.slots(form);
       expect(slots.map((s) => s.id).toSet(), core);

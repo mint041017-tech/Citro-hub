@@ -76,7 +76,7 @@ void main() {
     await tester.pump();
 
     // 四格目的地 + CICI 头像按钮，全部通过 Semantics 暴露。
-    for (final label in ['首页', '游戏', '社区', '待办', 'CICI 智能助手']) {
+    for (final label in ['首页', '游戏', '社区', '计划', 'CICI 智能助手']) {
       expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
 

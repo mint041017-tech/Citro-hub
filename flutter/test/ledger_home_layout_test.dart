@@ -18,13 +18,13 @@ void main() {
     store.reset(HomeLayoutKey.wideLandscape);
   });
 
-  test('记账卡默认出现在窄屏与宽屏布局里，且尺寸为小档', () {
+  test('记账卡已搬去计划页，不再占默认布局', () {
     for (final key in HomeLayoutKey.values) {
-      final slot = store
-          .slots(key)
-          .firstWhere((s) => s.id == HomeCardId.ledger);
-      expect(slot.w, 3);
-      expect(slot.h, 2);
+      expect(
+        store.slots(key).any((s) => s.id == HomeCardId.ledger),
+        isFalse,
+        reason: '$key 不该再有记账卡',
+      );
     }
     final options = store.available(HomeLayoutKey.compactPortrait);
     expect(options.any((o) => o.id == HomeCardId.ledger), isFalse);
@@ -42,24 +42,27 @@ void main() {
   });
 
   test('删除后可加回，加回后仍在布局内且不重叠', () {
+    // 记账卡已经搬去「计划」页、不再在首页的可选列表里，
+    // 这里改用仍在首页的打卡卡来验证「删掉还能加回来」。
     const key = HomeLayoutKey.compactPortrait;
-    store.remove(key, HomeCardId.ledger);
-    expect(store.slots(key).any((s) => s.id == HomeCardId.ledger), isFalse);
-    expect(store.available(key).any((o) => o.id == HomeCardId.ledger), isTrue);
+    store.remove(key, HomeCardId.checkin);
+    expect(store.slots(key).any((s) => s.id == HomeCardId.checkin), isFalse);
+    expect(store.available(key).any((o) => o.id == HomeCardId.checkin), isTrue);
 
-    expect(store.add(key, HomeCardId.ledger), isTrue);
+    expect(store.add(key, HomeCardId.checkin), isTrue);
     final slots = store.slots(key);
-    final ledger = slots.firstWhere((s) => s.id == HomeCardId.ledger);
-    expect(ledger.w, 3);
-    expect(ledger.h, 2);
+    final checkin = slots.firstWhere((s) => s.id == HomeCardId.checkin);
+    expect(checkin.w, 3);
+    expect(checkin.h, 2);
     for (final other in slots) {
-      if (other.key == ledger.key) continue;
-      expect(ledger.overlaps(other), isFalse);
+      if (other.key == checkin.key) continue;
+      expect(checkin.overlaps(other), isFalse);
     }
   });
 
   test('记账卡支持自由缩放，尺寸受 spec 约束', () {
     const key = HomeLayoutKey.widePortrait;
+    expect(store.add(key, HomeCardId.ledger), isTrue);
     final slot = store.slots(key).firstWhere((s) => s.id == HomeCardId.ledger);
     // 先挪到默认布局下方的空白行，再扩到 6×6：高度上限为 5 行。
     expect(store.move(key, HomeCardId.ledger, 0, 19), isTrue);

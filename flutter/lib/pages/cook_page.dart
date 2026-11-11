@@ -21,6 +21,7 @@ import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/app_image.dart';
 import '../widgets/cover_flight.dart';
+import '../widgets/glass_tab_bar.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
@@ -641,32 +642,41 @@ class _CookPageState extends State<CookPage> {
         body: CitroBackground(
           child: SafeArea(
             bottom: tablet,
-            child: tablet
-                ? Row(
-                    children: [
-                      SizedBox(
-                        width: kIsWeb ? 248 : 220,
-                        child: _sideNav(context),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 1040),
-                            child: main,
+            child: Stack(
+              children: [
+                if (tablet)
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: kIsWeb ? 248 : 220,
+                          child: _sideNav(context),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 1040),
+                              child: main,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   )
-                : Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      child: main,
+                else
+                  Positioned.fill(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        child: main,
+                      ),
                     ),
                   ),
+                if (!tablet) _bottomNav(context),
+              ],
+            ),
           ),
         ),
-        bottomNavigationBar: tablet ? null : _bottomNav(context),
       ),
     );
   }
@@ -1156,6 +1166,7 @@ class _CookPageState extends State<CookPage> {
       child: list.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 96),
               children: [
                 const SizedBox(height: 60),
                 Center(
@@ -1214,7 +1225,7 @@ class _CookPageState extends State<CookPage> {
                 final cardWidth = (usable - (columns - 1) * 10) / columns;
                 return GridView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 24),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 96),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
                     crossAxisSpacing: 10,
@@ -3215,74 +3226,20 @@ class _CookPageState extends State<CookPage> {
   }
 
   Widget _bottomNav(BuildContext context) {
-    final c = context.c;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.line)),
-        boxShadow: [
-          BoxShadow(
-            color: c.ink.withAlpha(20),
-            blurRadius: 18,
-            spreadRadius: -8,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: AppSpacing.navBar,
-          child: Row(
-            children: [
-              for (final it in _navItems)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _switchTab(it.$1),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (it.$1 == 'food' ? foodActive : tab == it.$1)
-                            ? c.ink
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(
-                          CitroColors.radii.inner,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AppIcon(
-                            strokeSvg(it.$3, width: 2),
-                            size: 19,
-                            color: (it.$1 == 'food' ? foodActive : tab == it.$1)
-                                ? c.bg
-                                : c.inkSoft,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            it.$2,
-                            style: context.body(
-                              size: CitroType.micro,
-                              weight: CitroType.strong,
-                              color:
-                                  (it.$1 == 'food' ? foodActive : tab == it.$1)
-                                      ? c.bg
-                                      : c.inkSoft,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+    // 「吃什么」不切 tab，只开抽签抽屉；抽屉打开期间这一格保持选中态。
+    final active = foodActive
+        ? _navItems.indexWhere((it) => it.$1 == 'food')
+        : _navItems.indexWhere((it) => it.$1 == tab);
+    return GlassTabBar(
+      tabs: const [
+        GlassTab(label: '食谱库', svg: AppIcons.book),
+        GlassTab(label: '食谱广场', svg: AppIcons.globe),
+        GlassTab(label: '吃什么', svg: AppIcons.fork),
+        GlassTab(label: '找菜', svg: AppIcons.search),
+        GlassTab(label: '购物清单', svg: AppIcons.cart),
+      ],
+      index: active < 0 ? 0 : active,
+      onChanged: (index) => _switchTab(_navItems[index].$1),
     );
   }
 

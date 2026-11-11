@@ -1464,7 +1464,9 @@ class ZodiacCard extends StatelessWidget {
               ? constraints.maxHeight
               : 272.0;
           final maxW = constraints.maxWidth;
-          final micro = maxW < 232 || cardHeight < 218;
+          // 232 太窄，320 以下（半宽卡片 / 小屏）就走紧凑头，
+          // 否则「DAILY ZODIAC」+ 日期胶囊会把行撑爆。
+          final micro = maxW < 320 || cardHeight < 218;
           final horizontal = maxW >= 316 && cardHeight >= 238;
           final tall = cardHeight >= 342;
           return SizedBox(

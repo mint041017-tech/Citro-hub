@@ -199,7 +199,8 @@ class TodoFocusPage extends StatelessWidget {
                           wide ? 0 : 16,
                           0,
                           wide ? 0 : 16,
-                          24,
+                          // 嵌在待办页里时，底部要避开浮动的玻璃导航条。
+                          embedded ? 96 : 24,
                         ),
                         child: Center(
                           child: ConstrainedBox(

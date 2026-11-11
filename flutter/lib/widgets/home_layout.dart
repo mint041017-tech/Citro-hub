@@ -276,11 +276,11 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
       HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 4),
-      HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 4),
+      HomeSlot(HomeCardId.cook, col: 0, row: 2, w: 6, h: 3),
       // 星象比以前矮一档，不再占掉半个首页。
-      HomeSlot(HomeCardId.zodiac, col: 6, row: 2, w: 6, h: 4),
-      HomeSlot(HomeCardId.quote, col: 0, row: 6, w: 12, h: 3),
-      HomeSlot(HomeCardId.mood, col: 0, row: 9, w: 12, h: 3),
+      HomeSlot(HomeCardId.zodiac, col: 6, row: 4, w: 6, h: 3),
+      HomeSlot(HomeCardId.quote, col: 0, row: 7, w: 12, h: 3),
+      HomeSlot(HomeCardId.mood, col: 0, row: 10, w: 12, h: 3),
     ];
   }
   // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
@@ -680,6 +680,12 @@ class HomeLayoutStore extends ChangeNotifier {
     bool taken(HomeCardId id, [String? item]) =>
         list.any((s) => s.id == id && s.item == item);
 
+    // 日历 / 待办 / 记账 已经收进「计划」页，首页不再给添加入口。
+    const planOnly = {
+      HomeCardId.calendar,
+      HomeCardId.todo,
+      HomeCardId.ledger,
+    };
     final out = <HomeCardOption>[];
     for (final id in const [
       HomeCardId.checkin,
@@ -694,7 +700,7 @@ class HomeLayoutStore extends ChangeNotifier {
       HomeCardId.zodiac,
       HomeCardId.quote,
     ]) {
-      if (taken(id)) continue;
+      if (planOnly.contains(id) || taken(id)) continue;
       final info = kHomeCardInfo[id]!;
       out.add(
         HomeCardOption(

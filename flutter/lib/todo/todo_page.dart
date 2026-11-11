@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import '../theme/native.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../overlays/ai_chat.dart';
+import '../widgets/glass_tab_bar.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -232,37 +234,39 @@ class _TodoPageState extends State<TodoPage>
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 0),
-                    child: Column(
+                    child: Stack(
                       children: [
-                        SizedBox(height: top),
-                        Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 1120),
-                            child: _header(context, wide: wide),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Expanded(
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: 1120,
+                        Positioned.fill(
+                          child: Column(
+                            children: [
+                              SizedBox(height: top),
+                              Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 1120,
+                                  ),
+                                  child: _header(context, wide: wide),
+                                ),
                               ),
-                              child: _pages(pages),
-                            ),
+                              const SizedBox(height: 4),
+                              Expanded(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 1120,
+                                    ),
+                                    child: _pages(pages),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        // 键盘弹起时收起底栏，用高度动画过渡，避免突然消失/出现。
+                        // 键盘弹起时收起底栏（玻璃条浮在内容之上，直接不挂载）。
                         if (!wide)
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 180),
-                            curve: CitroMotion.easeOut,
-                            alignment: Alignment.bottomCenter,
-                            child:
-                                MediaQuery.viewInsetsOf(context).bottom == 0
-                                ? _bottomBar(context)
-                                : const SizedBox(width: double.infinity),
-                          ),
+                          MediaQuery.viewInsetsOf(context).bottom == 0
+                              ? _bottomBar(context)
+                              : const SizedBox.shrink(),
                       ],
                     ),
                   ),
@@ -323,57 +327,16 @@ class _TodoPageState extends State<TodoPage>
   );
 
   Widget _bottomBar(BuildContext context) {
-    final c = context.c;
-    const items = [
-      (0, '待办', AppIcons.check),
-      (1, '数据', AppIcons.board),
-      (2, '专注', AppIcons.target),
-    ];
-    // 贴底导航：与食谱页一致，只留一条上边线，不做悬浮胶囊。
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: AppSpacing.navBar,
-          child: Row(
-            children: [
-              for (final item in items)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _switchTab(item.$1),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AppIcon(
-                          strokeSvg(item.$3, width: 1.9),
-                          size: 22,
-                          color: _tab == item.$1 ? c.accentInk : c.inkSoft,
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          item.$2,
-                          maxLines: 1,
-                          style: context.ui(
-                            size: CitroType.caption,
-                            weight: _tab == item.$1
-                                ? CitroType.strong
-                                : CitroType.regular,
-                            color: _tab == item.$1 ? c.accentInk : c.inkSoft,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+    return GlassTabBar(
+      tabs: const [
+        GlassTab(label: '待办', svg: AppIcons.check),
+        GlassTab(label: '数据', svg: AppIcons.board),
+        GlassTab(label: '专注', svg: AppIcons.target),
+      ],
+      index: _tab,
+      onChanged: _switchTab,
+      showCici: true,
+      onCiciTap: () => showAiChat(context),
     );
   }
 

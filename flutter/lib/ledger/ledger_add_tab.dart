@@ -323,7 +323,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
         final categories = store.categoriesFor(_kind);
         final c = context.c;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(14, 4, 14, 28),
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 96),
           children: [
             Center(
               child: ConstrainedBox(

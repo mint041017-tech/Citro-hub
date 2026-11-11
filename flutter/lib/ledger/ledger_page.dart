@@ -6,6 +6,8 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../overlays/ai_chat.dart';
+import '../widgets/glass_tab_bar.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import 'ledger_add_tab.dart';
@@ -98,26 +100,27 @@ class _LedgerPageState extends State<LedgerPage>
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.zero,
-                    child: Column(
+                    child: Stack(
                       children: [
-                        SizedBox(height: top),
-                        // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
-                        // 下面的内容区仍然保持 1120 的阅读宽度。
-                        _header(context, wide: wide),
-                        const SizedBox(height: 4),
-                        // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
-                        // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
-                        Expanded(child: _pages(pages)),
-                        if (!wide)
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 180),
-                            curve: CitroMotion.easeOut,
-                            alignment: Alignment.bottomCenter,
-                            child:
-                                MediaQuery.viewInsetsOf(context).bottom == 0
-                                ? _bottomBar(context)
-                                : const SizedBox(width: double.infinity),
+                        Positioned.fill(
+                          child: Column(
+                            children: [
+                              SizedBox(height: top),
+                              // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
+                              // 下面的内容区仍然保持 1120 的阅读宽度。
+                              _header(context, wide: wide),
+                              const SizedBox(height: 4),
+                              // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
+                              // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
+                              Expanded(child: _pages(pages)),
+                            ],
                           ),
+                        ),
+                        // 键盘弹起时收起底栏（玻璃条浮在内容之上，直接不挂载）。
+                        if (!wide)
+                          MediaQuery.viewInsetsOf(context).bottom == 0
+                              ? _bottomBar(context)
+                              : const SizedBox.shrink(),
                       ],
                     ),
                   ),
@@ -261,74 +264,23 @@ class _LedgerPageState extends State<LedgerPage>
   }
 
   Widget _bottomBar(BuildContext context) {
-    final c = context.c;
-    const items = [
-      (0, '首页', AppIcons.wallet),
-      (1, '记一笔', AppIcons.plus),
-    ];
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: AppSpacing.navBar,
-          child: Row(
-            children: [
-              for (final item in items)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: _tab == item.$1,
-                    label: item.$2,
-                    child: GestureDetector(
-                      key: ValueKey('ledger-tab-${item.$1}'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _switchTab(item.$1),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedScale(
-                            scale: _tab == item.$1 ? 1.05 : 1,
-                            duration: CitroMotion.reduced(context)
-                                ? Duration.zero
-                                : CitroMotion.indicator,
-                            curve: CitroMotion.easeOut,
-                            child: AppIcon(
-                              strokeSvg(item.$3, width: 1.9),
-                              size: 22,
-                              color: _tab == item.$1 ? c.accentInk : c.inkSoft,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          AnimatedDefaultTextStyle(
-                            duration: CitroMotion.reduced(context)
-                                ? Duration.zero
-                                : CitroMotion.indicator,
-                            style: context.lui(
-                              size: CitroType.caption,
-                              weight: _tab == item.$1
-                                  ? CitroType.strong
-                                  : CitroType.regular,
-                              color: _tab == item.$1 ? c.accentInk : c.inkSoft,
-                            ),
-                            child: Text(
-                              item.$2,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+    return GlassTabBar(
+      tabs: const [
+        GlassTab(
+          key: ValueKey('ledger-tab-0'),
+          label: '首页',
+          svg: AppIcons.wallet,
         ),
-      ),
+        GlassTab(
+          key: ValueKey('ledger-tab-1'),
+          label: '记一笔',
+          svg: AppIcons.plus,
+        ),
+      ],
+      index: _tab,
+      onChanged: _switchTab,
+      showCici: true,
+      onCiciTap: () => showAiChat(context),
     );
   }
 }

@@ -135,8 +135,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     final fish = tester.getTopLeft(find.byType(FishCard));
     final zodiac = tester.getTopLeft(find.byType(ZodiacCard));
-    // 新默认布局：状态条（打卡/听隅/记账/摸鱼）占满第一行，星象在下一段左列。
-    expect(zodiac.dx, lessThan(fish.dx));
+    // 新默认布局：摸鱼日历在首行右段，星象在它正下方（同一列、更靠右半区）。
+    expect(zodiac.dx, greaterThanOrEqualTo(fish.dx));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -208,7 +208,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     // 4+1 导航：第四格是「自定义」（默认待办），CICI 只在手机/平板的
     // 液态玻璃 Tab 栏里，Duo 侧栏不再重复放一个 AI 入口。
-    for (final label in ['首页', '游戏', '社区', '自定义']) {
+    for (final label in ['首页', '游戏', '社区', '计划']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('我的'), findsNothing);
@@ -333,7 +333,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    for (final label in ['首页', '游戏', '社区', '自定义']) {
+    for (final label in ['首页', '游戏', '社区', '计划']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('我的'), findsNothing);
@@ -383,7 +383,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     final fish = tester.getTopLeft(find.byType(FishCard));
     final zodiac = tester.getTopLeft(find.byType(ZodiacCard));
-    expect(zodiac.dy, greaterThan(fish.dy));
+    // 新布局里星象和摸鱼日历在同一行（星象收小成半宽）。
+    expect(zodiac.dy, greaterThanOrEqualTo(fish.dy));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
