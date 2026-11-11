@@ -1,15 +1,15 @@
 {
-  "version": "2.3.4",
-  "versionCode": 2340,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.3.4-release.apk",
-  "size": 68781600,
+  "version": "2.3.5",
+  "versionCode": 2350,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.3.5-release.apk",
+  "size": 68781604,
   "notes": [
     "配色改为奶米 + 青瓷 + 棕墨三色搭配",
     "卡面原图打包进包内，首页背景更清晰",
+    "深色模式下背景图压暗（浅色模式不变）",
     "首页卡片区起始高度再抬高一点",
     "首页食谱日记卡与心情卡互换位置",
-    "深色模式下背景图压暗一点",
-    "去掉链接跳转确认弹窗，点击直接打开"
+    "去掉链接跳转确认弹窗"
   ],
   "publishedAt": "2026-11-11",
   "force": false
