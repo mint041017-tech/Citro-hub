@@ -271,35 +271,38 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
   };
 }
 
-/// 默认布局：宽屏按「状态条 → 待办/天气 → 食谱/日历 → 星象/心情 → 一言」；
-/// 窄屏保持双卡并排 + 信息卡整宽，缩短滚动长度。
+/// 默认布局（六排）：
+/// 1. 打卡 + 摸鱼日历（小卡）
+/// 2. 天气 + 心情（原样）
+/// 3. 听隅 + 食谱日记（方形卡）
+/// 4. 星象（整宽大卡）
+/// 5. 卡面收藏（整宽）
+/// 6. 每日一言（整宽）
 List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
   if (key.form == HomeForm.wide) {
     return const [
       HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.fish, col: 6, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.weather, col: 9, row: 0, w: 3, h: 3),
-      HomeSlot(HomeCardId.mood, col: 0, row: 2, w: 6, h: 3),
-      // 星象和天气错开一行，避免右列重叠。
-      HomeSlot(HomeCardId.zodiac, col: 6, row: 3, w: 6, h: 3),
-      HomeSlot(HomeCardId.cardCollection, col: 0, row: 6, w: 12, h: 2),
-      HomeSlot(HomeCardId.quote, col: 0, row: 8, w: 12, h: 2),
-      HomeSlot(HomeCardId.cook, col: 0, row: 10, w: 12, h: 3),
+      HomeSlot(HomeCardId.fish, col: 3, row: 0, w: 3, h: 2),
+      HomeSlot(HomeCardId.weather, col: 6, row: 0, w: 3, h: 3),
+      HomeSlot(HomeCardId.mood, col: 9, row: 0, w: 3, h: 3),
+      HomeSlot(HomeCardId.tingyu, col: 0, row: 3, w: 6, h: 3),
+      HomeSlot(HomeCardId.cook, col: 6, row: 3, w: 6, h: 3),
+      HomeSlot(HomeCardId.zodiac, col: 0, row: 6, w: 12, h: 3),
+      HomeSlot(HomeCardId.cardCollection, col: 0, row: 9, w: 12, h: 2),
+      HomeSlot(HomeCardId.quote, col: 0, row: 11, w: 12, h: 2),
     ];
   }
-  // 日历 / 待办 / 记账已经搬去「计划」页，首页不再放。
-  // 卡片高度按内容收得更紧（2–3 行），卡与卡之间不再留大空白。
+  // 窄屏：每排两卡或整宽，行距按 8pt 栅格。
   return const [
     HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.tingyu, col: 3, row: 0, w: 3, h: 2),
+    HomeSlot(HomeCardId.fish, col: 3, row: 0, w: 3, h: 2),
     HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 3),
     HomeSlot(HomeCardId.mood, col: 3, row: 2, w: 3, h: 3),
-    HomeSlot(HomeCardId.fish, col: 0, row: 5, w: 3, h: 2),
-    HomeSlot(HomeCardId.zodiac, col: 3, row: 5, w: 3, h: 2),
-    HomeSlot(HomeCardId.cardCollection, col: 0, row: 7, w: 6, h: 2),
-    HomeSlot(HomeCardId.quote, col: 0, row: 9, w: 6, h: 2),
-    HomeSlot(HomeCardId.cook, col: 0, row: 11, w: 6, h: 3),
+    HomeSlot(HomeCardId.tingyu, col: 0, row: 5, w: 3, h: 3),
+    HomeSlot(HomeCardId.cook, col: 3, row: 5, w: 3, h: 3),
+    HomeSlot(HomeCardId.zodiac, col: 0, row: 8, w: 6, h: 3),
+    HomeSlot(HomeCardId.cardCollection, col: 0, row: 11, w: 6, h: 2),
+    HomeSlot(HomeCardId.quote, col: 0, row: 13, w: 6, h: 2),
   ];
 }
 
