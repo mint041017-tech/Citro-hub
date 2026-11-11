@@ -147,7 +147,7 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
           // 图再高也不超过视口的 65%，给卡片区留位置（超出的部分自然被裁掉）。
           final displayH = math.min(
             size.height * (displayW / size.width),
-            screenH * 0.78,
+            screenH * 0.6,
           );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (CitroBlendImage.bottomEdge.value != displayH) {

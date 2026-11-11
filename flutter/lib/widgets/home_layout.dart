@@ -423,10 +423,6 @@ class HomeLayoutStore extends ChangeNotifier {
 
   static const String prefsKey = PrefKeys.homeLayout;
 
-  /// 默认布局版本：默认布局重排过就 +1，让旧版保存的布局回默认。
-  static const String _versionKey = 'homeLayoutVersion';
-  static const int _layoutVersion = 5;
-
   final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
   final Set<HomeLayoutKey> _loaded = {};
   Map<String, Object?> _raw = const {};
@@ -447,55 +443,9 @@ class HomeLayoutStore extends ChangeNotifier {
   void _ensureLoaded(HomeLayoutKey key) {
     if (_loaded.contains(key)) return;
     _loaded.add(key);
-    final defaults = defaultHomeLayout(key);
-    // 默认布局重排过：旧版保存的布局不再适用，直接回默认。
-    if (Prefs.getInt(_versionKey) < _layoutVersion) {
-      _slots[key] = List<HomeSlot>.of(defaults);
-      unawaited(Prefs.setInt(_versionKey, _layoutVersion));
-      return;
-    }
-    List<HomeSlot>? stored;
-    try {
-      final raw = Prefs.getString(prefsKey);
-      if (raw != null && raw.isNotEmpty) {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) {
-          _raw = {
-            for (final entry in decoded.entries)
-              if (entry.key is String) entry.key as String: entry.value,
-          };
-          // 兼容旧版仅按 compact / wide 保存的数据：
-          // 首次升级时把它当作竖屏布局迁移过来。
-          final list = decoded[key.name] ?? decoded[key.form.name];
-          if (list is List) {
-            final parsed = <HomeSlot>[];
-            for (final item in list) {
-              final slot = HomeSlot.fromJson(item, key.form);
-              if (slot != null && parsed.every((e) => e.key != slot.key)) {
-                parsed.add(slot);
-              }
-            }
-            // 日历 / 待办 / 记账 已经搬去「计划」页：老布局里残留的剔掉，
-            // 免得同一个首页里出现两份。
-            parsed.removeWhere((s) => _planOnly.contains(s.id));
-            if (parsed.isNotEmpty) stored = parsed;
-          }
-        }
-      }
-    } catch (_) {
-      // 旧版本或损坏数据都静默回退到默认布局。
-    }
-
-    if (stored == null) {
-      _slots[key] = List<HomeSlot>.of(defaults);
-      return;
-    }
-    // 版本升级新增的卡片补到末尾，不覆盖用户已保存的位置。
-    for (final slot in defaults) {
-      if (_planOnly.contains(slot.id)) continue;
-      if (stored.every((e) => e.id != slot.id)) stored.add(slot);
-    }
-    _slots[key] = _normalizeAll(key, stored);
+    // 自定义布局已下线：永远用默认布局，不再读本地 / 云端保存的旧布局。
+    // 旧布局里卡片位置是几版前的，会把默认值盖掉（表现就是「卡片一直不换」）。
+    _slots[key] = List<HomeSlot>.of(defaultHomeLayout(key));
   }
 
   /// 已经搬去「计划」页的三张卡：默认布局和「添加卡片」都不再出现。
