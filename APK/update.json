@@ -1,13 +1,16 @@
 {
-  "version": "2.3.8",
-  "versionCode": 2380,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.3.8-release.apk",
-  "size": 68781600,
+  "version": "2.3.9",
+  "versionCode": 2390,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.3.9-release.apk",
+  "size": 68912672,
   "notes": [
     "配色改为奶米 + 青瓷 + 棕墨三色搭配",
     "卡面原图打包进包内，首页背景更清晰",
     "深色模式下背景图压暗（浅色模式不变）",
-    "首页改成六排布局（打卡/摸鱼、天气/心情、听隅/食谱、星象、卡面收藏、每日一言）",
+    "首页改成六排布局",
+    "星象卡放大，能看清运势指数和内容",
+    "卡面收藏卡改成两行排版",
+    "Tab 栏恢复玻璃效果",
     "去掉链接跳转确认弹窗"
   ],
   "publishedAt": "2026-11-11",
