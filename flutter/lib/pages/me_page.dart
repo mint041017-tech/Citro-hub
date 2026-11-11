@@ -1028,11 +1028,18 @@ class _ThemeRow extends StatelessWidget {
                 color: c.ink,
               ),
             ),
-            const SizedBox(width: AppSpacing.x1),
+            // 三段控件只占右侧固定宽度，不再被 Expanded 拉成整行：
+            // 它是一枚分段控件，应该和系统设置里的分段控件一样紧凑。
             Expanded(
-              child: _ThemeSegments(
-                current: current,
-                onChanged: context.app.setThemeMode,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: 180,
+                  child: _ThemeSegments(
+                    current: current,
+                    onChanged: context.app.setThemeMode,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1054,8 +1061,8 @@ class _ThemeSegments extends StatelessWidget {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
     return Container(
-      height: 40,
-      padding: const EdgeInsets.all(3),
+      height: 30,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(999),
@@ -1071,7 +1078,9 @@ class _ThemeSegments extends StatelessWidget {
                   duration: reduce ? Duration.zero : CitroMotion.indicator,
                   curve: CitroMotion.easeColor,
                   decoration: BoxDecoration(
-                    color: mode == current ? c.ink : Colors.transparent,
+                    // 选中段用品牌橙，和设置页的开关、进度条等选中态一致，
+                    // 不再各画各的（以前是近黑底，和橙色强调对不上）。
+                    color: mode == current ? c.accent : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   alignment: Alignment.center,
@@ -1080,11 +1089,11 @@ class _ThemeSegments extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: CitroType.meta,
+                      size: CitroType.small,
                       weight: mode == current
                           ? CitroType.medium
                           : CitroType.regular,
-                      color: mode == current ? c.bg : c.inkSoft,
+                      color: mode == current ? c.onAccent : c.inkSoft,
                     ),
                   ),
                 ),

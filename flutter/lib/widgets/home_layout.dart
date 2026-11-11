@@ -238,12 +238,7 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
     HomeCardId.mood => HomeCardSpec(minW: 3, maxW: cols, minH: 2, maxH: 4),
     // 记账支持 3×2 小卡到整宽大卡：小卡只放今日支出与预算剩余，
     // 大卡才展开近 7 日柱图与分类 Top。
-    HomeCardId.ledger => HomeCardSpec(
-      minW: half,
-      maxW: cols,
-      minH: 2,
-      maxH: 5,
-    ),
+    HomeCardId.ledger => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 5),
     HomeCardId.weather ||
     HomeCardId.cook => HomeCardSpec(minW: half, maxW: cols, minH: 3, maxH: 6),
     HomeCardId.calendar => HomeCardSpec(
@@ -692,11 +687,7 @@ class HomeLayoutStore extends ChangeNotifier {
         list.any((s) => s.id == id && s.item == item);
 
     // 日历 / 待办 / 记账 已经收进「计划」页，首页不再给添加入口。
-    const planOnly = {
-      HomeCardId.calendar,
-      HomeCardId.todo,
-      HomeCardId.ledger,
-    };
+    const planOnly = {HomeCardId.calendar, HomeCardId.todo, HomeCardId.ledger};
     final out = <HomeCardOption>[];
     for (final id in const [
       HomeCardId.checkin,
@@ -846,9 +837,10 @@ class HomeLayoutStore extends ChangeNotifier {
       final parsed = <HomeSlot>[];
       for (final item in list) {
         final slot = HomeSlot.fromJson(item, key.form);
-        if (slot != null && parsed.every((e) => e.key != slot.key)) {
-          parsed.add(slot);
-        }
+        // 老账号的云端布局里还留着日历 / 待办 / 记账：这三张已经搬去
+        // 「计划」页，同步下来时必须剔掉，否则首页会冒出来两份。
+        if (slot == null || _planOnly.contains(slot.id)) continue;
+        if (parsed.every((e) => e.key != slot.key)) parsed.add(slot);
       }
       if (parsed.isEmpty) continue;
       for (final slot in defaultHomeLayout(key)) {

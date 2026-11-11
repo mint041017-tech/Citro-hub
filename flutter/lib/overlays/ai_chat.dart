@@ -391,28 +391,88 @@ class _AiChatSheetState extends State<_AiChatSheet>
     _scrollToEnd();
   }
 
+  /// 顶栏的圆形图标按钮：性格 / 新对话 / 关闭，三枚统一 36。
+  Widget _HeaderIcon({
+    required String icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    final c = context.c;
+    return Semantics(
+      label: tooltip,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: c.surface2,
+            shape: BoxShape.circle,
+            border: Border.all(color: c.line2),
+          ),
+          child: Center(
+            child: AppIcon(strokeSvg(icon, width: 2), size: 18, color: c.ink2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 紧凑通知条：图标 + 一行字，比原来的大横幅矮一半。
+  Widget _notice(
+    BuildContext context, {
+    required String icon,
+    required Color color,
+    required Color background,
+    required Color border,
+    required String text,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          AppIcon(strokeSvg(icon, width: 2), size: 13, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.medium,
+                color: color,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _quickActions(BuildContext context) {
     // 食谱助手与转运是专用流程，不混入通用能力入口。
     if (widget.goodDeed || widget.recipe != null) {
       return const SizedBox.shrink();
     }
+    // 空对话在欢迎页里已经给了「记待办 / 建议」两张卡，输入框上方不再重复。
+    if (_messages.isEmpty) return const SizedBox.shrink();
     final c = context.c;
     final items = <(String, Widget, void Function())>[
-      (
-        '记待办',
-        _capIcon(AppIcons.check, c),
-        () => _runCapability(_addTodo),
-      ),
-      (
-        '建议',
-        _capIcon(AppIcons.sparkle, c),
-        () => _runCapability(_suggest),
-      ),
+      ('记待办', _capIcon(AppIcons.check, c), () => _runCapability(_addTodo)),
+      ('建议', _capIcon(AppIcons.sparkle, c), () => _runCapability(_suggest)),
     ];
     return SizedBox(
-      height: 46,
+      height: 38,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
         separatorBuilder: (_, _) => const SizedBox(width: 6),
@@ -442,19 +502,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
       scale: .94,
       hoverLift: 0,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: c.line),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             icon,
             const SizedBox(width: 4),
             Text(
               label,
-              style: context.body(size: CitroType.caption, color: c.ink2),
+              style: context.body(size: CitroType.micro, color: c.ink2),
             ),
           ],
         ),
@@ -468,10 +529,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (!mounted) return;
     final title = await showCitroDialog<String>(
       context,
-      builder: (_) => const PaperDialog(
-        maxWidth: 360,
-        child: _TodoQuickAddDialog(),
-      ),
+      builder: (_) =>
+          const PaperDialog(maxWidth: 360, child: _TodoQuickAddDialog()),
     );
     if (title == null || title.isEmpty || !mounted) return;
     _ciciSay('已加入今日待办：$title');
@@ -654,7 +713,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
     return Padding(
       padding: EdgeInsets.only(bottom: inset),
       child: ClipRRect(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.card),
+        ),
         child: Container(
           height: height,
           decoration: BoxDecoration(
@@ -676,7 +737,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
                     child: Row(
                       children: [
                         Container(
@@ -704,141 +765,78 @@ class _AiChatSheetState extends State<_AiChatSheet>
                             children: [
                               Text(
                                 'CiCi',
-                                style: context.heading(size: CitroType.titleLg, color: c.ink),
+                                style: context.heading(
+                                  size: CitroType.titleLg,
+                                  color: c.ink,
+                                ),
                               ),
+                              const SizedBox(height: 1),
                               Text(
                                 _subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: context.body(size: CitroType.micro, color: c.inkSoft),
+                                style: context.body(
+                                  size: CitroType.micro,
+                                  color: c.inkSoft,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        GestureDetector(
+                        // 三个等大的圆形图标按钮：性格 / 新对话 / 关闭。
+                        // 以前是「带字胶囊 + 圆形」混着来，宽度不一、重心乱；
+                        // 现在统一 36 圆钮，一行对齐，功能都还在。
+                        _HeaderIcon(
+                          icon: AppIcons.sparkle,
+                          tooltip: '性格',
                           onTap: _editPersona,
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: c.surface2,
-                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                              border: Border.all(color: c.line2),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AppIcon(
-                                  strokeSvg(AppIcons.sparkle, width: 2),
-                                  size: 13,
-                                  color: c.accentInk,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '性格',
-                                  style: context.body(
-                                    size: CitroType.meta,
-                                    weight: CitroType.medium,
-                                    color: c.ink2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                         const SizedBox(width: 6),
-                        GestureDetector(
+                        _HeaderIcon(
+                          icon: AppIcons.plus,
+                          tooltip: '新对话',
                           onTap: _clear,
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: c.surface2,
-                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                              border: Border.all(color: c.line2),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AppIcon(
-                                  strokeSvg(AppIcons.plus, width: 2),
-                                  size: 13,
-                                  color: _sending
-                                      ? c.inkSoft.withAlpha(100)
-                                      : c.accentInk,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '新对话',
-                                  style: context.body(
-                                    size: CitroType.meta,
-                                    weight: CitroType.medium,
-                                    color: _sending
-                                        ? c.inkSoft.withAlpha(100)
-                                        : c.ink2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                         const SizedBox(width: 6),
-                        GestureDetector(
+                        _HeaderIcon(
+                          icon: AppIcons.close,
+                          tooltip: '关闭',
                           onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: c.surface2,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: c.line2),
-                            ),
-                            child: Center(
-                              child: AppIcon(
-                                strokeSvg(AppIcons.close, width: 2.2),
-                                size: 22,
-                                color: c.inkSoft,
-                              ),
-                            ),
-                          ),
                         ),
                       ],
                     ),
                   ),
                   CitroDivider(color: c.line2.withAlpha(150)),
-                  if (_chatRewarded)
+                  // 奖励 / 转运提示：合并成一块紧凑的通知区，不再上下各挂一条
+                  // 大横幅把消息列表挤窄。
+                  if (_chatRewarded || (widget.goodDeed && _deedShared))
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.accentLt.withAlpha(c.dark ? 70 : 170),
-                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                          border: Border.all(color: c.accent.withAlpha(80)),
-                        ),
-                        child: Row(
-                          children: [
-                            AppIcon(
-                              strokeSvg(AppIcons.sparkle, width: 2),
-                              size: 13,
+                      child: Column(
+                        children: [
+                          if (_chatRewarded)
+                            _notice(
+                              context,
+                              icon: AppIcons.sparkle,
                               color: c.accentInk,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
-                                style: context.body(
-                                  size: CitroType.small,
-                                  weight: CitroType.medium,
-                                  color: c.accentInk,
-                                ),
+                              background: c.accentLt.withAlpha(
+                                c.dark ? 70 : 170,
                               ),
+                              border: c.accent.withAlpha(80),
+                              text: '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
+                            ),
+                          if (widget.goodDeed && _deedShared) ...[
+                            if (_chatRewarded) const SizedBox(height: 6),
+                            _notice(
+                              context,
+                              icon: AppIcons.sparkle,
+                              color: c.mintInk,
+                              background: c.mintSoft,
+                              border: c.mintLine,
+                              text: '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
                             ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
                   Expanded(
@@ -852,57 +850,17 @@ class _AiChatSheetState extends State<_AiChatSheet>
                                 _bubble(context, _messages[i]),
                           ),
                   ),
-                  if (widget.goodDeed && _deedShared)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.mintSoft,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                          border: Border.all(color: c.mintLine),
-                        ),
-                        child: Row(
-                          children: [
-                            AppIcon(
-                              strokeSvg(AppIcons.sparkle, width: 2),
-                              size: 14,
-                              color: c.mintInk,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
-                                style: context.body(
-                                  size: CitroType.small,
-                                  weight: CitroType.medium,
-                                  color: c.mintInk,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                       child: Text(
                         _error!,
-                        style: context.body(size: CitroType.small, color: c.stamp),
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.stamp,
+                        ),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 2),
-                    child: Text(
-                      'AI 生成内容仅供参考；文字与图片会发送至第三方 AI 服务处理，请勿发送敏感信息。',
-                      textAlign: TextAlign.center,
-                      style: context.body(size: CitroType.micro, color: c.inkSoft),
-                    ),
-                  ),
                   _inputBar(context),
                 ],
               ),
@@ -920,60 +878,56 @@ class _AiChatSheetState extends State<_AiChatSheet>
         : widget.goodDeed
         ? const <String>[]
         : ['帮我写一句手账文案', '今天吃什么？', '社区怎么玩？', '安慰一下我'];
+    final greeting = widget.recipe != null
+        ? '关于《${widget.recipe!.name}》，想聊点什么？'
+        : widget.goodDeed
+        ? '今天抽到下签也别慌。跟我说说你今天做的一件好事，我帮你转运一次。'
+        : '今天想聊点什么？';
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Transform.rotate(
-                angle: -3 * math.pi / 180,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: c.accent.withAlpha(70),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: c.line),
-                    boxShadow: CitroColors.shadows.sm(c),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/cici_avatar.webp',
-                      fit: BoxFit.cover,
-                      cacheWidth: 216,
-                    ),
-                  ),
+          // 居中头像 + 打招呼：以前是 72 大图斜 3° 配右侧气泡，
+          // 重心偏左、右侧留白偏大，现在收成一列，视觉重心稳。
+          Center(
+            child: Container(
+              width: 64,
+              height: 64,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: c.accent.withAlpha(70),
+                shape: BoxShape.circle,
+                border: Border.all(color: c.line2),
+                boxShadow: CitroColors.shadows.sm(c),
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/cici_avatar.webp',
+                  fit: BoxFit.cover,
+                  cacheWidth: 192,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  decoration: BoxDecoration(
-                    color: c.tintYellow.withAlpha(170),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(CitroColors.radii.xs),
-                      topRight: Radius.circular(CitroColors.radii.inner),
-                      bottomLeft: Radius.circular(CitroColors.radii.inner),
-                      bottomRight: Radius.circular(CitroColors.radii.inner),
-                    ),
-                    border: Border.all(color: c.line),
-                  ),
-                  child: Text(
-                    widget.recipe != null
-                        ? '你好呀，我是 CiCi。\n关于《${widget.recipe!.name}》，想聊点什么？'
-                        : widget.goodDeed
-                        ? '今天抽到下签也别慌。\n跟我说说你今天做的一件好事，我帮你转运一次。'
-                        : '你好呀，我是 CiCi。\n今天想聊点什么？',
-                    style: context.body(size: CitroType.meta, color: c.ink2, height: 1.7),
-                  ),
-                ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: Text(
+              '你好呀，我是 CiCi',
+              style: context.heading(size: CitroType.titleLg, color: c.ink),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text(
+              greeting,
+              textAlign: TextAlign.center,
+              style: context.body(
+                size: CitroType.meta,
+                color: c.inkSoft,
+                height: 1.6,
               ),
-            ],
+            ),
           ),
           if (widget.goodDeed) ...[
             const SizedBox(height: 14),
@@ -988,12 +942,42 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 context.app.loggedIn
                     ? '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后会以「今日好事：…」同步到社区动态（含图片，公开可见）。'
                     : '要真实帮到别人才算数：帮同学带饭、照顾家人、做志愿服务……也可以发公益捐赠截图（金额不限）。通过后才能获得转运机会。',
-                style: context.body(size: CitroType.caption, color: c.mintInk, height: 1.6),
+                style: context.body(
+                  size: CitroType.caption,
+                  color: c.mintInk,
+                  height: 1.6,
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
+          // 两个快捷能力做成卡片，比输入框上方的一排小 chip 更清楚；
+          // 空对话状态下输入框上方就不再重复放一遍。
+          Row(
+            children: [
+              Expanded(
+                child: _welcomeAction(
+                  context,
+                  icon: AppIcons.check,
+                  label: '记待办',
+                  desc: '把一件事记进今日待办',
+                  onTap: () => _runCapability(_addTodo),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _welcomeAction(
+                  context,
+                  icon: AppIcons.sparkle,
+                  label: '建议',
+                  desc: '看看今天最值得做的一件事',
+                  onTap: () => _runCapability(_suggest),
+                ),
+              ),
+            ],
+          ),
           if (prompts.isNotEmpty) ...[
+            const SizedBox(height: 20),
             Text(
               '可以试试',
               style: context.body(
@@ -1018,19 +1002,92 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       ),
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
                         border: Border.all(color: c.line),
                       ),
                       child: Text(
                         p,
-                        style: context.body(size: CitroType.caption, color: c.ink2),
+                        style: context.body(
+                          size: CitroType.caption,
+                          color: c.ink2,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
           ],
+          const SizedBox(height: 16),
+          Text(
+            'AI 生成内容仅供参考；文字与图片会发送至第三方 AI 服务处理，请勿发送敏感信息。',
+            textAlign: TextAlign.center,
+            style: context.body(
+              size: CitroType.micro,
+              color: c.inkSoft,
+              height: 1.5,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// 空对话里的快捷能力卡：图标 + 标题 + 一句说明。
+  Widget _welcomeAction(
+    BuildContext context, {
+    required String icon,
+    required String label,
+    required String desc,
+    required VoidCallback onTap,
+  }) {
+    final c = context.c;
+    return Pressable(
+      onTap: onTap,
+      scale: .98,
+      hoverLift: 0,
+      borderRadius: BorderRadius.circular(CitroColors.radii.card),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          border: Border.all(color: c.line),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(icon, width: 2),
+                  size: 17,
+                  color: c.accentInk,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: context.heading(size: CitroType.body)),
+            const SizedBox(height: 2),
+            Text(
+              desc,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.micro,
+                color: c.inkSoft,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1140,13 +1197,20 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         const SizedBox(width: 8),
                         Text(
                           '正在想想…',
-                          style: context.body(size: CitroType.caption, color: c.inkSoft),
+                          style: context.body(
+                            size: CitroType.caption,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ],
                     )
                   : Text(
                       m.text,
-                      style: context.body(size: CitroType.meta, color: c.ink, height: 1.7),
+                      style: context.body(
+                        size: CitroType.meta,
+                        color: c.ink,
+                        height: 1.7,
+                      ),
                     ),
             ),
           ),
@@ -1174,7 +1238,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                       child: Image.memory(
                         base64Decode(_pendingImage!.split(',').last),
                         width: 44,
@@ -1240,7 +1306,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     clipBehavior: Clip.none,
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.small,
+                        ),
                         child: _LocalImage(
                           dataUrl: _pendingImage!,
                           width: 58,
@@ -1274,7 +1342,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: Text(
                       '图片会和文字一起发给 CiCi',
-                      style: context.body(size: CitroType.small, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.small,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ),
                 ],
@@ -1297,7 +1368,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: Text(
                       '正在聆听…说完点一下麦克风停止',
-                      style: context.body(size: CitroType.small, color: c.accentInk),
+                      style: context.body(
+                        size: CitroType.small,
+                        color: c.accentInk,
+                      ),
                     ),
                   ),
                 ],
@@ -1309,9 +1383,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
               GestureDetector(
                 onTap: _picking || _sending ? null : _pickImage,
                 child: Container(
-                  width: 38,
-                  height: 38,
-                  margin: const EdgeInsets.only(right: 8, bottom: 1),
+                  width: 34,
+                  height: 34,
+                  margin: const EdgeInsets.only(right: 8, bottom: 2),
                   decoration: BoxDecoration(
                     color: c.surface2,
                     shape: BoxShape.circle,
@@ -1339,9 +1413,9 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 onTap: _sending || _picking ? null : _toggleVoice,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  width: 38,
-                  height: 38,
-                  margin: const EdgeInsets.only(right: 8, bottom: 1),
+                  width: 34,
+                  height: 34,
+                  margin: const EdgeInsets.only(right: 8, bottom: 2),
                   decoration: BoxDecoration(
                     color: _listening ? c.accent.withAlpha(36) : c.surface2,
                     shape: BoxShape.circle,
@@ -1369,13 +1443,15 @@ class _AiChatSheetState extends State<_AiChatSheet>
               Expanded(
                 child: Container(
                   constraints: const BoxConstraints(
-                    minHeight: 40,
+                    minHeight: 38,
                     maxHeight: 108,
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.inner,
+                    ),
                     border: Border.all(color: c.line2),
                   ),
                   child: TextField(
@@ -1405,7 +1481,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       hintText: '和 CiCi 聊聊…',
-                      hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
+                      hintStyle: context.body(
+                        size: CitroType.meta,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ),
                 ),
@@ -1414,8 +1493,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
               GestureDetector(
                 onTap: _sending ? null : _send,
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: _sending ? c.accent.withAlpha(100) : c.accent,
                     shape: BoxShape.circle,
@@ -1502,7 +1581,9 @@ class _PersonaSheetState extends State<_PersonaSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(CitroColors.radii.card),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -1527,7 +1608,10 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   children: [
                     Text(
                       'CiCi 的性格',
-                      style: context.heading(size: CitroType.titleLg, color: c.ink),
+                      style: context.heading(
+                        size: CitroType.titleLg,
+                        color: c.ink,
+                      ),
                     ),
                     const Spacer(),
                     GestureDetector(
@@ -1554,7 +1638,11 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                 const SizedBox(height: 6),
                 Text(
                   '选一个喜欢的说话方式，或者在下面写你想要的性格。保存后从下一句话开始生效，留空就是默认的嘴硬心软。',
-                  style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.6),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -1572,7 +1660,11 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   maxLines: 5,
                   maxLength: CiciPersona.maxLength,
                   onChanged: (_) => setState(() {}),
-                  style: context.body(size: CitroType.body, color: c.ink, height: 1.6),
+                  style: context.body(
+                    size: CitroType.body,
+                    color: c.ink,
+                    height: 1.6,
+                  ),
                   cursorColor: c.accent,
                   decoration: InputDecoration(
                     hintText: '例如：说话像邻居姐姐，爱用「呀」「啦」结尾，会主动关心我今天吃了什么。',
@@ -1583,14 +1675,21 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                     ),
                     filled: true,
                     fillColor: c.surface2,
-                    counterStyle: context.body(size: CitroType.small, color: c.inkSoft),
+                    counterStyle: context.body(
+                      size: CitroType.small,
+                      color: c.inkSoft,
+                    ),
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.inner,
+                      ),
                       borderSide: BorderSide(color: c.line2),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.inner,
+                      ),
                       borderSide: BorderSide(color: c.accent),
                     ),
                   ),
@@ -1632,7 +1731,9 @@ class _PersonaSheetState extends State<_PersonaSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? c.accentLt.withAlpha(c.dark ? 70 : 170) : c.surface2,
+          color: selected
+              ? c.accentLt.withAlpha(c.dark ? 70 : 170)
+              : c.surface2,
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: selected ? c.accent : c.line2),
         ),
@@ -1681,7 +1782,9 @@ class _TodoQuickAddDialogState extends State<_TodoQuickAddDialog> {
       title: title,
       note: _note.text.trim(),
       kind: TodoKind.task,
-      categoryId: store.categories.isEmpty ? 'study' : store.categories.first.id,
+      categoryId: store.categories.isEmpty
+          ? 'study'
+          : store.categories.first.id,
       listId: store.lists.isEmpty ? 'default' : store.lists.first.id,
       dueAt: DateTime(now.year, now.month, now.day, 23, 59),
       source: 'cici',

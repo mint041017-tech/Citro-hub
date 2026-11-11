@@ -41,7 +41,7 @@ class CiciComposer extends StatefulWidget {
 }
 
 class _CiciComposerState extends State<CiciComposer> {
-bool _voiceMode = false;
+  bool _voiceMode = false;
   bool _holding = false;
   bool _recognizing = false;
   bool _slideCancel = false;
@@ -236,7 +236,7 @@ bool _voiceMode = false;
     }
   }
 
-/// 录不上或转写失败时给出可复制的诊断信息。
+  /// 录不上或转写失败时给出可复制的诊断信息。
   Future<void> _showVoiceHelp({String? title, String? note}) async {
     final info = VoiceRecorder.diagnoseNow();
     if (!mounted) return;
@@ -307,7 +307,7 @@ bool _voiceMode = false;
     );
   }
 
-void _showOverlay() {
+  void _showOverlay() {
     // 以输入栏实际位置为基准，别用固定偏移：待办页和首页的输入栏高度不同，
     // 写死数值必然有一边挡住输入框。
     _overlayBottom = _measureBarBottom();
@@ -332,7 +332,7 @@ void _showOverlay() {
     _entry = null;
   }
 
-Widget _buildOverlay(BuildContext context) {
+  Widget _buildOverlay(BuildContext context) {
     final c = context.c;
     final accent = _slideCancel ? c.danger : c.ink;
     return Positioned(
@@ -357,16 +357,16 @@ Widget _buildOverlay(BuildContext context) {
                 Row(
                   children: [
                     AppIcon(
-                      strokeSvg(_slideCancel ? AppIcons.close : AppIcons.mic,
-                          width: 2),
+                      strokeSvg(
+                        _slideCancel ? AppIcons.close : AppIcons.mic,
+                        width: 2,
+                      ),
                       size: 13,
                       color: c.bg,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _slideCancel
-                          ? '松开取消'
-                          : (_recognizing ? '正在识别…' : '松开发送'),
+                      _slideCancel ? '松开取消' : (_recognizing ? '正在识别…' : '松开发送'),
                       style: context.ui(
                         size: CitroType.caption,
                         weight: CitroType.strong,
@@ -381,9 +381,7 @@ Widget _buildOverlay(BuildContext context) {
                         height: 6.0 + i * 3,
                         margin: const EdgeInsets.only(right: 2),
                         decoration: BoxDecoration(
-                          color: c.bg.withAlpha(
-                            _level / 2 > i ? 230 : 60,
-                          ),
+                          color: c.bg.withAlpha(_level / 2 > i ? 230 : 60),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -407,9 +405,7 @@ Widget _buildOverlay(BuildContext context) {
                           : (_recognizing ? '正在转成文字…' : '正在听，说完松手'),
                       style: context.ui(
                         size: CitroType.bodyLg,
-                        color: _preview.isNotEmpty
-                            ? c.bg
-                            : c.bg.withAlpha(150),
+                        color: _preview.isNotEmpty ? c.bg : c.bg.withAlpha(150),
                         height: 1.6,
                       ),
                     ),
@@ -443,8 +439,8 @@ Widget _buildOverlay(BuildContext context) {
       scale: .92,
       borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
       child: Container(
-        width: 38,
-        height: 38,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
           color: active ? c.ink : Colors.transparent,
           shape: BoxShape.circle,
@@ -454,14 +450,14 @@ Widget _buildOverlay(BuildContext context) {
               child ??
               AppIcon(
                 strokeSvg(icon, width: 2),
-                size: 19,
+                size: 17,
                 color: active ? c.bg : c.ink2,
               ),
         ),
       ),
     );
 
-final input = _voiceMode
+    final input = _voiceMode
         ? Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: _startHold,
@@ -469,7 +465,7 @@ final input = _voiceMode
             onPointerUp: (_) => _endHold(),
             onPointerCancel: (_) => _endHold(abort: true),
             child: Container(
-              height: 38,
+              height: 34,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: _slideCancel
@@ -478,17 +474,13 @@ final input = _voiceMode
                 borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
               ),
               child: Text(
-                _slideCancel
-                    ? '松开取消'
-                    : (_holding ? '松开发送' : '按住 说话'),
+                _slideCancel ? '松开取消' : (_holding ? '松开发送' : '按住 说话'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.ui(
                   size: CitroType.body,
                   weight: CitroType.strong,
-                  color: _slideCancel
-                      ? c.danger
-                      : (_holding ? c.ink : c.ink2),
+                  color: _slideCancel ? c.danger : (_holding ? c.ink : c.ink2),
                 ),
               ),
             ),
@@ -510,16 +502,16 @@ final input = _voiceMode
             onSubmitted: (_) => widget.onSend(),
           );
 
-return Padding(
+    return Padding(
       key: _barKey,
       padding: EdgeInsets.fromLTRB(
-        12,
-        6,
-        12,
-        MediaQuery.paddingOf(context).bottom + 10,
+        10,
+        5,
+        10,
+        MediaQuery.paddingOf(context).bottom + 8,
       ),
       child: Container(
-        height: 46,
+        height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: c.surface2,

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+
 import '../data/cards.dart';
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
@@ -167,10 +168,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(8.0, (width - maxWidth) / 2);
 
-    // 背景固定不动，露出这么高；卡片面板从它下缘开始，上滑时盖上来。
-    final bgHeight = wide
-        ? math.min(420.0, media.height * .46)
-        : (media.height * .56).clamp(320.0, 520.0);
+    // 顶栏（账号 + 日期）固定占位，卡片从它下缘开始滚，两者不重叠。
+    final topBarReserved = MediaQuery.paddingOf(context).top + 56;
+    // 卡片面板的顶边落在屏幕的这个高度上（默认约 2/3）；
+    // 英雄区（背景 + 打招呼）= 这段高度减去顶栏。
+    final heroBottom = wide
+        ? math.min(480.0, media.height * .60)
+        : (media.height * .68).clamp(440.0, 640.0);
+    final bgHeight = math.max(120.0, heroBottom - topBarReserved);
     _bgHeight = bgHeight;
     // 抽屉（负一屏）高度：够用就好，不要多余空白。
     final negHeight = (media.height * .52).clamp(300.0, 460.0);
@@ -195,15 +200,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
 
-        // ── 2. 整个首页：下拉时一起往下走（抽屉），上滑时卡片盖住背景 ──
+        // ── 2. 整个首页：下拉时一起往下走（抽屉） ──
         Positioned.fill(
           child: Transform.translate(
             key: const ValueKey('home-drawer-shift'),
             offset: Offset(0, _negProgress * travel),
             child: Stack(
               children: [
-                // 背景层：铺满全屏（卡片面板是玻璃，得有点东西透出来），
-                // 固定不动，只随下拉整体下移；清晰度随卡片覆盖下降
+                // 背景层：铺满全屏，固定不动，只随下拉整体下移；
+                // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
                 Positioned.fill(
                   child: Stack(
                     fit: StackFit.expand,
@@ -217,89 +222,75 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: const _RandomCardBackground(),
                         ),
                       ),
-                      const IgnorePointer(
-                        child: _RandomCardBackground.scrim,
-                      ),
-                      // 背景层不滚动，所以上半屏的下拉直接当抽屉拉手用：
-                      // 手指拖多少，首页就往下走多少。
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: bgHeight,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onVerticalDragUpdate: (d) {
-                            _setNegProgress(
-                              (_negProgress + d.primaryDelta! / _negThreshold)
-                                  .clamp(0.0, 1.0),
-                            );
-                            if (_negProgress > _negPeak) {
-                              _negPeak = _negProgress;
-                            }
-                          },
-                          onVerticalDragEnd: (_) {
-                            _setNegProgress(_negPeak > 0.3 ? 1.0 : 0.0);
-                            _negPeak = 0;
-                          },
-                          child: SafeArea(
-                            bottom: false,
-                            child: _HomeHeader(side: side),
+                      const IgnorePointer(child: _RandomCardBackground.scrim),
+                    ],
+                  ),
+                ),
+                // 顶栏固定 + 下方滚动区：卡片永远从顶栏下缘开始滚，
+                // 不会压到账号 / 日期。背景层铺在两者下面。
+                Positioned.fill(
+                  child: Column(
+                    children: [
+                      _HomeTopBar(side: side),
+                      Expanded(
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _onScrollNotification,
+                          child: SingleChildScrollView(
+                            controller: _scroll,
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  height: bgHeight,
+                                  child: _HomeHeader(side: side),
+                                ),
+                                _CardsPanel(
+                                  radiusTop: CitroColors.radii.card,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          side,
+                                          4,
+                                          side,
+                                          sideNav ? 92 : 108,
+                                        ),
+                                        child: HomeBento(
+                                          layoutKey: layoutKey,
+                                          editing: false,
+                                          scrollController: _scroll,
+                                          builder: _cardFor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                      Center(
+                                        child: Pressable(
+                                          onTap: () =>
+                                              showAppreciationSheet(context),
+                                          child: Text(
+                                            'Citro · 今天也要开心',
+                                            style: context.body(
+                                              size: CitroType.small,
+                                              color: context.c.inkSoft,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-                // 卡片层：玻璃底，从背景下缘开始，可滚动
-                Positioned.fill(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: bgHeight - 24),
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: _onScrollNotification,
-                      child: SingleChildScrollView(
-                        controller: _scroll,
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        child: _CardsPanel(
-                          radiusTop: CitroColors.radii.card,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  side,
-                                  4,
-                                  side,
-                                  sideNav ? 92 : 108,
-                                ),
-                                child: HomeBento(
-                                  layoutKey: layoutKey,
-                                  editing: false,
-                                  scrollController: _scroll,
-                                  builder: _cardFor,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              Center(
-                                child: Pressable(
-                                  onTap: () => showAppreciationSheet(context),
-                                  child: Text(
-                                    'Citro · 今天也要开心',
-                                    style: context.body(
-                                      size: CitroType.small,
-                                      color: context.c.inkSoft,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -335,9 +326,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
       final d = n.scrollDelta ?? 0;
       if (d != 0) {
-        _setNegProgress(
-          (_negProgress + (-d) / _negThreshold).clamp(0.0, 1.0),
-        );
+        _setNegProgress((_negProgress + (-d) / _negThreshold).clamp(0.0, 1.0));
         if (_negProgress > _negPeak) _negPeak = _negProgress;
       }
     } else if (n is OverscrollNotification &&
@@ -380,13 +369,14 @@ class _RandomCardBackground extends StatefulWidget {
   const _RandomCardBackground();
 
   /// 顶部深色罩面：保证浅色文字在任意卡面上都可读。
+  /// 中间留出大面积给背景本身，上下只压出文字的对比，
+  /// 否则整张背景会被灰罩面糊成一片。
   static const Widget scrim = DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        // 只在顶栏和底下的打招呼处压深，中间留出来给卡面本身。
-        colors: [Color(0x8C000000), Color(0x24000000), Color(0x80000000)],
+        colors: [Color(0x80000000), Color(0x1A000000), Color(0x59000000)],
         stops: [0, .5, 1],
       ),
     ),
@@ -495,7 +485,141 @@ class _TimeBackgroundState extends State<_TimeBackground> {
   }
 }
 
-/// 上半部分的文字层：账号入口 + 日期 + 打招呼。
+/// 固定的顶部栏：账号入口 + 日期。
+///
+/// 上滑时卡片会盖住打招呼，但账号和日期始终留在顶部，不用跟着滚走。
+/// 背景由底层的固定背景层统一提供（铺满全屏），这里只画内容。
+class _HomeTopBar extends StatelessWidget {
+  final double side;
+
+  const _HomeTopBar({required this.side});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final app = context.app;
+    final now = DateTime.now();
+    final user = app.user;
+    // user.av 可能是相对路径，必须过 Api.imageUrl 拼成完整地址，
+    // 否则 Image.network 直接失败、errorBuilder 返回空——整个圆就是空白。
+    final avatarUrl = Api.imageUrl(user?.av);
+    // 顶栏不单独加底色：直接压在全屏背景上，白字靠背景罩面读得清；
+    // 卡片从它下缘开始滚，不会叠上来。
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Pressable(
+                onTap: () => openMePage(context),
+                hoverLift: 0,
+                hoverShadow: false,
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white54),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: avatarUrl.isEmpty
+                            ? Center(
+                                child:
+                                    app.loggedIn &&
+                                        user != null &&
+                                        user.name.isNotEmpty
+                                    ? Text(
+                                        user.name[0],
+                                        style: context.heading(
+                                          size: CitroType.label,
+                                          color: c.ink,
+                                        ),
+                                      )
+                                    : AppIcon(
+                                        strokeSvg(AppIcons.user, width: 2),
+                                        size: 16,
+                                        color: c.ink2,
+                                      ),
+                              )
+                            : Image.network(
+                                avatarUrl,
+                                fit: BoxFit.cover,
+                                cacheWidth: 96,
+                                errorBuilder: (_, _, _) => Center(
+                                  child: AppIcon(
+                                    strokeSvg(AppIcons.user, width: 2),
+                                    size: 16,
+                                    color: c.ink2,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: AppSpacing.x1),
+                      Flexible(
+                        child: Text(
+                          app.loggedIn && user != null && user.name.isNotEmpty
+                              ? user.name
+                              : '点击进入我的',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.body(
+                            size: CitroType.label,
+                            weight: CitroType.medium,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      AppIcon(
+                        strokeSvg(AppIcons.chevronRight, width: 2),
+                        size: 15,
+                        color: Colors.white70,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x1),
+            if (LanternApi.currentWindow() != null) ...[
+              const LanternEntry(),
+              const SizedBox(width: AppSpacing.x1),
+            ],
+            Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(28),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Center(
+                child: Text(
+                  '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
+                  style: context.body(
+                    size: CitroType.micro,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 英雄区的打招呼：跟着滚动走，上滑时被卡片盖掉。
 class _HomeHeader extends StatelessWidget {
   final double side;
 
@@ -503,30 +627,7 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
-    final app = context.app;
     final now = DateTime.now();
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const _RandomCardBackground(),
-        // 顶部压一层深色罩面：卡面普遍偏亮且花色随机，
-        // 固定用浅色文字比「猜底色」稳得多。
-        const IgnorePointer(child: _RandomCardBackground.scrim),
-        SafeArea(bottom: false, child: _headerBody(context, c, app, now, true)),
-      ],
-    );
-  }
-
-  Widget _headerBody(
-    BuildContext context,
-    CitroColors c,
-    AppState app,
-    DateTime now,
-    bool dark,
-  ) {
-    final onBg = dark ? Colors.white : c.ink;
-    final onSoft = dark ? Colors.white70 : c.inkSoft;
     final greeting = now.hour < 6
         ? '夜深了'
         : now.hour < 11
@@ -536,130 +637,25 @@ class _HomeHeader extends StatelessWidget {
         : now.hour < 18
         ? '下午好'
         : '晚上好';
-    final user = app.user;
-    // user.av 可能是相对路径，必须过 Api.imageUrl 拼成完整地址，
-    // 否则 Image.network 直接失败、errorBuilder 返回空——整个圆就是空白。
-    final avatarUrl = Api.imageUrl(user?.av);
     return Padding(
       padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Pressable(
-                  onTap: () => openMePage(context),
-                  hoverLift: 0,
-                  hoverShadow: false,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    height: 42,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: dark ? Colors.white : c.surface,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: dark ? Colors.white54 : c.line,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: avatarUrl.isEmpty
-                              ? Center(
-                                  child: app.loggedIn &&
-                                          user != null &&
-                                          user.name.isNotEmpty
-                                      ? Text(
-                                          user.name[0],
-                                          style: context.heading(
-                                            size: CitroType.label,
-                                            color: c.ink,
-                                          ),
-                                        )
-                                      : AppIcon(
-                                          strokeSvg(AppIcons.user, width: 2),
-                                          size: 16,
-                                          color: c.ink2,
-                                        ),
-                                )
-                              : Image.network(
-                                  avatarUrl,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 96,
-                                  errorBuilder: (_, _, _) => Center(
-                                    child: AppIcon(
-                                      strokeSvg(AppIcons.user, width: 2),
-                                      size: 16,
-                                      color: c.ink2,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(width: AppSpacing.x1),
-                        Flexible(
-                          child: Text(
-                            app.loggedIn && user != null && user.name.isNotEmpty
-                                ? user.name
-                                : '点击进入我的',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.body(
-                              size: CitroType.label,
-                              weight: CitroType.medium,
-                              color: onBg,
-                            ),
-                          ),
-                        ),
-                        AppIcon(
-                          strokeSvg(AppIcons.chevronRight, width: 2),
-                          size: 15,
-                          color: onSoft,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.x1),
-              if (LanternApi.currentWindow() != null) ...[
-                const LanternEntry(),
-                const SizedBox(width: AppSpacing.x1),
-              ],
-              Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: dark ? Colors.white.withAlpha(28) : Colors.white.withAlpha(150),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: dark ? Colors.white24 : Colors.white.withAlpha(200),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
-                    style: context.body(size: CitroType.micro, color: onBg),
-                  ),
-                ),
-              ),
-            ],
-          ),
           const Spacer(),
           Text(
             '$greeting，',
-            style: context.display(size: CitroType.hero, color: onBg, height: 1.12),
+            style: context.display(
+              size: CitroType.hero,
+              color: Colors.white,
+              height: 1.12,
+            ),
           ),
           Text(
             '今天也要开心',
             style: context.display(
               size: CitroType.hero,
-              color: onBg,
+              color: Colors.white,
               height: 1.12,
             ),
           ),
@@ -881,7 +877,10 @@ class WeatherCard extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: Text(
                     '${w.updated} 更新',
-                    style: context.body(size: CitroType.small, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ),
               ],
@@ -1177,7 +1176,8 @@ class _CalendarCardState extends State<CalendarCard> {
           builder: (context, constraints) {
             // 3×3 起的小卡片只保留「今天」：大日期 + 星期 + 农历，
             // 不再铺整月日期格，避免小尺寸里 42 个日期挤成一团。
-            final mini = widget.compact ||
+            final mini =
+                widget.compact ||
                 constraints.maxHeight < 210 ||
                 constraints.maxWidth < 210;
             if (mini) return _todayOnly(context, current);
@@ -1285,9 +1285,7 @@ class _CalendarCardState extends State<CalendarCard> {
                             style: context.body(
                               size: dense ? CitroType.small : CitroType.label,
                               weight: CitroType.medium,
-                              color: (i == 0 || i == 6)
-                                  ? c.accent
-                                  : c.inkSoft,
+                              color: (i == 0 || i == 6) ? c.accent : c.inkSoft,
                             ),
                           ),
                         ),
@@ -1397,10 +1395,7 @@ class _CalendarCardState extends State<CalendarCard> {
                 dateLine,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.body(
-                  size: CitroType.micro,
-                  color: c.inkSoft,
-                ),
+                style: context.body(size: CitroType.micro, color: c.inkSoft),
               ),
             ],
           ),
@@ -1484,7 +1479,9 @@ class _CalCell extends StatelessWidget {
               Text(
                 '$day',
                 style: context.hand(
-                  size: dense ? CitroType.body : (fill ? CitroType.titleLg : CitroType.title),
+                  size: dense
+                      ? CitroType.body
+                      : (fill ? CitroType.titleLg : CitroType.title),
                   color: dayColor,
                   height: 1.05,
                 ),

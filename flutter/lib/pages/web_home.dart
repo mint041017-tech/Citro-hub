@@ -53,7 +53,9 @@ class WebHomePage extends StatelessWidget {
                       ),
                     ),
                     const WebGridCell(1, 3, 3, 2, WeatherCard()),
-                    const WebGridCell(1, 5, 3, 4, CalendarCard()),
+                    // 日历 / 待办 / 记账已经收进「计划」页，桌面首页不再重复。
+                    const WebGridCell(1, 5, 3, 2, FishCard()),
+                    const WebGridCell(1, 7, 3, 2, CheckinCard(compact: true)),
                     WebGridCell(
                       4,
                       2,
@@ -78,15 +80,13 @@ class WebHomePage extends StatelessWidget {
                       4,
                       7,
                       3,
-                      1,
+                      2,
                       _WebRecipeTicket(
                         onTap: () => Navigator.of(context).pushNamed('/cook'),
                       ),
                     ),
-                    const WebGridCell(4, 8, 3, 1, FishCard()),
                     const WebGridCell(7, 2, 6, 7, _WebGames()),
-                    const WebGridCell(1, 9, 3, 1, CheckinCard(compact: true)),
-                    const WebGridCell(4, 9, 9, 1, _WebQuoteStrip()),
+                    const WebGridCell(1, 9, 12, 1, _WebQuoteStrip()),
                   ],
                 ),
               ),
@@ -360,10 +360,7 @@ class _WebDownloadCard extends StatelessWidget {
             Container(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(
-                color: c.mint,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: c.mint, shape: BoxShape.circle),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.download, width: 2),
@@ -397,8 +394,9 @@ class _WebDownloadCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius:
-                              BorderRadius.circular(CitroColors.radii.chip),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
                         ),
                         child: Text(
                           '官方',
@@ -488,8 +486,7 @@ class _WebGameCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: entry.gradient(c),
                   ),
-                  borderRadius:
-                      BorderRadius.circular(CitroColors.radii.small),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 ),
                 child: Center(
                   child: FittedBox(

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../utils/lunar.dart';
 import '../widgets/ledger_home_card.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import '../widgets/todo_home_card.dart';
-import 'home_page.dart';
 
 /// 计划页：把原来散在首页的「日历 / 待办 / 记账」收成一页。
 ///
@@ -45,12 +45,9 @@ class PlanPage extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const _SectionLabel('日历', '月历 · 农历 · 节日'),
+                      const _SectionLabel('日历', '今天 · 农历 · 节日'),
                       const SizedBox(height: AppSpacing.x1),
-                      SizedBox(
-                        height: (w * .95).clamp(330.0, 470.0),
-                        child: const CalendarCard(compact: true),
-                      ),
+                      const _TodayCard(),
                       const SizedBox(height: AppSpacing.x3),
                       const _SectionLabel('待办', '今天的任务与专注'),
                       const SizedBox(height: AppSpacing.x1),
@@ -105,6 +102,99 @@ class _SectionLabel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 计划页的「今天」卡：只显示当天，不铺整月格子。
+///
+/// 横排布局：左边大日期，右边星期 / 农历 / 节日，整卡固定 108 高，
+/// 点一下进完整月历。以前这里塞的是整宽月历（330–470 高），
+/// 在竖排计划页里过于抢戏，现在收缩成一条日期条。
+class _TodayCard extends StatelessWidget {
+  const _TodayCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final now = DateTime.now();
+    final lunar = lunarOf(now);
+    final fid = festivalIdOf(now);
+    final term = termToday(now);
+    final weekday = weekdayChinese(now);
+    final headline = fid != null ? festivalName(fid) : (term ?? weekday);
+    final lunarText = lunar?.name ?? '';
+    final sub = [weekday, lunarText].where((s) => s.isNotEmpty).join(' · ');
+    return CitroCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      onTap: () => Navigator.of(context).pushNamed('/calendar'),
+      child: SizedBox(
+        height: 84,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 88,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${now.day}',
+                    style: context.hand(
+                      size: 44,
+                      weight: CitroType.strong,
+                      color: c.ink,
+                      height: .95,
+                    ),
+                  ),
+                  Text(
+                    '${now.year} / ${now.month}',
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x2),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    headline,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.bodyLg,
+                      weight: CitroType.medium,
+                      color: c.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x1),
+            AppIcon(
+              strokeSvg(AppIcons.chevronRight, width: 2),
+              size: 18,
+              color: c.inkSoft,
+            ),
+          ],
+        ),
       ),
     );
   }
