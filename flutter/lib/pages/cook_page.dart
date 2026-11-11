@@ -672,7 +672,9 @@ class _CookPageState extends State<CookPage> {
                       ),
                     ),
                   ),
-                if (!tablet) _bottomNav(context),
+                // 输入法弹起时藏掉底部 tab，别让键盘把它顶起来。
+                if (!tablet && MediaQuery.viewInsetsOf(context).bottom == 0)
+                  _bottomNav(context),
               ],
             ),
           ),
@@ -3184,6 +3186,8 @@ class _CookPageState extends State<CookPage> {
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
+                      // 文字在 44 高的胶囊里垂直居中，不偏上 / 偏下。
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       hintText: '添加要买的东西…',
                       hintStyle: context.body(
                         size: CitroType.caption,

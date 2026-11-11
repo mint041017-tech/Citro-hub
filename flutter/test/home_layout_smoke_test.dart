@@ -148,7 +148,7 @@ void main() {
 
     // 在上半屏（背景图区域）往下拖，首页整体跟着走，抽屉从下面露出来。
     await tester.drag(
-      find.byKey(const ValueKey('home-header-pull')),
+      find.byType(SingleChildScrollView),
       const Offset(0, 260),
     );
     await tester.pump();
@@ -166,7 +166,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(_drawerShift(tester), 0);
 
-    await tester.drag(find.byKey(const ValueKey('home-header-pull')), const Offset(0, 320));
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
     await tester.pump();
     expect(_drawerShift(tester), greaterThan(0));
     await tester.pumpAndSettle();
@@ -184,7 +184,7 @@ void main() {
     expect(_drawerShift(tester), 0);
 
     // 先下拉把抽屉拉开。
-    await tester.drag(find.byKey(const ValueKey('home-header-pull')), const Offset(0, 320));
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
     await tester.pumpAndSettle();
     expect(_drawerShift(tester), greaterThan(0));
 
@@ -209,7 +209,7 @@ void main() {
 
     // 下拉 100px：抽屉跟手走 1:1（封顶在抽屉高度）。
     final gesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('home-header-pull'))),
+      tester.getCenter(find.byType(SingleChildScrollView)),
     );
     await gesture.moveBy(const Offset(0, 100));
     await tester.pump();

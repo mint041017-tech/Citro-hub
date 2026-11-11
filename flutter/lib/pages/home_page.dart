@@ -259,77 +259,77 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                // 顶栏固定 + 下方滚动区：卡片永远从顶栏下缘开始滚，
-                // 不会压到账号 / 日期。背景层铺在两者下面。
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      _HomeTopBar(side: side),
-                      // 背景图区域：固定高度，下拉手势只在这一层生效。
-                      SizedBox(
-                        height: bgHeight,
-                        child: GestureDetector(
-                          key: const ValueKey('home-header-pull'),
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragStart: _onPullStart,
-                          onVerticalDragUpdate: _onPullUpdate,
-                          onVerticalDragEnd: _onPullEnd,
-                          onVerticalDragCancel: _onPullCancel,
-                          child: _HomeHeader(side: side),
-                        ),
-                      ),
-                      // 卡片区：只在自己的区域里滚动。
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: _scroll,
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          child: _CardsPanel(
-                            radiusTop: CitroColors.radii.card,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    side,
-                                    8,
-                                    side,
-                                    sideNav ? 92 : 108,
+                  // 顶栏固定 + 下方整页滚动：卡片上滑时逐渐盖住背景图。
+                  Positioned.fill(
+                    child: Column(
+                      children: [
+                        _HomeTopBar(side: side),
+                        Expanded(
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: _onScrollNotification,
+                            child: SingleChildScrollView(
+                              controller: _scroll,
+                              // 去掉回弹：到底 / 到顶都硬停，不弹。
+                              physics: const ClampingScrollPhysics(
+                                parent: AlwaysScrollableScrollPhysics(),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    height: bgHeight,
+                                    child: _HomeHeader(side: side),
                                   ),
-                                  child: HomeBento(
-                                    layoutKey: layoutKey,
-                                    editing: false,
-                                    scrollController: _scroll,
-                                    builder: _cardFor,
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Center(
-                                  child: Pressable(
-                                    onTap: () => showAppreciationSheet(context),
-                                    child: Text(
-                                      'Citro · 今天也要开心',
-                                      style: context.body(
-                                        size: CitroType.small,
-                                        color: context.c.inkSoft,
-                                      ),
+                                  _CardsPanel(
+                                    radiusTop: CitroColors.radii.card,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            side,
+                                            8,
+                                            side,
+                                            sideNav ? 92 : 108,
+                                          ),
+                                          child: HomeBento(
+                                            layoutKey: layoutKey,
+                                            editing: false,
+                                            scrollController: _scroll,
+                                            builder: _cardFor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 18),
+                                        Center(
+                                          child: Pressable(
+                                            onTap: () =>
+                                                showAppreciationSheet(context),
+                                            child: Text(
+                                              'Citro · 今天也要开心',
+                                              style: context.body(
+                                                size: CitroType.small,
+                                                color: context.c.inkSoft,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 18),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 18),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         ),
       ],
     );
@@ -348,42 +348,55 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double _pullProgress() =>
       ((_negPull / _negThreshold) * _negDamping).clamp(0.0, 1.0);
 
-  /// 背景图区域的下拉 / 上滑驱动负一屏（只在背景图那一层挂手势）。
-  void _onPullStart(DragStartDetails details) {
-    _negPull = 0;
-  }
-
-  void _onPullUpdate(DragUpdateDetails details) {
-    if (_negAuto != null) return;
-    _negPull += details.delta.dy;
-    if (_negPull <= 0) {
-      // 上滑：抽屉开着就立刻收起。
-      if (_negProgress.value > 0.02) _animateNegTo(0);
+  /// 顶部下拉 / 上滑驱动负一屏（对齐微信首页下拉小程序面板）。
+  ///
+  /// - 关着：列表到顶还继续下拉，首页跟手（带阻尼），走到 [_negOpenAt]
+  ///   直接弹开，不用等松手。
+  /// - 开着：任意位置上滑立刻收起。
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is ScrollStartNotification) {
       _negPull = 0;
-      return;
+    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      if (_negAuto != null) return false;
+      final d = n.scrollDelta ?? 0;
+      if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
+        _negPull += -d;
+        final next = _pullProgress();
+        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
+          unawaited(Haptics.breath());
+          _animateNegTo(1);
+          return false;
+        }
+        _setNegProgress(next);
+      } else if (d > 0 && _negProgress.value > 0.02) {
+        _animateNegTo(0);
+      }
+    } else if (n is OverscrollNotification &&
+        n.dragDetails != null &&
+        n.overscroll != 0 &&
+        _scroll.hasClients &&
+        _scroll.offset <= 0.5) {
+      if (_negAuto != null) return false;
+      if (n.overscroll < 0) {
+        _negPull += -n.overscroll;
+        final next = _pullProgress();
+        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
+          unawaited(Haptics.breath());
+          _animateNegTo(1);
+          return false;
+        }
+        _setNegProgress(next);
+      } else if (n.overscroll > 0 && _negProgress.value > 0.02) {
+        _animateNegTo(0);
+      }
+    } else if (n is ScrollEndNotification) {
+      // 松手吸附：超过吸合线弹开，否则立刻收回（不停顿）。
+      if (_negProgress.value > 0 && _negAuto == null) {
+        _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
+      }
+      _negPull = 0;
     }
-    final next = _pullProgress();
-    if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
-      unawaited(Haptics.breath());
-      _animateNegTo(1);
-      return;
-    }
-    _setNegProgress(next);
-  }
-
-  void _onPullEnd(DragEndDetails details) {
-    // 松手吸附：超过吸合线弹开，否则立刻收回（不停顿）。
-    if (_negProgress.value > 0 && _negAuto == null) {
-      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
-    }
-    _negPull = 0;
-  }
-
-  void _onPullCancel() {
-    if (_negProgress.value > 0 && _negAuto == null) {
-      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
-    }
-    _negPull = 0;
+    return false;
   }
 
   /// 首页卡片的内容映射：栅格只负责位置，卡片自身保持原来的交互与动效。
@@ -579,6 +592,7 @@ class _HomeHeader extends StatelessWidget {
           const Spacer(),
           Text(
             '$greeting，',
+            textAlign: TextAlign.left,
             style: context.display(
               size: CitroType.hero,
               color: Colors.white,
@@ -587,6 +601,7 @@ class _HomeHeader extends StatelessWidget {
           ),
           Text(
             line,
+            textAlign: TextAlign.left,
             style: context.display(
               size: CitroType.hero,
               color: Colors.white,

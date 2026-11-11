@@ -87,8 +87,20 @@ class PlanPage extends StatelessWidget {
 /// 以前只放一条日期条，看不出「今天是这一周的第几天」，也看不到邻近几天
 /// 有什么节日。现在改成横排一周：每天一格，格下写节日 / 节气 / 农历，
 /// 有倒数日 / 纪念日的小圆点也标出来。
-class _TodayCard extends StatelessWidget {
+class _TodayCard extends StatefulWidget {
   const _TodayCard();
+
+  @override
+  State<_TodayCard> createState() => _TodayCardState();
+}
+
+class _TodayCardState extends State<_TodayCard> {
+  @override
+  void initState() {
+    super.initState();
+    // 倒数日 / 纪念日本来在日历页才加载，计划页也要拿到才能标出来。
+    CalendarStore.instance.ensureInit();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,63 +111,71 @@ class _TodayCard extends StatelessWidget {
     final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
     final fid = festivalIdOf(now);
     final term = termToday(now);
-    final headline = (fid != null ? festivalName(fid) : null) ??
-        term ??
-        weekdayChinese(now);
-    return CitroCard(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      onTap: () => Navigator.of(context).pushNamed('/calendar'),
-      child: Column(
-        children: [
-          Row(
+    final headline =
+        (fid != null ? festivalName(fid) : null) ?? term ?? weekdayChinese(now);
+    //  Store 变化（新增 / 删除纪念日）时重建这一周。
+    return ListenableBuilder(
+      listenable: CalendarStore.instance,
+      builder: (context, _) {
+        return CitroCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          onTap: () => Navigator.of(context).pushNamed('/calendar'),
+          child: Column(
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: c.accentLt.withAlpha(c.dark ? 70 : 170),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: AppIcon(
-                    strokeSvg(AppIcons.calendar, width: 2),
-                    size: 15,
-                    color: c.accentInk,
+              Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: AppIcon(
+                        strokeSvg(AppIcons.calendar, width: 2),
+                        size: 15,
+                        color: c.accentInk,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSpacing.x2),
+                  Text(
+                    '${now.month} 月 ${now.day} 日 · $headline',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.bodyLg,
+                      weight: CitroType.medium,
+                      color: c.ink,
+                    ),
+                  ),
+                  const Spacer(),
+                  AppIcon(
+                    strokeSvg(AppIcons.chevronRight, width: 2),
+                    size: 16,
+                    color: c.inkSoft,
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.x2),
-              Text(
-                '${now.month} 月 ${now.day} 日 · $headline',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(
-                  size: CitroType.bodyLg,
-                  weight: CitroType.medium,
-                  color: c.ink,
-                ),
-              ),
-              const Spacer(),
-              AppIcon(
-                strokeSvg(AppIcons.chevronRight, width: 2),
-                size: 16,
-                color: c.inkSoft,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  for (var i = 0; i < 7; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    Expanded(
+                      child: _WeekCell(
+                        date: startOfWeek.add(Duration(days: i)),
+                        today: today,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (var i = 0; i < 7; i++) ...[
-                if (i > 0) const SizedBox(width: 4),
-                Expanded(
-                  child: _WeekCell(date: startOfWeek.add(Duration(days: i)), today: today),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -221,10 +241,11 @@ class _WeekCell extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '${date.day}',
-            style: context.heading(
-              size: CitroType.bodyLg,
-              color: fg,
-            ).copyWith(fontWeight: isToday ? CitroType.strong : CitroType.medium),
+            style: context
+                .heading(size: CitroType.bodyLg, color: fg)
+                .copyWith(
+                  fontWeight: isToday ? CitroType.strong : CitroType.medium,
+                ),
           ),
           const SizedBox(height: 2),
           Text(
