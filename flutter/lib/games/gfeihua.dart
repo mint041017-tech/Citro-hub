@@ -489,14 +489,7 @@ class GameFeihuaView extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _rules(context),
-            const SizedBox(height: 20),
-            GameActionButton(
-              label: '开始飞花令',
-              primary: true,
-              expand: true,
-              onTap: onStart,
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               'AI 对战 · GLM-5.3-Flash 实时抽字与对诗',
               textAlign: TextAlign.center,
@@ -584,54 +577,6 @@ class GameFeihuaView extends StatelessWidget {
     final warn = seconds <= 10;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          child: Row(
-            children: [
-              Text('令字', style: context.body(size: CitroType.small, color: c.inkSoft)),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: id.soft,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                ),
-                child: Text(
-                  ch.isEmpty ? '—' : ch,
-                  style: context.hand(
-                    size: CitroType.titleLg,
-                    weight: CitroType.strong,
-                    color: id.primaryInk,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: 34,
-                child: Text(
-                  '$seconds',
-                  textAlign: TextAlign.right,
-                  style: context.hand(
-                    size: CitroType.titleLg,
-                    weight: CitroType.strong,
-                    color: warn ? id.deep : c.ink,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 58,
-                child: CitroProgressBar(
-                  value: frac,
-                  height: 6,
-                  color: warn ? id.deep : id.primary,
-                  track: id.deep.withAlpha(40),
-                ),
-              ),
-            ],
-          ),
-        ),
-        CitroDivider(color: c.line),
         Expanded(
           child: Stack(
             children: [
@@ -657,66 +602,10 @@ class GameFeihuaView extends StatelessWidget {
           ),
         ),
         CitroDivider(color: c.line),
+        // 关键信息跟着输入区走：键盘抬起时上半屏被顶掉，令字 / 倒计时集中
+        // 放在输入区上方；换字入口留在同一行右侧。
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-          child: SizedBox(
-            height: 48,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: input,
-                    focusNode: focusNode,
-                    enabled: !thinking,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => onEnter?.call(),
-                    maxLength: 128,
-                    style: context.body(size: CitroType.bodyLg, color: c.ink),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      counterText: '',
-                      hintText: '输入一句诗，选候选词后回车或点「对」',
-                      hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
-                      filled: true,
-                      fillColor: id.soft.withAlpha(90),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.primary, width: 1.5),
-                      ),
-                      disabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                GameActionButton(
-                  label: '对',
-                  width: 66,
-                  height: 48,
-                  primary: true,
-                  onTap: thinking ? null : onSubmit,
-                ),
-              ],
-            ),
-          ),
-        ),
-        // 底部条只留令字 + 换字，倍数与句数不再占位。
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
           child: Row(
             children: [
               Container(
@@ -724,7 +613,6 @@ class GameFeihuaView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  border: Border.all(color: id.primary.withAlpha(60)),
                 ),
                 child: Text.rich(
                   TextSpan(
@@ -743,7 +631,30 @@ class GameFeihuaView extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 34,
+                child: Text(
+                  '$seconds',
+                  textAlign: TextAlign.right,
+                  style: context.hand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
+                    color: warn ? id.deep : c.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 58,
+                child: CitroProgressBar(
+                  value: frac,
+                  height: 6,
+                  color: warn ? id.deep : id.primary,
+                  track: id.deep.withAlpha(40),
+                ),
+              ),
+              const Spacer(),
               // 换字按钮 + 解锁提示：对句数从棋盘移除后，count < 2 的解锁条件
               // 在画面上没有数字依据，补一句最小提示说明还差几句。
               Column(
@@ -802,6 +713,51 @@ class GameFeihuaView extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: TextField(
+              controller: input,
+              focusNode: focusNode,
+              enabled: !thinking,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => onEnter?.call(),
+              maxLength: 128,
+              style: context.body(size: CitroType.bodyLg, color: c.ink),
+              decoration: InputDecoration(
+                isDense: true,
+                counterText: '',
+                hintText: '输入一句诗，选候选词后回车提交',
+                hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+                filled: true,
+                fillColor: id.soft.withAlpha(90),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                // 去掉身份红描边：输入区只用中性描边，聚焦时换主题青瓷。
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.accent, width: 1.5),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+              ),
+            ),
           ),
         ),
       ],

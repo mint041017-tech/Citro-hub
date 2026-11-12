@@ -85,9 +85,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
   List<_ChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
   String? _error;
 
-  /// 快捷能力执行期间挡住重复点击，避免连按叠出两个弹层。
-  bool _acting = false;
-
   /// 桌面端麦克风按钮的长按说话：按下超过 0.42s 开始听写，松手停止；
   /// 短按仍然只是开关。
   Timer? _micTimer;
@@ -394,26 +391,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 快捷能力
-  // -------------------------------------------------------------------------
-
-  Future<void> _runCapability(Future<void> Function() action) async {
-    if (_acting) return;
-    _acting = true;
-    try {
-      await action();
-    } finally {
-      if (mounted) setState(() => _acting = false);
-    }
-  }
-
-  /// 把能力执行结果以 CiCi 的口吻写进对话流。
-  void _ciciSay(String text) {
-    setState(() => _messages.add(_ChatMessage(user: false, text: text)));
-    _scrollToEnd();
-  }
-
   /// 顶栏的圆形图标按钮：性格 / 新对话 / 关闭，三枚统一 36。
   Widget _HeaderIcon({
     required String icon,
@@ -478,89 +455,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
         ],
       ),
     );
-  }
-
-  Widget _quickActions(BuildContext context) {
-    // 食谱助手与转运是专用流程，不混入通用能力入口。
-    if (widget.goodDeed || widget.recipe != null) {
-      return const SizedBox.shrink();
-    }
-    // 空对话在欢迎页里已经给了「记待办 / 记账」两张卡，输入框上方不再重复。
-    if (_messages.isEmpty) return const SizedBox.shrink();
-    final c = context.c;
-    final items = <(String, Widget, void Function())>[
-      ('记待办', _capIcon(AppIcons.check, c), () => _runCapability(_addTodo)),
-      (
-        '记账',
-        _capIcon(AppIcons.book, c),
-        () => Navigator.of(context).pushNamed('/ledger'),
-      ),
-    ];
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final (label, icon, onTap) = items[index];
-          return _capChip(context, label, icon, onTap);
-        },
-      ),
-    );
-  }
-
-  Widget _capIcon(String svg, CitroColors c) =>
-      AppIcon(strokeSvg(svg, width: 1.9), size: 14, color: c.accentInk);
-
-  Widget _capChip(
-    BuildContext context,
-    String label,
-    Widget icon,
-    void Function() onTap,
-  ) {
-    final c = context.c;
-    return Pressable(
-      onTap: () {
-        if (_acting) return;
-        onTap();
-      },
-      scale: .94,
-      hoverLift: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: c.line),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            icon,
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: context.body(size: CitroType.micro, color: c.ink2),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 记一条今日待办：写入 [TodoStore]，当天 23:59 截止。
-  Future<void> _addTodo() async {
-    await TodoStore.instance.ensureInit();
-    if (!mounted) return;
-    final title = await showCitroDialog<String>(
-      context,
-      builder: (_) =>
-          const PaperDialog(maxWidth: 360, child: _TodoQuickAddDialog()),
-    );
-    if (title == null || title.isEmpty || !mounted) return;
-    _ciciSay('已加入今日待办：$title');
   }
 
   /// 转运分享的好事同步成一条社区动态（图片一并带上），不再写进笔记。
@@ -968,32 +862,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
             ),
           ],
-          const SizedBox(height: 20),
-          // 两个快捷能力做成卡片，比输入框上方的一排小 chip 更清楚；
-          // 空对话状态下输入框上方就不再重复放一遍。
-          Row(
-            children: [
-              Expanded(
-                child: _welcomeAction(
-                  context,
-                  icon: AppIcons.check,
-                  label: '记待办',
-                  desc: '把一件事记进今日待办',
-                  onTap: () => _runCapability(_addTodo),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _welcomeAction(
-                  context,
-                  icon: AppIcons.book,
-                  label: '记账',
-                  desc: '记一笔今天的收支',
-                  onTap: () => Navigator.of(context).pushNamed('/ledger'),
-                ),
-              ),
-            ],
-          ),
           if (prompts.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
@@ -1048,64 +916,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// 空对话里的快捷能力卡：图标 + 标题 + 一句说明。
-  Widget _welcomeAction(
-    BuildContext context, {
-    required String icon,
-    required String label,
-    required String desc,
-    required VoidCallback onTap,
-  }) {
-    final c = context.c;
-    return Pressable(
-      onTap: onTap,
-      scale: .98,
-      hoverLift: 0,
-      borderRadius: BorderRadius.circular(CitroColors.radii.card),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.card),
-          border: Border.all(color: c.line),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: c.accentLt.withAlpha(c.dark ? 70 : 170),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(icon, width: 2),
-                  size: 17,
-                  color: c.accentInk,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(label, style: context.heading(size: CitroType.body)),
-            const SizedBox(height: 2),
-            Text(
-              desc,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: context.body(
-                size: CitroType.micro,
-                color: c.inkSoft,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1246,7 +1056,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _quickActions(context),
             if (_pendingImage != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
@@ -1308,7 +1117,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _quickActions(context),
           if (_pendingImage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -1775,122 +1583,6 @@ class _PersonaSheetState extends State<_PersonaSheet> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// 记一条今日待办的轻量弹层。
-class _TodoQuickAddDialog extends StatefulWidget {
-  const _TodoQuickAddDialog();
-
-  @override
-  State<_TodoQuickAddDialog> createState() => _TodoQuickAddDialogState();
-}
-
-class _TodoQuickAddDialogState extends State<_TodoQuickAddDialog> {
-  final TextEditingController _title = TextEditingController();
-  final TextEditingController _note = TextEditingController();
-  String? _error;
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _note.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final title = _title.text.trim();
-    if (title.isEmpty) {
-      setState(() => _error = '写个标题吧');
-      return;
-    }
-    final store = TodoStore.instance;
-    final now = DateTime.now();
-    store.createTask(
-      title: title,
-      note: _note.text.trim(),
-      kind: TodoKind.task,
-      categoryId: store.categories.isEmpty
-          ? 'study'
-          : store.categories.first.id,
-      listId: store.lists.isEmpty ? 'default' : store.lists.first.id,
-      dueAt: DateTime(now.year, now.month, now.day, 23, 59),
-      source: 'cici',
-    );
-    Navigator.of(context).pop(title);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '记一条今日待办',
-          style: context.heading(size: CitroType.subtitle, color: c.ink),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _title,
-          autofocus: true,
-          style: context.body(size: CitroType.meta, color: c.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: c.surface2,
-            hintText: '例如：给妈妈打个电话',
-            hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.line2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.accent),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _note,
-          style: context.body(size: CitroType.meta, color: c.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: c.surface2,
-            hintText: '备注（可选）',
-            hintStyle: context.body(size: CitroType.meta, color: c.inkSoft),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.line2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              borderSide: BorderSide(color: c.accent),
-            ),
-          ),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _error!,
-            style: context.body(size: CitroType.caption, color: c.stamp),
-          ),
-        ],
-        const SizedBox(height: 14),
-        AccentButton(text: '加入待办', onTap: _save),
-      ],
     );
   }
 }

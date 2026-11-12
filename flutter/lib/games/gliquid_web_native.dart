@@ -5,29 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import '../services/api.dart';
 import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
-import 'game_identity.dart';
 import 'game_ui.dart'
     show
         GameActionButton,
-        GameHead,
         GameIcons,
         GameIdentityScope,
-        GameLiveBar,
-        GameMetrics,
         GameScaffold,
         GameScorePill,
-        gameIcon,
         showGameRank;
 
 /// 咕噜果冻铺 Web 版：资源内联进单页 HTML。
-/// 桌面 / iPad 横屏使用标准 GameScaffold；手机保留原有的紧凑游戏外壳。
+/// 与其它游戏一致，统一走 GameScaffold 标准外壳（顶栏 + HUD + 棋盘 + 操作 + 正在玩），
+/// 手机 / 横屏同一套骨架；网页内部按 citro-standard 隐藏自己的 HUD，读分交给 Flutter。
 class GameLiquidPage extends StatefulWidget {
   const GameLiquidPage({super.key});
 
@@ -41,15 +36,11 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   String? _error;
   bool _loading = true;
   bool _submitting = false;
-  bool _standardShell = false;
   bool _isDark = false;
   bool _themeInitialized = false;
-  String _progress = '开局准备中';
   int _score = 0;
   int _best = 0;
   List<int> _next = const [];
-  List<dynamic> _live = const [];
-  Timer? _liveTimer;
   final ValueNotifier<String> _liveProgress = ValueNotifier('开局准备中');
 
   static const _baseUrl = 'https://liquid2048.local/';
@@ -69,11 +60,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 ''';
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (platform.isTest) return;
@@ -82,7 +68,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       _themeInitialized = true;
       _isDark = dark;
       unawaited(_prepare());
-      _startLive();
     } else if (_isDark != dark) {
       _isDark = dark;
       unawaited(_applyThemeMode());
@@ -91,42 +76,9 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   @override
   void dispose() {
-    _liveTimer?.cancel();
+    // 正在玩的轮询与离房由 GameScaffold 统一负责（与其它游戏一致）。
     _liveProgress.dispose();
-    final state = AppState.instance;
-    unawaited(
-      Api.gameLive(
-        'gliquid',
-        leave: true,
-        name: state.loggedIn ? null : state.guestName,
-        gid: state.loggedIn ? null : state.gid,
-      ).catchError((_) => <String, dynamic>{}),
-    );
     super.dispose();
-  }
-
-  void _startLive() {
-    _liveTimer?.cancel();
-    unawaited(_tickLive());
-    _liveTimer = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => unawaited(_tickLive()),
-    );
-  }
-
-  Future<void> _tickLive() async {
-    if (!mounted) return;
-    try {
-      final state = AppState.instance;
-      final j = await Api.gameLive(
-        'gliquid',
-        progress: _progress,
-        name: state.loggedIn ? null : state.guestName,
-        gid: state.loggedIn ? null : state.gid,
-      );
-      if (!mounted) return;
-      setState(() => _live = (j['list'] as List?) ?? const []);
-    } catch (_) {}
   }
 
   Future<void> _prepare() async {
@@ -219,9 +171,8 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   void _handleLiveState(Map<String, dynamic> body) {
     final progress = '${body['progress'] ?? ''}'.trim();
-    if (progress.isNotEmpty) {
-      _progress = progress;
-      if (_liveProgress.value != progress) _liveProgress.value = progress;
+    if (progress.isNotEmpty && _liveProgress.value != progress) {
+      _liveProgress.value = progress;
     }
     final score = _asInt(body['score']);
     final best = _asInt(body['best']);
@@ -259,13 +210,14 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
     } catch (_) {}
   }
 
-  Future<void> _applyShellMode(bool standard) async {
+  /// 网页内部按 citro-standard 隐藏自己的 HUD / 玩法提示，标题、分数、操作、
+  /// 正在玩都由 Flutter 的 GameScaffold 提供（与其它游戏同一套外壳）。
+  Future<void> _applyStandardShell() async {
     final web = _web;
     if (web == null) return;
     try {
       await web.evaluateJavascript(
-        source:
-            "document.body.classList.toggle('citro-standard', ${standard ? 'true' : 'false'});",
+        source: "document.body.classList.add('citro-standard');",
       );
     } catch (_) {}
   }
@@ -289,97 +241,13 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
     }
   }
 
-  void _syncShellMode(bool standard) {
-    if (_standardShell == standard) return;
-    _standardShell = standard;
-    if (standard) {
-      _liveTimer?.cancel();
-      _liveTimer = null;
-    } else {
-      _startLive();
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_applyShellMode(standard));
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 与 Web 的 GameScaffold 判定保持一致：横屏一律标准壳，同窗口同罐子。
-    final standard = MediaQuery.orientationOf(context) == Orientation.landscape;
-    _syncShellMode(standard);
-    return standard ? _buildStandardShell(context) : _buildPhoneShell(context);
+    // 与其它游戏一致：始终 GameScaffold 标准外壳，手机 / 横屏同一套骨架。
+    return _buildShell(context);
   }
 
-  Widget _buildPhoneShell(BuildContext context) {
-    final c = context.c;
-    final identity = identityOf('gliquid');
-    // 紧凑壳自己就是页顶：在这里注入身份色，GameHead / 正在玩 / 排行圆钮
-    // 才不会回落到中性灰。
-    return GameIdentityScope(
-      identity: identity,
-      child: Scaffold(
-        backgroundColor: c.bg,
-        body: DecoratedBox(
-          // 身份色只以极低透明度铺在顶部，像舞台顶光（与标准壳同源）。
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [identity.primary.withAlpha(c.dark ? 34 : 30), c.bg],
-              stops: const [0, 0.62],
-            ),
-          ),
-          child: Column(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: GameHead(
-                  onBack: () => Navigator.maybePop(context),
-                  buttonSize: 42,
-                  iconSize: 20,
-                  centerBrand: true,
-                  extraActions: [
-                    _RankButton(
-                      onTap: () =>
-                          showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                // 紧凑壳的棋盘在 Expanded 里：宽高都有界，先按宽度折算，
-                // 再用可用高度收底（与 Web 共用 LiquidBoardMetrics.boardSizeFor）。
-                child: LayoutBuilder(
-                  builder: (context, cons) {
-                    final size = LiquidBoardMetrics.boardSizeFor(
-                      // 与 Web 的 GameScaffold board 区同左右内边距（gutter*2），
-                      // 同一窗口 native / web 拿到相同视口。
-                      maxWidth: cons.maxWidth - GameMetrics.gutter * 2,
-                      maxHeight: cons.maxHeight,
-                    );
-                    return Center(
-                      child: SizedBox(
-                        width: size.width,
-                        height: size.height,
-                        child: platform.isTest
-                            ? _testBody(context)
-                            : _webPanel(context),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (!platform.isTest)
-                SafeArea(top: false, child: GameLiveBar(list: _live)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStandardShell(BuildContext context) {
+  Widget _buildShell(BuildContext context) {
     return GameScaffold(
       gameKey: 'gliquid',
       title: '咕噜果冻铺',
@@ -417,16 +285,14 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
           return SizedBox(
             width: size.width,
             height: size.height,
-            child: platform.isTest
-                ? _testBody(context)
-                : _webPanel(context, clipped: true),
+            child: platform.isTest ? _testBody(context) : _webPanel(context),
           );
         },
       ),
     );
   }
 
-  Widget _webPanel(BuildContext context, {bool clipped = false}) {
+  Widget _webPanel(BuildContext context) {
     final panel = Stack(
       children: [
         Positioned.fill(
@@ -482,7 +348,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                 controller.evaluateJavascript(source: _disableSelectionScript),
               );
               unawaited(_applyThemeMode());
-              unawaited(_applyShellMode(_standardShell));
+              unawaited(_applyStandardShell());
             },
             onReceivedError: (_, request, error) {
               if (!mounted || request.isForMainFrame != true) return;
@@ -501,7 +367,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
           ),
       ],
     );
-    if (!clipped) return panel;
     return ClipRRect(borderRadius: BorderRadius.circular(16), child: panel);
   }
 
@@ -513,37 +378,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       child: Text(
         '咕噜果冻铺',
         style: context.heading(size: CitroType.titleLg, color: c.ink),
-      ),
-    );
-  }
-}
-
-class _RankButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _RankButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return Pressable(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(99),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: identity.primary.withAlpha(26),
-          shape: BoxShape.circle,
-          border: Border.all(color: identity.primary.withAlpha(70)),
-        ),
-        child: Center(
-          child: gameIcon(
-            GameIcons.trophy,
-            size: 18,
-            color: identity.primaryInk,
-          ),
-        ),
       ),
     );
   }

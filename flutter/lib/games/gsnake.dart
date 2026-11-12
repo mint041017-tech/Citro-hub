@@ -307,8 +307,8 @@ class GameSnakeView extends StatelessWidget {
         var maxW = w;
         var maxH = h;
         // 竖屏棋盘按内容宽算：方向盘在棋盘下方，整页可滚，不必给它预留高度
-        // （棋盘区在 SingleChildScrollView 里，maxHeight 恒为无限，扣了反而把
-        // 棋盘压到 148px，比方向盘还小）。横屏 / 平板与方向盘并排时才扣宽度。
+        // （棋盘区在 SingleChildScrollView 里，maxHeight 恒为无限，扣了只会
+        // 白白把棋盘压小）。横屏 / 平板与方向盘并排时才扣宽度。
         if (keyboard) {
           if (h.isFinite) maxH = h - hint;
         } else if (wide) {
@@ -459,16 +459,15 @@ class GameSnakeView extends StatelessWidget {
     );
   }
 
-  /// .gsnake-dpad：240x240 grid 3x3，gap 8，四个 74.67 圆钮
+  /// .gsnake-dpad：四个方向键同一排（← ↓ ↑ →），每键 54px（≥44 触摸目标），
+  /// 整排 240 宽 —— 与棋盘并排（横屏 / 平板）时的宽度预算与旧十字布局一致。
   Widget _dpad(BuildContext context) {
     final identity = GameIdentityScope.of(context);
-    const cell = 74.6719;
-    const step = cell + 8;
-    const size = step * 3 - 8; // 240.0157
-    Widget btn(String path, int col, int row, int dx, int dy) {
-      return Positioned(
-        left: col * step,
-        top: row * step,
+    const cell = 54.0;
+    const gap = 8.0;
+    const size = 240.0; // cell * 4 + gap * 3
+    Widget btn(String path, int dx, int dy) {
+      return SizedBox(
         width: cell,
         height: cell,
         child: GameHover(
@@ -498,13 +497,16 @@ class GameSnakeView extends StatelessWidget {
 
     return SizedBox(
       width: size,
-      height: size,
-      child: Stack(
+      height: cell,
+      child: Row(
         children: [
-          btn(GameIcons.arrowUp, 1, 0, 0, -1),
-          btn(GameIcons.arrowLeftSolid, 0, 1, -1, 0),
-          btn(GameIcons.arrowRightSolid, 2, 1, 1, 0),
-          btn(GameIcons.arrowDown, 1, 2, 0, 1),
+          btn(GameIcons.arrowLeftSolid, -1, 0),
+          const SizedBox(width: gap),
+          btn(GameIcons.arrowDown, 0, 1),
+          const SizedBox(width: gap),
+          btn(GameIcons.arrowUp, 0, -1),
+          const SizedBox(width: gap),
+          btn(GameIcons.arrowRightSolid, 1, 0),
         ],
       ),
     );

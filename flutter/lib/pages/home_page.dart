@@ -125,6 +125,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (mounted) setState(() {});
   }
 
+  /// 双击英雄区（背景可见的那一块）切换背景图。
+  ///
+  /// 手势只挂在这里：卡片、顶栏、横滑切 Tab 都不经过它；单击也不会被吞
+  /// （只认双击，单击照常落空）。抽屉（负一屏）开着时先不响应，
+  /// 免得一次双击既收起抽屉又换图。
+  void _onDoubleTapBackground() {
+    if (_negProgress.value >= 0.02) return;
+    unawaited(Haptics.breath());
+    CitroAmbientBackground.cycle();
+  }
+
   void _onScrollOffset() {
     if (!_scroll.hasClients) return;
     final cover = (_scroll.offset / _bgHeight).clamp(0.0, 1.0);
@@ -281,7 +292,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 children: [
                                   SizedBox(
                                     height: bgHeight,
-                                    child: _HomeHeader(side: side),
+                                    // 双击这块可见背景换图：命中区就是英雄区
+                                    // （顶栏以下、卡片以上），不压到卡片点击。
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onDoubleTap: _onDoubleTapBackground,
+                                      child: _HomeHeader(side: side),
+                                    ),
                                   ),
                                   _CardsPanel(
                                     radiusTop: CitroColors.radii.card,

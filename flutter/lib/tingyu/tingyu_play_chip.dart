@@ -6,6 +6,12 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'tingyu_controller.dart';
+import 'tingyu_page.dart'
+    show
+        tingyuAccentDark,
+        tingyuAccentLight,
+        tingyuOnAccentDark,
+        tingyuOnAccentLight;
 
 /// 离开听隅后的统一播放入口：声音仍在播放时，把听隅入口换成可暂停的胶囊。
 class TingyuPlayChip extends StatelessWidget {
@@ -17,6 +23,9 @@ class TingyuPlayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // 听隅的播放入口属于模块品牌色（鼠尾草绿），不跟全站青瓷 accent。
+    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
+    final onAccent = c.dark ? tingyuOnAccentDark : tingyuOnAccentLight;
     final player = NookController.instance;
     return Semantics(
       button: true,
@@ -25,7 +34,7 @@ class TingyuPlayChip extends StatelessWidget {
         onTap: () => Navigator.of(context).pushNamed('/tingyu'),
         hoverLift: 0,
         hoverShadow: false,
-        hoverColor: c.accent.withAlpha(24),
+        hoverColor: accent.withAlpha(24),
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         child: Container(
           height: height,
@@ -42,7 +51,7 @@ class TingyuPlayChip extends StatelessWidget {
               AppIcon(
                 strokeSvg(AppIcons.wave, width: 2),
                 size: 18,
-                color: c.accentInk,
+                color: accent,
               ),
               const SizedBox(width: 8),
               ConstrainedBox(
@@ -65,19 +74,19 @@ class TingyuPlayChip extends StatelessWidget {
                 child: Pressable(
                   onTap: () => unawaited(player.send('pause')),
                   scale: .9,
-                  hoverColor: c.accent.withAlpha(24),
+                  hoverColor: accent.withAlpha(24),
                   borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
                   child: Container(
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: c.accent,
+                      color: accent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.pause_rounded,
                       size: 18,
-                      color: c.onAccent,
+                      color: onAccent,
                     ),
                   ),
                 ),

@@ -159,6 +159,8 @@ class TingyuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // 听隅入口属于模块品牌色（鼠尾草绿），不跟全站青瓷 accent。
+    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
     final reduce = CitroMotion.reduced(context);
     return ListenableBuilder(
       listenable: NookController.instance,
@@ -191,7 +193,7 @@ class TingyuCard extends StatelessWidget {
                   AppIcon(
                     strokeSvg(AppIcons.wave, width: 2),
                     size: 18,
-                    color: c.accent,
+                    color: accent,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -264,6 +266,9 @@ class _NookToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // 播放态沿用听隅模块品牌色（鼠尾草绿）；未播放仍是全局薄荷软底。
+    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
+    final onAccent = c.dark ? tingyuOnAccentDark : tingyuOnAccentLight;
     return Semantics(
       button: true,
       label: playing ? '暂停听隅' : (ready ? '播放听隅' : '进入听隅'),
@@ -277,13 +282,13 @@ class _NookToggleButton extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: playing ? c.accent : c.mintSoft,
+            color: playing ? accent : c.mintSoft,
             shape: BoxShape.circle,
           ),
           child: Icon(
             playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
             size: 20,
-            color: playing ? c.onAccent : c.mintInk,
+            color: playing ? onAccent : c.mintInk,
           ),
         ),
       ),

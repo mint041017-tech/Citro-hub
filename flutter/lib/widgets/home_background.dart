@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import '../data/cards.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 
 /// 背景图的信息：资源、原始尺寸、底部提取色。
 class _BgInfo {
@@ -46,6 +47,15 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   /// 解码结果按资源地址缓存：计划 / 游戏 / 社区共用同一张背景，
   /// 不能每进一页就重解码一次。
   static final Map<String, _BgInfo> _cache = {};
+
+  /// 提前解码一张背景图（供首页双击切换前预取）。
+  ///
+  /// 只写缓存、不碰界面：[_load] 随后会直接命中，切换时卡片区起点
+  /// 不用等新图解码完才跟着动。
+  static void prefetchDecoded(String key) {
+    if (_cache.containsKey(key)) return;
+    unawaited(_decode(key).then((info) => _cache[key] = info));
+  }
 
   Future<_BgInfo>? _future;
 
@@ -200,12 +210,20 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
 class CitroTimeBackground extends StatefulWidget {
   const CitroTimeBackground({super.key});
 
+  /// 四个时段的背景图资源；首页双击切换没有卡面时用这一组兜底。
+  static const List<String> assets = [
+    'assets/images/backgrounds/dawn.webp',
+    'assets/images/backgrounds/day.webp',
+    'assets/images/backgrounds/dusk.webp',
+    'assets/images/backgrounds/night.webp',
+  ];
+
   static String assetFor(DateTime now) {
     final h = now.hour;
-    if (h >= 5 && h < 8) return 'assets/images/backgrounds/dawn.webp';
-    if (h >= 8 && h < 17) return 'assets/images/backgrounds/day.webp';
-    if (h >= 17 && h < 20) return 'assets/images/backgrounds/dusk.webp';
-    return 'assets/images/backgrounds/night.webp';
+    if (h >= 5 && h < 8) return assets[0];
+    if (h >= 8 && h < 17) return assets[1];
+    if (h >= 17 && h < 20) return assets[2];
+    return assets[3];
   }
 
   /// 背景图还没解码出来时的底色，顺便保证任何主题下都不会闪黑。
@@ -250,6 +268,9 @@ class _CitroTimeBackgroundState extends State<CitroTimeBackground> {
 /// 首页用它做整屏背景（随滚动加模糊），计划 / 游戏 / 社区也用它，
 /// 固定高斯模糊后垫在内容底下。选中的卡面在多个页面间共享，
 /// 免得每个 tab 各自随机出不同的卡。
+///
+/// 首页双击可见的背景区域时调 `cycle()` 在背景图列表里循环换图，
+/// 换图走交叉淡化（500ms，减少动态时直接跳过）。
 class CitroAmbientBackground extends StatefulWidget {
   /// 是否对背景图做高斯模糊。
   final bool blurred;
@@ -299,6 +320,12 @@ class CitroAmbientBackground extends StatefulWidget {
     ),
   );
 
+  /// 双击首页背景：在背景图列表里循环切换。
+  ///
+  /// 真正的状态在 [_CitroAmbientBackgroundState]（多个页面共享同一张背景），
+  /// 这里只做转发，供首页等外部调用。
+  static void cycle() => _CitroAmbientBackgroundState.cycle();
+
   @override
   State<CitroAmbientBackground> createState() => _CitroAmbientBackgroundState();
 }
@@ -307,51 +334,160 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
   /// 多个页面共享同一张卡面：首页先选，其余 tab 直接复用。
   static CardFace? _cachedFace;
 
-  CardFace? _face;
+  /// 可切换的背景列表：已收藏的卡面。一张都没有时退回时段背景图。
+  static List<CardFace> _faces = const [];
+
+  /// 当前背景在列表里的下标；-1 表示还没选过。
+  static int _index = -1;
+
+  /// 没有卡面时双击强制的时段图；null 表示跟随时间自动选。
+  static String? _timeAsset;
+
+  /// 列表是否已就绪：没就绪时双击不响应，避免切到半加载的列表。
+  static bool _listReady = false;
+
+  /// 背景切换版本号：自增一次，所有 [CitroAmbientBackground] 一起换图。
+  static final ValueNotifier<int> _revision = ValueNotifier(0);
+
+  /// 背景交叉淡化时长：整屏大面积过渡，比 UI 动效慢一档（500ms），
+  /// 太短会闪、太长会拖。减少动态时由 [CitroMotion.guard] 归零。
+  static const Duration _bgFade = Duration(milliseconds: 500);
+
   bool _ready = false;
 
   @override
   void initState() {
     super.initState();
+    _revision.addListener(_onRevision);
     unawaited(_pick());
   }
 
-  Future<void> _pick() async {
-    final cached = _cachedFace;
-    if (cached != null) {
-      if (mounted)
-        setState(() {
-          _face = cached;
-          _ready = true;
-        });
-      return;
+  @override
+  void dispose() {
+    _revision.removeListener(_onRevision);
+    super.dispose();
+  }
+
+  /// 双击首页背景：在背景图列表里循环切换。
+  ///
+  /// 列表是已收藏的卡面；一张都没有时退回时段背景图（清晨 / 白天 /
+  /// 傍晚 / 夜晚）。切换的交叉淡化由 build 里的 [AnimatedSwitcher] 做。
+  static void cycle() {
+    if (!_listReady) return;
+    if (_faces.isEmpty) {
+      _timeAsset = _nextTimeAsset();
+      _cachedFace = null;
+    } else {
+      _index = (_index + 1) % _faces.length;
+      _cachedFace = _faces[_index];
+      _timeAsset = null;
     }
+    _revision.value++;
+  }
+
+  /// 下一张时段背景图（在 [CitroTimeBackground.assets] 里循环）。
+  static String _nextTimeAsset() {
+    final assets = CitroTimeBackground.assets;
+    final current = _timeAsset;
+    if (current == null) return assets.first;
+    return assets[(assets.indexOf(current) + 1) % assets.length];
+  }
+
+  /// 当前背景的资源：本地资源优先，其次网络图。
+  static (String?, String?) get _source {
+    final face = _cachedFace;
+    return (
+      _timeAsset ?? (face != null && face.isAsset ? face.asset : null),
+      face != null && !face.isAsset ? face.url : null,
+    );
+  }
+
+  /// 下一张背景的资源，用于提前预取。
+  static (String?, String?) get _nextSource {
+    if (_faces.isEmpty) return (_nextTimeAsset(), null);
+    final face = _faces[(_index + 1) % _faces.length];
+    return (face.isAsset ? face.asset : null, face.isAsset ? null : face.url);
+  }
+
+  /// 与 [CitroBlendImage] 的 `cacheWidth: 512` 完全一致的 provider：
+  /// 预取要写进同一个 [ImageCache] key 才算数。
+  static ImageProvider _providerFor(String? asset, String? url) {
+    if (asset != null) return ResizeImage(AssetImage(asset), width: 512);
+    if (url != null) return ResizeImage(NetworkImage(url), width: 512);
+    return ResizeImage(
+      AssetImage(CitroTimeBackground.assetFor(DateTime.now())),
+      width: 512,
+    );
+  }
+
+  Future<void> _pick() async {
     await CardCatalog.ensureLoaded();
     if (!mounted) return;
     final owned = context.app.ownedCards
         .map((id) => CardCatalog.byId(id))
         .whereType<CardFace>()
         .toList();
-    final face = owned.isEmpty
-        ? null
-        : owned[math.Random().nextInt(owned.length)];
-    _cachedFace = face;
-    if (mounted) {
-      setState(() {
-        _face = face;
-        _ready = true;
-      });
+    _faces = owned;
+    _listReady = true;
+    // 只在没选过时随机一次；之后换图由 cycle() 驱动。
+    if (_cachedFace == null) {
+      final i = owned.isEmpty ? -1 : math.Random().nextInt(owned.length);
+      _index = i;
+      _cachedFace = i < 0 ? null : owned[i];
     }
+    if (owned.isNotEmpty) _timeAsset = null;
+    if (mounted) {
+      setState(() => _ready = true);
+    }
+    _prefetchNext();
+  }
+
+  void _onRevision() {
+    if (!mounted) return;
+    // 只是让 build 重跑一次去读新的 [_source]；此刻 _ready 已经是 true。
+    setState(() {});
+    _prefetchNext();
+  }
+
+  /// 预取下一张背景：图片进 [ImageCache]、尺寸进解码缓存，
+  /// 切换时才不闪白、卡片区起点也不用等新图解码。
+  void _prefetchNext() {
+    final source = _nextSource;
+    final asset = source.$1;
+    final url = source.$2;
+    if (asset == null && url == null) return;
+    unawaited(
+      precacheImage(
+        _providerFor(asset, url),
+        context,
+        // 预取失败不算错误：真切到这张时 [CitroBlendImage] 的 errorBuilder
+        // 会兜底，这里也不必把异常抛给全局错误上报。
+        onError: (_, _) {},
+      ),
+    );
+    _CitroBlendImageState.prefetchDecoded(asset ?? url!);
   }
 
   @override
   Widget build(BuildContext context) {
     // 卡面原图已打包进包内，优先用本地资源；否则退回网络图 / 时段背景。
-    final face = _ready ? _face : null;
-    Widget image = CitroBlendImage(
-      asset: face?.isAsset == true ? face!.asset : null,
-      networkUrl: face?.isAsset == true ? null : face?.url,
+    final source = _source;
+    final blend = CitroBlendImage(
+      key: ValueKey('${source.$1 ?? ''}|${source.$2 ?? ''}'),
+      asset: source.$1,
+      networkUrl: source.$2,
     );
+    // 首帧不包 AnimatedSwitcher：从时段背景硬切到选中的卡面是原本的行为，
+    // 不让它多一段淡入；就绪之后的每次换图才交叉淡化。
+    Widget image = blend;
+    if (_ready) {
+      image = AnimatedSwitcher(
+        duration: CitroMotion.guard(context, _bgFade),
+        switchInCurve: CitroMotion.curveFor(context, CitroMotion.easeInOut),
+        switchOutCurve: CitroMotion.curveFor(context, CitroMotion.easeInOut),
+        child: blend,
+      );
+    }
     if (widget.blurred) {
       image = ImageFiltered(
         imageFilter: ui.ImageFilter.blur(

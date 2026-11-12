@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -923,23 +922,10 @@ class _SheepBoardState extends State<_SheepBoard> {
     });
   }
 
-  /// 层深 → 模糊半径。最上层为 0，越往下越虚化。
-  static const List<double> _bandBlur = <double>[0, 1.2, 1.9, 2.6];
-
   @override
   Widget build(BuildContext context) {
     final geom = widget.geom;
     final lockedIds = sheepLockedIds(widget.tiles);
-    final maxLayer = widget.tiles
-        .where((t) => !t.picked)
-        .fold<int>(0, (m, t) => math.max(m, t.layer));
-    final bands = List<List<SheepTile>>.generate(4, (_) => <SheepTile>[]);
-    for (final t in widget.tiles) {
-      if (t.picked) continue;
-      final depth = maxLayer - t.layer;
-      final level = depth == 0 ? 0 : (depth <= 2 ? 1 : (depth <= 4 ? 2 : 3));
-      bands[level].add(t);
-    }
 
     Widget tileAt(SheepTile t) => Positioned(
       left: geom.leftOf(t),
@@ -959,27 +945,19 @@ class _SheepBoardState extends State<_SheepBoard> {
       ),
     );
 
-    Widget bandAt(int level) => Stack(
-      clipBehavior: Clip.none,
-      children: [for (final t in bands[level]) tileAt(t)],
-    );
+    // 只有「被上层牌压住、点不动」的牌才做不可点提示（tileBuilder 里的
+    // 半透明遮罩，廉价）；能点的牌保持清晰。
+    // 不再按层深整片 ImageFiltered 模糊：300 张牌时每层一次 saveLayer 很贵，
+    // 而且会把本来能点的深层牌一起糊掉。
+    // 绘制顺序按 (层, id) 升序：深层先画、同层后画压前，与 isLocked 的
+    // 「画在上面」判定一致。
+    final ordered = widget.tiles.where((t) => !t.picked).toList()
+      ..sort((a, b) => a.layer != b.layer ? a.layer - b.layer : a.id - b.id);
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // 深层先画：每层只套一次模糊，避免 300 张牌各自 saveLayer。
-        for (var level = 3; level >= 1; level--)
-          if (bands[level].isNotEmpty)
-            Positioned.fill(
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(
-                  sigmaX: _bandBlur[level],
-                  sigmaY: _bandBlur[level],
-                ),
-                child: bandAt(level),
-              ),
-            ),
-        if (bands[0].isNotEmpty) Positioned.fill(child: bandAt(0)),
+        for (final t in ordered) tileAt(t),
         for (final g in _ghosts)
           Positioned(
             key: ValueKey<String>('sheepGhost${g.id}'),
@@ -1346,17 +1324,6 @@ class GameSheepView extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            if (locked)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: c.inkSoft.withAlpha(70),
-                      borderRadius: radius,
-                    ),
-                  ),
-                ),
-              ),
             Center(
               child: SizedBox(
                 width: iconSize,
@@ -1364,6 +1331,19 @@ class GameSheepView extends StatelessWidget {
                 child: _sheepIcon(type),
               ),
             ),
+            // 锁定态遮罩画在最上层：只压牌底的话图案仍然鲜亮，看起来和能点的
+            // 牌没区别。整张牌（牌底 + 图案）一起压暗，才读得出「点不动」。
+            if (locked)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: c.inkSoft.withAlpha(100),
+                      borderRadius: radius,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

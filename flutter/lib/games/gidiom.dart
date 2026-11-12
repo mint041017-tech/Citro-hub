@@ -488,14 +488,7 @@ class GameIdiomView extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _rules(context),
-            const SizedBox(height: 20),
-            GameActionButton(
-              label: '开始接龙',
-              primary: true,
-              expand: true,
-              onTap: onStart,
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               'AI 对战 · GLM-5.3-Flash 实时出题与判定',
               textAlign: TextAlign.center,
@@ -579,57 +572,6 @@ class GameIdiomView extends StatelessWidget {
     final warn = deadline <= 10;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          child: Row(
-            children: [
-              Text(
-                '请接这个音',
-                style: context.body(size: CitroType.small, color: c.inkSoft),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: id.soft,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                ),
-                child: Text(
-                  need.isEmpty ? '—' : need,
-                  style: context.hand(
-                    size: CitroType.titleLg,
-                    weight: CitroType.strong,
-                    color: id.primaryInk,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: 34,
-                child: Text(
-                  '$deadline',
-                  textAlign: TextAlign.right,
-                  style: context.hand(
-                    size: CitroType.titleLg,
-                    weight: CitroType.strong,
-                    color: warn ? id.deep : c.ink,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 58,
-                child: CitroProgressBar(
-                  value: frac,
-                  height: 6,
-                  color: warn ? id.deep : id.primary,
-                  track: id.deep.withAlpha(40),
-                ),
-              ),
-            ],
-          ),
-        ),
-        CitroDivider(color: c.line),
         Expanded(
           child: Stack(
             children: [
@@ -659,78 +601,24 @@ class GameIdiomView extends StatelessWidget {
           ),
         ),
         CitroDivider(color: c.line),
+        // 关键信息跟着输入区走：键盘抬起时上半屏被顶掉，令音 / 倒计时 /
+        // 倍数集中放在输入区上方，抬起键盘也还在视线里。
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-          child: SizedBox(
-            height: 48,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: input,
-                    focusNode: focusNode,
-                    enabled: !aiThinking,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => onEnter?.call(),
-                    maxLength: 64,
-                    style: context.body(size: CitroType.bodyLg, color: c.ink),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      counterText: '',
-                      hintText: '输入成语，选候选词后回车或点「接」',
-                      hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
-                      filled: true,
-                      fillColor: id.soft.withAlpha(90),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.primary, width: 1.5),
-                      ),
-                      disabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                GameActionButton(
-                  label: '接',
-                  width: 66,
-                  height: 48,
-                  primary: true,
-                  onTap: aiThinking ? null : onSubmit,
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
           child: Row(
             children: [
-              if (aiThinking)
+              if (aiThinking) ...[
                 Text(
                   'AI 兜底中…',
                   style: context.body(size: CitroType.small, color: c.inkSoft),
                 ),
+                const SizedBox(width: 8),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  border: Border.all(color: id.primary.withAlpha(60)),
                 ),
                 child: Text.rich(
                   TextSpan(
@@ -747,6 +635,29 @@ class GameIdiomView extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 34,
+                child: Text(
+                  '$deadline',
+                  textAlign: TextAlign.right,
+                  style: context.hand(
+                    size: CitroType.titleLg,
+                    weight: CitroType.strong,
+                    color: warn ? id.deep : c.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 58,
+                child: CitroProgressBar(
+                  value: frac,
+                  height: 6,
+                  color: warn ? id.deep : id.primary,
+                  track: id.deep.withAlpha(40),
                 ),
               ),
               const Spacer(),
@@ -767,6 +678,51 @@ class GameIdiomView extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: TextField(
+              controller: input,
+              focusNode: focusNode,
+              enabled: !aiThinking,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => onEnter?.call(),
+              maxLength: 64,
+              style: context.body(size: CitroType.bodyLg, color: c.ink),
+              decoration: InputDecoration(
+                isDense: true,
+                counterText: '',
+                hintText: '输入成语，选候选词后回车提交',
+                hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+                filled: true,
+                fillColor: id.soft.withAlpha(90),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                // 去掉身份红描边：输入区只用中性描边，聚焦时换主题青瓷。
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.accent, width: 1.5),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                  borderSide: BorderSide(color: c.line2),
+                ),
+              ),
+            ),
           ),
         ),
       ],

@@ -8,6 +8,7 @@ import '../../widgets/paper.dart';
 import '../game_ui.dart';
 import 'sudoku_modes.dart';
 import 'sudoku_resume.dart';
+import '../game_theme.dart';
 
 /// 统一数独入口的模式选择：经典 / 异形 / 高级阶数。
 class SudokuModeSelect extends StatelessWidget {
@@ -27,7 +28,6 @@ class SudokuModeSelect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     final classic = kSudokuModes.first;
     final jigsaw = kSudokuModes.firstWhere((m) => m.key == 'jigsaw');
     final windmill = kSudokuModes.firstWhere((m) => m.key == 'windmill');
@@ -66,8 +66,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
-            // 固定 2 列：手机上也不再把卡片单列拉长。
-            final w = math.max(1.0, (box.maxWidth - 12) / 2);
+            final two = box.maxWidth >= 560;
+            final w = two ? (box.maxWidth - 12) / 2 : box.maxWidth;
             return Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -110,8 +110,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, box) {
-            const columns = 2;
-            final w = math.max(1.0, (box.maxWidth - 10 * (columns - 1)) / columns);
+            final columns = box.maxWidth >= 620 ? 3 : 2;
+            final w = (box.maxWidth - 10 * (columns - 1)) / columns;
             return Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -146,8 +146,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
-            const columns = 2;
-            final w = math.max(1.0, (box.maxWidth - 10 * (columns - 1)) / columns);
+            final columns = box.maxWidth >= 620 ? 3 : 2;
+            final w = (box.maxWidth - 10 * (columns - 1)) / columns;
             return Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -177,11 +177,7 @@ class SudokuModeSelect extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          gameIcon(
-            GameIcons.sparkle,
-            size: 15,
-            color: c.dark ? c.ink2 : identity.primaryInk,
-          ),
+          gameIcon(GameIcons.sparkle, size: 15, color: c.accentInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -264,14 +260,13 @@ class _ResumeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     final filled = resume.board.where((v) => v != 0).length;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: identity.soft.withAlpha(210),
+        color: c.accentLt.withAlpha(150),
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: identity.primary.withValues(alpha: .55)),
+        border: Border.all(color: c.accent.withValues(alpha: .5)),
         boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
@@ -281,10 +276,10 @@ class _ResumeCard extends StatelessWidget {
             height: 34,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: identity.primary.withValues(alpha: .18),
+              color: c.accent.withValues(alpha: .18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: gameIcon(GameIcons.play, size: 14, color: identity.primaryInk),
+            child: gameIcon(GameIcons.play, size: 14, color: c.accentText),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -296,8 +291,7 @@ class _ResumeCard extends StatelessWidget {
                   style: context.body(
                     size: 14,
                     weight: FontWeight.w700,
-                    // 卡底是 identity.soft 浅底（暗色下是浅蓝），浅字压浅底只有 1.6:1。
-                    color: c.dark ? identity.primaryInk : c.ink,
+                    color: c.ink,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -306,7 +300,7 @@ class _ResumeCard extends StatelessWidget {
                   '${resume.remainingLabel(DateTime.now())}',
                   style: context.body(
                     size: 11,
-                    color: identity.primaryInk,
+                    color: c.accentText,
                     height: 1.4,
                   ),
                 ),
@@ -335,21 +329,15 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           decoration: BoxDecoration(
-            color: c.dark
-                ? c.surface2
-                : Color.alphaBlend(
-                    identity.soft.withValues(alpha: .42),
-                    c.surface,
-                  ),
+            color: c.surface,
             borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: identity.primary.withAlpha(52)),
+            border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.card(c),
           ),
           child: Row(
@@ -361,10 +349,7 @@ class _Hero extends StatelessWidget {
                     Text(
                       'SUDOKU · 数独',
                       style: context
-                          .hand(
-                            size: 12,
-                            color: c.dark ? c.ink : identity.primaryInk,
-                          )
+                          .hand(size: 12, color: c.accentInk)
                           .copyWith(letterSpacing: 1.6),
                     ),
                     const SizedBox(height: 4),
@@ -405,7 +390,6 @@ class _GroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -416,7 +400,7 @@ class _GroupHeader extends StatelessWidget {
               height: 25,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: identity.primary,
+                color: c.accent,
                 borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
               child: Text(
@@ -424,7 +408,7 @@ class _GroupHeader extends StatelessWidget {
                 style: context.hand(
                   size: CitroType.small,
                   weight: CitroType.strong,
-                  color: identity.onPrimary,
+                  color: c.accentText,
                 ),
               ),
             ),
@@ -497,73 +481,60 @@ class _ModeCard extends StatelessWidget {
         border: Border.all(color: c.line),
         boxShadow: CitroColors.shadows.card(c),
       ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          // 两列布局把卡片压到 ~175px 时，「图形 + 12 + 文字」横排必然溢出
-          // （最宽的一枚难度按钮就有 ~90px）。窄卡改成图形在上、文字在下。
-          final content = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Wrap(
-                spacing: 6,
-                runSpacing: 2,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    mode.title,
-                    style: context.body(
-                      size: 15,
-                      weight: FontWeight.w700,
-                      color: c.ink,
-                    ),
-                  ),
-                  if (mode.variant == SudokuVariant.jigsaw)
-                    const _Tag(text: '每局不同'),
-                  if (mode.key == 'windmill') const _Tag(text: '5 盘'),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                mode.blurb,
-                style: context.body(size: 11, color: c.inkSoft, height: 1.45),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 7,
-                runSpacing: 6,
-                children: [
-                  for (final d in mode.difficulties)
-                    _StartChip(
-                      label: mode.difficulties.length == 1
-                          ? '开始 · ${d.label}'
-                          : d.label,
-                      onTap: () => onStart(mode, d),
-                    ),
-                ],
-              ),
-            ],
-          );
-          if (box.maxWidth < 216) {
-            return Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          glyph,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Center(child: glyph),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        mode.title,
+                        style: context.body(
+                          size: 15,
+                          weight: FontWeight.w700,
+                          color: c.ink,
+                        ),
+                      ),
+                    ),
+                    if (mode.variant == SudokuVariant.jigsaw) ...[
+                      const SizedBox(width: 6),
+                      const _Tag(text: '每局不同'),
+                    ],
+                    if (mode.key == 'windmill') ...[
+                      const SizedBox(width: 6),
+                      const _Tag(text: '5 盘'),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  mode.blurb,
+                  style: context.body(size: 11, color: c.inkSoft, height: 1.45),
+                ),
                 const SizedBox(height: 10),
-                content,
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 6,
+                  children: [
+                    for (final d in mode.difficulties)
+                      _StartChip(
+                        label: mode.difficulties.length == 1
+                            ? '开始 · ${d.label}'
+                            : d.label,
+                        onTap: () => onStart(mode, d),
+                      ),
+                  ],
+                ),
               ],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              glyph,
-              const SizedBox(width: 12),
-              Expanded(child: content),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -674,13 +645,10 @@ class _Tag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: c.dark
-            ? c.surface2
-            : identity.soft.withValues(alpha: .85),
+        color: c.accentLt.withValues(alpha: c.dark ? .24 : .55),
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Text(
@@ -688,7 +656,7 @@ class _Tag extends StatelessWidget {
         style: context.body(
           size: 9,
           weight: FontWeight.w700,
-          color: c.dark ? c.ink : identity.primaryInk,
+          color: c.accentText,
           height: 1.2,
         ),
       ),
@@ -709,18 +677,18 @@ class _StartChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
+    final c = context.c;
     return Pressable(
       onTap: onTap,
       borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       scale: .96,
       child: Container(
-        height: 44,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
+        height: compact ? 25 : 28,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
         decoration: BoxDecoration(
-          color: identity.soft.withAlpha(215),
+          color: c.accentLt.withAlpha(150),
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: identity.primary.withValues(alpha: .6)),
+          border: Border.all(color: c.accent.withValues(alpha: .55)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -728,17 +696,17 @@ class _StartChip extends StatelessWidget {
             Text(
               label,
               style: context.body(
-                size: compact ? 11 : 12,
+                size: compact ? 10 : 11,
                 weight: FontWeight.w700,
-                color: identity.primaryInk,
+                color: c.accentText,
                 height: 1,
               ),
             ),
             const SizedBox(width: 3),
             gameIcon(
               GameIcons.arrowRightSolid,
-              size: compact ? 8 : 10,
-              color: identity.primaryInk,
+              size: compact ? 8 : 9,
+              color: c.accentText,
             ),
           ],
         ),
@@ -764,18 +732,14 @@ class _VariantGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     return Container(
       width: size,
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Color.alphaBlend(
-          identity.soft.withValues(alpha: c.dark ? .30 : .55),
-          c.bg2,
-        ),
+        color: c.bg2,
         borderRadius: BorderRadius.circular(size * .22),
-        border: Border.all(color: identity.primary.withAlpha(70)),
+        border: Border.all(color: c.line),
       ),
       child: CustomPaint(
         painter: _GlyphPainter(
@@ -783,7 +747,7 @@ class _VariantGlyph extends StatelessWidget {
           overlapCount: overlapCount,
           windmill: windmill,
           ink: c.ink2,
-          accent: identity.primary,
+          accent: c.accent,
           soft: c.line2,
           paper: c.surface2,
         ),

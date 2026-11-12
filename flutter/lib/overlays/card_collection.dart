@@ -10,7 +10,6 @@ import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_morph.dart';
 import '../widgets/paper.dart';
-import '../widgets/shared_element.dart';
 import 'card_draw.dart';
 import '../widgets/modal.dart';
 
@@ -105,7 +104,7 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
         .length;
     final columns = wide
         ? (MediaQuery.sizeOf(context).width >= 1100 ? 6 : 5)
-        : (MediaQuery.sizeOf(context).width < 390 ? 3 : 4);
+        : (MediaQuery.sizeOf(context).width < 560 ? 3 : 4);
     final padding = wide ? 26.0 : 16.0;
     return CustomScrollView(
       slivers: [
@@ -246,7 +245,9 @@ class _CardCollectionDialogState extends State<_CardCollectionDialog> {
                 crossAxisCount: columns,
                 mainAxisSpacing: wide ? 16 : 10,
                 crossAxisSpacing: wide ? 14 : 9,
-                childAspectRatio: .63,
+                // 卡面原图是 3:4（750×1000）。格子按同一个比例给，
+                // 卡面图正好铺满整格、不裁切，状态文字移到卡面角标上。
+                childAspectRatio: .75,
               ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final card = category.cards[index];
@@ -287,124 +288,89 @@ class _CardTile extends StatelessWidget {
     return GestureDetector(
       onTap: () =>
           unlocked ? _open(context) : AppToast.show(context, '抽到这张后才会点亮'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: CitroHero(
-              tag: CitroHero.tagOf('card', card.id),
-              enabled: unlocked,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                  border: Border.all(
-                    color: unlocked ? c.accent.withAlpha(120) : c.line2,
-                  ),
-                  boxShadow: unlocked ? CitroColors.shadows.sm(c) : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (unlocked)
-                        CardFaceImage(
-                          card: card,
-                          cacheWidth: 320,
-                          borderRadius: BorderRadius.zero,
-                        )
-                      else ...[
-                        ColorFiltered(
-                          colorFilter: const ColorFilter.matrix(<double>[
-                            .2126,
-                            .7152,
-                            .0722,
-                            0,
-                            0,
-                            .2126,
-                            .7152,
-                            .0722,
-                            0,
-                            0,
-                            .2126,
-                            .7152,
-                            .0722,
-                            0,
-                            0,
-                            0,
-                            0,
-                            0,
-                            1,
-                            0,
-                          ]),
-                          child: Opacity(
-                            opacity: .34,
-                            child: CardFaceImage(
-                              card: card,
-                              cacheWidth: 240,
-                              borderRadius: BorderRadius.zero,
-                            ),
-                          ),
-                        ),
-                        Container(color: c.scrim),
-                        Center(
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: c.scrim,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: c.surface.withAlpha(160),
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.lock_outline_rounded,
-                                size: 16,
-                                color: c.surface,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (unlocked)
-                        Positioned(
-                          right: 6,
-                          top: 6,
-                          child: Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: c.accent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.check_rounded,
-                              size: 12,
-                              color: c.onAccent,
-                            ),
-                          ),
-                        ),
-                    ],
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          border: Border.all(
+            color: unlocked ? c.accent.withAlpha(120) : c.line2,
+          ),
+          boxShadow: unlocked ? CitroColors.shadows.sm(c) : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (unlocked)
+                CardFaceImage(
+                  card: card,
+                  cacheWidth: 320,
+                  borderRadius: BorderRadius.zero,
+                )
+              else ...[
+                ColorFiltered(
+                  colorFilter: const ColorFilter.matrix(<double>[
+                    .2126,
+                    .7152,
+                    .0722,
+                    0,
+                    0,
+                    .2126,
+                    .7152,
+                    .0722,
+                    0,
+                    0,
+                    .2126,
+                    .7152,
+                    .0722,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
+                  ]),
+                  child: Opacity(
+                    opacity: .34,
+                    child: CardFaceImage(
+                      card: card,
+                      cacheWidth: 240,
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
                 ),
+                Container(color: c.scrim),
+                Center(
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: c.scrim,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: c.surface.withAlpha(160),
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.lock_outline_rounded,
+                        size: 16,
+                        color: c.surface,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              // 状态文字收进卡面角标，整格都留给卡面。
+              Positioned(
+                right: 6,
+                top: 6,
+                child: _CardBadge(text: unlocked ? '已收集' : '未解锁'),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 5),
-          Text(
-            unlocked ? '${card.categoryName} · ${card.label}' : '未解锁',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: context.body(
-              size: CitroType.micro,
-              weight: unlocked ? CitroType.medium : CitroType.regular,
-              color: unlocked ? c.ink2 : c.inkSoft,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -412,7 +378,6 @@ class _CardTile extends StatelessWidget {
   void _open(BuildContext context) {
     // 从被点的那一格长到屏幕中央：卡片放大统一走 CitroCardMorph，
     // 起点就是这一格，「回」也回到这一格。
-    // （这里原来用 CitroHero，但网格在 DialogRoute 里，Hero 从来不飞，是死代码。）
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
     final rect = box.localToGlobal(Offset.zero) & box.size;
@@ -421,6 +386,35 @@ class _CardTile extends StatelessWidget {
       source: rect,
       barrier: context.c.scrim,
       builder: (_) => _CardZoom(card: card),
+    );
+  }
+}
+
+/// 卡面角标：状态文字贴在卡片角落，不占卡面排版。
+class _CardBadge extends StatelessWidget {
+  const _CardBadge({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.scrim,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: Colors.white.withAlpha(60)),
+      ),
+      child: Text(
+        text,
+        style: context.body(
+          size: CitroType.micro,
+          weight: CitroType.medium,
+          color: Colors.white,
+          letterSpacing: .5,
+        ),
+      ),
     );
   }
 }

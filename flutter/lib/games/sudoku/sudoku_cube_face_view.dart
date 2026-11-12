@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
-import '../game_identity.dart';
-import '../game_ui.dart';
 import 'sudoku_puzzle.dart';
 
 /// 三面立方中“当前面”的平面 9×9 视图。
@@ -57,7 +55,6 @@ class SudokuCubeFaceView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final identity = GameIdentityScope.of(context);
     final map = _map;
     if (map == null) return const SizedBox.shrink();
     final peers = _peers();
@@ -78,14 +75,9 @@ class SudokuCubeFaceView extends StatelessWidget {
             child: RepaintBoundary(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: c.dark
-                      ? c.surface2
-                      : Color.alphaBlend(
-                          identity.soft.withValues(alpha: .58),
-                          c.surface2,
-                        ),
+                  color: c.surface2,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: identity.primary.withAlpha(64)),
+                  border: Border.all(color: c.line2),
                   boxShadow: CitroColors.shadows.card(c),
                 ),
                 child: ClipRRect(
@@ -110,7 +102,6 @@ class SudokuCubeFaceView extends StatelessWidget {
                                         peers: peers,
                                         selectedValue: selectedValue,
                                         cell: cell,
-                                        identity: identity,
                                         onTap: onSelect,
                                       ),
                                     ),
@@ -153,7 +144,6 @@ class _FaceCell extends StatelessWidget {
     required this.peers,
     required this.selectedValue,
     required this.cell,
-    required this.identity,
     this.onTap,
   });
 
@@ -166,7 +156,6 @@ class _FaceCell extends StatelessWidget {
   final Set<int> peers;
   final int selectedValue;
   final double cell;
-  final GameIdentity identity;
   final ValueChanged<int>? onTap;
 
   @override
@@ -178,30 +167,20 @@ class _FaceCell extends StatelessWidget {
     final conflict = conflicts.contains(index);
     final peer = peers.contains(index);
     final same = selectedValue != 0 && value == selectedValue;
-    var bg = c.dark
-        ? c.surface2
-        : Color.alphaBlend(
-            identity.soft.withValues(alpha: .58),
-            c.surface2,
-          );
-    if (peer) {
-      bg = Color.alphaBlend(identity.primary.withValues(alpha: .10), bg);
-    }
+    var bg = c.surface2;
+    if (peer) bg = c.mintSoft;
     if (same) {
-      bg = Color.alphaBlend(identity.primary.withValues(alpha: .18), bg);
+      bg = Color.alphaBlend(c.accent.withValues(alpha: .18), bg);
     }
     if (isSelected) {
-      bg = Color.alphaBlend(identity.primary.withValues(alpha: .26), bg);
+      bg = Color.alphaBlend(c.accent.withValues(alpha: .26), bg);
     }
     if (conflict) {
       bg = Color.alphaBlend(
-        c.danger.withValues(alpha: isSelected ? .26 : .14),
+        c.stamp.withValues(alpha: isSelected ? .26 : .14),
         bg,
       );
     }
-    // 暗色主题下深面统一用主题浅墨，identity.onDark() 在选中浮层上不够稳。
-    final givenInk = c.dark ? c.ink : identity.deep;
-    final entryInk = c.dark ? c.ink : identity.primaryInk;
     final fontSize = (cell * .52).clamp(9.0, 30.0);
     final noteSize = (cell * .2).clamp(5.0, 9.0);
     return GestureDetector(
@@ -212,7 +191,7 @@ class _FaceCell extends StatelessWidget {
         foregroundDecoration: isSelected
             ? BoxDecoration(
                 border: Border.all(
-                  color: conflict ? c.danger : identity.primary,
+                  color: conflict ? c.stamp : c.accent,
                   width: 2,
                 ),
               )
@@ -229,9 +208,7 @@ class _FaceCell extends StatelessWidget {
                     fontFamilyFallback: AppFonts.fallback,
                     fontSize: fontSize,
                     fontWeight: isGiven ? FontWeight.w700 : FontWeight.w700,
-                    color: conflict
-                        ? c.danger
-                        : (isGiven ? givenInk : entryInk),
+                    color: conflict ? c.stamp : (isGiven ? c.ink : c.accentInk),
                     height: 1,
                   ),
                 ),

@@ -218,6 +218,8 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
   late final AnimationController _burst;
   bool _revealed = false;
   bool _flipping = false;
+  // 翻面过中点后一次性切正/背面，避免每帧重建卡面子树。
+  bool _showFront = false;
   Timer? _autoFlip;
 
   @override
@@ -230,7 +232,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
     _flip = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 980),
-    );
+    )..addListener(_handleFlip);
     _glow = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 9),
@@ -241,6 +243,13 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
     );
     HapticFeedback.mediumImpact();
     _autoFlip = Timer(const Duration(milliseconds: 1700), _reveal);
+  }
+
+  void _handleFlip() {
+    final front = _flip.value > .5;
+    if (front != _showFront && mounted) {
+      setState(() => _showFront = front);
+    }
   }
 
   @override
@@ -258,7 +267,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
     if (!mounted || _flipping || _revealed) return;
     _flipping = true;
     HapticFeedback.selectionClick();
-    _flip.animateTo(1, curve: Curves.easeInOutCubic).then((_) {
+    _flip.animateTo(1, curve: CitroMotion.easeInOut).then((_) {
       if (!mounted) return;
       setState(() {
         _revealed = true;
@@ -273,7 +282,8 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
     final ctx = citroNavigatorKey.currentContext;
     Navigator.of(context).pop();
     if (ctx == null) return;
-    Future<void>.delayed(const Duration(milliseconds: 160), () {
+    // 等这一层退场结束再开下一层，别让两场淡入淡出叠在一起。
+    Future<void>.delayed(CitroMotion.modalReverse, () {
       if (ctx.mounted) unawaited(showCardDrawOverlay(ctx));
     });
   }
@@ -310,14 +320,26 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
               ),
             ),
           ),
+          // 光晕是静态图层，只旋转 + 轻微呼吸：不再每帧重绘整块屏幕，
+          // 翻转时 GPU 只需重新合成一张已栅格化的贴图。
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _glow,
-              builder: (context, _) => CustomPaint(
-                painter: _HaloPainter(
-                  t: _glow.value,
-                  color: c.accent,
-                ),
+              builder: (context, child) {
+                final center = Offset(size.width / 2, size.height * .46);
+                final pulse = 1 + .04 * math.sin(_glow.value * math.pi * 2);
+                return Transform.rotate(
+                  origin: center,
+                  angle: _glow.value * math.pi * 2,
+                  child: Transform.scale(
+                    origin: center,
+                    scale: pulse,
+                    child: child,
+                  ),
+                );
+              },
+              child: RepaintBoundary(
+                child: CustomPaint(painter: _HaloPainter(color: c.accent)),
               ),
             ),
           ),
@@ -361,14 +383,16 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x2),
+                  // 卡面本体作为 child 传进去：动画每帧只更新外层 Transform，
+                  // 不重建卡面（900px 图解码、背面图案、大模糊阴影），
+                  // 翻转时才不会掉帧。正/背面只在过中点时切一次。
                   AnimatedBuilder(
                     animation: Listenable.merge([_intro, _flip]),
-                    builder: (context, _) {
-                      final e = Curves.easeOutBack.transform(
+                    builder: (context, child) {
+                      final e = CitroMotion.easeOut.transform(
                         _intro.value.clamp(0.0, 1.0),
                       );
                       final angle = _flip.value * math.pi;
-                      final front = angle > math.pi / 2;
                       return Transform.translate(
                         offset: Offset(0, 70 * (1 - e)),
                         child: Transform.scale(
@@ -380,25 +404,26 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                               transform: Matrix4.identity()
                                 ..setEntry(3, 2, .0015)
                                 ..rotateY(angle),
-                              child: SizedBox(
-                                width: cardW,
-                                height: cardH,
-                                child: front
-                                    ? Transform(
-                                        alignment: Alignment.center,
-                                        transform: Matrix4.rotationY(math.pi),
-                                        child: _CardFront(card: widget.card),
-                                      )
-                                    : GestureDetector(
-                                        onTap: _reveal,
-                                        child: _CardBack(card: widget.card),
-                                      ),
-                              ),
+                              child: child,
                             ),
                           ),
                         ),
                       );
                     },
+                    child: SizedBox(
+                      width: cardW,
+                      height: cardH,
+                      child: _showFront
+                          ? Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationY(math.pi),
+                              child: _CardFront(card: widget.card),
+                            )
+                          : GestureDetector(
+                              onTap: _reveal,
+                              child: _CardBack(card: widget.card),
+                            ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.x3),
                   AnimatedOpacity(
@@ -503,31 +528,26 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
               ),
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _burst,
-                builder: (context, _) {
-                  if (!_revealed || _burst.value == 0) {
-                    return const SizedBox.shrink();
-                  }
-                  return CustomPaint(
-                    painter: _BurstPainter(
-                      t: _burst.value,
-                      origin: Offset(size.width / 2, size.height * .46),
-                      colors: [
-                        c.accent,
-                        c.mint,
-                        c.stamp,
-                        c.accentLt,
-                        c.surface,
-                      ],
-                    ),
-                  );
-                },
+          if (_revealed)
+            Positioned.fill(
+              child: IgnorePointer(
+                // painter 自带 repaint: _burst，动画每帧只重绘这一层；
+                // 粒子参数在构造时算好，避免每帧新建 Paint/Color。
+                child: CustomPaint(
+                  painter: _BurstPainter(
+                    animation: _burst,
+                    origin: Offset(size.width / 2, size.height * .46),
+                    colors: [
+                      c.accent,
+                      c.mint,
+                      c.stamp,
+                      c.accentLt,
+                      c.surface,
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -547,7 +567,7 @@ class _CardBack extends StatelessWidget {
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
         color: c.surface2,
         border: Border.all(color: c.accentLt, width: 1.2),
-        boxShadow: CitroColors.shadows.lg(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -650,7 +670,7 @@ class _CardFront extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
         border: Border.all(color: c.accentLt, width: 1.4),
-        boxShadow: CitroColors.shadows.lg(c),
+        boxShadow: CitroColors.shadows.card(c),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(CitroColors.radii.card - 1),
@@ -724,41 +744,36 @@ class _CardFront extends StatelessWidget {
 }
 
 class _HaloPainter extends CustomPainter {
-  _HaloPainter({required this.t, required this.color});
+  _HaloPainter({required this.color});
 
-  final double t;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height * .46);
     final radius = math.min(size.width, size.height) * .46;
-    final paint = Paint()..style = PaintingStyle.stroke;
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
     for (var i = 0; i < 3; i++) {
-      final p = (t + i / 3) % 1;
-      paint
-        ..color = color.withAlpha(((1 - p) * 30).round())
-        ..strokeWidth = 1.2;
-      canvas.drawCircle(center, radius * (.42 + .55 * p), paint);
+      ring.color = color.withAlpha(26 - i * 7);
+      canvas.drawCircle(center, radius * (.42 + .16 * i), ring);
     }
     final ray = Paint()
       ..color = color.withAlpha(22)
       ..strokeWidth = 1.4;
     for (var i = 0; i < 18; i++) {
-      final angle = i * math.pi * 2 / 18 + t * math.pi / 9;
-      final inner = radius * (.5 + .02 * math.sin(t * math.pi * 2 + i));
-      final outer = radius * (.74 + .04 * math.sin(t * math.pi * 2 + i * 1.7));
+      final angle = i * math.pi * 2 / 18;
       canvas.drawLine(
-        center + Offset(math.cos(angle), math.sin(angle)) * inner,
-        center + Offset(math.cos(angle), math.sin(angle)) * outer,
+        center + Offset(math.cos(angle), math.sin(angle)) * radius * .5,
+        center + Offset(math.cos(angle), math.sin(angle)) * radius * .74,
         ray,
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _HaloPainter old) =>
-      old.t != t || old.color != color;
+  bool shouldRepaint(covariant _HaloPainter old) => old.color != color;
 }
 
 class _BackPatternPainter extends CustomPainter {
@@ -792,32 +807,57 @@ class _BackPatternPainter extends CustomPainter {
 }
 
 class _BurstPainter extends CustomPainter {
-  _BurstPainter({required this.t, required this.origin, required this.colors});
+  _BurstPainter({
+    required this.animation,
+    required this.origin,
+    required this.colors,
+  })  : _angles = List<double>.generate(
+          _count,
+          (i) => i * 2.399963 + (i % 5) * .13,
+        ),
+        _speeds = List<double>.generate(
+          _count,
+          (i) => 120 + (i * 37 % 190),
+        ),
+        _radii = List<double>.generate(
+          _count,
+          (i) => i % 3 == 0 ? 3.2 : 2.0,
+        ),
+        super(repaint: animation);
 
-  final double t;
+  static const int _count = 46;
+
+  final Animation<double> animation;
   final Offset origin;
   final List<Color> colors;
+  final List<double> _angles;
+  final List<double> _speeds;
+  final List<double> _radii;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final eased = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
+    final t = animation.value;
+    if (t <= 0) return;
+    final eased = CitroMotion.easeOut.transform(t.clamp(0.0, 1.0));
     final fade = (1 - t).clamp(0.0, 1.0);
     if (fade <= 0) return;
-    for (var i = 0; i < 46; i++) {
-      final angle = i * 2.399963 + (i % 5) * .13;
-      final speed = 120 + (i * 37 % 190);
-      final dist = speed * eased;
+    // 一个 Paint 复用到底，避免每帧给 46 个粒子各建一个。
+    final paint = Paint();
+    for (var i = 0; i < _count; i++) {
+      final dist = _speeds[i] * eased;
       final gravity = 150 * eased * eased;
-      final p =
-          origin +
-          Offset(math.cos(angle), math.sin(angle) * .82) * dist +
+      final p = origin +
+          Offset(math.cos(_angles[i]), math.sin(_angles[i]) * .82) * dist +
           Offset(0, gravity);
-      final paint = Paint()
-        ..color = colors[i % colors.length].withAlpha((235 * fade).round());
-      final radius = (i % 3 == 0 ? 3.2 : 2.0) * (0.6 + .4 * fade);
+      paint.color = colors[i % colors.length].withAlpha((235 * fade).round());
+      final radius = _radii[i] * (0.6 + .4 * fade);
       if (i % 4 == 0) {
         canvas.drawRect(
-          Rect.fromCenter(center: p, width: radius * 3, height: radius * 1.3),
+          Rect.fromCenter(
+            center: p,
+            width: radius * 3,
+            height: radius * 1.3,
+          ),
           paint,
         );
       } else {
@@ -828,5 +868,5 @@ class _BurstPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BurstPainter old) =>
-      old.t != t || old.origin != origin;
+      old.origin != origin || old.colors != colors;
 }

@@ -22,12 +22,14 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/card_morph.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'legal_page.dart';
 
 Future<void> showMeWindow(BuildContext context) {
+  final reduce = CitroMotion.reduced(context);
   // 透明 PageRoute：Hero 只在 PageRoute 之间飞行，Dialog 路由不会。
   return Navigator.of(context, rootNavigator: true).push<void>(
     PageRouteBuilder<void>(
@@ -35,8 +37,10 @@ Future<void> showMeWindow(BuildContext context) {
       barrierColor: context.c.scrim,
       barrierDismissible: true,
       barrierLabel: '关闭我的',
-      transitionDuration: CitroMotion.modal,
-      reverseTransitionDuration: CitroMotion.modalReverse,
+      // 和卡片打开同一套节奏：进 300ms / 出 220ms，同一条 emphasized → exit
+      // 轨迹。旧版是 280 / 200 的居中淡入淡出，关掉时看不出「回到入口」。
+      transitionDuration: reduce ? Duration.zero : CitroMotion.cardOpen,
+      reverseTransitionDuration: reduce ? Duration.zero : CitroMotion.cardClose,
       pageBuilder: (ctx, _, _) {
         final media = MediaQuery.of(ctx);
         final width = math.min(720.0, media.size.width - 48);
@@ -64,14 +68,23 @@ Future<void> showMeWindow(BuildContext context) {
       transitionsBuilder: (ctx, animation, secondary, child) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: CitroMotion.easeOut,
+          curve: CitroMotion.emphasized,
           reverseCurve: CitroMotion.exit,
         );
+        if (reduce) return FadeTransition(opacity: curved, child: child);
         return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: .96, end: 1).animate(curved),
-            child: child,
+          // 起始就有 82% 不透明度：位移负责方向感、透明度只做收尾。
+          // 整扇窗从 0 淡进来回得像系统对话框，而不是本产品的动效。
+          opacity: Tween<double>(begin: .82, end: 1).animate(curved),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, .045),
+              end: Offset.zero,
+            ).animate(curved),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: .96, end: 1).animate(curved),
+              child: child,
+            ),
           ),
         );
       },
@@ -89,7 +102,21 @@ void openMePage(BuildContext context) {
     showMeWindow(context);
     return;
   }
-  Navigator.of(context).pushNamed('/me');
+  // 整页「我的」也走全 App 唯一的卡片打开入口：300 / 220、emphasized → exit，
+  // 和首页卡片、菜谱、日历、记账、听隅同一套节奏。原先 pushNamed 走的是平台
+  // 页面转场（280 / 200），和其它页不一致，关掉时也回不到入口。
+  // 入口是各处的头像、没有可快照的卡片矩形，所以不附快照：转场就是同一场
+  // 「纸页抬起」；source 只在附带快照时用来定位纸面，这里传当前页矩形占位。
+  final box = context.findRenderObject();
+  final source = box is RenderBox && box.hasSize
+      ? box.localToGlobal(Offset.zero) & box.size
+      : Rect.zero;
+  CitroCardMorph.openCardPage<void>(
+    context,
+    source: source,
+    settings: const RouteSettings(name: '/me'),
+    builder: (_) => const MePage(),
+  );
 }
 
 class MePage extends StatelessWidget {

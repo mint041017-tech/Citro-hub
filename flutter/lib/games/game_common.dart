@@ -557,7 +557,369 @@ bool g2048IsAiRecord(String name, int score) {
   return score > kAiBoardScoreThreshold;
 }
 
-/// 排行榜分榜切换（手机弹窗）。
+// ---------------------------------------------------------------------------
+// 排行榜版式
+// ---------------------------------------------------------------------------
+
+/// 榜单行几何（手机弹层与平板侧栏共用）。
+///
+/// 两个容器宽度差得很远（弹层 ~360px、侧栏 ~210px），所以这里统一的是
+/// 「行高 / 间距 / 省略 / 数字对齐」的规则，而不是把两边做成同一宽度：
+/// 行高由头像与上下内边距决定，行间距固定，名字超长省略，分数等宽右对齐。
+const double _rankBadgeSize = 26;
+const double _rankAvatarSize = 28;
+const double _rankColumnGap = 8;
+const double _rankScoreMax = 88;
+const double _rankRowPadH = 12;
+const double _rankRowPadV = 6;
+const double _rankRowGap = 4;
+
+/// 榜单行的时间：与社区同一套「刚刚 / N分钟前 / 日期」口吻。
+/// [ts] 秒与毫秒都兼容（历史数据两种都出现过），缺失时返回 null 不显示。
+String? rankTimeAgo(int ts) {
+  if (ts <= 0) return null;
+  final ms = ts < 100000000000 ? ts * 1000 : ts;
+  final diff = DateTime.now().millisecondsSinceEpoch - ms;
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return '${diff ~/ 60000}分钟前';
+  if (diff < 86400000) return '${diff ~/ 3600000}小时前';
+  if (diff < 86400000 * 7) return '${diff ~/ 86400000}天前';
+  final d = DateTime.fromMillisecondsSinceEpoch(ms);
+  return '${d.year}.${d.month}.${d.day}';
+}
+
+/// 加载占位：转圈 + 一句话，比裸的 CircularProgressIndicator 有交代。
+class _RankSpinner extends StatelessWidget {
+  const _RankSpinner();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 26,
+          height: 26,
+          child: CircularProgressIndicator(strokeWidth: 2, color: c.accent),
+        ),
+        const SizedBox(height: AppSpacing.x2),
+        Text(
+          '正在加载排行榜…',
+          style: context.body(size: CitroType.small, color: c.inkSoft),
+        ),
+      ],
+    );
+  }
+}
+
+/// 榜单三态占位（失败 / 空态）统一用纸面 + 图标 + 一句话，
+/// 切换难度时列表区不会因为换了一套组件而跳动。
+class _RankPlaceholder extends StatelessWidget {
+  const _RankPlaceholder({
+    required this.title,
+    this.icon,
+    this.hint,
+    this.onRetry,
+  });
+
+  final String title;
+  final String? icon;
+  final String? hint;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Center(
+      // 列表区很矮时（矮屏 + 双层分榜 + 我的排名底条）允许滚动，不撑破弹层。
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.x3),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              AppIcon(strokeSvg(icon!, width: 2), size: 32, color: c.inkSoft),
+              const SizedBox(height: AppSpacing.x2),
+            ],
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                hint!,
+                textAlign: TextAlign.center,
+                style: context.body(size: CitroType.micro, color: c.inkSoft),
+              ),
+            ],
+            if (onRetry != null) ...[
+              const SizedBox(height: AppSpacing.x2),
+              SizedBox(
+                width: 150,
+                child: AccentButton(text: '重新加载', onTap: onRetry),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 表头：与 [_RankRow] 的列一一对齐（名次 / 玩家 / 分数）。
+/// 没有表头时，名次徽章、头像和分数各自为政，看不出哪列是哪列。
+///
+/// [padH] 与同一容器里 [_RankRow] 的左右内边距保持一致，两处才列列对齐；
+/// 手机弹层取 16（跟着标题行），平板侧栏取 0（跟着侧栏自己的标题）。
+class _RankHeader extends StatelessWidget {
+  const _RankHeader({this.padH = _rankRowPadH});
+
+  final double padH;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final label = context.body(size: CitroType.micro, color: c.inkSoft);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: padH,
+            vertical: AppSpacing.x1,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: _rankBadgeSize,
+                child: Text('名次', textAlign: TextAlign.center, style: label),
+              ),
+              const SizedBox(width: _rankColumnGap),
+              // 头像 + 间距 + 名字合起来是「玩家」一列。
+              Expanded(child: Text('玩家', style: label)),
+              SizedBox(
+                width: _rankColumnGap + _rankScoreMax,
+                child: Text('分数', textAlign: TextAlign.right, style: label),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: padH),
+          child: CitroDivider(color: c.line),
+        ),
+      ],
+    );
+  }
+}
+
+/// 榜单行：名次徽章 + 头像 + 名字（单行省略）+ 分数（等宽右对齐）+ 时间。
+class _RankRow extends StatelessWidget {
+  const _RankRow({required this.row, this.padH = _rankRowPadH});
+
+  final BoardEntry row;
+  final double padH;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final top = row.rank <= 3;
+    final badgeColor = row.rank == 1
+        ? c.accent
+        : (top ? c.accentLt : c.surface2);
+    final badgeFg = row.rank == 1
+        ? c.accentText
+        : (top ? c.accentInk : c.inkSoft);
+    final time = rankTimeAgo(row.ts);
+    return Container(
+      margin: const EdgeInsets.only(bottom: _rankRowGap),
+      padding: EdgeInsets.symmetric(
+        horizontal: padH,
+        vertical: _rankRowPadV,
+      ),
+      decoration: BoxDecoration(
+        color: row.you ? c.accentLt.withAlpha(150) : Colors.transparent,
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+        border: row.you ? Border.all(color: c.accent.withAlpha(120)) : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: _rankBadgeSize,
+            height: _rankBadgeSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+            child: Text(
+              '${row.rank}',
+              style: context.hand(
+                size: CitroType.small,
+                weight: CitroType.strong,
+                color: badgeFg,
+              ),
+            ),
+          ),
+          const SizedBox(width: _rankColumnGap),
+          Container(
+            width: _rankAvatarSize,
+            height: _rankAvatarSize,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: c.surface2),
+            clipBehavior: Clip.antiAlias,
+            child: row.av != null
+                ? Image.network(
+                    Api.imageUrl(row.av),
+                    fit: BoxFit.cover,
+                    cacheWidth: 84,
+                  )
+                : Center(
+                    child: Text(
+                      row.name.isEmpty ? '?' : row.name[0],
+                      style: context.body(size: CitroType.small, color: c.ink2),
+                    ),
+                  ),
+          ),
+          const SizedBox(width: _rankColumnGap),
+          Expanded(
+            child: Text(
+              row.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.meta,
+                weight: CitroType.strong,
+                color: c.ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: _rankColumnGap),
+          // 分数列：超长时省略而不是撑破行；时间只做这一列的注脚。
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _rankScoreMax),
+                child: Text(
+                  '${row.score}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: context.hand(
+                    size: CitroType.bodyLg,
+                    weight: CitroType.strong,
+                    color: c.accentInk,
+                  ),
+                ),
+              ),
+              if (time != null)
+                Text(
+                  time,
+                  style: context.body(size: CitroType.small, color: c.inkSoft),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 「我的排名」底条：弹层与侧栏共用同一枚胶囊。
+class _RankMeFooter extends StatelessWidget {
+  const _RankMeFooter({required this.me});
+
+  final Map<String, dynamic> me;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: c.accentLt.withAlpha(140),
+        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+        border: Border.all(color: c.accent.withAlpha(100)),
+      ),
+      child: Text(
+        '我的排名：第 ${me['rank'] ?? '—'} 名 · ${me['score'] ?? 0} 分',
+        textAlign: TextAlign.center,
+        style: context.body(
+          size: CitroType.small,
+          weight: CitroType.strong,
+          color: c.accentInk,
+        ),
+      ),
+    );
+  }
+}
+
+/// 榜单列表体：表头固定，列表区在「加载 / 失败 / 空 / 有数据」之间切换。
+///
+/// 刷新时保留旧榜单，只在列表顶挂一条细进度；整页换成转圈会让切换难度
+/// 看起来像「闪了一下」，还会把滚动位置弄丢。
+class _RankBoard extends StatelessWidget {
+  const _RankBoard({
+    required this.loading,
+    required this.error,
+    required this.rows,
+    required this.emptyTitle,
+    this.onRetry,
+    this.padH = _rankRowPadH,
+  });
+
+  final bool loading;
+  final String? error;
+  final List<BoardEntry> rows;
+  final String emptyTitle;
+  final VoidCallback? onRetry;
+  final double padH;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: loading && rows.isEmpty
+              ? const Center(child: _RankSpinner())
+              : error != null && rows.isEmpty
+                  ? _RankPlaceholder(
+                      icon: AppIcons.trophy,
+                      title: '排行榜暂时无法加载',
+                      hint: '网络异常，请稍后重试',
+                      onRetry: onRetry,
+                    )
+                  : rows.isEmpty
+                      ? _RankPlaceholder(icon: AppIcons.trophy, title: emptyTitle)
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(
+                            top: AppSpacing.x1,
+                            bottom: AppSpacing.x1,
+                          ),
+                          itemCount: rows.length,
+                          itemBuilder: (_, i) => _RankRow(row: rows[i], padH: padH),
+                        ),
+        ),
+        if (loading && rows.isNotEmpty)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(
+              minHeight: 2,
+              color: c.accent,
+              backgroundColor: c.line,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 排行榜分榜切换（手机弹窗 / 平板侧栏共用）。
 ///
 /// 重叠数独有 6 个分榜，单行放不下；这里用 [Wrap] 自动换行，
 /// 避免最右侧的档位被屏幕裁掉、又没有横向滑动的入口。
@@ -574,30 +936,54 @@ class GameDiffTabs extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  Widget build(BuildContext context) => _GameChipTabs(
+        items: difficulties,
+        selected: selected,
+        onSelect: onSelect,
+      );
+}
+
+/// 榜单胶囊：手机 AI 榜 / 难度与平板 AI 榜 / 难度四处共用同一套选中态，
+/// 避免同一个功能在弹层和侧栏里是两种选中色、两种按压手感。
+class _GameChipTabs extends StatelessWidget {
+  const _GameChipTabs({
+    required this.items,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<(String, String)> items;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
   Widget build(BuildContext context) {
     final c = context.c;
     return Wrap(
-      spacing: 7,
-      runSpacing: 6,
+      spacing: AppSpacing.x1,
+      runSpacing: AppSpacing.x1,
       children: [
-        for (final d in difficulties)
-          GestureDetector(
-            onTap: () => onSelect(d.$1),
+        for (final item in items)
+          Pressable(
+            onTap: () => onSelect(item.$1),
+            scale: .97,
+            hoverLift: 0,
+            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: selected == d.$1 ? c.accentLt : Colors.transparent,
+                color: selected == item.$1 ? c.accentLt : c.surface2,
                 borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 border: Border.all(
-                  color: selected == d.$1 ? c.accent : c.line2,
+                  color: selected == item.$1 ? c.accent : c.line,
                 ),
               ),
               child: Text(
-                d.$2,
+                item.$2,
                 style: context.body(
                   size: CitroType.caption,
                   weight: CitroType.strong,
-                  color: selected == d.$1 ? c.accentText : c.inkSoft,
+                  color: selected == item.$1 ? c.accentText : c.inkSoft,
                 ),
               ),
             ),
@@ -666,33 +1052,6 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
     ];
   }
 
-  Widget _aiTab(String key, String label) {
-    final c = context.c;
-    final on = boardTab == key;
-    return GestureDetector(
-      onTap: () {
-        if (boardTab == key) return;
-        setState(() => boardTab = key);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: on ? c.accentLt : Colors.transparent,
-          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: on ? c.accent : c.line2),
-        ),
-        child: Text(
-          label,
-          style: context.body(
-            size: CitroType.meta,
-            weight: CitroType.strong,
-            color: on ? c.accentText : c.inkSoft,
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _load() async {
     setState(() {
       loading = true;
@@ -714,7 +1073,13 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
         me = j['me'] is Map ? Map<String, dynamic>.from(j['me'] as Map) : null;
       });
     } on Exception catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (!mounted) return;
+      // 榜上已有内容时保留旧榜单：整页换成错误态会让人以为榜单没了。
+      if (rows.isEmpty) {
+        setState(() => error = e.toString());
+      } else {
+        AppToast.show(context, '排行榜刷新失败，请稍后重试');
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -724,6 +1089,9 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
   Widget build(BuildContext context) {
     final c = context.c;
     final height = MediaQuery.sizeOf(context).height * .68;
+    final emptyTitle = widget.aiSplit && boardTab == 'ai'
+        ? 'AI 榜还没有成绩 · 十万分以上自动归入'
+        : '还没有人上榜，快来抢第一';
     return Container(
       height: height,
       decoration: BoxDecoration(
@@ -750,7 +1118,7 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 10, 6),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
               child: Row(
                 children: [
                   AppIcon(
@@ -767,12 +1135,15 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                   ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: AppIcon(
-                        strokeSvg(AppIcons.close, width: 2.4),
-                        size: 18,
-                        color: c.inkSoft,
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Center(
+                        child: AppIcon(
+                          strokeSvg(AppIcons.close, width: 2.4),
+                          size: 18,
+                          color: c.inkSoft,
+                        ),
                       ),
                     ),
                   ),
@@ -782,17 +1153,18 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
             if (widget.aiSplit) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _aiTab('player', '玩家榜'),
-                    const SizedBox(width: 8),
-                    _aiTab('ai', 'AI 榜'),
-                  ],
+                child: _GameChipTabs(
+                  items: const [('player', '玩家榜'), ('ai', 'AI 榜')],
+                  selected: boardTab,
+                  onSelect: (key) {
+                    if (key == boardTab) return;
+                    setState(() => boardTab = key);
+                  },
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.x1),
             ],
-            if (widget.difficulties.isNotEmpty)
+            if (widget.difficulties.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: GameDiffTabs(
@@ -805,144 +1177,30 @@ class _LeaderboardSheetState extends State<_LeaderboardSheet> {
                   },
                 ),
               ),
-            const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.x1),
+            ],
             Expanded(
-              child: loading
-                  ? const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : error != null
-                  ? Center(
-                      child: Text(
-                        error!,
-                        style: context.body(size: 12, color: c.stamp),
-                      ),
-                    )
-                  : _shownRows.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.emoji_events_outlined,
-                            size: 40,
-                            color: c.accentLt,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.aiSplit && boardTab == 'ai'
-                                ? 'AI 榜还没有成绩 · 十万分以上自动归入'
-                                : '还没有人上榜，快来抢第一',
-                            style: context.body(size: CitroType.caption, color: c.inkSoft),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      itemCount: _shownRows.length,
-                      separatorBuilder: (_, _) => CitroDivider(
-                        color: c.line,
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                      ),
-                      itemBuilder: (_, i) {
-                        final r = _shownRows[i];
-                        final rankColor = r.rank == 1
-                            ? c.accent
-                            : (r.rank == 2 ? c.ink2 : (r.rank == 3 ? c.stamp : c.line2));
-                        return Container(
-                          padding: const EdgeInsets.symmetric(vertical: 5),
-                          decoration: r.you
-                              ? BoxDecoration(
-                                  color: c.accentLt.withAlpha(150),
-                                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                                )
-                              : null,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 26,
-                                height: 26,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: r.rank <= 3 ? rankColor : c.surface2,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  '${r.rank}',
-                                  style: context.hand(
-                                    size: CitroType.small,
-                                    weight: CitroType.strong,
-                                    color: r.rank == 1 ? c.accentText : (r.rank <= 3 ? c.onAccent : c.inkSoft),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: c.surface2,
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: r.av != null
-                                    ? Image.network(
-                                        Api.imageUrl(r.av),
-                                        fit: BoxFit.cover,
-                                        cacheWidth: 90,
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          r.name.isEmpty ? '?' : r.name[0],
-                                          style: context.body(
-                                            size: CitroType.small,
-                                            color: c.ink2,
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  r.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.body(
-                                    size: CitroType.meta,
-                                    weight: CitroType.strong,
-                                    color: c.ink,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${r.score}',
-                                style: context.hand(
-                                  size: CitroType.bodyLg,
-                                  weight: CitroType.strong,
-                                  color: c.accentInk,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _RankHeader(padH: 16),
+                  Expanded(
+                    child: _RankBoard(
+                      loading: loading,
+                      error: error,
+                      rows: _shownRows,
+                      emptyTitle: emptyTitle,
+                      onRetry: _load,
+                      padH: 16,
                     ),
+                  ),
+                ],
+              ),
             ),
             if (me != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: c.line)),
-                ),
-                child: Text(
-                  '我的排名：第 ${me!['rank'] ?? '—'} 名 · ${me!['score'] ?? 0} 分',
-                  textAlign: TextAlign.center,
-                  style: context.body(size: 12, color: c.accentInk),
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                child: _RankMeFooter(me: me!),
               ),
           ],
         ),
@@ -1037,7 +1295,13 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
             : null;
       });
     } on Exception catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (!mounted) return;
+      // 榜上已有内容时保留旧榜单，只给一条轻提示（同手机弹层）。
+      if (rows.isEmpty) {
+        setState(() => error = e.toString());
+      } else {
+        AppToast.show(context, '排行榜刷新失败，请稍后重试');
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -1065,6 +1329,9 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final emptyTitle = widget.aiSplit && boardTab == 'ai'
+        ? 'AI 榜还没有成绩 · 十万分以上自动归入'
+        : '还没有人上榜，快来抢第一';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1077,12 +1344,11 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
                 color: c.accentInk,
               ),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '排行榜',
-                  style: context.heading(size: 18, color: c.ink),
-                ),
+              Text(
+                '排行榜',
+                style: context.heading(size: 18, color: c.ink),
               ),
+              const SizedBox(width: AppSpacing.x1),
               Flexible(
                 child: Text(
                   widget.title,
@@ -1093,203 +1359,46 @@ class _GameTabletRankRailState extends State<GameTabletRankRail> {
               ),
             ],
           ),
+        if (widget.showTitle) const SizedBox(height: 10),
         if (widget.difficulties.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final item in widget.difficulties)
-                Pressable(
-                  scale: .97,
-                  hoverLift: 0,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  onTap: () {
-                    if (diff == item.$1) return;
-                    setState(() => diff = item.$1);
-                    _load();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: diff == item.$1 ? c.accent : c.surface2,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                      border: Border.all(
-                        color: diff == item.$1 ? c.accent : c.line,
-                      ),
-                    ),
-                    child: Text(
-                      item.$2,
-                      style: context.body(
-                        size: 12,
-                        weight: FontWeight.w700,
-                        color: diff == item.$1
-                            ? c.accentText
-                            : c.inkSoft,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          _GameChipTabs(
+            items: widget.difficulties,
+            selected: diff,
+            onSelect: (key) {
+              if (diff == key) return;
+              setState(() => diff = key);
+              _load();
+            },
           ),
+          const SizedBox(height: AppSpacing.x1),
         ],
         if (widget.aiSplit) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (final item in const [('player', '玩家榜'), ('ai', 'AI 榜')])
-                Padding(
-                  padding: const EdgeInsets.only(right: 5),
-                  child: Pressable(
-                    scale: .97,
-                    hoverLift: 0,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                    onTap: () => setState(() => boardTab = item.$1),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: boardTab == item.$1 ? c.hl : Colors.transparent,
-                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                        border: Border.all(
-                          color: boardTab == item.$1 ? c.accent : c.line,
-                        ),
-                      ),
-                      child: Text(
-                        item.$2,
-                        style: context.body(
-                          size: 12,
-                          weight: FontWeight.w700,
-                          color: boardTab == item.$1 ? c.accentText : c.inkSoft,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          _GameChipTabs(
+            items: const [('player', '玩家榜'), ('ai', 'AI 榜')],
+            selected: boardTab,
+            onSelect: (key) {
+              if (boardTab == key) return;
+              setState(() => boardTab = key);
+            },
           ),
+          const SizedBox(height: AppSpacing.x1),
         ],
-        const SizedBox(height: 8),
-        CitroDivider(color: c.line),
-        const SizedBox(height: 4),
+        const _RankHeader(padH: 0),
         Expanded(
-          child: loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-              : error != null
-              ? Center(
-                  child: Text(
-                    '排行榜暂时无法加载',
-                    textAlign: TextAlign.center,
-                    style: context.body(size: 11, color: c.inkSoft),
-                  ),
-                )
-              : _shownRows.isEmpty
-              ? Center(
-                  child: Text(
-                    '还没有人上榜',
-                    style: context.body(size: 11, color: c.inkSoft),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 4),
-                  itemCount: _shownRows.length,
-                  itemBuilder: (_, i) => _rankRow(context, _shownRows[i]),
-                ),
+          child: _RankBoard(
+            loading: loading,
+            error: error,
+            rows: _shownRows,
+            emptyTitle: emptyTitle,
+            onRetry: _load,
+            padH: 0,
+          ),
         ),
         if (me != null) ...[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: c.accentLt.withAlpha(140),
-              borderRadius: BorderRadius.circular(CitroColors.radii.small),
-              border: Border.all(color: c.accent.withAlpha(100)),
-            ),
-            child: Text(
-              '我的排名：第 ${me!['rank'] ?? '—'} 名 · ${me!['score'] ?? 0} 分',
-              textAlign: TextAlign.center,
-              style: context.body(
-                size: 11,
-                weight: FontWeight.w700,
-                color: c.accentInk,
-              ),
-            ),
-          ),
+          const SizedBox(height: AppSpacing.x1),
+          _RankMeFooter(me: me!),
         ],
       ],
-    );
-  }
-
-  Widget _rankRow(BuildContext context, BoardEntry row) {
-    final c = context.c;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: row.you ? c.accentLt.withAlpha(150) : Colors.transparent,
-        borderRadius: BorderRadius.circular(CitroColors.radii.small),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 22,
-            child: Text(
-              '${row.rank}',
-              textAlign: TextAlign.center,
-              style: context.hand(
-                size: CitroType.body,
-                weight: CitroType.strong,
-                color: row.rank <= 3 ? c.accentInk : c.inkSoft,
-              ),
-            ),
-          ),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: c.surface2),
-            clipBehavior: Clip.antiAlias,
-            child: row.av != null
-                ? Image.network(
-                    Api.imageUrl(row.av),
-                    fit: BoxFit.cover,
-                    cacheWidth: 84,
-                  )
-                : Center(
-                    child: Text(
-                      row.name.isEmpty ? '?' : row.name[0],
-                      style: context.body(size: CitroType.small, color: c.ink2),
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              row.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.body(
-                size: CitroType.caption,
-                weight: CitroType.strong,
-                color: c.ink,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '${row.score}',
-            style: context.hand(
-              size: CitroType.bodyLg,
-              weight: CitroType.strong,
-              color: c.accentInk,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
