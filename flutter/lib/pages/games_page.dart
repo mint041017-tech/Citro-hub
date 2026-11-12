@@ -47,57 +47,62 @@ class GamesPage extends StatelessWidget {
           [for (final key in group.$2) kGameCards.firstWhere((g) => g.key == key)],
         ),
     ];
-    final content = Stack(
-      children: [
-        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
-        Positioned.fill(child: ColoredBox(color: context.c.bg)),
-        CitroBackground(
-          color: Colors.transparent,
-          child: SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                side,
-                AppSpacing.pageTop(width),
-                side,
-                wideDesktop ? 32 : 100,
-              ),
-              child: CitroStagger(
-                step: const Duration(milliseconds: 28),
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x1),
-                    child: CitroPageTitle('游戏', '挑一个，玩一会儿'),
-                  ),
-                  const SizedBox(height: AppSpacing.x3),
-                  for (final group in gameGroups) ...[
-                    _GroupHeader(
-                      title: group.$1,
-                      count: group.$2.length,
-                      games: group.$2,
+    // 最外层必须是 Material：没有它，Flutter 的 Text 会退回「未包 Material」
+    // 的兜底样式（黄色下划线 + 警告 debugLabel），整页文字都会带着一条黄线。
+    final content = Material(
+      color: c.bg,
+      child: Stack(
+        children: [
+          // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
+          Positioned.fill(child: ColoredBox(color: context.c.bg)),
+          CitroBackground(
+            color: Colors.transparent,
+            child: SafeArea(
+              bottom: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  side,
+                  AppSpacing.pageTop(width),
+                  side,
+                  wideDesktop ? 32 : 100,
+                ),
+                child: CitroStagger(
+                  step: const Duration(milliseconds: 28),
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x1),
+                      child: CitroPageTitle('游戏', '挑一个，玩一会儿'),
                     ),
-                    const SizedBox(height: AppSpacing.x2),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: gameColumns,
-                        crossAxisSpacing: AppSpacing.x2,
-                        mainAxisSpacing: AppSpacing.x2,
-                        childAspectRatio: .8,
+                    const SizedBox(height: AppSpacing.x3),
+                    for (final group in gameGroups) ...[
+                      _GroupHeader(
+                        title: group.$1,
+                        count: group.$2.length,
+                        games: group.$2,
                       ),
-                      itemCount: group.$2.length,
-                      itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
-                    ),
-                    const SizedBox(height: AppSpacing.x4),
+                      const SizedBox(height: AppSpacing.x2),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: gameColumns,
+                          crossAxisSpacing: AppSpacing.x2,
+                          mainAxisSpacing: AppSpacing.x2,
+                          childAspectRatio: .8,
+                        ),
+                        itemCount: group.$2.length,
+                        itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
+                      ),
+                      const SizedBox(height: AppSpacing.x4),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
     if (!desktopWeb) return content;
     return Stack(
@@ -196,7 +201,7 @@ class _GameCard extends StatelessWidget {
           return;
         }
         final rect = box.localToGlobal(Offset.zero) & box.size;
-        CitroCardMorph.pushPageSoft(
+        CitroCardMorph.openCardPage(
           context,
           source: rect,
           snapshot: CitroCardFlight.snapshotOf(context, rect),

@@ -182,7 +182,7 @@ Future<void> showCardDrawOverlay(
     AppToast.show(context, '还没有抽卡机会');
     return;
   }
-  await showGeneralDialog<void>(
+  await showCitroGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierLabel: '收下卡面',

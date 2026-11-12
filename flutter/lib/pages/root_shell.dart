@@ -45,6 +45,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   late final List<Widget> _pages;
   late final AnimationController _tabAnim;
   double _dir = 1;
+
+  /// 切页动画期间仍留在 Stack 里的上一页，动画结束后移除。
+  ///
+  /// 旧页在同一帧直接 Offstage 时，交接的那一帧上新旧两页都不在，
+  /// 会露出 Scaffold 底色（首页有背景图时尤其明显）。留着它交叉淡入，
+  /// 切换才有「从这里到那里」的连续感。
+  int? _prevIndex;
   Timer? _updateTimer;
   final List<Timer> _warmTimers = <Timer>[];
   Timer? _cardPromptTimer;
@@ -240,11 +247,12 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _dir = i > index ? 1.0 : -1.0;
     final reduce = CitroMotion.reduced(context);
     PerfProbe.beginFrameCollection();
-    _tabAnim.duration = CitroMotion.tabLength;
+    _tabAnim.duration = CitroMotion.tabContent;
     // 先把动画值归零，保证等待新页首帧时它就以 t=0 呈现；
     // 否则会先显示一帧 t=1 再跳回起点，出现闪动。
     _tabAnim.value = 0;
     setState(() {
+      _prevIndex = index;
       _visited[i] = true;
       index = i;
     });
@@ -254,6 +262,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     }
     if (reduce) {
       _tabAnim.value = 1;
+      if (_prevIndex != null) _prevIndex = null;
       PerfProbe.endFrameCollection('tab_$i');
       return;
     }
@@ -263,6 +272,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     if (!mounted) return;
     await _tabAnim.forward(from: 0);
     if (!mounted) return;
+    if (_prevIndex != null) {
+      setState(() => _prevIndex = null);
+    }
     if (PerfProbe.enabled) {
       // FrameTiming 在帧结束后才批量回传，给采样回调留一帧时间。
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -271,7 +283,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   }
 
   Widget _pageStack() {
-    // 已挂载的页面保持原位，只有当前页参与切页动画。
+    // 已挂载的页面保持原位；当前页与上一页（切页动画期间）同时在场。
     // 旧实现把整棵 Stack 放进 AnimatedBuilder，动画期间后台页也会逐帧重建；
     // 首页、社区这类长页面在每次切 Tab 时都要白白 build + layout 一遍。
     return Stack(
@@ -279,21 +291,28 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       clipBehavior: Clip.hardEdge,
       children: [
         for (var i = 0; i < _tabCount; i++)
-          _visited[i] ? _pageLayer(i) : const SizedBox.shrink(),
+          if (_visited[i] && i != index && i != _prevIndex)
+            _pageLayer(i, active: false),
+        if (_prevIndex != null && _visited[_prevIndex!])
+          _pageLayer(_prevIndex!, active: false),
+        _pageLayer(index, active: true),
       ],
     );
   }
 
-  Widget _pageLayer(int i) {
-    final active = i == index;
+  Widget _pageLayer(int i, {required bool active}) {
+    final leaving = !active && i == _prevIndex;
     // 关键：隐藏页和显示页必须返回同一棵 widget 结构，否则 Flutter 会整页重建，
     // 每次切 Tab 都重放入场动画并闪一下。
     final page = RepaintBoundary(
-      child: TickerMode(enabled: active, child: _pages[i]),
+      child: TickerMode(
+        enabled: active || leaving,
+        child: _pages[i],
+      ),
     );
     return Positioned.fill(
       child: Offstage(
-        offstage: !active,
+        offstage: !active && !leaving,
         child: IgnorePointer(
           ignoring: !active,
           // 页面作为 child 传入，动画期间只更新外面这层包装，不重建页面本身。
@@ -304,26 +323,39 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                 ? _tabAnim
                 : const AlwaysStoppedAnimation<double>(1),
             child: page,
-            builder: (context, child) => _settlePage(child!, active),
+            builder: (context, child) =>
+                _settlePage(child!, active: active, leaving: leaving),
           ),
         ),
       ),
     );
   }
 
-  Widget _settlePage(Widget child, bool active) {
-    final t = active ? CitroMotion.easeOut.transform(_tabAnim.value) : 1.0;
-    // 旧页立即撤下：屏幕上永远只出现当前页，不会残留上一页的一条。
-    // 新页只做 10px 归位 + 轻微淡入——足够表达"切换发生了"，
-    // 又不会出现两页并存、残影或空白条。
-    return Opacity(
-      opacity: .82 + .18 * t,
-      child: Transform.scale(
-        scale: .992 + .008 * t,
-        child: Transform.translate(
-          offset: Offset(_dir * 8 * (1 - t), 6 * (1 - t)),
+  /// 切页包装：新页从行进方向一侧进入并淡入，旧页反向让位。
+  ///
+  /// 位移用 [FractionalTranslation]（相对自身宽度），不需要知道画布有多宽；
+  /// 5% 宽在 220ms 下能读出方向，又不会像整页横推那样「等页面」。
+  Widget _settlePage(Widget child, {required bool active, required bool leaving}) {
+    final reduce = CitroMotion.reduced(context);
+    if (active) {
+      final t = CitroMotion.easeOut.transform(_tabAnim.value);
+      if (reduce) return child;
+      return Opacity(
+        opacity: .85 + .15 * t,
+        child: FractionalTranslation(
+          translation: Offset(-_dir * .05 * (1 - t), 0),
           child: child,
         ),
+      );
+    }
+    if (!leaving || reduce) return child;
+    // 旧页：朝相反方向让开一半，同时淡到 70%，把舞台让给新页。
+    final out = CitroMotion.exit.transform(_tabAnim.value);
+    return Opacity(
+      opacity: 1 - .3 * out,
+      child: FractionalTranslation(
+        translation: Offset(_dir * .025 * out, 0),
+        child: child,
       ),
     );
   }

@@ -11,10 +11,11 @@ import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'card_draw.dart';
+import '../widgets/modal.dart';
 
 Future<void> showCardCollection(BuildContext context) {
   unawaited(AppState.instance.syncCardsFromCloud());
-  return showGeneralDialog<void>(
+  return showCitroGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭卡面收藏',

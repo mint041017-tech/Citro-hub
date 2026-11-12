@@ -21,7 +21,7 @@ import 'todo_ui.dart';
 /// 专注面板：复用 PomodoroState 的计时、统计与通知，换成待办模块的纸张 UI。
 Future<void> showTodoFocus(BuildContext context, {TodoTask? task}) {
   PomodoroState.instance.ensureInit();
-  return showGeneralDialog<void>(
+  return showCitroGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierLabel: '专注',

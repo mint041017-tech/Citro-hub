@@ -33,53 +33,15 @@ class CitroCardMorph {
     return rect;
   }
 
-  /// 打开一个"从卡片长出来"的整页。
-  static Future<T?> pushPage<T>(
-    BuildContext context, {
-    required Rect source,
-    required WidgetBuilder builder,
-    RouteSettings? settings,
-    Color? barrier,
-    Future<ui.Image?>? snapshot,
-  }) async {
-    final reduce = CitroMotion.reduced(context);
-    final image = reduce ? null : await snapshot;
-    final result = await Navigator.of(context, rootNavigator: true).push<T>(
-      PageRouteBuilder<T>(
-        settings: settings,
-        opaque: false,
-        barrierColor: barrier,
-        barrierDismissible: false,
-        transitionDuration: reduce ? Duration.zero : CitroMotion.pageTouch,
-        reverseTransitionDuration: reduce
-            ? Duration.zero
-            : CitroMotion.pageTouchReverse,
-        pageBuilder: (ctx, animation, secondary) => builder(ctx),
-        transitionsBuilder: (ctx, animation, secondary, child) {
-          if (reduce) return child;
-          return _CardMorphTransition(
-            source: source,
-            animation: animation,
-            snapshot: image,
-            child: child,
-          );
-        },
-      ),
-    );
-    // 退场的最后一帧仍在用这张快照，立刻释放会让 RenderImage 在下一帧
-    // clone 到已 dispose 的图片（Bad state: Cannot clone a disposed image）。
-    if (image != null) {
-      Future<void>.delayed(const Duration(milliseconds: 800), image.dispose);
-    }
-    return result;
-  }
-
-  /// 打开一个"卡片放大预览"（用于本身没有详情的卡片）。
-  /// 纸页升起：适合食谱日记 / 听隅这类内容页。
+  /// 打开一个"卡片长出来"的整页 —— 全 App 唯一的卡片打开入口。
   ///
-  /// 页面从第一帧就存在，以轻微下沉 + 缩放淡入，卡片快照快速抬起淡出，
-  /// 背景纸张同时铺满，不做「空白卡片先展开再淡入」的那一段。
-  static Future<T?> pushPageSoft<T>(
+  /// 卡片快照从它的屏幕矩形抬起淡出，纸页同时下沉淡入；退场是同一场运动的
+  /// 倒带（[CitroMotion.cardOpen] 进 / [CitroMotion.cardClose] 出），
+  /// 所以「回」和「去」是同一条轨迹，视线能回到出发点。
+  ///
+  /// 所有卡片入口（游戏中心、首页卡片、待办 / 记账卡、听隅、菜谱）都走这里，
+  /// 不要再自绘一套转场：方向、时长、曲线必须一致，才知道东西从哪来。
+  static Future<T?> openCardPage<T>(
     BuildContext context, {
     required Rect source,
     required WidgetBuilder builder,
@@ -94,12 +56,10 @@ class CitroCardMorph {
         opaque: false,
         barrierColor: Colors.transparent,
         barrierDismissible: false,
-        transitionDuration: reduce
-            ? Duration.zero
-            : const Duration(milliseconds: 380),
+        transitionDuration: reduce ? Duration.zero : CitroMotion.cardOpen,
         reverseTransitionDuration: reduce
             ? Duration.zero
-            : const Duration(milliseconds: 260),
+            : CitroMotion.cardClose,
         pageBuilder: (ctx, animation, secondary) => builder(ctx),
         transitionsBuilder: (ctx, animation, secondary, child) {
           if (reduce) return child;
@@ -112,6 +72,8 @@ class CitroCardMorph {
         },
       ),
     );
+    // 退场的最后一帧仍在用这张快照，立刻释放会让 RenderImage 在下一帧
+    // clone 到已 dispose 的图片（Bad state: Cannot clone a disposed image）。
     if (image != null) {
       Future<void>.delayed(const Duration(milliseconds: 800), image.dispose);
     }

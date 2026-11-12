@@ -9,6 +9,7 @@ import '../services/voice_recorder.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
 import '../theme/tokens.dart';
+import '../theme/motion.dart';
 import '../widgets/modal.dart';
 import 'paper.dart';
 
@@ -40,7 +41,8 @@ class CiciComposer extends StatefulWidget {
   State<CiciComposer> createState() => _CiciComposerState();
 }
 
-class _CiciComposerState extends State<CiciComposer> {
+class _CiciComposerState extends State<CiciComposer>
+    with SingleTickerProviderStateMixin {
   bool _voiceMode = false;
   bool _holding = false;
   bool _recognizing = false;
@@ -52,6 +54,7 @@ class _CiciComposerState extends State<CiciComposer> {
   double _overlayBottom = 82;
   Timer? _capTimer;
   OverlayEntry? _entry;
+  AnimationController? _entryAnim;
   final GlobalKey _barKey = GlobalKey();
   // 录音启动中的 Future：松手时先等它落地，避免 finish() 在 _startedAt 为 null 时空转。
   Future<bool>? _starting;
@@ -337,7 +340,24 @@ class _CiciComposerState extends State<CiciComposer> {
     // 写死数值必然有一边挡住输入框。
     _overlayBottom = _measureBarBottom();
     final overlay = Overlay.of(context);
-    _entry = OverlayEntry(builder: _buildOverlay);
+    final anim = AnimationController(
+      vsync: this,
+      duration: CitroMotion.panel,
+      reverseDuration: CitroMotion.panelReverse,
+    )..forward();
+    _entryAnim = anim;
+    _entry = OverlayEntry(
+      builder: (context) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, .05), end: Offset.zero)
+              .animate(
+                CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+              ),
+          child: _buildOverlay(context),
+        ),
+      ),
+    );
     overlay.insert(_entry!);
   }
 
@@ -353,8 +373,18 @@ class _CiciComposerState extends State<CiciComposer> {
   }
 
   void _hideOverlay() {
-    _entry?.remove();
+    final entry = _entry;
+    final anim = _entryAnim;
     _entry = null;
+    _entryAnim = null;
+    if (entry == null) return;
+    if (anim == null || !anim.isAnimating && anim.value == 0) {
+      entry.remove();
+      return;
+    }
+    anim.reverse().whenComplete(() {
+      if (entry.mounted) entry.remove();
+    });
   }
 
   Widget _buildOverlay(BuildContext context) {
@@ -448,6 +478,7 @@ class _CiciComposerState extends State<CiciComposer> {
   void dispose() {
     _micTimer?.cancel();
     _hideOverlay();
+    _entryAnim?.dispose();
     VoiceRecorder.cancel();
     super.dispose();
   }

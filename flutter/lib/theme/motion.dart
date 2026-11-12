@@ -68,6 +68,24 @@ class CitroMotion {
   static const Duration pageTouch = Duration(milliseconds: 280);
   static const Duration pageTouchReverse = Duration(milliseconds: 200);
 
+  /// 卡片打开 / 关闭（容器形变、卡片快照抬起）。
+  ///
+  /// 这是全 App 最常用的「打开」，必须一眼算完：300ms 进场、220ms 退场，
+  /// 退场比进场短 80ms，收得利落。所有卡片入口共用这两个值。
+  static const Duration cardOpen = Duration(milliseconds: 300);
+  static const Duration cardClose = Duration(milliseconds: 220);
+
+  /// Tab / 内联内容切换：比整页转场略短，避免「等页面」。
+  static const Duration tabContent = Duration(milliseconds: 220);
+
+  /// 自绘浮层面板（全局搜索、录音气泡等 OverlayEntry）。
+  static const Duration panel = Duration(milliseconds: 160);
+  static const Duration panelReverse = Duration(milliseconds: 120);
+
+  /// 原生日期 / 时间选择器。
+  static const Duration picker = Duration(milliseconds: 280);
+  static const Duration pickerReverse = Duration(milliseconds: 200);
+
   /// Tab / 侧栏页切换：与整页转场同一节奏，但略短，避免"等页面"。
   static const Duration tab = Duration(milliseconds: 280);
   static const Duration tabDesktop = Duration(milliseconds: 220);

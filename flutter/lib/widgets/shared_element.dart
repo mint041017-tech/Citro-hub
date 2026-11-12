@@ -50,14 +50,12 @@ class CitroHero extends StatelessWidget {
     final target = toContext.widget is Hero
         ? (toContext.widget as Hero).child
         : (fromContext.widget as Hero).child;
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: CitroMotion.easeInOut,
-      reverseCurve: CitroMotion.exit,
-    );
+    // animation 本身已经带路由转场的曲线（进场 easeOut / 退场 exit）。
+    // 再套一层 CurvedAnimation 会双重加曲线，共享元素的节奏就和页面错开半拍，
+    // 看起来像「飞得比页面快」。这里直接复用同一个 animation。
     // 飞行中保持近乎不透明：只补 8% 透明度收尾，避免出现"半透明的物体"。
     return FadeTransition(
-      opacity: Tween<double>(begin: .92, end: 1).animate(curved),
+      opacity: Tween<double>(begin: .92, end: 1).animate(animation),
       child: Material(type: MaterialType.transparency, child: target),
     );
   }

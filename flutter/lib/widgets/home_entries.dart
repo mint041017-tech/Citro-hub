@@ -171,7 +171,7 @@ class TingyuCard extends StatelessWidget {
             Navigator.of(context).pushNamed('/tingyu');
             return;
           }
-          CitroCardMorph.pushPageSoft(
+          CitroCardMorph.openCardPage(
             context,
             source: rect,
             settings: const RouteSettings(name: '/tingyu'),
@@ -386,7 +386,7 @@ class HomeGameCard extends StatelessWidget {
           return;
         }
         final rect = box.localToGlobal(Offset.zero) & box.size;
-        CitroCardMorph.pushPageSoft(
+        CitroCardMorph.openCardPage(
           context,
           source: rect,
           snapshot: CitroCardFlight.snapshotOf(context, rect),

@@ -9,6 +9,7 @@ import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
+import '../widgets/modal.dart';
 
 Future<void> showPomodoroOverlay(
   BuildContext context, {
@@ -17,7 +18,7 @@ Future<void> showPomodoroOverlay(
 }) async {
   PomodoroState.instance.ensureInit();
   PomodoroState.instance.nookUi = nook;
-  await showGeneralDialog(
+  await showCitroGeneralDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭',
@@ -113,7 +114,7 @@ class _PomodoroDoneWatcherState extends State<PomodoroDoneWatcher> {
       PomodoroState.instance.settleFinished();
       return;
     }
-    await showGeneralDialog<void>(
+    await showCitroGeneralDialog<void>(
       context: ctx,
       barrierDismissible: true,
       barrierLabel: '稍后',

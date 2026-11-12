@@ -98,6 +98,97 @@ class _CitroDialogRoute<T> extends PopupRoute<T> {
   }
 }
 
+/// 居中 / 自定义转场弹层的统一入口，替掉 `showGeneralDialog`。
+///
+/// Flutter 的 `RawDialogRoute` 没有 `reverseTransitionDuration`，退场只能和
+/// 进场一样长，做不到「回得比去得快」。这里改用自绘 [PopupRoute] 补上，
+/// 转场写法与 `showGeneralDialog` 完全一致（pageBuilder + transitionBuilder），
+/// 只是退场固定比进场短。
+Future<T?> showCitroGeneralDialog<T>({
+  required BuildContext context,
+  required RoutePageBuilder pageBuilder,
+  required RouteTransitionsBuilder transitionBuilder,
+  bool barrierDismissible = true,
+  String? barrierLabel,
+  Color barrierColor = const Color(0x8A000000),
+  Duration transitionDuration = CitroMotion.modal,
+  Duration reverseTransitionDuration = CitroMotion.modalReverse,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+}) {
+  final reduce = CitroMotion.reduced(context);
+  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
+    _CitroGeneralDialogRoute<T>(
+      pageBuilder: pageBuilder,
+      transitionBuilder: transitionBuilder,
+      dismissible: barrierDismissible,
+      label: barrierLabel ?? '关闭',
+      barrier: barrierColor,
+      duration: transitionDuration,
+      reverseDuration: reverseTransitionDuration,
+      reduce: reduce,
+      settings: routeSettings,
+    ),
+  );
+}
+
+class _CitroGeneralDialogRoute<T> extends PopupRoute<T> {
+  _CitroGeneralDialogRoute({
+    required this.pageBuilder,
+    required this.transitionBuilder,
+    required this.dismissible,
+    required this.label,
+    required this.barrier,
+    required this.duration,
+    required this.reverseDuration,
+    required this.reduce,
+    super.settings,
+  });
+
+  final RoutePageBuilder pageBuilder;
+  final RouteTransitionsBuilder transitionBuilder;
+  final bool dismissible;
+  final String label;
+  final Color barrier;
+  final Duration duration;
+  final Duration reverseDuration;
+  final bool reduce;
+
+  @override
+  Duration get transitionDuration => reduce ? Duration.zero : duration;
+
+  @override
+  Duration get reverseTransitionDuration =>
+      reduce ? Duration.zero : reverseDuration;
+
+  @override
+  bool get opaque => false;
+
+  @override
+  bool get barrierDismissible => dismissible;
+
+  @override
+  Color? get barrierColor => barrier;
+
+  @override
+  String? get barrierLabel => label;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => pageBuilder(context, animation, secondaryAnimation);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => transitionBuilder(context, animation, secondaryAnimation, child);
+}
+
 /// 底部弹层统一入口：四端同一套抽屉曲线与非对称时长。
 ///
 /// 直接调用 `showModalBottomSheet` 会落到 Flutter 默认的 250ms ease，

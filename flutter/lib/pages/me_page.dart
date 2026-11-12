@@ -197,10 +197,10 @@ class MePage extends StatelessWidget {
         _ProfileCell(
           state: state,
           user: user,
-          heroTag: CitroHero.tagOf(
-            'profile',
-            embedded || floating ? 'tab' : 'me',
-          ),
+          // 「我的」全形态共用同一个 Hero tag：平板侧栏 / Duo 栏 / 浮窗 /
+          // 手机路由都从这颗头像飞进飞出。tag 不一致时 Hero 不生效，
+          // 就只剩浮窗淡入，看不出「从哪来」。
+          heroTag: CitroHero.tagOf('profile', 'me'),
         ),
         const _BlockDivider(),
         _SettingsRow(

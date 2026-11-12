@@ -1356,7 +1356,7 @@ class _NookHomeState extends State<NookHome> {
 
   Future<void> breathe() {
     final p = Palette.of(context);
-    return showGeneralDialog<void>(
+    return showCitroGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭呼吸',
@@ -2454,7 +2454,7 @@ class _NookHomeState extends State<NookHome> {
 
   Future<void> _openDurationSettings(BuildContext context) {
     final p = Palette.of(context);
-    return showGeneralDialog<void>(
+    return showCitroGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭时长设置',

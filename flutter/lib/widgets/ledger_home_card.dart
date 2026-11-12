@@ -38,7 +38,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
       Navigator.of(context).pushNamed('/ledger');
       return;
     }
-    CitroCardMorph.pushPageSoft(
+    CitroCardMorph.openCardPage(
       context,
       source: rect,
       settings: const RouteSettings(name: '/ledger'),

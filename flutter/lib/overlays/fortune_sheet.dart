@@ -16,9 +16,10 @@ import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
 import 'ai_chat.dart';
 import 'card_draw.dart';
+import '../widgets/modal.dart';
 
 Future<void> showFortuneOverlay(BuildContext context) async {
-  await showGeneralDialog(
+  await showCitroGeneralDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭',

@@ -62,7 +62,7 @@ class TodoHomeCard extends StatelessWidget {
       Navigator.of(context).pushNamed('/todo');
       return;
     }
-    CitroCardMorph.pushPageSoft(
+    CitroCardMorph.openCardPage(
       context,
       source: rect,
       settings: const RouteSettings(name: '/todo'),

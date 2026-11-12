@@ -17,6 +17,7 @@ import '../services/lantern_api.dart';
 import '../services/prefs.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../theme/motion.dart';
 import 'paper.dart';
 
 const _searchHistoryKey = 'chimu_search_hist';
@@ -272,13 +273,15 @@ class GlobalSearch extends StatefulWidget {
   State<GlobalSearch> createState() => _GlobalSearchState();
 }
 
-class _GlobalSearchState extends State<GlobalSearch> {
+class _GlobalSearchState extends State<GlobalSearch>
+    with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   final _link = LayerLink();
   final _tapGroup = Object();
   final _index = _buildSearchIndex();
   OverlayEntry? _panel;
+  AnimationController? _panelAnim;
   List<_SearchRow> _rows = [];
   int _active = -1;
   double _targetWidth = 400;
@@ -303,6 +306,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   void dispose() {
     _closePanel();
+    _panelAnim?.dispose();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -383,6 +387,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
       _panel!.markNeedsBuild();
       return;
     }
+    // 浮层进场用 160ms 淡入 + 上滑：直接 insert 会硬切一下，
+    // 和别处的弹层节奏也对不上。
+    final anim = AnimationController(
+      vsync: this,
+      duration: CitroMotion.panel,
+      reverseDuration: CitroMotion.panelReverse,
+    )..forward();
+    _panelAnim = anim;
     _panel = OverlayEntry(
       builder: (overlayContext) => Positioned(
         left: 0,
@@ -396,11 +408,22 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ? Alignment.topLeft
               : Alignment.bottomLeft,
           offset: Offset(0, _panelBelow ? 8 : -8),
-          child: TextFieldTapRegion(
-            groupId: _tapGroup,
-            child: Material(
-              color: Colors.transparent,
-              child: _buildPanel(overlayContext),
+          child: FadeTransition(
+            opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(0, _panelBelow ? -0.06 : 0.06),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+              ),
+              child: TextFieldTapRegion(
+                groupId: _tapGroup,
+                child: Material(
+                  color: Colors.transparent,
+                  child: _buildPanel(overlayContext),
+                ),
+              ),
             ),
           ),
         ),
@@ -410,10 +433,21 @@ class _GlobalSearchState extends State<GlobalSearch> {
   }
 
   void _closePanel() {
-    _panel?.remove();
+    final entry = _panel;
+    final anim = _panelAnim;
     _panel = null;
+    _panelAnim = null;
     _rows = [];
     _active = -1;
+    if (entry == null) return;
+    if (anim == null || !anim.isAnimating && anim.value == 0) {
+      entry.remove();
+      return;
+    }
+    // 退场先把动画倒回去再移除，避免「啪」地一下消失。
+    anim.reverse().whenComplete(() {
+      if (entry.mounted) entry.remove();
+    });
   }
 
   void _saveHistory(String value) {

@@ -26,6 +26,7 @@ import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
+import '../widgets/shared_element.dart';
 import '../widgets/home_background.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
@@ -458,46 +459,49 @@ class _HomeTopBar extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white54),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: avatarUrl.isEmpty
-                            ? Center(
-                                child:
-                                    app.loggedIn &&
-                                        user != null &&
-                                        user.name.isNotEmpty
-                                    ? Text(
-                                        user.name[0],
-                                        style: context.heading(
-                                          size: CitroType.label,
-                                          color: c.ink,
+                      CitroHero(
+                        tag: CitroHero.tagOf('profile', 'me'),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white54),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: avatarUrl.isEmpty
+                              ? Center(
+                                  child:
+                                      app.loggedIn &&
+                                          user != null &&
+                                          user.name.isNotEmpty
+                                      ? Text(
+                                          user.name[0],
+                                          style: context.heading(
+                                            size: CitroType.label,
+                                            color: c.ink,
+                                          ),
+                                        )
+                                      : AppIcon(
+                                          strokeSvg(AppIcons.user, width: 2),
+                                          size: 16,
+                                          color: c.ink2,
                                         ),
-                                      )
-                                    : AppIcon(
-                                        strokeSvg(AppIcons.user, width: 2),
-                                        size: 16,
-                                        color: c.ink2,
-                                      ),
-                              )
-                            : Image.network(
-                                avatarUrl,
-                                fit: BoxFit.cover,
-                                cacheWidth: 96,
-                                errorBuilder: (_, _, _) => Center(
-                                  child: AppIcon(
-                                    strokeSvg(AppIcons.user, width: 2),
-                                    size: 16,
-                                    color: c.ink2,
+                                )
+                              : Image.network(
+                                  avatarUrl,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 96,
+                                  errorBuilder: (_, _, _) => Center(
+                                    child: AppIcon(
+                                      strokeSvg(AppIcons.user, width: 2),
+                                      size: 16,
+                                      color: c.ink2,
+                                    ),
                                   ),
                                 ),
-                              ),
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.x1),
                       Flexible(
@@ -833,7 +837,7 @@ class CookCard extends StatelessWidget {
           );
           return;
         }
-        CitroCardMorph.pushPageSoft(
+        CitroCardMorph.openCardPage(
           context,
           source: rect,
           settings: const RouteSettings(name: 'cook'),
@@ -1035,7 +1039,7 @@ class _CalendarCardState extends State<CalendarCard> {
       Navigator.of(context).pushNamed('/calendar');
       return;
     }
-    CitroCardMorph.pushPageSoft(
+    CitroCardMorph.openCardPage(
       context,
       source: rect,
       settings: const RouteSettings(name: '/calendar'),
