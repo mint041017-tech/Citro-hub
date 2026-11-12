@@ -479,6 +479,8 @@ class _TodoCiciState extends State<TodoCici> with WidgetsBindingObserver {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      // 不传就走 Material 默认的 250/200ms legacy 曲线，和其余弹层节奏不一致。
+      sheetAnimationStyle: CitroMotion.sheetStyle(context),
       builder: (ctx) {
         final c = ctx.c;
         return Container(

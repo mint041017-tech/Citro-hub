@@ -2623,7 +2623,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () async {
-                  final d = await showDatePicker(
+                  final d = await showCitroDatePicker(
                     context: ctx,
                     initialDate: date,
                     firstDate: DateTime(2020),
@@ -2898,7 +2898,7 @@ Future<FridgeItem?> showFridgeDialog(
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        final d = await showDatePicker(
+                        final d = await showCitroDatePicker(
                           context: ctx,
                           initialDate: buyDate ?? DateTime.now(),
                           firstDate: DateTime(2020),
@@ -2913,7 +2913,7 @@ Future<FridgeItem?> showFridgeDialog(
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        final d = await showDatePicker(
+                        final d = await showCitroDatePicker(
                           context: ctx,
                           initialDate:
                               expDate ??

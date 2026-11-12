@@ -63,24 +63,9 @@ class _FishDialogState extends State<_FishDialog> {
 
   Future<void> _pickTime({required bool start}) async {
     final current = FishState.minutes(start ? cfg.start : cfg.end);
-    final picked = await showTimePicker(
+    final picked = await showCitroTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          timePickerTheme: TimePickerThemeData(
-            backgroundColor: context.c.surface,
-            hourMinuteColor: context.c.surface2,
-            dayPeriodColor: context.c.accentLt,
-            dialBackgroundColor: context.c.surface2,
-            dialHandColor: context.c.accent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-            ),
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (picked == null) return;
     final v =
@@ -92,7 +77,7 @@ class _FishDialogState extends State<_FishDialog> {
     final current = FishState.minutes(
       start ? (cfg.breakStart ?? '12:00') : (cfg.breakEnd ?? '13:00'),
     );
-    final picked = await showTimePicker(
+    final picked = await showCitroTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60),
     );

@@ -189,6 +189,74 @@ class _CitroGeneralDialogRoute<T> extends PopupRoute<T> {
   ) => transitionBuilder(context, animation, secondaryAnimation, child);
 }
 
+/// 日期选择器：统一套 Citro 主题。
+///
+/// 不套 builder 的原生日期选择器是 Material 默认配色，和整站没关系；
+/// 这里只改配色与圆角，不动交互。
+Future<DateTime?> showCitroDatePicker({
+  required BuildContext context,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  DateTime? currentDate,
+  String? helpText,
+}) {
+  final c = context.c;
+  return showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    currentDate: currentDate,
+    helpText: helpText,
+    builder: (ctx, child) => Theme(
+      data: Theme.of(ctx).copyWith(
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: c.surface,
+          headerBackgroundColor: c.accentLt,
+          headerForegroundColor: c.ink,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          ),
+        ),
+      ),
+      child: child!,
+    ),
+  );
+}
+
+/// 时间选择器：统一套 Citro 主题（原先有一处完全没套，配色和整站无关）。
+Future<TimeOfDay?> showCitroTimePicker({
+  required BuildContext context,
+  required TimeOfDay initialTime,
+  String? helpText,
+}) {
+  final c = context.c;
+  return showTimePicker(
+    context: context,
+    initialTime: initialTime,
+    helpText: helpText,
+    builder: (ctx, child) => Theme(
+      data: Theme.of(ctx).copyWith(
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: c.surface,
+          hourMinuteColor: c.surface2,
+          hourMinuteTextColor: c.ink,
+          dayPeriodColor: c.accentLt,
+          dayPeriodTextColor: c.ink,
+          dialBackgroundColor: c.surface2,
+          dialHandColor: c.accent,
+          dialTextColor: c.ink,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          ),
+        ),
+      ),
+      child: child!,
+    ),
+  );
+}
+
 /// 底部弹层统一入口：四端同一套抽屉曲线与非对称时长。
 ///
 /// 直接调用 `showModalBottomSheet` 会落到 Flutter 默认的 250ms ease，
