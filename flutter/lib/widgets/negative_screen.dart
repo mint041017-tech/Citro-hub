@@ -85,7 +85,13 @@ class NegativeScreen extends StatelessWidget {
             // 填满抽屉，卡片被拉高、内容居中反而显得空。
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3),
+                // 底部多留 16px：抽屉高度按内容算，贴边时长卡下缘会顶到首页。
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x3,
+                  0,
+                  AppSpacing.x3,
+                  AppSpacing.x2,
+                ),
                 child: _QuickGrid(items: _buildItems(context)),
               ),
             ),

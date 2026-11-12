@@ -39,6 +39,9 @@ class AppState extends ChangeNotifier {
   String _weatherCity = '北海';
   Future<void>? _weatherRequest;
   bool _locationAsked = false;
+
+  /// 用户手动选过城市：启动时的自动定位不再覆盖，只有点「定位并刷新」才重新定位。
+  bool _weatherCityManual = false;
   int unread = 0;
   bool notificationsEnabled = true;
   bool _pushBindingBlocked = false;
@@ -127,6 +130,7 @@ class AppState extends ChangeNotifier {
     _weatherLon =
         double.tryParse(Prefs.getString(PrefKeys.weatherLon) ?? '') ?? 109.1193;
     _weatherCity = Prefs.getString(PrefKeys.weatherCity) ?? '北海';
+    _weatherCityManual = Prefs.getBool(PrefKeys.weatherCityManual);
     zodiacSign = Prefs.getString(PrefKeys.zodiacSign);
     final token = Prefs.getString(PrefKeys.token);
     if (token != null && token.isNotEmpty) {
@@ -490,7 +494,15 @@ class AppState extends ChangeNotifier {
     await Prefs.setString(PrefKeys.customTab, module.name);
   }
 
-  Future<bool> refreshWeatherWithLocation({bool force = false}) async {
+  /// 定位并刷新天气。
+  ///
+  /// [fromUser] 区分两种触发：用户点「定位并刷新」传 true，启动时的自动定位不传。
+  /// 用户手动选过城市后，自动定位不再覆盖它（[_weatherCityManual]）。
+  Future<bool> refreshWeatherWithLocation({
+    bool force = false,
+    bool fromUser = false,
+  }) async {
+    if (!fromUser && _weatherCityManual) return false;
     if (!force && _locationAsked) return false;
     _locationAsked = true;
     final loc = await LocationService.current();
@@ -498,11 +510,34 @@ class AppState extends ChangeNotifier {
     _weatherLat = loc.latitude;
     _weatherLon = loc.longitude;
     _weatherCity = loc.city.isNotEmpty ? loc.city : '当前位置';
+    _weatherCityManual = false;
     await Prefs.setString(PrefKeys.weatherLat, '$_weatherLat');
     await Prefs.setString(PrefKeys.weatherLon, '$_weatherLon');
     await Prefs.setString(PrefKeys.weatherCity, _weatherCity);
+    await Prefs.setBool(PrefKeys.weatherCityManual, false);
     await refreshWeather();
     return true;
+  }
+
+  /// 手动选择城市：写经纬度与城市名并立即刷新。
+  ///
+  /// 选过一次之后，启动时的自动定位会被 [_weatherCityManual] 拦住，
+  /// 除非用户再点「定位并刷新」重新授权。
+  Future<void> setWeatherCity({
+    required String city,
+    required double lat,
+    required double lon,
+  }) async {
+    _weatherLat = lat;
+    _weatherLon = lon;
+    _weatherCity = city;
+    _weatherCityManual = true;
+    _locationAsked = true;
+    await Prefs.setString(PrefKeys.weatherLat, '$lat');
+    await Prefs.setString(PrefKeys.weatherLon, '$lon');
+    await Prefs.setString(PrefKeys.weatherCity, city);
+    await Prefs.setBool(PrefKeys.weatherCityManual, true);
+    await refreshWeather();
   }
 
   Future<void> refreshWeather() {

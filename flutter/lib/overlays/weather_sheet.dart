@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../services/models.dart';
 import '../state/app_state.dart';
@@ -9,6 +13,366 @@ import '../widgets/paper.dart';
 
 Future<void> showWeatherDialog(BuildContext context) async {
   await showCitroDialog(context, builder: (ctx) => const _WeatherDialog());
+}
+
+/// 城市选择：搜索（Open-Meteo 地理编码）+ 热门城市兜底。
+Future<void> showCityPickerDialog(BuildContext context) async {
+  await showCitroDialog(context, builder: (ctx) => const _CityPickerDialog());
+}
+
+class _CityHit {
+  final String name;
+  final double lat;
+  final double lon;
+  final String region;
+
+  const _CityHit({
+    required this.name,
+    required this.lat,
+    required this.lon,
+    this.region = '',
+  });
+
+  /// 同名同坐标视为同一个城市，去掉接口返回的重复项。
+  @override
+  bool operator ==(Object other) =>
+      other is _CityHit && other.name == name && other.lat == lat && other.lon == lon;
+
+  @override
+  int get hashCode => Object.hash(name, lat, lon);
+}
+
+/// 搜索接口失败时也能直接选，不必联网。
+const List<_CityHit> _kHotCities = [
+  _CityHit(name: '北京', lat: 39.9042, lon: 116.4074),
+  _CityHit(name: '上海', lat: 31.2304, lon: 121.4737),
+  _CityHit(name: '广州', lat: 23.1291, lon: 113.2644),
+  _CityHit(name: '深圳', lat: 22.5431, lon: 114.0579),
+  _CityHit(name: '成都', lat: 30.5728, lon: 104.0668),
+  _CityHit(name: '杭州', lat: 30.2741, lon: 120.1551),
+  _CityHit(name: '重庆', lat: 29.5630, lon: 106.5516),
+  _CityHit(name: '武汉', lat: 30.5928, lon: 114.3055),
+  _CityHit(name: '西安', lat: 34.3416, lon: 108.9398),
+  _CityHit(name: '南京', lat: 32.0603, lon: 118.7969),
+  _CityHit(name: '天津', lat: 39.3434, lon: 117.3616),
+  _CityHit(name: '苏州', lat: 31.2989, lon: 120.5853),
+  _CityHit(name: '长沙', lat: 28.2282, lon: 112.9388),
+  _CityHit(name: '郑州', lat: 34.7466, lon: 113.6254),
+  _CityHit(name: '青岛', lat: 36.0671, lon: 120.3826),
+  _CityHit(name: '沈阳', lat: 41.8057, lon: 123.4315),
+  _CityHit(name: '哈尔滨', lat: 45.8038, lon: 126.5349),
+  _CityHit(name: '厦门', lat: 24.4798, lon: 118.0894),
+  _CityHit(name: '昆明', lat: 24.8801, lon: 102.8329),
+  _CityHit(name: '海口', lat: 20.0444, lon: 110.1999),
+  _CityHit(name: '南宁', lat: 22.8170, lon: 108.3665),
+  _CityHit(name: '贵阳', lat: 26.6470, lon: 106.6302),
+  _CityHit(name: '兰州', lat: 36.0611, lon: 103.8343),
+  _CityHit(name: '银川', lat: 38.4872, lon: 106.2309),
+  _CityHit(name: '拉萨', lat: 29.6520, lon: 91.1721),
+  _CityHit(name: '乌鲁木齐', lat: 43.8256, lon: 87.6168),
+  _CityHit(name: '呼和浩特', lat: 40.8424, lon: 111.7490),
+  _CityHit(name: '太原', lat: 37.8706, lon: 112.5489),
+  _CityHit(name: '合肥', lat: 31.8206, lon: 117.2272),
+  _CityHit(name: '福州', lat: 26.0745, lon: 119.2965),
+  _CityHit(name: '南昌', lat: 28.6820, lon: 115.8579),
+  _CityHit(name: '长春', lat: 43.8171, lon: 125.3235),
+  _CityHit(name: '香港', lat: 22.3193, lon: 114.1694),
+  _CityHit(name: '澳门', lat: 22.1987, lon: 113.5439),
+  _CityHit(name: '台北', lat: 25.0330, lon: 121.5654),
+];
+
+class _CityPickerDialog extends StatefulWidget {
+  const _CityPickerDialog();
+
+  @override
+  State<_CityPickerDialog> createState() => _CityPickerDialogState();
+}
+
+class _CityPickerDialogState extends State<_CityPickerDialog> {
+  final TextEditingController _controller = TextEditingController();
+  Timer? _debounce;
+  int _requestId = 0;
+  bool _loading = false;
+  List<_CityHit> _hits = _kHotCities;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onQueryChanged);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.removeListener(_onQueryChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    // 立即重建：空查询时要显示「热门城市」。
+    setState(() {});
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _search(_controller.text),
+    );
+  }
+
+  Future<void> _search(String keyword) async {
+    final q = keyword.trim();
+    if (q.isEmpty) {
+      _requestId++;
+      if (!mounted) return;
+      setState(() {
+        _hits = _kHotCities;
+        _error = null;
+        _loading = false;
+      });
+      return;
+    }
+    final id = ++_requestId;
+    setState(() => _loading = true);
+    try {
+      final uri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
+        'name': q,
+        'count': '10',
+        'language': 'zh',
+        'format': 'json',
+      });
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (!mounted || id != _requestId) return;
+      if (res.statusCode != 200) throw Exception('${res.statusCode}');
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      final raw = body is Map && body['results'] is List
+          ? body['results'] as List
+          : <dynamic>[];
+      final hits = raw
+          .whereType<Map>()
+          .map((e) {
+            final name = '${e['name'] ?? ''}'.trim();
+            final lat = (e['latitude'] as num?)?.toDouble();
+            final lon = (e['longitude'] as num?)?.toDouble();
+            if (name.isEmpty || lat == null || lon == null) return null;
+            final region = [
+              if ('${e['admin1'] ?? ''}'.trim().isNotEmpty)
+                '${e['admin1']}'.trim(),
+              if ('${e['country'] ?? ''}'.trim().isNotEmpty)
+                '${e['country']}'.trim(),
+            ].join(' · ');
+            return _CityHit(name: name, lat: lat, lon: lon, region: region);
+          })
+          .whereType<_CityHit>()
+          .toSet()
+          .toList();
+      setState(() {
+        _hits = hits;
+        _error = hits.isEmpty ? '没有找到「$q」' : null;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted || id != _requestId) return;
+      setState(() {
+        // 搜索挂了也保留热门城市，别让用户空手回去。
+        _error = '城市搜索失败，可先在下面选热门城市';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _pick(_CityHit hit) async {
+    await AppState.instance.setWeatherCity(
+      city: hit.name,
+      lat: hit.lat,
+      lon: hit.lon,
+    );
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    AppToast.show(context, '已切换到 ${hit.name}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final searching = _controller.text.trim().isNotEmpty;
+    return PaperDialog(
+      maxWidth: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('修改城市', style: context.heading(size: 20)),
+              ),
+              Pressable(
+                onTap: () => Navigator.of(context).pop(),
+                hoverLift: 0,
+                hoverShadow: false,
+                borderRadius: BorderRadius.circular(99),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: c.surface2,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.line),
+                  ),
+                  child: Center(
+                    child: AppIcon(
+                      strokeSvg(AppIcons.close, width: 2.2),
+                      size: 14,
+                      color: c.ink2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          CitroTextField(
+            controller: _controller,
+            hint: '搜索城市，如 北京 / 上海',
+            prefix: AppIcon(
+              strokeSvg(AppIcons.search, width: 2),
+              size: 15,
+              color: c.inkSoft,
+            ),
+            textInputAction: TextInputAction.search,
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 1.6),
+                ),
+              ),
+            )
+          else if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                _error!,
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
+              ),
+            )
+          else if (searching)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _hits.length,
+                itemBuilder: (ctx, i) => _cityRow(c, _hits[i]),
+              ),
+            )
+          else
+            _hotWrap(c),
+        ],
+      ),
+    );
+  }
+
+  Widget _hotWrap(CitroColors c) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            AppIcon(
+              strokeSvg(AppIcons.location, width: 2),
+              size: 13,
+              color: c.inkSoft,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '热门城市',
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [for (final hit in _hits) _hotChip(c, hit)],
+        ),
+      ],
+    );
+  }
+
+  Widget _hotChip(CitroColors c, _CityHit hit) {
+    return Pressable(
+      onTap: () => _pick(hit),
+      hoverLift: 0,
+      hoverShadow: false,
+      borderRadius: BorderRadius.circular(99),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: c.line),
+        ),
+        child: Text(
+          hit.name,
+          style: context.body(size: CitroType.small, color: c.ink),
+        ),
+      ),
+    );
+  }
+
+  Widget _cityRow(CitroColors c, _CityHit hit) {
+    return Pressable(
+      onTap: () => _pick(hit),
+      hoverLift: 0,
+      hoverShadow: false,
+      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+        child: Row(
+          children: [
+            AppIcon(
+              strokeSvg(AppIcons.location, width: 2),
+              size: 15,
+              color: c.accentInk,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hit.name,
+                    style: context.body(
+                      size: CitroType.body,
+                      weight: CitroType.medium,
+                      color: c.ink,
+                    ),
+                  ),
+                  if (hit.region.isNotEmpty)
+                    Text(
+                      hit.region,
+                      style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    ),
+                ],
+              ),
+            ),
+            AppIcon(
+              strokeSvg(AppIcons.chevronRight, width: 2.2),
+              size: 14,
+              color: c.inkSoft,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _WeatherDialog extends StatefulWidget {
@@ -30,10 +394,36 @@ class _WeatherDialogState extends State<_WeatherDialog> {
   Future<void> _locateAndRefresh() async {
     if (locating) return;
     setState(() => locating = true);
-    final ok = await AppState.instance.refreshWeatherWithLocation(force: true);
+    // fromUser：用户主动点「定位并刷新」，可以覆盖手动选的城市。
+    final ok = await AppState.instance.refreshWeatherWithLocation(
+      fromUser: true,
+    );
     if (!mounted) return;
     setState(() => locating = false);
-    if (!ok) AppToast.show(context, '定位未开启，已使用上次位置');
+    if (!ok) AppToast.show(context, '定位失败，已保留当前城市');
+  }
+
+  Widget _weatherAction(
+    CitroColors c,
+    String icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppIcon(strokeSvg(icon, width: 2), size: 13, color: c.accentInk),
+            const SizedBox(width: 4),
+            Text(label, style: context.body(size: 12, color: c.accentInk)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -250,23 +640,31 @@ class _WeatherDialogState extends State<_WeatherDialog> {
             ),
           ),
         const SizedBox(height: 8),
-        GestureDetector(
-          onTap: _locateAndRefresh,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(
-                strokeSvg(AppIcons.location, width: 2),
-                size: 13,
-                color: c.accentInk,
-              ),
-              const SizedBox(width: 4),
-              Text(
+        Row(
+          children: [
+            Expanded(
+              child: _weatherAction(
+                c,
+                AppIcons.location,
                 locating ? '定位中…' : '定位并刷新',
-                style: context.body(size: 12, color: c.accentInk),
+                _locateAndRefresh,
               ),
-            ],
-          ),
+            ),
+            Container(
+              width: 1,
+              height: 14,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: c.line2,
+            ),
+            Expanded(
+              child: _weatherAction(
+                c,
+                AppIcons.globe,
+                '修改城市',
+                () => showCityPickerDialog(context),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
       ],

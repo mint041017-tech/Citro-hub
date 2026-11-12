@@ -635,8 +635,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
           top: Radius.circular(CitroColors.radii.card),
         ),
         child: ColoredBox(
-          // CiCi 页面统一用奶米底（玻璃已取消，实心即可）。
-          color: const Color(0xFFF9EDD7),
+          // 页面底跟随主题：浅色奶米 / 深色近黑。
+          // 写死浅色会让深色模式下整页仍是奶米底，和已经 token 化的
+          // 顶栏 / 气泡 / 输入栏错配（同族 todo_cici 用的是 c.surface）。
+          color: c.bg,
           child: SizedBox(
             height: height,
             child: SafeArea(
@@ -812,7 +814,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
               height: 64,
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: c.accent.withAlpha(70),
+                // 和 AI 气泡的头像圈一样，深色下提亮一档才看得见。
+                color: c.accent.withAlpha(c.dark ? 110 : 70),
                 shape: BoxShape.circle,
                 border: Border.all(color: c.line2),
                 boxShadow: CitroColors.shadows.sm(c),

@@ -100,6 +100,10 @@ class PrefKeys {
   static const weatherLat = 'citro_weather_lat';
   static const weatherLon = 'citro_weather_lon';
   static const weatherCity = 'citro_weather_city';
+
+  /// 用户手动选过城市：启动时的自动定位不再覆盖它，
+  /// 只有用户主动点「定位并刷新」才重新定位。
+  static const weatherCityManual = 'citro_weather_city_manual';
   static const notificationsEnabled = 'citro_notifications_enabled';
   static const reduceMotion = 'citro_reduce_motion';
   static const ciciPersona = 'citro_cici_persona';

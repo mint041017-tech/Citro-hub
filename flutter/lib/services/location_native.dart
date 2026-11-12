@@ -50,11 +50,15 @@ class LocationService {
       final lat = (map['latitude'] as num?)?.toDouble();
       final lon = (map['longitude'] as num?)?.toDouble();
       if (lat == null || lon == null) return null;
+      // 原生只回坐标（Geocoder 在部分机型/模拟器上会一直阻塞，把定位拖到超时）。
+      // 城市名统一在这里走 HTTP 逆地理，失败就是空串，不影响天气拉取。
+      final nativeCity = (map['city'] as String?)?.trim() ?? '';
+      final city = nativeCity.isNotEmpty ? nativeCity : await _reverseCity(lat, lon);
       return GeoLocation(
         latitude: lat,
         longitude: lon,
         accuracy: (map['accuracy'] as num?)?.toDouble() ?? 0,
-        city: (map['city'] as String?)?.trim() ?? '',
+        city: city,
       );
     } on TimeoutException {
       return null;

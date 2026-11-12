@@ -165,7 +165,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     if (kIsWeb) return;
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
-    await AppState.instance.refreshWeatherWithLocation(force: true);
+    // 启动时自动定位：用户手动选过城市的话，AppState 内部会直接跳过。
+    await AppState.instance.refreshWeatherWithLocation();
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     await Notifications.ensureInit();

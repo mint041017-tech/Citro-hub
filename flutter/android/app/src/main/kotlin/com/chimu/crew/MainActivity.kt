@@ -538,7 +538,8 @@ class MainActivity : FlutterActivity() {
     private fun resolveLocation(result: MethodChannel.Result) {
         try {
             val manager = getSystemService(LOCATION_SERVICE) as LocationManager
-            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            // 网络定位通常几秒内就能回来，GPS 在室内往往拿不到 fix；两个都要，谁先回来用谁。
+            val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
                 .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
             if (providers.isEmpty()) {
                 result.error("disabled", "系统定位服务未开启", null)
@@ -559,28 +560,40 @@ class MainActivity : FlutterActivity() {
 
             val finished = AtomicBoolean(false)
             val handler = Handler(Looper.getMainLooper()).also { locationHandler = it }
-            val provider = providers.first()
-            val listener = object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    if (finished.compareAndSet(false, true)) {
-                        handler.removeCallbacksAndMessages(null)
-                        runCatching { manager.removeUpdates(this) }
-                        reply(result, location)
-                    }
-                }
-
-                override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) {}
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            val listeners = mutableListOf<LocationListener>()
+            fun cleanup() {
+                listeners.forEach { runCatching { manager.removeUpdates(it) } }
+                listeners.clear()
             }
-            runCatching { manager.requestSingleUpdate(provider, listener, Looper.getMainLooper()) }
-                .onFailure {
-                    result.error("unavailable", "无法请求定位", null)
-                    return
+            var requested = 0
+            for (provider in providers) {
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        if (finished.compareAndSet(false, true)) {
+                            handler.removeCallbacksAndMessages(null)
+                            cleanup()
+                            reply(result, location)
+                        }
+                    }
+
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
                 }
+                listeners.add(listener)
+                val ok = runCatching {
+                    manager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                }.isSuccess
+                if (ok) requested++
+            }
+            if (requested == 0) {
+                cleanup()
+                result.error("unavailable", "无法请求定位", null)
+                return
+            }
             handler.postDelayed({
                 if (finished.compareAndSet(false, true)) {
-                    runCatching { manager.removeUpdates(listener) }
+                    cleanup()
                     val fallback = best
                     if (fallback != null) {
                         reply(result, fallback)
@@ -596,28 +609,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * 直接回传经纬度。
+     *
+     * 逆地理（Geocoder）在部分机型 / 模拟器上没有后端服务，调用会一直阻塞，
+     * 把整个定位拖到 Dart 侧 30s 超时——以前这里就是「定位总失败」的根因。
+     * 现在只回坐标，城市名由 Dart 侧走 HTTP 逆地理（BigDataCloud）拿。
+     */
     private fun reply(result: MethodChannel.Result, loc: Location) {
-        val latitude = loc.latitude
-        val longitude = loc.longitude
-        Thread {
-            var city = ""
-            try {
-                if (Geocoder.isPresent()) {
-                    @Suppress("DEPRECATION")
-                    val addresses = Geocoder(this, Locale.getDefault()).getFromLocation(latitude, longitude, 1)
-                    val address = addresses?.firstOrNull()
-                    city = address?.locality ?: address?.subAdminArea ?: address?.adminArea ?: ""
-                }
-            } catch (_: Exception) {
-            }
-            val payload = hashMapOf<String, Any>(
-                "latitude" to latitude,
-                "longitude" to longitude,
+        result.success(
+            hashMapOf<String, Any>(
+                "latitude" to loc.latitude,
+                "longitude" to loc.longitude,
                 "accuracy" to loc.accuracy,
-                "city" to city
             )
-            runOnUiThread { result.success(payload) }
-        }.start()
+        )
     }
 
     companion object {

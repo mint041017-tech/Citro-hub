@@ -242,9 +242,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         : math.max(120.0, heroBottom - topBarReserved);
     final bgHeight = math.min(rawBg, media.height * 0.55);
     _bgHeight = bgHeight;
-    // 抽屉（负一屏）高度：内容（标题 + 3 小卡一行 + 屏幕分享大卡一行）
-    // 自然高度约 267px，390×844 上取 300px —— 底部留约 33px 呼吸位。
-    final negHeight = (media.height * .355).clamp(280.0, 340.0);
+    // 抽屉（负一屏）高度按内容自然高算，不再用屏高比例：
+    // 标题区 ≈75 + 小卡两排 70×2 + 行距 16×2 + 屏幕分享长卡 102 ≈ 349，
+    // 再加顶部安全区与底部 16px 呼吸位。上一版按 .355 取比例（≈300）是旧排版
+    // （3 小卡一行，内容 ≈267）的校准值；内容变高后长卡被裁在抽屉视口外，
+    // 完全展开时首页顶边又正好贴在抽屉底边上，看起来就像被首页盖住。
+    // 矮屏 / 横屏用 0.62 封顶，超出部分交给抽屉内滚动。
+    final safeTop = MediaQuery.paddingOf(context).top;
+    const negContent = 349.0;
+    final negHeight = math.min(
+      media.height * .62,
+      safeTop + negContent + AppSpacing.x2,
+    );
     _negThreshold = negHeight;
     // 下拉行程 = 抽屉高度，手指拖多少首页就往下走多少。
     final travel = negHeight;
