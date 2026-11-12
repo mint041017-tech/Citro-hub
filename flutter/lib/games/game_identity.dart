@@ -41,6 +41,18 @@ class GameIdentity {
   /// 可选的第二色，用于少数需要双色的游戏（果冻、铃渡）。
   final Color? secondary;
 
+  /// 图形里需要「纸白」的部分（卡牌背面、果冻瓶身）。
+  static const Color paper = Color(0xFFFFFDF8);
+
+  /// 主色实底上的文字 / 图标色：按主色亮度自动选深墨或纸白，
+  /// 14 款游戏的主色深浅差很大，写死一种总会有一头对比不够。
+  Color get onPrimary =>
+      primary.computeLuminance() > 0.55 ? const Color(0xFF23211C) : paper;
+
+  /// 主色在纸面上的可读深色（ HUD 数字、强调文字用），
+  /// 比 [deep] 更饱和，小字号下比深棕更清楚。
+  Color get primaryInk => Color.lerp(primary, const Color(0xFF1A1410), 0.35)!;
+
   /// 暗色纸面上把主色提亮一点，避免大面积深色把卡片压糊。
   Color onDark() => Color.lerp(primary, const Color(0xFFFFFFFF), 0.18)!;
 }

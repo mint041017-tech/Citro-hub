@@ -484,7 +484,7 @@ class _WebGameCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: entry.gradient(c),
+                    colors: entry.gradient,
                   ),
                   borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 ),

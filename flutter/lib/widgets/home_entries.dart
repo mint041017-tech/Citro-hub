@@ -496,7 +496,7 @@ Widget _artTile(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: entry.gradient(c),
+        colors: entry.gradient,
       ),
       borderRadius: BorderRadius.circular(size * .26),
       border: Border.all(color: c.line),

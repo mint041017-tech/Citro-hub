@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../games/game_loader.dart';
+import '../games/game_identity.dart';
 import '../games/game_registry.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
@@ -33,7 +34,6 @@ class GamesPage extends StatelessWidget {
     final gameColumns = duo
         ? (width >= 900 ? 6 : (width >= 640 ? 5 : (width >= 460 ? 4 : 3)))
         : (width >= 1180 ? 7 : (width >= 920 ? 6 : (width >= 680 ? 5 : 3)));
-    final games = kGameCards;
     // 分类重排：按玩法类型分组，不再是一整坨平铺。
     final gameGroups = <(String, List<GameCardData>)>[
       for (final group in const <(String, List<String>)>[
@@ -44,7 +44,7 @@ class GamesPage extends StatelessWidget {
       ])
         (
           group.$1,
-          [for (final key in group.$2) games.firstWhere((g) => g.key == key)],
+          [for (final key in group.$2) kGameCards.firstWhere((g) => g.key == key)],
         ),
     ];
     final content = Stack(
@@ -70,46 +70,28 @@ class GamesPage extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: AppSpacing.x1),
                     child: CitroPageTitle('游戏', '挑一个，玩一会儿'),
                   ),
-                  const SizedBox(height: AppSpacing.x2),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CitroCard(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final group in gameGroups) ...[
-                              Text(
-                                group.$1,
-                                style: context.body(
-                                  size: CitroType.label,
-                                  weight: CitroType.medium,
-                                  color: c.ink2,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.x1),
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: gameColumns,
-                                      crossAxisSpacing: AppSpacing.x1,
-                                      mainAxisSpacing: AppSpacing.x1,
-                                      childAspectRatio: 1.06,
-                                    ),
-                                itemCount: group.$2.length,
-                                itemBuilder: (_, i) =>
-                                    _GameCard(entry: group.$2[i]),
-                              ),
-                              const SizedBox(height: AppSpacing.x3),
-                            ],
-                          ],
-                        ),
+                  const SizedBox(height: AppSpacing.x3),
+                  for (final group in gameGroups) ...[
+                    _GroupHeader(
+                      title: group.$1,
+                      count: group.$2.length,
+                      games: group.$2,
+                    ),
+                    const SizedBox(height: AppSpacing.x2),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: gameColumns,
+                        crossAxisSpacing: AppSpacing.x2,
+                        mainAxisSpacing: AppSpacing.x2,
+                        childAspectRatio: .8,
                       ),
-                    ],
-                  ),
+                      itemCount: group.$2.length,
+                      itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
+                    ),
+                    const SizedBox(height: AppSpacing.x4),
+                  ],
                 ],
               ),
             ),
@@ -131,6 +113,66 @@ class GamesPage extends StatelessWidget {
   }
 }
 
+/// 分组标题：分类名 + 这一组的游戏色点 + 数量。
+class _GroupHeader extends StatelessWidget {
+  final String title;
+  final int count;
+  final List<GameCardData> games;
+
+  const _GroupHeader({
+    required this.title,
+    required this.count,
+    required this.games,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x1),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: context.heading(size: CitroType.title, color: c.ink),
+          ),
+          const SizedBox(width: AppSpacing.x1),
+          // 这一组游戏里出现次数最多的身份色，作为分组的小标记。
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+              border: Border.all(color: c.line),
+            ),
+            child: Text(
+              '$count 款',
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.medium,
+                color: c.inkSoft,
+              ),
+            ),
+          ),
+          const Spacer(),
+          for (final g in games.take(5))
+            Padding(
+              padding: const EdgeInsets.only(left: 3),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: g.identity.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GameCard extends StatelessWidget {
   final GameCardData entry;
   const _GameCard({required this.entry});
@@ -144,6 +186,7 @@ class _GameCard extends StatelessWidget {
         (layout?.duo ?? false) && CitroLayoutScope.widthOf(context) < 520;
     final desktopWeb = kIsWeb && CitroLayoutScope.widthOf(context) >= 1025;
     final large = (tablet || desktopWeb) && !compact;
+    final identity = entry.identity;
     return Pressable(
       onTap: () {
         // 和听隅一致：纸页从第一帧轻沉淡入，卡片快照抬起，退出时反向收回。
@@ -163,7 +206,7 @@ class _GameCard extends StatelessWidget {
       },
       // 卡片底用实心表面（玻璃已全线取消，仅 Tab 栏保留）。
       child: CitroCard(
-        radius: 14,
+        radius: 18,
         padding: EdgeInsets.zero,
         clip: Clip.antiAlias,
         child: Column(
@@ -171,34 +214,72 @@ class _GameCard extends StatelessWidget {
             Expanded(
               child: Container(
                 margin: const EdgeInsets.all(1),
-                padding: EdgeInsets.all(compact ? 6 : 4),
+                padding: EdgeInsets.all(compact ? 6 : 8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: entry.gradient(c),
+                    colors: entry.gradient,
                   ),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                    bottomLeft: Radius.circular(9),
-                    bottomRight: Radius.circular(9),
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(11),
+                    bottomRight: Radius.circular(11),
                   ),
                 ),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: entry.art(context),
-                  ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: entry.art(context),
+                        ),
+                      ),
+                    ),
+                    // 分类小标签：贴在封面右上角，颜色跟身份色走。
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: GameIdentity.paper.withValues(alpha: .94),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
+                          border: Border.all(
+                            color: identity.primary.withValues(alpha: .5),
+                          ),
+                        ),
+                        child: Text(
+                          identity.tag,
+                          style: TextStyle(
+                            fontFamily: AppFonts.rounded,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .4,
+                            color: identity.deep,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
             Container(
-              height: large ? 48 : (compact ? 36 : 39),
+              height: large ? 50 : (compact ? 38 : 42),
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: large ? 12 : 10),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: c.line)),
+                color: c.surface,
+                border: Border(top: BorderSide(color: identity.primary.withAlpha(40))),
               ),
               alignment: Alignment.centerLeft,
               child: CitroHero(
