@@ -2,7 +2,7 @@
   "version": "2.6.0",
   "versionCode": 2600,
   "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.6.0-release.apk",
-  "size": 68912972,
+  "size": 68978304,
   "notes": [
     "全局动效统一：卡片开合一律 300ms 进 / 220ms 出，回和去是同一条轨迹",
     "弹层退场更快，不再「进去等多久、出来也等多久」",
