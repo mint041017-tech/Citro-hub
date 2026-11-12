@@ -1,8 +1,8 @@
 {
-  "version": "2.3.9",
-  "versionCode": 2390,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.3.9-release.apk",
-  "size": 68912672,
+  "version": "2.5.1",
+  "versionCode": 2510,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v2.5.1-release.apk",
+  "size": 68912972,
   "notes": [
     "配色改为奶米 + 青瓷 + 棕墨三色搭配",
     "卡面原图打包进包内，首页背景更清晰",
@@ -13,6 +13,6 @@
     "Tab 栏恢复玻璃效果",
     "去掉链接跳转确认弹窗"
   ],
-  "publishedAt": "2026-11-11",
+  "publishedAt": "2026-11-12",
   "force": false
 }
