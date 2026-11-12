@@ -454,7 +454,6 @@ class GameFeihuaView extends StatelessWidget {
   // --- 菜单 --------------------------------------------------------------
 
   Widget _menu(BuildContext context) {
-    final id = GameIdentityScope.of(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -462,20 +461,6 @@ class GameFeihuaView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: id.soft,
-                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              ),
-              child: Text(
-                '令',
-                style: context.heading(size: CitroType.titleLg, color: id.primaryInk),
-              ),
-            ),
-            const SizedBox(height: 14),
             Text(
               '飞花令',
               textAlign: TextAlign.center,

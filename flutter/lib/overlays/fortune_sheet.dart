@@ -69,7 +69,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
     with TickerProviderStateMixin {
   static final _cardRadius = BorderRadius.all(Radius.circular(CitroColors.radii.card));
   static const _flipDuration = Duration(milliseconds: 900);
-  static const _flipCurve = Cubic(.22, 1.12, .32, 1);
+  // 翻面曲线：去掉 overshoot（原 Cubic(.22,1.12,.32,1) 会有「顿」一下的过冲）。
+  static const Curve _flipCurve = CitroMotion.easeInOut;
 
   final GlobalKey _cardKey = GlobalKey();
   Offset? _downAt;
@@ -422,7 +423,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
             child: AnimatedBuilder(
               animation: _entrance,
               builder: (context, child) {
-                final t = Curves.easeOutBack.transform(
+                final t = CitroMotion.easeOut.transform(
                   _entrance.value.clamp(0.0, 1.0),
                 );
                 final fade = Curves.easeOut.transform(
@@ -452,12 +453,24 @@ class _FortuneDialogState extends State<_FortuneDialog>
                     top: -40,
                     bottom: -40,
                     child: IgnorePointer(
-                      child: AnimatedBuilder(
-                        animation: _aura,
-                        builder: (context, _) => CustomPaint(
-                          painter: _FortuneAuraPainter(
-                            t: _aura.value,
-                            color: c.accent,
+                      // 光晕图案固定不变，只做旋转 + 呼吸缩放：整层只栅格化一次，
+                      // 不用每帧重画 24 条射线 + 16 个粒子（原来是 5s 无限 repeat
+                      // 且每帧重绘整块区域，是打卡动画卡顿的主因）。
+                      child: RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: _aura,
+                          builder: (context, child) {
+                            final t = _aura.value;
+                            return Transform.rotate(
+                              angle: t * math.pi * 2 / 24,
+                              child: Transform.scale(
+                                scale: .96 + .04 * math.sin(t * math.pi * 2),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: CustomPaint(
+                            painter: _FortuneAuraPainter(color: c.accent),
                           ),
                         ),
                       ),
@@ -1392,9 +1405,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
 
 /// 打卡卡面出场时的暖色光晕：缓慢旋转的射线 + 呼吸光斑。
 class _FortuneAuraPainter extends CustomPainter {
-  _FortuneAuraPainter({required this.t, required this.color});
+  _FortuneAuraPainter({required this.color});
 
-  final double t;
   final Color color;
 
   @override
@@ -1410,8 +1422,8 @@ class _FortuneAuraPainter extends CustomPainter {
 
     final ray = Paint()..strokeWidth = 1.2;
     for (var i = 0; i < 24; i++) {
-      final angle = i * math.pi * 2 / 24 + t * math.pi * 2 / 24;
-      final pulse = .5 + .5 * math.sin(t * math.pi * 2 + i * .9);
+      final angle = i * math.pi * 2 / 24;
+      final pulse = .5 + .5 * math.sin(i * .9);
       ray.color = color.withAlpha((8 + 14 * pulse).round());
       final inner = radius * (.46 + .02 * pulse);
       final outer = radius * (.66 + .06 * pulse);
@@ -1422,8 +1434,8 @@ class _FortuneAuraPainter extends CustomPainter {
       );
     }
     for (var i = 0; i < 16; i++) {
-      final phase = (t + i / 16) % 1;
-      final angle = i * 2.399 + phase * math.pi * 2;
+      final phase = i / 16;
+      final angle = i * 2.399;
       final dist = radius * (.5 + .18 * phase);
       final p = center + Offset(math.cos(angle), math.sin(angle)) * dist;
       final fade = math.sin(phase * math.pi);
@@ -1436,8 +1448,7 @@ class _FortuneAuraPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FortuneAuraPainter old) =>
-      old.t != t || old.color != color;
+  bool shouldRepaint(covariant _FortuneAuraPainter old) => old.color != color;
 }
 
 /// 翻面时扫过卡面的一道暖光；只在动画期间显形。
