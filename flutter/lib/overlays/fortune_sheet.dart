@@ -120,7 +120,6 @@ class _FortuneDialogState extends State<_FortuneDialog>
       duration: _revealDuration,
       value: 1,
     );
-    _reduced = CitroMotion.reduced(context);
     _load();
     _loadCard();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -133,6 +132,14 @@ class _FortuneDialogState extends State<_FortuneDialog>
       // 卡背先停 240ms 让用户看清「今天要翻什么」，再翻开。
       _introTimer = Timer(const Duration(milliseconds: 240), _flipToFront);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // MediaQuery 依赖要在 didChangeDependencies 里读，initState 里读会抛
+    // 「dependOnInheritedWidgetOfExactType() was called before initState() finished」。
+    _reduced = CitroMotion.reduced(context);
   }
 
   Future<void> _loadCard() async {
