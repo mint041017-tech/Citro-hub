@@ -477,8 +477,12 @@ class _CiciComposerState extends State<CiciComposer>
   @override
   void dispose() {
     _micTimer?.cancel();
-    _hideOverlay();
+    // 同 global_search：卸载不播退场动画，直接摘掉浮层再放走控制器。
+    final entry = _entry;
+    _entry = null;
     _entryAnim?.dispose();
+    _entryAnim = null;
+    entry?.remove();
     VoiceRecorder.cancel();
     super.dispose();
   }

@@ -49,6 +49,9 @@ const Color _paper = Color(0xFFF2E9D8);
 /// 按钮和间距都按这个基准缩放，避免小窗口里 UI 压过水面。
 const double _boardBaseWidth = 362;
 
+/// GameLiveBar 的高度 + 下边距（竖屏棋盘区下方的「正在玩」条）。
+const double _liveBarHeight = 48 + 12;
+
 /// 浮层统一进场时长：结算卡与选关页共用，遮罩同一种颜色同一种淡入。
 const Duration _overlayFade = Duration(milliseconds: 300);
 
@@ -456,7 +459,9 @@ class _KnockwaterPageState extends State<KnockwaterPage>
   }
 
   bool _isChapterExpanded(String chapter) =>
-      _chapterExpanded[chapter] ?? (chapter == kLevels[_level].chapter);
+      // 默认展开「继续」要回到的章节（lastPlayed），而不是 _level 所在的章节：
+      // 带存档进来时 _level 仍是 0，继续入口却在后续章节。
+      _chapterExpanded[chapter] ?? (chapter == kLevels[_resumeIndex].chapter);
 
   void _toggleChapter(String chapter) {
     setState(() {
@@ -838,27 +843,38 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     _dragLast = null;
   }
 
-  /// 棋盘尺寸：宽度取自舞台内容区约束（横屏已扣除左右侧栏），
-  /// 高度在页面约束里扣除顶栏 / 正在玩 / 滚动内边距，再按 0.6 的
-  /// 宽高比收敛，竖屏、横屏、平板、桌面都不会被裁切。
+  /// 棋盘尺寸：宽度取自 board 槽位的内容区约束（横屏已扣除左右侧栏），
+  /// 高度按内容区可用高度折算，再按 0.6 的宽高比收敛，竖屏、横屏、
+  /// 平板、桌面都不会被裁切。
   ///
   /// 这里读父级 [LayoutBuilder] 约束而不是 `MediaQuery.sizeOf`：
   /// GameScaffold 把 board 放进滚动视图，槽位的高度约束是无穷，
-  /// 只有页面约束能给出「扣除外壳后还剩多少」。
+  /// 所以槽位有界时（紧凑壳的 Expanded）直接用槽位；无界时从页面
+  /// 约束扣掉真实外壳（顶栏 / 正在玩条 / 底部安全区 / 滚动内边距）
+  /// 折算内容区高度。固定 160/40 在竖屏短视口 + 大底部安全区时会
+  /// 算出比内容区更高的棋盘，把重叩钮顶到折叠线以下。
   ({double width, double height}) _boardSize(
     BoxConstraints page,
     BoxConstraints area,
     bool wide,
+    EdgeInsets safe,
   ) {
     final contentW = area.maxWidth.isFinite
         ? area.maxWidth
         : math.max(260.0, page.maxWidth - 32);
     // Windows 窗口多一层标题栏，扣掉后棋盘不会被顶出视口。
     final chromeInset = platform.isWindows ? 40.0 : 0.0;
-    final budget = wide
-        ? page.maxHeight - 40 - chromeInset
-        : page.maxHeight - 160 - chromeInset;
-    final capH = math.min(900.0, math.max(260.0, budget));
+    final contentH = area.maxHeight.isFinite
+        ? area.maxHeight
+        : wide
+            ? page.maxHeight - safe.top - 20 - chromeInset
+            : page.maxHeight -
+                GameMetrics.headHeight -
+                _liveBarHeight -
+                safe.bottom -
+                8 -
+                chromeInset;
+    final capH = math.min(900.0, math.max(260.0, contentH));
     final width = math.min(
       contentW,
       math.min(640.0, math.max(260.0, capH * 0.75)),
@@ -881,6 +897,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
         builder: (context, page) {
           // 横屏判定与 GameScaffold 的 landscape 保持一致（宽 > 高即出侧栏）。
           final wide = page.maxWidth > page.maxHeight;
+          // 底部安全区随设备变化，折算内容区高度时要扣掉。
+          final safe = MediaQuery.paddingOf(context);
           return ValueListenableBuilder<GameHudSnapshot>(
             valueListenable: _hud,
             builder: (context, hud, _) {
@@ -909,7 +927,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                 ],
                 board: LayoutBuilder(
                   builder: (context, area) {
-                    final size = _boardSize(page, area, wide);
+                    final size = _boardSize(page, area, wide, safe);
                     final identity = GameIdentityScope.of(context);
                     return DecoratedBox(
                       decoration: BoxDecoration(
@@ -918,16 +936,18 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         ),
                         // 身份色微光描在水面板外缘，和页面顶光、正在玩条
                         // 连成同一层颜色，而不是一块悬浮的深色贴纸。
+                        // 阴影范围收到 14px 以内：board 滚动区左右只留
+                        // 16px gutter、底部 0，再大会被裁掉。
                         boxShadow: <BoxShadow>[
                           BoxShadow(
                             color: identity.primary.withValues(alpha: 0.22),
-                            blurRadius: 26,
-                            offset: const Offset(0, 8),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                           const BoxShadow(
                             color: Color(0x33000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 6),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
                           ),
                         ],
                       ),
@@ -1120,7 +1140,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                           Text(
                             '第 ${hud.levelIndex + 1} 关',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 13,
                               letterSpacing: 2.2,
                               color: kGlow.withValues(alpha: 0.42),
                             ),
@@ -1150,7 +1170,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                             child: Text(
                               '铃息',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 13,
                                 letterSpacing: 2,
                                 color: kGlow.withValues(alpha: 0.38),
                               ),
@@ -1209,7 +1229,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         Text(
                           '花瓣',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 13,
                             letterSpacing: 1.4,
                             color: kGlow.withValues(alpha: 0.4),
                           ),
@@ -1226,7 +1246,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       '星数 $_starTotal/$_maxStars',
                       key: const ValueKey('kw-hud-stars'),
                       style: context.hand(
-                        size: 10,
+                        size: 13,
                         color: kGold.withValues(alpha: 0.55),
                       ),
                     ),
@@ -1285,7 +1305,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                             child: Text(
                               kLevels[hud.levelIndex].hint,
                               style: TextStyle(
-                                fontSize: 12 * s,
+                                fontSize: math.max(13.0, 12 * s),
                                 height: 1.65,
                                 letterSpacing: 0.3 * s,
                                 color: _paper.withValues(alpha: 0.76),
@@ -1485,7 +1505,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
         children: <Widget>[
           Icon(
             ok ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-            size: 12 * s,
+            size: math.max(13.0, 12 * s),
             color: ok ? kGlow : _paper.withValues(alpha: 0.3),
           ),
           SizedBox(width: 6 * s),
@@ -1493,7 +1513,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 11 * s,
+                fontSize: math.max(13.0, 11 * s),
                 height: 1.5,
                 letterSpacing: 0.2 * s,
                 color: _paper.withValues(alpha: ok ? 0.82 : 0.6),
@@ -1513,7 +1533,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
             Text(
               '教学 · 三步',
               style: TextStyle(
-                fontSize: 10 * s,
+                fontSize: math.max(13.0, 10 * s),
                 letterSpacing: 2 * s,
                 color: kGold.withValues(alpha: 0.8),
               ),
@@ -1522,7 +1542,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
             Text(
               '$done/3',
               style: TextStyle(
-                fontSize: 10 * s,
+                fontSize: math.max(13.0, 10 * s),
                 color: kGlow.withValues(alpha: 0.55),
               ),
             ),

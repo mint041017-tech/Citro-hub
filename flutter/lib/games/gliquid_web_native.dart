@@ -20,6 +20,7 @@ import 'game_ui.dart'
         GameIcons,
         GameIdentityScope,
         GameLiveBar,
+        GameMetrics,
         GameScaffold,
         GameScorePill,
         gameIcon,
@@ -347,11 +348,14 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                 ),
               ),
               Expanded(
-                // 紧凑壳的棋盘在 Expanded 里：宽高都有界，直接按内容区尺寸来。
+                // 紧凑壳的棋盘在 Expanded 里：宽高都有界，先按宽度折算，
+                // 再用可用高度收底（与 Web 共用 LiquidBoardMetrics.boardSizeFor）。
                 child: LayoutBuilder(
                   builder: (context, cons) {
                     final size = LiquidBoardMetrics.boardSizeFor(
-                      maxWidth: cons.maxWidth - LiquidBoardMetrics.sidePad * 2,
+                      // 与 Web 的 GameScaffold board 区同左右内边距（gutter*2），
+                      // 同一窗口 native / web 拿到相同视口。
+                      maxWidth: cons.maxWidth - GameMetrics.gutter * 2,
                       maxHeight: cons.maxHeight,
                     );
                     return Center(
@@ -581,7 +585,7 @@ class _LiquidBoot extends StatelessWidget {
               '咕噜果冻铺 · 软体合并',
               style: context.body(
                 size: CitroType.small,
-                color: identity.deep.withAlpha(160),
+                color: identity.primaryInk,
               ),
             ),
           ],

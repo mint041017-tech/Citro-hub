@@ -187,18 +187,25 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
 /// 刹车棋盘（内嵌网页视口）按内容区约束推导。
 ///
 /// 内容区宽度有界、高度无界，所以高度按宽度折算：窄内容区（手机）给竖屏
-/// 比例，宽内容区（桌面横屏）给接近 16:10 的驾驶视角。
+/// 比例，宽内容区（桌面横屏）给接近 16:10 的驾驶视角。两个比例在阈值附近
+/// 平滑过渡，避免内容宽跨过阈值时高度突变。
 const double _kBrakeMaxWidth = 900;
 const double _kBrakeMaxHeight = 640;
 const double _kBrakeCompactRatio = 1.35;
 const double _kBrakeWideRatio = 0.62;
 const double _kBrakeCompactMaxWidth = 560;
 
+/// 比例过渡带半宽：在阈值前后各 90px 内从竖屏比例平滑插值到宽屏比例。
+const double _kBrakeRatioBlend = 90;
+
 Size _brakeBoardSize(double maxWidth) {
   final w = math.min(maxWidth, _kBrakeMaxWidth);
-  final ratio = w < _kBrakeCompactMaxWidth
-      ? _kBrakeCompactRatio
-      : _kBrakeWideRatio;
+  // 阈值附近用 smoothstep 插值比例，高度随宽度连续变化（559 与 560 同高）。
+  final t = ((w - _kBrakeCompactMaxWidth) / _kBrakeRatioBlend)
+      .clamp(0.0, 1.0)
+      .toDouble();
+  final ratio = _kBrakeCompactRatio +
+      (_kBrakeWideRatio - _kBrakeCompactRatio) * (t * t * (3 - 2 * t));
   final h = (w * ratio).clamp(240.0, _kBrakeMaxHeight).toDouble();
   return Size(w, h);
 }
@@ -239,7 +246,7 @@ class _BrakeLoading extends StatelessWidget {
               '极限刹车 · 原版赛道',
               style: context.body(
                 size: CitroType.small,
-                color: identity.deep.withAlpha(160),
+                color: identity.primaryInk,
               ),
             ),
           ],

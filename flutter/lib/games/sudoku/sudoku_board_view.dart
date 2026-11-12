@@ -250,10 +250,18 @@ class _SudokuBoardPainter extends CustomPainter {
   int get _base => layer * _rows * _cols;
 
   /// 格面底色：主题面上叠一层身份色浅端，整盘一眼是数独的颜色。
-  Color get _cellBase => Color.alphaBlend(
-    identity.soft.withValues(alpha: colors.dark ? .26 : .58),
-    colors.surface2,
-  );
+  /// 暗色下身份色是固定浅底调，叠在深面上只会发灰，改用中性深面。
+  Color get _cellBase => colors.dark
+      ? colors.surface2
+      : Color.alphaBlend(
+          identity.soft.withValues(alpha: .58),
+          colors.surface2,
+        );
+
+  /// 数字墨色：浅底用身份深色端；暗色主题下深面统一用主题浅墨。
+  /// identity.onDark() 在选中格的蓝调浮层上只剩 3:1 出头，不够稳。
+  Color get _givenInk => colors.dark ? colors.ink : identity.deep;
+  Color get _entryInk => colors.dark ? colors.ink : identity.primaryInk;
 
   /// 有规则 3×3 宫结构的变体：隔宫铺一层极淡的身份色。
   bool get _hasBoxStructure =>
@@ -551,9 +559,7 @@ class _SudokuBoardPainter extends CustomPainter {
           fontFamilyFallback: AppFonts.fallback,
           fontSize: fontSize,
           fontWeight: FontWeight.w700,
-          color: conflict
-              ? colors.danger
-              : (given ? identity.deep : identity.primaryInk),
+          color: conflict ? colors.danger : (given ? _givenInk : _entryInk),
           height: 1,
         ),
       ),
@@ -843,7 +849,8 @@ class _SudokuBoardPainter extends CustomPainter {
   void _paintInequalities(Canvas canvas) {
     if (puzzle.inequalities.isEmpty) return;
     final stroke = Paint()
-      ..color = identity.primaryInk
+      // 暗色下 identity.primaryInk 是深蓝，压在 surface2 光晕上只有约 1.3:1。
+      ..color = colors.dark ? identity.onDark() : identity.primaryInk
       ..strokeWidth = math.max(1.2, cell * .045)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

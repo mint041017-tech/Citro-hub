@@ -1137,7 +1137,7 @@ class GameSheepView extends StatelessWidget {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(height: toolsH, child: _tools(context)),
+              _tools(context),
               const SizedBox(height: toolsGap),
               _stage(
                 context,
@@ -1157,8 +1157,11 @@ class GameSheepView extends StatelessWidget {
   // --- 道具条 ---------------------------------------------------------
 
   Widget _tools(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    // 窄横屏内容区放不下 3 个按钮，用 Wrap 换行，避免 RenderFlex 横向溢出。
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         _tool(
           context,
@@ -1168,7 +1171,6 @@ class GameSheepView extends StatelessWidget {
           enabled: shuffleEnabled,
           onTap: onShuffle,
         ),
-        const SizedBox(width: 10),
         _tool(
           context,
           label: '撤销',
@@ -1177,7 +1179,6 @@ class GameSheepView extends StatelessWidget {
           enabled: undoEnabled,
           onTap: onUndo,
         ),
-        const SizedBox(width: 10),
         _tool(
           context,
           label: '移出',
@@ -1224,7 +1225,9 @@ class GameSheepView extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: id.primary,
+                  // 角标底用身份深色端：主色 #85AC5C 亮度 0.3526，纸白字只有
+                  // 2.57:1；换 deep #587C38 后纸白 4.74:1。
+                  color: id.deep,
                   shape: BoxShape.circle,
                   border: Border.all(color: c.surface, width: 1.5),
                 ),
@@ -1385,18 +1388,23 @@ class GameSheepView extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < _slotCount; i++) ...[
-              if (i > 0) const SizedBox(width: 3),
-              SizedBox(
-                width: slotSize,
-                height: slotSize,
-                child: _slot(context, i, slotSize),
-              ),
+        child: FittedBox(
+          // 卡槽按内容宽算，但父容器可能被压得更窄（横屏 / 窄窗口）；
+          // scaleDown 保证永远放得下，只是整体略缩，不溢出不裁切。
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < _slotCount; i++) ...[
+                if (i > 0) const SizedBox(width: 3),
+                SizedBox(
+                  width: slotSize,
+                  height: slotSize,
+                  child: _slot(context, i, slotSize),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

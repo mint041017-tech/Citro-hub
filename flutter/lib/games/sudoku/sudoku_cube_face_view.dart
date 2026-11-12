@@ -78,10 +78,12 @@ class SudokuCubeFaceView extends StatelessWidget {
             child: RepaintBoundary(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Color.alphaBlend(
-                    identity.soft.withValues(alpha: c.dark ? .26 : .58),
-                    c.surface2,
-                  ),
+                  color: c.dark
+                      ? c.surface2
+                      : Color.alphaBlend(
+                          identity.soft.withValues(alpha: .58),
+                          c.surface2,
+                        ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: identity.primary.withAlpha(64)),
                   boxShadow: CitroColors.shadows.card(c),
@@ -176,10 +178,12 @@ class _FaceCell extends StatelessWidget {
     final conflict = conflicts.contains(index);
     final peer = peers.contains(index);
     final same = selectedValue != 0 && value == selectedValue;
-    var bg = Color.alphaBlend(
-      identity.soft.withValues(alpha: c.dark ? .26 : .58),
-      c.surface2,
-    );
+    var bg = c.dark
+        ? c.surface2
+        : Color.alphaBlend(
+            identity.soft.withValues(alpha: .58),
+            c.surface2,
+          );
     if (peer) {
       bg = Color.alphaBlend(identity.primary.withValues(alpha: .10), bg);
     }
@@ -195,6 +199,9 @@ class _FaceCell extends StatelessWidget {
         bg,
       );
     }
+    // 暗色主题下深面统一用主题浅墨，identity.onDark() 在选中浮层上不够稳。
+    final givenInk = c.dark ? c.ink : identity.deep;
+    final entryInk = c.dark ? c.ink : identity.primaryInk;
     final fontSize = (cell * .52).clamp(9.0, 30.0);
     final noteSize = (cell * .2).clamp(5.0, 9.0);
     return GestureDetector(
@@ -224,7 +231,7 @@ class _FaceCell extends StatelessWidget {
                     fontWeight: isGiven ? FontWeight.w700 : FontWeight.w700,
                     color: conflict
                         ? c.danger
-                        : (isGiven ? identity.deep : identity.primaryInk),
+                        : (isGiven ? givenInk : entryInk),
                     height: 1,
                   ),
                 ),

@@ -2030,7 +2030,9 @@ class _LayerChip extends StatelessWidget {
                     ? c.danger
                     : (selected
                           ? identity.onPrimary
-                          : (complete ? identity.primaryInk : c.line2)),
+                          : (complete
+                                ? (c.dark ? c.ink : identity.primaryInk)
+                                : c.line2)),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -2273,7 +2275,9 @@ class _ColumnPeek extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: bad
                     ? c.danger
-                    : (on ? identity.onPrimary : identity.primaryInk),
+                    : (on
+                          ? identity.onPrimary
+                          : (c.dark ? c.ink : identity.primaryInk)),
                 height: 1,
               ),
             ),
@@ -2294,13 +2298,13 @@ class _DifficultyNotice extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
-        color: Color.alphaBlend(c.stamp.withValues(alpha: .08), c.surface2),
+        color: Color.alphaBlend(c.danger.withValues(alpha: .08), c.surface2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.stamp.withValues(alpha: .38)),
+        border: Border.all(color: c.danger.withValues(alpha: .38)),
       ),
       child: Row(
         children: [
-          gameIcon(GameIcons.lightbulb, size: 14, color: c.stamp),
+          gameIcon(GameIcons.lightbulb, size: 14, color: c.danger),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2618,7 +2622,11 @@ class _Legend extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          gameIcon(GameIcons.sparkle, size: 13, color: identity.primaryInk),
+          gameIcon(
+            GameIcons.sparkle,
+            size: 13,
+            color: c.dark ? c.ink2 : identity.primaryInk,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2670,7 +2678,7 @@ class _BoardOverlay extends StatelessWidget {
             textAlign: TextAlign.center,
             style: context.heading(
               size: CitroType.heading,
-              color: fail ? c.danger : identity.primaryInk,
+              color: fail ? c.danger : (c.dark ? c.ink : identity.primaryInk),
             ),
           ),
           if (description.isNotEmpty) ...[
@@ -2733,7 +2741,7 @@ class _LoadingPanel extends StatelessWidget {
               height: 34,
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                color: identity.primary,
+                color: c.dark ? identity.onDark() : identity.primary,
               ),
             ),
             const SizedBox(height: 14),

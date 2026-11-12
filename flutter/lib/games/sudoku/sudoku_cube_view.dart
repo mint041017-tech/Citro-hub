@@ -416,15 +416,21 @@ class _SudokuCubePainter extends CustomPainter {
       SudokuCubeFace.frontLeft => .05,
       SudokuCubeFace.frontRight => .09,
     };
-    final base = Color.alphaBlend(
-      identity.soft.withValues(alpha: colors.dark ? .26 : .58),
-      colors.surface2,
-    );
+    final base = colors.dark
+        ? colors.surface2
+        : Color.alphaBlend(
+            identity.soft.withValues(alpha: .58),
+            colors.surface2,
+          );
     return Color.alphaBlend(
       colors.ink.withValues(alpha: colors.dark ? shade * .45 : shade),
       base,
     );
   }
+
+  /// 数字墨色：浅底用身份深色端；暗色主题下深面统一用主题浅墨。
+  Color get _givenInk => colors.dark ? colors.ink : identity.deep;
+  Color get _entryInk => colors.dark ? colors.ink : identity.primaryInk;
 
   void _paintFace(
     Canvas canvas,
@@ -577,9 +583,7 @@ class _SudokuCubePainter extends CustomPainter {
               fontFamily: AppFonts.noto,
               fontFamilyFallback: AppFonts.fallback,
               fontWeight: given ? FontWeight.w700 : FontWeight.w700,
-              color: conflict
-                  ? colors.danger
-                  : (given ? identity.deep : identity.primaryInk),
+              color: conflict ? colors.danger : (given ? _givenInk : _entryInk),
               height: 1,
             ),
           );

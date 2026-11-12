@@ -636,11 +636,15 @@ class _RowHint extends StatelessWidget {
     final id = GameIdentityScope.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+      child: FittedBox(
+        // 提示值可能是两位数，按「一位数」预算的列宽会不够；
+        // scaleDown 让整行缩一点，而不是溢出到第一格上。
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
           for (var i = 0; i < hints.length; i++) ...[
             if (i > 0) const SizedBox(width: 3),
             Text(
@@ -660,6 +664,7 @@ class _RowHint extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }

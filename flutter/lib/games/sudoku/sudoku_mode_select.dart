@@ -177,7 +177,11 @@ class SudokuModeSelect extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          gameIcon(GameIcons.sparkle, size: 15, color: identity.primaryInk),
+          gameIcon(
+            GameIcons.sparkle,
+            size: 15,
+            color: c.dark ? c.ink2 : identity.primaryInk,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -292,7 +296,8 @@ class _ResumeCard extends StatelessWidget {
                   style: context.body(
                     size: 14,
                     weight: FontWeight.w700,
-                    color: c.ink,
+                    // 卡底是 identity.soft 浅底（暗色下是浅蓝），浅字压浅底只有 1.6:1。
+                    color: c.dark ? identity.primaryInk : c.ink,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -337,10 +342,12 @@ class _Hero extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           decoration: BoxDecoration(
-            color: Color.alphaBlend(
-              identity.soft.withValues(alpha: c.dark ? .22 : .42),
-              c.surface,
-            ),
+            color: c.dark
+                ? c.surface2
+                : Color.alphaBlend(
+                    identity.soft.withValues(alpha: .42),
+                    c.surface,
+                  ),
             borderRadius: BorderRadius.circular(CitroColors.radii.card),
             border: Border.all(color: identity.primary.withAlpha(52)),
             boxShadow: CitroColors.shadows.card(c),
@@ -354,7 +361,10 @@ class _Hero extends StatelessWidget {
                     Text(
                       'SUDOKU · 数独',
                       style: context
-                          .hand(size: 12, color: identity.primaryInk)
+                          .hand(
+                            size: 12,
+                            color: c.dark ? c.ink : identity.primaryInk,
+                          )
                           .copyWith(letterSpacing: 1.6),
                     ),
                     const SizedBox(height: 4),
@@ -487,60 +497,73 @@ class _ModeCard extends StatelessWidget {
         border: Border.all(color: c.line),
         boxShadow: CitroColors.shadows.card(c),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          glyph,
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        mode.title,
-                        style: context.body(
-                          size: 15,
-                          weight: FontWeight.w700,
-                          color: c.ink,
-                        ),
-                      ),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // 两列布局把卡片压到 ~175px 时，「图形 + 12 + 文字」横排必然溢出
+          // （最宽的一枚难度按钮就有 ~90px）。窄卡改成图形在上、文字在下。
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    mode.title,
+                    style: context.body(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: c.ink,
                     ),
-                    if (mode.variant == SudokuVariant.jigsaw) ...[
-                      const SizedBox(width: 6),
-                      const _Tag(text: '每局不同'),
-                    ],
-                    if (mode.key == 'windmill') ...[
-                      const SizedBox(width: 6),
-                      const _Tag(text: '5 盘'),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  mode.blurb,
-                  style: context.body(size: 11, color: c.inkSoft, height: 1.45),
-                ),
+                  ),
+                  if (mode.variant == SudokuVariant.jigsaw)
+                    const _Tag(text: '每局不同'),
+                  if (mode.key == 'windmill') const _Tag(text: '5 盘'),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                mode.blurb,
+                style: context.body(size: 11, color: c.inkSoft, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 7,
+                runSpacing: 6,
+                children: [
+                  for (final d in mode.difficulties)
+                    _StartChip(
+                      label: mode.difficulties.length == 1
+                          ? '开始 · ${d.label}'
+                          : d.label,
+                      onTap: () => onStart(mode, d),
+                    ),
+                ],
+              ),
+            ],
+          );
+          if (box.maxWidth < 216) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(child: glyph),
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 6,
-                  children: [
-                    for (final d in mode.difficulties)
-                      _StartChip(
-                        label: mode.difficulties.length == 1
-                            ? '开始 · ${d.label}'
-                            : d.label,
-                        onTap: () => onStart(mode, d),
-                      ),
-                  ],
-                ),
+                content,
               ],
-            ),
-          ),
-        ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              glyph,
+              const SizedBox(width: 12),
+              Expanded(child: content),
+            ],
+          );
+        },
       ),
     );
   }
@@ -655,7 +678,9 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: identity.soft.withValues(alpha: c.dark ? .42 : .85),
+        color: c.dark
+            ? c.surface2
+            : identity.soft.withValues(alpha: .85),
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Text(
@@ -663,7 +688,7 @@ class _Tag extends StatelessWidget {
         style: context.body(
           size: 9,
           weight: FontWeight.w700,
-          color: identity.primaryInk,
+          color: c.dark ? c.ink : identity.primaryInk,
           height: 1.2,
         ),
       ),

@@ -62,11 +62,16 @@ class PengPalette {
 
 PengPalette pengPalette(GameIdentity identity, CitroColors c) {
   final balls = <_PengColorPair>[
-    _PengColorPair(identity.primary, identity.deep),
+    // 墙改 identity.deep 后，球的亮端统一避开墙色（paper / soft / mix 浅端），
+    // 暗端用 deep / primary / ink 保持体积感，球贴墙时亮端仍可读。
+    _PengColorPair(GameIdentity.paper, identity.deep),
     _PengColorPair(identity.soft, identity.primary),
     _PengColorPair(GameIdentity.paper, identity.primary),
-    _PengColorPair(identity.primaryInk, identity.deep),
-    _PengColorPair(identity.deep, identity.ink),
+    _PengColorPair(
+      Color.lerp(identity.primary, GameIdentity.paper, .5)!,
+      identity.deep,
+    ),
+    _PengColorPair(identity.soft, identity.ink),
     _PengColorPair(
       Color.lerp(identity.primary, GameIdentity.paper, .5)!,
       identity.primary,
@@ -74,8 +79,9 @@ PengPalette pengPalette(GameIdentity identity, CitroColors c) {
   ];
   return PengPalette(
     balls: balls,
-    wall: identity.primary,
-    gapDot: identity.deep,
+    wall: identity.deep,
+    // 墙改成 deep 后，缺口端点圆点要用浅端才压得住（deep 圆点会融进墙里）。
+    gapDot: GameIdentity.paper,
     danger: c.danger,
     dangerInk: c.stamp,
     floatInk: identity.primaryInk,
@@ -91,37 +97,18 @@ const double _cardRadius = 24;
 /// 暗角：直接画 shader 径向渐变（中心柔光 → 边缘轻压暗），
 /// 不再走多层 LUT / ImageFiltered。颜色由身份色派生。
 void _paintVignette(Canvas canvas, Size size, PengPalette palette) {
-  final radius = math.max(size.width, size.height) * 0.72;
   canvas.drawRect(
     Offset.zero & size,
     Paint()
       ..shader = RadialGradient(
         center: const Alignment(0, -0.1),
-        radius: radius,
+        // RadialGradient.radius 是「最短边的分数」，不是像素：写像素值会让
+        // 半径变成十万级，暗角永不出现、整块棋盘被均匀罩一层 paper α70。
+        radius: 0.72,
         colors: [palette.vignetteCenter, palette.vignetteEdge],
         stops: const [0, 1],
       ).createShader(Offset.zero & size),
   );
-}
-
-/// 舞台可用高度：竖屏扣除顶栏 / HUD / 操作行 / 正在玩；横屏扣除左右侧栏。
-///
-/// GameScaffold 的 board 槽位是 SingleChildScrollView（高度无界），
-/// 这里按版式常量估算内容区高度，避免棋盘在横屏 / 平板被裁。
-double _stageHeight(BuildContext context) {
-  final mq = MediaQuery.of(context);
-  final screen = mq.size;
-  final landscape = screen.width > screen.height;
-  const double head = 64; // GameMetrics.headHeight
-  const double hud = 76; // HUD 条（pill + 内外边距）
-  const double actions = 74; // 操作行（boardGap + 按钮 + bodyBottom）
-  const double live = 60; // 正在玩（48 + 12 下边距）
-  const double pad = 8; // board 槽位顶部留白
-  if (landscape) {
-    // 横屏：HUD 与操作行在中间滚动区内，正在玩在右侧栏。
-    return screen.height - mq.padding.top - hud - actions - 20;
-  }
-  return screen.height - head - hud - actions - live - mq.padding.bottom - pad;
 }
 
 double _normA(double a) {
@@ -823,15 +810,13 @@ class GamePengView extends StatelessWidget {
     final board = LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
-        // 优先用父级给的高度约束；GameScaffold 的 board 槽位目前无界，
-        // 回退到按版式常量估算的内容区高度。
-        final avail = constraints.maxHeight.isFinite
-            ? constraints.maxHeight
-            : _stageHeight(context);
         const double hintH = 34.0;
         const double gap = 8.0;
-        // 棋盘随内容区：竖屏铺满剩余高度（圆填满宽度），横屏铺满高度（圆填满高度）。
-        final h = math.max(160.0, avail - hintH - gap);
+        // 棋盘尺寸只吃内容区约束：圆形场地按内容宽算（正方形卡，圆填满宽度），
+        // 不再读 MediaQuery；高度不够时交给外层 SingleChildScrollView 滚动。
+        final h = constraints.maxHeight.isFinite
+            ? math.max(160.0, constraints.maxHeight - hintH - gap)
+            : w;
         onBoardSize?.call(Size(w, h));
         final palette = pengPalette(id, c);
         return Center(
@@ -1125,6 +1110,9 @@ class _PengOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final id = identity;
+    // 浮层是 c.surface（暗色下深面）：primaryInk 只有约 3.0:1，
+    // 暗色主题改用 onDark()。
+    final overlayInk = c.dark ? id.onDark() : id.primaryInk;
     return Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
@@ -1148,7 +1136,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$secs',
                     style: TextStyle(
-                      color: id.primaryInk,
+                      color: overlayInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1156,7 +1144,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$bounces',
                     style: TextStyle(
-                      color: id.primaryInk,
+                      color: overlayInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1164,7 +1152,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: id.primaryInk,
+                      color: overlayInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

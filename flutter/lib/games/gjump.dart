@@ -948,14 +948,11 @@ class GameJumpView extends StatelessWidget {
     final board = LayoutBuilder(
       builder: (context, cons) {
         final w = cons.maxWidth.isFinite ? cons.maxWidth : 360.0;
-        // 优先用父级给的高度约束；GameScaffold 的 board 槽位目前无界，
-        // 回退到按版式常量估算的内容区高度。
-        final avail = cons.maxHeight.isFinite
-            ? cons.maxHeight
-            : _stageHeight(context);
+        // 棋盘尺寸只吃内容区约束：高度按内容宽算（web 画布 360×566 的竖向比例），
+        // 不再读 MediaQuery；高度不够时交给外层 SingleChildScrollView 滚动。
         const double hintH = 34.0;
         const double gap = 8.0;
-        final h = math.min(w / 0.62, math.max(160.0, avail - hintH - gap));
+        final h = w / 0.62;
         onBoardSize?.call(Size(w, h));
         return SizedBox(
           width: w,
@@ -1025,6 +1022,7 @@ class GameJumpView extends StatelessWidget {
                                         ..particles = particles),
                                   repaint: sceneRepaint,
                                   identity: id,
+                                  dark: c.dark,
                                 ),
                               ),
                             ),
@@ -1076,26 +1074,6 @@ class GameJumpView extends StatelessWidget {
       liveProgress: liveProgress,
     );
   }
-}
-
-/// 舞台可用高度：竖屏扣除顶栏 / HUD / 操作行 / 正在玩；横屏扣除左右侧栏。
-///
-/// GameScaffold 的 board 槽位是 SingleChildScrollView（高度无界），
-/// 这里按版式常量估算内容区高度，避免棋盘在横屏 / 平板被裁。
-double _stageHeight(BuildContext context) {
-  final mq = MediaQuery.of(context);
-  final screen = mq.size;
-  final landscape = screen.width > screen.height;
-  const double head = 64; // GameMetrics.headHeight
-  const double hud = 76; // HUD 条（pill + 内外边距）
-  const double actions = 74; // 操作行（boardGap + 按钮 + bodyBottom）
-  const double live = 60; // 正在玩（48 + 12 下边距）
-  const double pad = 8; // board 槽位顶部留白
-  if (landscape) {
-    // 横屏：HUD 与操作行在中间滚动区内，正在玩在右侧栏。
-    return screen.height - mq.padding.top - hud - actions - 20;
-  }
-  return screen.height - head - hud - actions - live - mq.padding.bottom - pad;
 }
 
 /// 提示胶囊：纸底 + 身份色描边 + 前置圆点，移到棋盘外常驻。
@@ -1198,7 +1176,9 @@ class _JumpOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: id.primaryInk,
+                      // 浮层是 c.surface（暗色下深面）：primaryInk 只有约 2.4:1，
+                      // 暗色主题改用 onDark()。
+                      color: c.dark ? id.onDark() : id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1229,10 +1209,14 @@ class _JumpPainter extends CustomPainter {
     this.data, {
     Listenable? repaint,
     required this.identity,
+    this.dark = false,
   }) : super(repaint: repaint);
 
   final _JumpFrameData data;
   final GameIdentity identity;
+
+  /// 暗色主题：台面是深面，身份色实底（ink / primaryInk）要提亮一档才压得住。
+  final bool dark;
 
   List<_JumpBlock> get blocks => data.blocks;
   int get cur => data.cur;
@@ -1896,7 +1880,9 @@ class _JumpPainter extends CustomPainter {
     canvas.translate(p.dx, p.dy);
     if (pieceRot != 0) canvas.rotate(pieceRot);
     canvas.scale(pieceScaleX * _sc, pieceScaleY * _sc);
-    final body = Paint()..color = identity.ink;
+    // 棋子身体 / 头部：暗色台面是深面，身份色墨迹（#471F13）几乎不可见，
+    // 改用 onDark()（主色调亮 18%）压住深底。
+    final body = Paint()..color = dark ? identity.onDark() : identity.ink;
     canvas.drawPath(
       Path()
         ..moveTo(-11, 1)
@@ -1938,6 +1924,10 @@ class _JumpPainter extends CustomPainter {
     }
     for (final f in floats) {
       final a = _clamp01(f.life * 1.4);
+      // 飘字：暗色台面是深面，identity.ink / primaryInk 改用 onDark()。
+      final floatInk = dark
+          ? identity.onDark()
+          : (f.big ? identity.primaryInk : identity.ink);
       final tp = TextPainter(
         text: TextSpan(
           text: f.text,
@@ -1946,7 +1936,7 @@ class _JumpPainter extends CustomPainter {
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: f.big ? 18 : 14,
             fontWeight: FontWeight.w700,
-            color: (f.big ? identity.primaryInk : identity.ink).withValues(alpha: a),
+            color: floatInk.withValues(alpha: a),
           ),
         ),
         textDirection: TextDirection.ltr,

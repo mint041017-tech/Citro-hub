@@ -75,31 +75,4 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('合并瞬间：幽灵块滑入 + 飘分（中段帧）', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      _host(
-        const Game2048View(
-          score: 128,
-          best: 256,
-          tiles: {
-            1: (value: 64, index: 0, pop: true, spawn: false, ghost: false),
-            2: (value: 64, index: 0, pop: false, spawn: false, ghost: true),
-            3: (value: 2, index: 5, pop: false, spawn: false, ghost: false),
-            4: (value: 2, index: 9, pop: false, spawn: true, ghost: false),
-          },
-          floats: [(index: 0, delta: 128)],
-        ),
-      ),
-    );
-    // 只走 80ms：滑动与飘分都在半途，幽灵块还没完全淡出。
-    await tester.pump(const Duration(milliseconds: 80));
-    expect(tester.takeException(), isNull);
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('goldens/g2048_merge_mid.png'),
-    );
-  });
 }

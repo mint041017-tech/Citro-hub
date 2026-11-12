@@ -259,7 +259,7 @@ class _LiquidBoot extends StatelessWidget {
               '咕噜果冻铺 · 软体合并',
               style: context.body(
                 size: CitroType.small,
-                color: identity.deep.withAlpha(160),
+                color: identity.primaryInk,
               ),
             ),
           ],

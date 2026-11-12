@@ -27,7 +27,6 @@ import '../widgets/shared_element.dart';
 import 'game_common.dart'
     show GameTabletRankRail, sameLiveList, showGameAccount, showGameLeaderboard;
 import 'game_identity.dart';
-import 'game_theme.dart';
 
 /// 游戏身份作用域。
 ///
@@ -550,49 +549,60 @@ class _GameScaffoldState extends State<GameScaffold> {
     );
   }
 
-  /// 横屏：HUD 与操作行跟着棋盘一起进可滚动区，避免横屏高度不够时被裁。
+  /// 横屏：HUD 与操作行分别钉在上下两端，中间棋盘可滚。
+  ///
+  /// 旧版把 HUD、棋盘、操作全塞进一条滚动视图，棋盘一大就把操作行顶到
+  /// 折叠线以下——「暂停 / 新游戏」这种必须够得着的按钮不该需要滚。
   Widget _centerArea(BuildContext context) {
     final actions = _visibleActions();
-    return LayoutBuilder(
-      builder: (ctx, area) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            GameMetrics.gutter,
-            8,
-            GameMetrics.gutter,
-            12,
+    return Column(
+      children: [
+        _hudStrip(context),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (ctx, area) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  GameMetrics.gutter,
+                  8,
+                  GameMetrics.gutter,
+                  8,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: math.max(0.0, area.maxHeight - 16),
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: widget.contentMaxWidth,
+                      ),
+                      child: widget.board ?? const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: math.max(0.0, area.maxHeight - 20),
+        ),
+        if (actions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              GameMetrics.gutter,
+              8,
+              GameMetrics.gutter,
+              GameMetrics.bodyBottom,
             ),
             child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _hudStrip(context),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: widget.contentMaxWidth,
-                    ),
-                    child: widget.board ?? const SizedBox.shrink(),
-                  ),
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: GameMetrics.actionGap,
-                      runSpacing: GameMetrics.actionGap,
-                      children: actions,
-                    ),
-                  ],
-                ],
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: GameMetrics.actionGap,
+                runSpacing: GameMetrics.actionGap,
+                children: actions,
               ),
             ),
           ),
-        );
-      },
+      ],
     );
   }
 
@@ -1325,8 +1335,10 @@ class GameSegTabs<T> extends StatelessWidget {
         borderRadius: BorderRadius.circular(CitroColors.radii.button),
         border: Border.all(color: c.line),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      // 用 Wrap 而不是 Row：窄侧栏（iPad 横屏）里段数多时换行，不溢出。
+      child: Wrap(
+        spacing: 0,
+        runSpacing: 0,
         children: [
           for (final it in items)
             GestureDetector(

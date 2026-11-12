@@ -524,7 +524,7 @@ class _BrakeLoadingState extends State<_BrakeLoading>
               '极限刹车 · 原版赛道',
               style: context.body(
                 size: CitroType.small,
-                color: identity.deep.withAlpha(160),
+                color: identity.primaryInk,
               ),
             ),
           ],

@@ -415,6 +415,9 @@ class GameFeihuaView extends StatelessWidget {
       ],
       // 舞台只吃内容区约束：竖屏扣除 HUD / 操作行 / 正在玩，横屏扣除左右侧栏，
       // 不再读 MediaQuery（按整屏宽算在横屏必然裁切）。
+      // 但棋盘区在 SingleChildScrollView 里，高度无界：maxHeight 不可用时退回
+      // 按宽度估算（w * 1.5）。横屏 / 键盘弹出时若真实高度不足，底部输入行会
+      // 落到首屏外，靠整页滚动兜底——注释如实说明，尚未做到自适应。
       board: LayoutBuilder(
         builder: (context, constraints) {
           final w =
@@ -741,29 +744,62 @@ class GameFeihuaView extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Opacity(
-                opacity: count >= 2 ? 1 : 0.4,
-                child: GestureDetector(
-                  onTap: onSwap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 30,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                      border: Border.all(color: id.primary.withAlpha(80)),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '换个令字',
-                      style: context.body(
-                        size: CitroType.meta,
-                        weight: CitroType.strong,
-                        color: id.primaryInk,
+              // 换字按钮 + 解锁提示：对句数从棋盘移除后，count < 2 的解锁条件
+              // 在画面上没有数字依据，补一句最小提示说明还差几句。
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Opacity(
+                    opacity: count >= 2 ? 1 : 0.4,
+                    child: GestureDetector(
+                      onTap: onSwap,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        height: 30,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
+                          border: Border.all(color: id.primary.withAlpha(80)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '换个令字',
+                          style: context.body(
+                            size: CitroType.meta,
+                            weight: CitroType.strong,
+                            color: id.primaryInk,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  if (count < 2) ...[
+                    const SizedBox(height: 4),
+                    // 浅底用 primaryInk：深底主题下深色墨迹会糊，这里垫一层
+                    // id.soft 浅端，暗色主题也保持可读。
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: id.soft,
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
+                      ),
+                      child: Text(
+                        '再对 ${2 - count} 句解锁',
+                        style: context.body(
+                          size: CitroType.small,
+                          color: id.primaryInk,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -853,7 +889,11 @@ class GameFeihuaView extends StatelessWidget {
           if (i < parts.length - 1)
             TextSpan(
               text: ch,
-              style: TextStyle(color: id.primary, fontWeight: FontWeight.w700),
+              // 画在 id.soft 上：主色 3.88:1 不达 AA，换 primaryInk（6.4:1）。
+              style: TextStyle(
+                color: id.primaryInk,
+                fontWeight: FontWeight.w700,
+              ),
             ),
         ],
       ],

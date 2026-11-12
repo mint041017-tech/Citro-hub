@@ -414,6 +414,9 @@ class GameIdiomView extends StatelessWidget {
       ],
       // 舞台只吃内容区约束：竖屏扣除 HUD / 操作行 / 正在玩，横屏扣除左右侧栏，
       // 不再读 MediaQuery（按整屏宽算在横屏必然裁切）。
+      // 但棋盘区在 SingleChildScrollView 里，高度无界：maxHeight 不可用时退回
+      // 按宽度估算（w * 1.5）。横屏 / 键盘弹出时若真实高度不足，底部输入行会
+      // 落到首屏外，靠整页滚动兜底——注释如实说明，尚未做到自适应。
       board: LayoutBuilder(
         builder: (context, constraints) {
           final w =
@@ -839,7 +842,9 @@ class GameIdiomView extends StatelessWidget {
                             TextSpan(
                               text: text.substring(text.length - 1),
                               style: TextStyle(
-                                color: id.primary,
+                                // 画在 id.soft 上：主色 3.98:1 不达 AA，
+                                // 换 primaryInk（6.3:1）与其他强调文字一致。
+                                color: id.primaryInk,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),

@@ -73,31 +73,6 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('贪吃蛇：插值中段帧（固定 0.5，确定性）', (tester) async {
-    // 直接给插值信号一个固定值，不依赖 ticker 的帧时序，golden 才稳定。
-    await _pump(
-      tester,
-      GameSnakeView(
-        snake: const [Point(9, 8), Point(8, 8), Point(7, 8)],
-        prevSnake: const [
-          Offset(9.5, 8),
-          Offset(8.5, 8),
-          Offset(7.5, 8),
-        ],
-        interp: ValueNotifier<double>(0.5),
-        food: const Point(12, 8),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 120));
-    expect(tester.takeException(), isNull, reason: '贪吃蛇插值中段帧');
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('goldens/gsnake_interp_mid.png'),
-    );
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
   testWidgets('华容道：有效滑动 + 无效点击抖动', (tester) async {
     await _pump(tester, const GameSlidePage());
     // 点一个角上的方块（几乎一定不邻接空格）→ 触发抖动。

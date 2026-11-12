@@ -583,7 +583,8 @@ class _Tile24 extends StatelessWidget {
     final c = context.c;
     final id = GameIdentityScope.of(context);
     // 身份色阶：纸白 → 浅端 → 主色 → 深端，数值越大越沉。
-    // 数字一律跟着底色走：浅底用 deep，主色 / 深端实底用 onPrimary。
+    // 数字跟着底色走：浅端到主色实底用 deep（主色 #E08A2E 偏亮，
+    // 纸白 onPrimary 只有 2.6:1）；更深的底色用 paper。
     Color bg(double lerp) => Color.lerp(id.soft, id.primary, lerp)!;
     if (!c.dark) {
       return switch (v) {
@@ -591,8 +592,8 @@ class _Tile24 extends StatelessWidget {
         4 => (bg(.30), id.deep, null, false, false),
         8 => (bg(.50), id.deep, null, false, false),
         16 => (bg(.50), id.deep, null, false, false),
-        32 => (id.primary, id.onPrimary, null, false, true),
-        64 => (id.primary, id.onPrimary, null, false, true),
+        32 => (id.primary, id.deep, null, false, true),
+        64 => (id.primary, id.deep, null, false, true),
         128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
         256 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
         512 => (id.deep, GameIdentity.paper, null, false, true),
@@ -606,8 +607,8 @@ class _Tile24 extends StatelessWidget {
       // 配 onPrimary（纸白）只有 1.8:1，数字几乎看不见。
       8 => (bg(.50), id.deep, null, false, false),
       16 => (bg(.50), id.deep, null, false, false),
-      32 => (id.primary, id.onPrimary, null, false, true),
-      64 => (id.primary, id.onPrimary, null, false, true),
+      32 => (id.primary, id.deep, null, false, true),
+      64 => (id.primary, id.deep, null, false, true),
       128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
       256 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
       512 => (id.deep, GameIdentity.paper, null, false, true),

@@ -305,8 +305,13 @@ class _GlobalSearchState extends State<GlobalSearch>
 
   @override
   void dispose() {
-    _closePanel();
+    // 卸载时直接摘掉浮层：dispose 是同步的，播退场动画会留下一个
+    // still-active 的 Ticker（_GlobalSearchState disposed with an active Ticker）。
+    final entry = _panel;
+    _panel = null;
     _panelAnim?.dispose();
+    _panelAnim = null;
+    entry?.remove();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
