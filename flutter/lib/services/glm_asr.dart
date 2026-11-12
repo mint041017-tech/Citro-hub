@@ -7,18 +7,23 @@ import 'package:http/http.dart' as http;
 ///
 /// 正常路径应该走服务端 `/api/asr`（key 不出端），只有在服务端还没部署
 /// 或未配置 GLM key 时，才退回这里，保证语音功能不至于整条不可用。
+///
+/// 注意：key 不写进仓库、不进安装包，只能用 `--dart-define` 注入，
+/// 否则密钥会随 APK 一起泄露。
 class GlmAsr {
   GlmAsr._();
 
-  static const String _key = String.fromEnvironment(
-    'GLM_ASR_KEY',
-    defaultValue: '9afd1948557345cab1940ba326792230.SYvdnKqsRZPJDVkn',
-  );
+  /// 直连 key 只由 `--dart-define=GLM_ASR_KEY=...` 注入，**不写进仓库、不进安装包**。
+  /// 正常路径是服务端 `/api/asr`（key 不出端），这里只是服务端没配 key 时的兜底。
+  static const String _key = String.fromEnvironment('GLM_ASR_KEY');
 
   static const String _endpoint =
       'https://open.bigmodel.cn/api/paas/v4/audio/transcriptions';
 
   static Future<String> transcribe(String base64Audio) async {
+    if (_key.isEmpty) {
+      throw Exception('未配置 GLM_ASR_KEY');
+    }
     final res = await http
         .post(
           Uri.parse(_endpoint),

@@ -45,6 +45,9 @@ class _CiciComposerState extends State<CiciComposer>
     with TickerProviderStateMixin {
   bool _voiceMode = false;
   bool _holding = false;
+
+  /// 录音是否还在启动中（等权限 / 等引擎）。这期间浮层不能显示「正在听」。
+  bool _startingMic = false;
   bool _recognizing = false;
   bool _slideCancel = false;
   String _preview = '';
@@ -135,8 +138,12 @@ class _CiciComposerState extends State<CiciComposer>
     final generation = ++_holdGeneration;
     HapticFeedback.lightImpact();
     _downY = downY;
+    // _starting：录音还没真正起来（在等麦克风权限 / 引擎启动）。
+    // 这期间浮层显示「正在启动麦克风…」，不能显示「正在听，说完松手」——
+    // 否则权限弹窗还挡着，用户看到「在听」却没收音，会以为卡死了。
     setState(() {
       _holding = true;
+      _startingMic = true;
       _recognizing = false;
       _slideCancel = false;
       _preview = '';
@@ -154,6 +161,7 @@ class _CiciComposerState extends State<CiciComposer>
       if (!mounted) return;
       setState(() {
         _holding = false;
+        _startingMic = false;
         _recognizing = false;
         _slideCancel = false;
         _preview = '';
@@ -218,6 +226,8 @@ class _CiciComposerState extends State<CiciComposer>
     _capTimer = Timer(VoiceRecorder.maxLength, () {
       if (_holding) _endHold(abort: false);
     });
+    // 录音真的起来了：浮层从「正在启动麦克风…」切到「正在听，说完松手」。
+    if (mounted) setState(() => _startingMic = false);
   }
 
   void _onHoldMove(PointerMoveEvent event) {
@@ -426,14 +436,19 @@ class _CiciComposerState extends State<CiciComposer>
     _entryAnim = anim;
     _entryAnims.add(anim);
     _entry = OverlayEntry(
-      builder: (context) => FadeTransition(
-        opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
-        child: SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, .05), end: Offset.zero)
-              .animate(
-                CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
-              ),
-          child: _buildOverlay(context),
+      builder: (context) => Positioned(
+        left: 16,
+        right: 16,
+        bottom: _overlayBottom,
+        child: FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, .05), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+                ),
+            child: _buildOverlayBody(context),
+          ),
         ),
       ),
     );
@@ -491,87 +506,96 @@ class _CiciComposerState extends State<CiciComposer>
     anim.dispose();
   }
 
-  Widget _buildOverlay(BuildContext context) {
+  /// 浮层内容（不含定位）。
+  ///
+  /// 定位必须由 `_showOverlay` 里的 `Positioned` 直接挂在 OverlayEntry 上：
+  /// `_Theater` 只读直接子级的 `StackParentData`，把 `Positioned` 包在
+  /// FadeTransition / SlideTransition 里它就被当成非定位子级，
+  /// 会被 StackFit.expand 铺满整屏、内容全挤在左上角。
+  Widget _buildOverlayBody(BuildContext context) {
     final c = context.c;
     final accent = _slideCancel ? c.danger : c.ink;
-    return Positioned(
-      left: 16,
-      right: 16,
-      bottom: _overlayBottom,
-      child: IgnorePointer(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 220),
-            padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
-            decoration: BoxDecoration(
-              color: accent.withAlpha(238),
-              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-              boxShadow: CitroColors.shadows.lg(c),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    AppIcon(
-                      strokeSvg(
-                        _slideCancel ? AppIcons.close : AppIcons.mic,
-                        width: 2,
-                      ),
-                      size: 13,
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 220),
+          padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(238),
+            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+            boxShadow: CitroColors.shadows.lg(c),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppIcon(
+                    strokeSvg(
+                      _slideCancel ? AppIcons.close : AppIcons.mic,
+                      width: 2,
+                    ),
+                    size: 13,
+                    color: c.bg,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _startingMic
+                        ? '正在启动麦克风…'
+                        : _slideCancel
+                            ? '松开取消'
+                            : (_recognizing ? '正在识别…' : '松开发送'),
+                    style: context.ui(
+                      size: CitroType.caption,
+                      weight: CitroType.strong,
                       color: c.bg,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _slideCancel ? '松开取消' : (_recognizing ? '正在识别…' : '松开发送'),
-                      style: context.ui(
-                        size: CitroType.caption,
-                        weight: CitroType.strong,
-                        color: c.bg,
+                  ),
+                  const SizedBox(width: 10),
+                  // 音量条：一眼看出麦克风到底有没有在采集。
+                  for (var i = 0; i < 5; i++)
+                    Container(
+                      width: 3,
+                      height: 6.0 + i * 3,
+                      margin: const EdgeInsets.only(right: 2),
+                      decoration: BoxDecoration(
+                        color: c.bg.withAlpha(_level / 2 > i ? 230 : 60),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    // 音量条：一眼看出麦克风到底有没有在采集。
-                    for (var i = 0; i < 5; i++)
-                      Container(
-                        width: 3,
-                        height: 6.0 + i * 3,
-                        margin: const EdgeInsets.only(right: 2),
-                        decoration: BoxDecoration(
-                          color: c.bg.withAlpha(_level / 2 > i ? 230 : 60),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    const Spacer(),
-                    if (!_slideCancel)
-                      Text(
-                        '上滑取消',
-                        style: context.ui(
-                          size: CitroType.micro,
-                          color: c.bg.withAlpha(120),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Text(
-                      _preview.isNotEmpty
-                          ? _preview
-                          : (_recognizing ? '正在转成文字…' : '正在听，说完松手'),
+                  const Spacer(),
+                  if (!_slideCancel)
+                    Text(
+                      '上滑取消',
                       style: context.ui(
-                        size: CitroType.bodyLg,
-                        color: _preview.isNotEmpty ? c.bg : c.bg.withAlpha(150),
-                        height: 1.6,
+                        size: CitroType.micro,
+                        color: c.bg.withAlpha(120),
                       ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    _preview.isNotEmpty
+                        ? _preview
+                        : (_startingMic
+                            ? '正在启动麦克风…'
+                            : (_recognizing
+                                ? '正在转成文字…'
+                                : '正在听，说完松手')),
+                    style: context.ui(
+                      size: CitroType.bodyLg,
+                      color: _preview.isNotEmpty ? c.bg : c.bg.withAlpha(150),
+                      height: 1.6,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -95,20 +95,22 @@ class NegativeScreen extends StatelessWidget {
     );
   }
 
-  /// 固定的 5 项：灵敏度 / 玩法抽签 / 视野live / 屏幕分享 / 便签。
+  /// 固定的 5 项：灵敏度 / 玩法抽签 / 视野live / 便签 / 屏幕分享。
+  ///
+  /// 前四项两两一排，最后一项「屏幕分享」单独占一整行长卡（用户指定）。
   List<_QuickItem?> _buildItems(BuildContext context) {
     final byName = {for (final t in kTools) t.name: t};
     return [
       _item(context, byName['灵敏度'], AppIcons.clock),
       _item(context, byName['玩法抽签'], AppIcons.sparkle),
       _item(context, byName['视野live'], AppIcons.eye),
-      _item(context, byName['屏幕分享'], AppIcons.monitor),
       _QuickItem(
         name: '便签',
         desc: '随手记点什么',
         icon: AppIcons.note,
         onTap: () => showNotesModal(context),
       ),
+      _item(context, byName['屏幕分享'], AppIcons.monitor),
     ];
   }
 
@@ -146,40 +148,25 @@ class _QuickGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final tiles = items.whereType<_QuickItem>().toList();
     if (tiles.isEmpty) return const SizedBox.shrink();
-    // 「屏幕分享」用大卡（横向占两列），「便签」用小卡（纵向半高）。
-    // 其余三项等宽排在第一行。
-    final big = tiles.length >= 4 ? tiles[3] : null;
-    final small = tiles.length >= 5 ? tiles[4] : null;
-    final top = big == null || small == null ? tiles : tiles.take(3).toList();
+    // 前四项两两一排；最后一项（屏幕分享）单独占一整行长卡。
+    final head = tiles.length > 1 ? tiles.sublist(0, tiles.length - 1) : tiles;
+    final wide = tiles.length > 1 ? tiles.last : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            for (var i = 0; i < top.length; i++) ...[
-              Expanded(child: _QuickTile(item: top[i])),
-              if (i + 1 < top.length) const SizedBox(width: AppSpacing.x2),
-            ],
-          ],
-        ),
-        if (big != null) ...[
-          const SizedBox(height: AppSpacing.x2),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _QuickTile(item: big, big: true),
-                ),
-                if (small != null) ...[
-                  const SizedBox(width: AppSpacing.x2),
-                  Expanded(child: _QuickTile(item: small)),
-                ],
+        for (var i = 0; i < head.length; i += 2) ...[
+          Row(
+            children: [
+              Expanded(child: _QuickTile(item: head[i])),
+              if (i + 1 < head.length) ...[
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(child: _QuickTile(item: head[i + 1])),
               ],
-            ),
+            ],
           ),
+          const SizedBox(height: AppSpacing.x2),
         ],
+        if (wide != null) _QuickTile(item: wide, wide: true),
       ],
     );
   }
@@ -188,22 +175,22 @@ class _QuickGrid extends StatelessWidget {
 class _QuickTile extends StatelessWidget {
   final _QuickItem item;
 
-  /// 大卡：图标砖更大、标题更大、描述不省略，整卡更醒目。
-  final bool big;
+  /// 长卡（整行）：图标砖更大、标题更大、描述不省略、高度更高。
+  final bool wide;
 
-  const _QuickTile({required this.item, this.big = false});
+  const _QuickTile({required this.item, this.wide = false});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final iconSize = big ? 54.0 : 38.0;
+    final iconSize = wide ? 54.0 : 38.0;
     return Pressable(
       onTap: item.onTap,
       hoverLift: 0,
       hoverShadow: false,
       borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       child: Container(
-        padding: EdgeInsets.all(big ? AppSpacing.x3 : AppSpacing.x2),
+        padding: EdgeInsets.all(wide ? AppSpacing.x3 : AppSpacing.x2),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
@@ -217,13 +204,13 @@ class _QuickTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: c.tintYellow,
                 borderRadius: BorderRadius.circular(
-                  big ? CitroColors.radii.inner : CitroColors.radii.small,
+                  wide ? CitroColors.radii.inner : CitroColors.radii.small,
                 ),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(item.icon, width: 2),
-                  size: big ? 27 : 19,
+                  size: wide ? 27 : 19,
                   color: c.accentInk,
                 ),
               ),
@@ -238,15 +225,15 @@ class _QuickTile extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: big ? CitroType.title : CitroType.label),
+                    style: context.heading(size: wide ? CitroType.title : CitroType.label),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     item.desc,
-                    maxLines: big ? 2 : 1,
+                    maxLines: wide ? 2 : 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: big ? CitroType.small : CitroType.micro,
+                      size: wide ? CitroType.small : CitroType.micro,
                       color: c.inkSoft,
                     ),
                   ),
@@ -255,7 +242,7 @@ class _QuickTile extends StatelessWidget {
             ),
             AppIcon(
               strokeSvg(AppIcons.arrowUpRight, width: 2.2),
-              size: big ? 19 : 15,
+              size: wide ? 19 : 15,
               color: c.inkSoft,
             ),
           ],

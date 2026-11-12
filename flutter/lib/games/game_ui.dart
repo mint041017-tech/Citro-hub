@@ -141,6 +141,10 @@ class GameScaffold extends StatefulWidget {
     this.rankAiSplit = false,
     this.showSidePanels = true,
     this.contentMaxWidth = 760,
+
+    /// 键盘弹出时隐藏操作行（成语接龙 / 飞花令这类有文字录入的游戏用）：
+    /// 键盘抬起时操作行会被顶到首屏外，用户反而点不到。
+    this.hideActionsOnKeyboard = false,
   });
 
   final String gameKey;
@@ -180,6 +184,9 @@ class GameScaffold extends StatefulWidget {
 
   /// 居中内容最大宽度；模式选择页可传更宽的值。
   final double contentMaxWidth;
+
+  /// 键盘弹出时是否隐藏操作行。
+  final bool hideActionsOnKeyboard;
 
   /// 测试时关掉轮询（golden 渲染用）
   static bool liveEnabled = true;
@@ -476,6 +483,12 @@ class _GameScaffoldState extends State<GameScaffold> {
   Widget _actionsStrip(BuildContext context) {
     final actions = _visibleActions();
     if (actions.isEmpty) return const SizedBox.shrink();
+    // 键盘弹出时收起操作行：否则它会被顶到折叠线之外，用户点不到，
+    // 看起来像按钮「消失」了（成语接龙 / 飞花令）。
+    if (widget.hideActionsOnKeyboard &&
+        MediaQuery.viewInsetsOf(context).bottom > 0) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: EdgeInsets.fromLTRB(
         GameMetrics.gutter,

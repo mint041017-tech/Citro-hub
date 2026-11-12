@@ -398,6 +398,7 @@ class GameFeihuaView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GameScaffold(
+      hideActionsOnKeyboard: true,
       gameKey: 'gfeihua',
       title: '飞花令',
       boardGap: 12,

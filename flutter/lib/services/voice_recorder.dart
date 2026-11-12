@@ -41,7 +41,10 @@ class VoiceRecorder {
   /// 平台通道可能一直不回复（权限弹窗被系统吞掉、个别 ROM 的录音服务卡死、
   /// 蓝牙 SCO 连接不回）。所有这些等待都必须有上限，否则调用方会永远等下去，
   /// 界面卡在「按住说话」上。
-  static const Duration startTimeout = Duration(seconds: 6);
+  ///
+  /// 15s 是有意放长的：第一次按住时系统会弹麦克风权限框，用户需要时间决定；
+  /// 6s 会在弹窗还没处理完就超时（实测会误报「麦克风启动超时」）。
+  static const Duration startTimeout = Duration(seconds: 15);
   static const Duration stopTimeout = Duration(seconds: 4);
 
   /// 一次录音会话的编号：取消 / 重启后，旧会话的回调与分片上传不能再写回状态，

@@ -398,6 +398,7 @@ class GameIdiomView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GameScaffold(
+      hideActionsOnKeyboard: true,
       gameKey: 'gidiom',
       title: '成语接龙',
       boardGap: 12,
