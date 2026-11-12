@@ -130,6 +130,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 手势只挂在这里：卡片、顶栏、横滑切 Tab 都不经过它；单击也不会被吞
   /// （只认双击，单击照常落空）。抽屉（负一屏）开着时先不响应，
   /// 免得一次双击既收起抽屉又换图。
+  /// 英雄区上一次点击的时间与位置，用来识别双击。
+  ///
+  /// 用 Listener 的原始指针事件而不是 GestureDetector 的 onDoubleTap：
+  /// 手势竞技场里双击识别器会和首页的下拉拖拽抢，导致下拉被拖住。
+  DateTime? _lastHeroTapAt;
+  Offset? _lastHeroTapPos;
+
+  void _onHeroPointerDown(PointerDownEvent event) {
+    final now = DateTime.now();
+    final lastAt = _lastHeroTapAt;
+    final lastPos = _lastHeroTapPos;
+    final isDoubleTap =
+        lastAt != null &&
+        lastPos != null &&
+        now.difference(lastAt) < const Duration(milliseconds: 320) &&
+        (event.position - lastPos).distance < 40;
+    _lastHeroTapAt = now;
+    _lastHeroTapPos = event.position;
+    if (isDoubleTap) {
+      _lastHeroTapAt = null;
+      _lastHeroTapPos = null;
+      _onDoubleTapBackground();
+    }
+  }
+
   void _onDoubleTapBackground() {
     if (_negProgress.value >= 0.02) return;
     unawaited(Haptics.breath());
@@ -294,9 +319,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     height: bgHeight,
                                     // 双击这块可见背景换图：命中区就是英雄区
                                     // （顶栏以下、卡片以上），不压到卡片点击。
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onDoubleTap: _onDoubleTapBackground,
+                                    // 用 Listener 而不是 GestureDetector：
+                                    // 后者要进手势竞技场，会把首页的下拉（负一屏）
+                                    // 拖拽一起拖住；Listener 只旁观指针，不参与竞争。
+                                    child: Listener(
+                                      behavior: HitTestBehavior.translucent,
+                                      onPointerDown: _onHeroPointerDown,
                                       child: _HomeHeader(side: side),
                                     ),
                                   ),
