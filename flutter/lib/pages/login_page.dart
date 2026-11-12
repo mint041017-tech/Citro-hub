@@ -181,8 +181,8 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
       backgroundColor: c.bg,
       body: Stack(
         children: [
-          // 和主界面共用同一张背景：进主界面时背景是连续的，不跳。
-          const Positioned.fill(child: CitroAmbientBackground(scrim: true)),
+          // 登录页用纯色底：不铺背景图，视觉干净、也不和主界面抢。
+          Positioned.fill(child: ColoredBox(color: c.bg)),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(

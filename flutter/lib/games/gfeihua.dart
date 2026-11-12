@@ -425,9 +425,15 @@ class GameFeihuaView extends StatelessWidget {
         builder: (context, constraints) {
           final w =
               constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+          // 键盘弹出时压缩棋盘：棋盘是固定高（滚动区无界），不压的话
+          // 输入行和下面的「开始飞花令」会被顶到首屏之外。
+          final kb = MediaQuery.viewInsetsOf(context).bottom;
           final h = constraints.maxHeight.isFinite
               ? constraints.maxHeight
-              : math.min(600.0, math.max(420.0, w * 1.5));
+              : math.max(
+                  220.0,
+                  math.min(600.0, math.max(420.0, w * 1.5)) - kb,
+                );
           final id = GameIdentityScope.of(context);
           return SizedBox(
             width: w,
@@ -708,47 +714,58 @@ class GameFeihuaView extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: TextField(
-              controller: input,
-              focusNode: focusNode,
-              enabled: !thinking,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => onEnter?.call(),
-              maxLength: 128,
-              style: context.body(size: CitroType.bodyLg, color: c.ink),
-              decoration: InputDecoration(
-                isDense: true,
-                counterText: '',
-                hintText: '输入一句诗，选候选词后回车提交',
-                hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
-                filled: true,
-                fillColor: id.soft.withAlpha(90),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                // 去掉身份红描边：输入区只用中性描边，聚焦时换主题青瓷。
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                  borderSide: BorderSide(color: c.line2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                  borderSide: BorderSide(color: c.line2),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                  borderSide: BorderSide(color: c.accent, width: 1.5),
-                ),
-                disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                  borderSide: BorderSide(color: c.line2),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: input,
+                    focusNode: focusNode,
+                    enabled: !thinking,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => onEnter?.call(),
+                    maxLength: 128,
+                    style: context.body(size: CitroType.bodyLg, color: c.ink),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      counterText: '',
+                      hintText: '输入一句诗，选候选词后点发送',
+                      hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+                      filled: true,
+                      fillColor: id.soft.withAlpha(90),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      // 去掉身份红描边：输入区只用中性描边，聚焦时换主题青瓷。
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.accent, width: 1.5),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderSide: BorderSide(color: c.line2),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              // 发送按钮：键盘弹出时也能直接点，不必依赖键盘右下角的回车。
+              _FhSendButton(
+                enabled: !thinking,
+                onTap: () => onEnter?.call(),
+              ),
+            ],
           ),
         ),
       ],
@@ -934,6 +951,40 @@ class GameFeihuaView extends StatelessWidget {
           size: CitroType.meta,
           weight: CitroType.strong,
           color: id.ink,
+        ),
+      ),
+    );
+  }
+}
+
+/// 输入区右侧的发送按钮（48 高，和输入框同高）。
+class _FhSendButton extends StatelessWidget {
+  const _FhSendButton({required this.onTap, this.enabled = true});
+
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final id = GameIdentityScope.of(context);
+    return Pressable(
+      onTap: enabled ? onTap : null,
+      hoverLift: 0,
+      hoverShadow: false,
+      borderRadius: BorderRadius.circular(CitroColors.radii.button),
+      child: Container(
+        width: 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: enabled ? id.primary : id.soft,
+          borderRadius: BorderRadius.circular(CitroColors.radii.button),
+        ),
+        child: AppIcon(
+          strokeSvg(AppIcons.arrowRight, width: 2.2),
+          size: 18,
+          color: enabled ? id.onPrimary : c.inkSoft,
         ),
       ),
     );

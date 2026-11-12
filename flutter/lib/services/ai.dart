@@ -137,21 +137,33 @@ class AiService {
       final lines = res.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter());
-      await for (final line in lines) {
-        if (!line.startsWith('data:')) continue;
-        final data = line.substring(5).trim();
-        if (data.isEmpty || data == '[DONE]') continue;
-        try {
-          final j = jsonDecode(data);
-          final choices = j is Map ? j['choices'] : null;
-          if (choices is List && choices.isNotEmpty) {
-            final delta = choices.first is Map
-                ? (choices.first as Map)['delta']
-                : null;
-            final content = delta is Map ? delta['content'] : null;
-            if (content is String && content.isNotEmpty) yield content;
-          }
-        } catch (_) {}
+      // 空闲超时：服务端迟迟不出字（或连接挂着不断流）时，调用方的
+      // `_sending` 会永远为 true，输入栏连麦克风一起被永久禁用，
+      // 用户视角就是「卡死」。这里给每次等待下一个事件设上限。
+      const idle = Duration(seconds: 40);
+      final iterator = StreamIterator<String>(lines);
+      try {
+        while (
+          await iterator.moveNext().timeout(idle, onTimeout: () => false)
+        ) {
+          final line = iterator.current;
+          if (!line.startsWith('data:')) continue;
+          final data = line.substring(5).trim();
+          if (data.isEmpty || data == '[DONE]') continue;
+          try {
+            final j = jsonDecode(data);
+            final choices = j is Map ? j['choices'] : null;
+            if (choices is List && choices.isNotEmpty) {
+              final delta = choices.first is Map
+                  ? (choices.first as Map)['delta']
+                  : null;
+              final content = delta is Map ? delta['content'] : null;
+              if (content is String && content.isNotEmpty) yield content;
+            }
+          } catch (_) {}
+        }
+      } finally {
+        await iterator.cancel();
       }
     } on TimeoutException {
       throw AiException('AI 响应超时，请重试');

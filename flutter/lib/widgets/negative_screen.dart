@@ -145,20 +145,40 @@ class _QuickGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tiles = items.whereType<_QuickItem>().toList();
+    if (tiles.isEmpty) return const SizedBox.shrink();
+    // 「屏幕分享」用大卡（横向占两列），「便签」用小卡（纵向半高）。
+    // 其余三项等宽排在第一行。
+    final big = tiles.length >= 4 ? tiles[3] : null;
+    final small = tiles.length >= 5 ? tiles[4] : null;
+    final top = big == null || small == null ? tiles : tiles.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < tiles.length; i += 2) ...[
-          Row(
-            children: [
-              Expanded(child: _QuickTile(item: tiles[i])),
-              if (i + 1 < tiles.length) ...[
-                const SizedBox(width: AppSpacing.x2),
-                Expanded(child: _QuickTile(item: tiles[i + 1])),
-              ],
+        Row(
+          children: [
+            for (var i = 0; i < top.length; i++) ...[
+              Expanded(child: _QuickTile(item: top[i])),
+              if (i + 1 < top.length) const SizedBox(width: AppSpacing.x2),
             ],
+          ],
+        ),
+        if (big != null) ...[
+          const SizedBox(height: AppSpacing.x2),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _QuickTile(item: big, big: true),
+                ),
+                if (small != null) ...[
+                  const SizedBox(width: AppSpacing.x2),
+                  Expanded(child: _QuickTile(item: small)),
+                ],
+              ],
+            ),
           ),
-          if (i + 2 < tiles.length) const SizedBox(height: AppSpacing.x2),
         ],
       ],
     );
@@ -168,18 +188,22 @@ class _QuickGrid extends StatelessWidget {
 class _QuickTile extends StatelessWidget {
   final _QuickItem item;
 
-  const _QuickTile({required this.item});
+  /// 大卡：图标砖更大、标题更大、描述不省略，整卡更醒目。
+  final bool big;
+
+  const _QuickTile({required this.item, this.big = false});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final iconSize = big ? 54.0 : 38.0;
     return Pressable(
       onTap: item.onTap,
       hoverLift: 0,
       hoverShadow: false,
       borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x2),
+        padding: EdgeInsets.all(big ? AppSpacing.x3 : AppSpacing.x2),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
@@ -188,16 +212,18 @@ class _QuickTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
                 color: c.tintYellow,
-                borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                borderRadius: BorderRadius.circular(
+                  big ? CitroColors.radii.inner : CitroColors.radii.small,
+                ),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(item.icon, width: 2),
-                  size: 19,
+                  size: big ? 27 : 19,
                   color: c.accentInk,
                 ),
               ),
@@ -212,15 +238,15 @@ class _QuickTile extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: CitroType.label),
+                    style: context.heading(size: big ? CitroType.title : CitroType.label),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     item.desc,
-                    maxLines: 1,
+                    maxLines: big ? 2 : 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.body(
-                      size: CitroType.micro,
+                      size: big ? CitroType.small : CitroType.micro,
                       color: c.inkSoft,
                     ),
                   ),
@@ -229,7 +255,7 @@ class _QuickTile extends StatelessWidget {
             ),
             AppIcon(
               strokeSvg(AppIcons.arrowUpRight, width: 2.2),
-              size: 15,
+              size: big ? 19 : 15,
               color: c.inkSoft,
             ),
           ],

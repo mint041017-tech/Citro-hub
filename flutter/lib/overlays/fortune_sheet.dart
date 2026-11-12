@@ -129,8 +129,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
         _frontUp = true;
         return;
       }
-      // 卡背先停 240ms 让用户看清「今天要翻什么」，再翻开。
-      _introTimer = Timer(const Duration(milliseconds: 240), _flipToFront);
+      // 卡背先停一会儿让用户看清「今天要翻什么」，再翻开（原来 240ms 太短，
+      // 看起来像直接翻；也不能长到拖沓）。
+      _introTimer = Timer(const Duration(milliseconds: 680), _flipToFront);
     });
   }
 
