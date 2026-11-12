@@ -124,3 +124,38 @@ flutter/android/**/build/
 flutter/.flutter-plugins
 flutter/.flutter-plugins-dependencies
 devtools/.fontcache/
+
+# ---------- 其他独立项目（不并入 Citro 仓库） ----------
+Ling Du/
+ambient noise/
+health/
+scr/
+docs/shots-ui-review/
+flutter/.impeccable/
+出货规则调整.txt
+.opencode/
+material/card/岁岁/
+material/card/月饼/
+material/card/cici/
+
+# ---------- 评审 / 调试截图（本地临时，不入库） ----------
+f0.png
+f1.png
+f2.png
+f3.png
+f4.png
+f5.png
+f6.png
+g0.png
+g1.png
+g2.png
+g3.png
+g4.png
+g5.png
+s1.png
+s2.png
+v1.png
+now.png
+shot1.png
+devtools/shot-cook.png
+material/cici头像.jpg
