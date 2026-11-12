@@ -23,10 +23,9 @@ import 'game_ui.dart';
 //   · 道具：洗牌 2 次 / 撤销 3 次 / 移出 1 次。
 //   · 计分：score = max(1, 99999 - floor(用时秒))；本机最快用时存 "sheep" 的最好成绩。
 //
-// 版式取自 web 计算样式（390×844 light）：
-//   内容顶 121.663 = HUD 107.641（pills 56.6406 + 9 + actions 42）
-//   + 4 + 10 → 工具条 37 → 14 → 舞台 543 = 362 × 3/2（宽 362，上下留白 14/10）
-//   舞台内：#gsheepBoard 340×453（flex:1）+ 14 + #gsheepSlots 340×50
+// 版式：HUD → 44px 道具带（GameActionButton + 身份色角标）→ 舞台（纸面卡 +
+// 牌桌 + 卡槽）→ 操作行 → 正在玩。牌桌按内容区宽 / 高自适应（去掉写死高度）；
+// 卡槽加宽到 ≥40px，移出区固定高度 52；牌底 / 选中态用身份色。
 // ---------------------------------------------------------------------------
 
 /// 一张牌：牌堆网格坐标（gx/gy 允许半格）+ 所在层 + 图案编号。
@@ -1086,7 +1085,18 @@ class GameSheepView extends StatelessWidget {
       showLive: true,
       liveInScroll: true,
       liveProgress: liveProgress,
-      hud: _hud(context),
+      pills: [
+        GameScorePill(label: '关卡', value: levelText),
+        if (timeListenable != null)
+          ValueListenableBuilder<String>(
+            valueListenable: timeListenable!,
+            builder: (context, value, _) =>
+                GameScorePill(label: '用时', value: value),
+          )
+        else
+          GameScorePill(label: '用时', value: timeText),
+        GameScorePill(label: '最快', value: bestText),
+      ],
       actions: [
         GameActionButton(
           label: '新游戏',
@@ -1101,16 +1111,24 @@ class GameSheepView extends StatelessWidget {
         ),
       ],
       boardGap: 14,
+      // 牌桌只吃内容区约束：宽度按内容区收（横屏扣掉左右侧栏），
+      // 高度用内容区剩余（未定时退化为 2:3 舞台），不再写死 640。
       board: LayoutBuilder(
         builder: (context, cons) {
-          final availableW = cons.maxWidth.isFinite ? cons.maxWidth : 362.0;
-          final tablet = MediaQuery.sizeOf(context).width >= 900;
-          final bodyW = tablet ? math.min(480.0, availableW) : availableW;
-          // 手机保持 2:3；平板以网页版桌面舞台 480×640 为上限，避免棋盘高过视口。
-          final stageH = tablet ? math.min(640.0, bodyW * 1.5) : bodyW * 1.5;
+          final availableW = cons.maxWidth.isFinite && cons.maxWidth > 0
+              ? cons.maxWidth
+              : 362.0;
+          final availableH = cons.maxHeight.isFinite && cons.maxHeight > 0
+              ? cons.maxHeight
+              : availableW * 1.5;
+          final bodyW = math.min(480.0, availableW);
+          const double toolsH = 44;
+          const double toolsGap = 14;
+          final stageH = math.max(240.0, availableH - toolsH - toolsGap);
           final boardW = bodyW - 22;
-          final removedBlock = removed.isEmpty ? 0.0 : 56.0;
-          final boardH = stageH - 2 - 24 - 14 - 50 - removedBlock;
+          // 舞台：1px 边框 + 上 15 / 下 11 内边距 + 14 间距 + 50 卡槽。
+          final removedBlock = removed.isEmpty ? 0.0 : 60.0;
+          final boardH = math.max(80.0, stageH - 28 - 14 - 50 - removedBlock);
           final geom = SheepGeom.compute(
             boardW: boardW,
             boardH: boardH,
@@ -1119,8 +1137,8 @@ class GameSheepView extends StatelessWidget {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _tools(context),
-              const SizedBox(height: 14),
+              SizedBox(height: toolsH, child: _tools(context)),
+              const SizedBox(height: toolsGap),
               _stage(
                 context,
                 bodyW: bodyW,
@@ -1133,84 +1151,6 @@ class GameSheepView extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  // --- HUD ------------------------------------------------------------
-
-  Widget _hud(BuildContext context) {
-    // kit 标题行盒被 SkParagraph 取整成 42.0（web 25.74*1.65 = 42.471），
-    // 整条纵向链会偏高 0.471px；这里补回差值，让 HUD/牌桌/卡槽对齐参考图。
-    return Padding(
-      padding: const EdgeInsets.only(top: 0.471),
-      child: Column(
-        key: const ValueKey<String>('sheepHud'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _pill(context, '关卡', levelText),
-              const SizedBox(width: 10),
-              _timePill(context),
-              const SizedBox(width: 10),
-              _pill(context, '最快', bestText),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 复刻 web `.g-pill`。kit 的 GameScorePill 行盒会被 SkParagraph 取整成
-  /// 20 / 22（web 是 19.8 / 21.85），造成 label 高 1px、value 低 1px；
-  /// 这里自绘并用 ±1px 视觉补偿对齐参考图。
-  Widget _pill(BuildContext context, String label, String value) {
-    final c = context.c;
-    return Container(
-      width: 62,
-      height: 56.64,
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.line),
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: context.body(
-                size: CitroType.small,
-                weight: CitroType.medium,
-                color: c.inkSoft,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              value,
-              style: context.hand(
-                size: CitroType.titleLg,
-                weight: CitroType.strong,
-                color: c.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _timePill(BuildContext context) {
-    final listenable = timeListenable;
-    if (listenable == null) {
-      return _pill(context, '用时', timeText);
-    }
-    return ValueListenableBuilder<String>(
-      valueListenable: listenable,
-      builder: (context, value, _) => _pill(context, '用时', value),
     );
   }
 
@@ -1250,6 +1190,7 @@ class GameSheepView extends StatelessWidget {
     );
   }
 
+  /// 道具按钮：统一用 [GameActionButton]，剩余次数做成身份色角标。
   Widget _tool(
     BuildContext context, {
     required String label,
@@ -1259,45 +1200,47 @@ class GameSheepView extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     final c = context.c;
-    final row = Container(
-      height: 37,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.button),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    final id = GameIdentityScope.of(context);
+    return SizedBox(
+      height: 44,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          gameIcon(icon, size: 16, color: c.ink2),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: context.body(
-              size: CitroType.meta,
-              weight: CitroType.strong,
-              color: c.ink2,
-            ),
+          GameActionButton(
+            label: label,
+            icon: icon,
+            enabled: enabled,
+            onTap: onTap,
+            height: 44,
           ),
-          const SizedBox(width: 6),
-          Text(
-            '$count',
-            style: context.hand(
-              size: CitroType.meta,
-              weight: CitroType.strong,
-              color: c.mintInk,
+          Positioned(
+            right: -5,
+            top: -5,
+            child: Opacity(
+              opacity: enabled ? 1 : 0.4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                height: 18,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: id.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: c.surface, width: 1.5),
+                ),
+                child: Text(
+                  '$count',
+                  style: context.body(
+                    size: 9,
+                    weight: CitroType.strong,
+                    color: id.onPrimary,
+                    height: 1,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
-      ),
-    );
-    return GameHover(
-      enabled: enabled,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? onTap : null,
-        child: enabled ? row : Opacity(opacity: .45, child: row),
       ),
     );
   }
@@ -1313,6 +1256,7 @@ class GameSheepView extends StatelessWidget {
     required SheepGeom geom,
   }) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     return SizedBox(
       key: const ValueKey<String>('sheepStage'),
       width: bodyW,
@@ -1325,7 +1269,7 @@ class GameSheepView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: c.surface,
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                border: Border.all(color: c.line),
+                border: Border.all(color: id.deep.withAlpha(80)),
                 boxShadow: CitroColors.shadows.card(c),
               ),
             ),
@@ -1369,14 +1313,17 @@ class GameSheepView extends StatelessWidget {
     );
   }
 
-  /// 一张贴纸牌：纸面 + 1px 边 + 双层投影（web `.gsheep-tile-inner`）。
+  /// 一张贴纸牌：身份色浅端牌底 + 深端描边 + 投影（web `.gsheep-tile-inner`）。
+  /// [selected] = 已进卡槽的牌，用主色加粗描边。
   Widget _tileCard(
     BuildContext context, {
     required double size,
     required int type,
     bool locked = false,
+    bool selected = false,
   }) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     final radius = BorderRadius.circular(CitroColors.radii.small);
     final iconSize = (size - 2) * 0.8;
     // 300 张牌时逐牌做 MaskFilter/SaveLayer 是主要掉帧源：
@@ -1386,9 +1333,12 @@ class GameSheepView extends StatelessWidget {
       height: size,
       child: Container(
         decoration: BoxDecoration(
-          color: c.surface,
+          color: id.soft,
           borderRadius: radius,
-          border: Border.all(color: c.line),
+          border: Border.all(
+            color: selected ? id.primary : id.deep.withAlpha(90),
+            width: selected ? 2 : 1,
+          ),
           boxShadow: CitroColors.shadows.sm(c),
         ),
         child: Stack(
@@ -1420,46 +1370,40 @@ class GameSheepView extends StatelessWidget {
   // --- 底部 7 个卡槽 --------------------------------------------------
 
   Widget _slotsRow(BuildContext context, double width) {
-    final c = context.c;
-    const slotSize = 34.0;
-    // web 是 border-box：50 = 1 边框 + 7 padding + 34 卡槽。Flutter 的边框不占布局，
-    // 所以 padding 各加 1px，inset 阴影单独铺在整盒（边框内）上。
+    final id = GameIdentityScope.of(context);
+    // 卡槽加宽到 ≥40：7×40 + 6×3 间距 + 左右 6 内边距 = 304，
+    // 竖屏内容区（≈310+）放得下；更窄的横屏按比例收，不撑破。
+    final slotSize = math.min(40.0, (width - 30.0) / _slotCount);
     return Container(
       key: const ValueKey<String>('sheepSlots'),
       width: width,
       height: 50,
       decoration: BoxDecoration(
-        color: c.bg2,
+        color: id.soft.withAlpha(60),
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.line),
+        border: Border.all(color: id.deep.withAlpha(90)),
       ),
-      child: Stack(
-        children: [
-          Padding(
-            // 边框已被 Container 当作内边距（1px），web 是 1 + 7；再补 0.303
-            // 让卡槽虚线框落在参考图的 784.3。
-            padding: const EdgeInsets.fromLTRB(7, 7.303, 7, 6.697),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < _slotCount; i++) ...[
-                  if (i > 0) const SizedBox(width: 5),
-                  SizedBox(
-                    width: slotSize,
-                    height: slotSize,
-                    child: _slot(context, i, slotSize),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < _slotCount; i++) ...[
+              if (i > 0) const SizedBox(width: 3),
+              SizedBox(
+                width: slotSize,
+                height: slotSize,
+                child: _slot(context, i, slotSize),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _slot(BuildContext context, int index, double size) {
-    final c = context.c;
+    final id = GameIdentityScope.of(context);
     final tile = index < slots.length ? slots[index] : null;
     final ghosts = fading.where((e) => e.$3 == index).toList();
     return Stack(
@@ -1467,9 +1411,9 @@ class GameSheepView extends StatelessWidget {
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: c.surface,
+              color: id.soft.withAlpha(60),
               borderRadius: BorderRadius.circular(CitroColors.radii.small),
-              border: Border.all(color: c.line2),
+              border: Border.all(color: id.deep.withAlpha(90)),
             ),
           ),
         ),
@@ -1477,7 +1421,12 @@ class GameSheepView extends StatelessWidget {
           Positioned(
             left: 2,
             top: 2,
-            child: _tileCard(context, size: size - 4, type: tile.type),
+            child: _tileCard(
+              context,
+              size: size - 4,
+              type: tile.type,
+              selected: true,
+            ),
           ),
         // v1.6.0：三消幽灵——牌在原槽位放大 + 淡出（web 版的瞬时消失在
         // 手机上显得生硬，用户反馈要消失动画）。
@@ -1503,39 +1452,42 @@ class GameSheepView extends StatelessWidget {
     );
   }
 
-  /// 移出区（web `#gsheepRemoved`，`--gsheep-removed-*`）：横向排列被移出的牌。
+  /// 移出区（web `#gsheepRemoved`）：固定高度 52，横向排列被移出的牌。
   Widget _removedRow(BuildContext context, double width) {
-    final c = context.c;
+    final id = GameIdentityScope.of(context);
     return Container(
       width: width,
-      height: 48,
+      height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       decoration: BoxDecoration(
-        color: c.bg2,
+        color: id.soft.withAlpha(60),
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.line),
+        border: Border.all(color: id.deep.withAlpha(90)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var i = 0; i < removed.length; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onPickRemoved == null
-                    ? null
-                    : () => onPickRemoved!(removed[i]),
-                child: Opacity(
-                  opacity: .85,
-                  child: _tileCard(context, size: 36, type: removed[i].type),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < removed.length; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onPickRemoved == null
+                      ? null
+                      : () => onPickRemoved!(removed[i]),
+                  child: Opacity(
+                    opacity: .85,
+                    child: _tileCard(context, size: 40, type: removed[i].type),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1544,13 +1496,14 @@ class GameSheepView extends StatelessWidget {
 
   Widget _overlay(BuildContext context) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     return GestureDetector(
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(
           color: c.surface.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(CitroColors.radii.card),
-          border: Border.all(color: c.line),
+          border: Border.all(color: id.deep.withAlpha(80)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1559,7 +1512,10 @@ class GameSheepView extends StatelessWidget {
             Text(
               overlayTitle!,
               textAlign: TextAlign.center,
-              style: context.heading(size: CitroType.heading, color: c.ink),
+              style: context.heading(
+                size: CitroType.heading,
+                color: c.dark ? id.onDark() : id.primaryInk,
+              ),
             ),
             const SizedBox(height: 12),
             ConstrainedBox(

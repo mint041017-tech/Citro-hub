@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 
 /// 记忆卡牌（web `#gmemPage`：index.html:8109-8143 + gmem JS 18096-18239）。
@@ -405,7 +406,7 @@ class _MemoryBoard extends StatelessWidget {
                 // 纸板底：主题面上叠一层极低透明的主色，不铺死色。
                 color: Color.lerp(c.surface, identity.primary, 0.12),
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                border: Border.all(color: identity.deep.withAlpha(70)),
+                border: Border.all(color: identity.primary.withAlpha(60)),
                 boxShadow: CitroColors.shadows.card(c),
               ),
               child: SizedBox(width: wrapW, height: wrapH),

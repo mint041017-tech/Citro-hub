@@ -23,6 +23,7 @@ import '../../services/platform.dart' as platform;
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
+import '../game_identity.dart';
 import '../game_ui.dart';
 import 'engine.dart';
 import 'hud_snapshot.dart';
@@ -47,6 +48,9 @@ const Color _paper = Color(0xFFF2E9D8);
 /// 源版竖屏 390 宽时水面板的宽度（390 - 14*2）。board 内的字号、
 /// 按钮和间距都按这个基准缩放，避免小窗口里 UI 压过水面。
 const double _boardBaseWidth = 362;
+
+/// 浮层统一进场时长：结算卡与选关页共用，遮罩同一种颜色同一种淡入。
+const Duration _overlayFade = Duration(milliseconds: 300);
 
 /// 把一次拖动映射到八个引擎方向之一。
 ///
@@ -114,6 +118,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
   bool _showTitle = true;
   bool _showEnd = false;
   bool _showSelect = false;
+  // 选关页章节折叠：null = 默认（只展开当前关卡所在章节）。
+  final Map<String, bool> _chapterExpanded = <String, bool>{};
   bool _progressSaved = false;
   bool _roundCounted = false;
   double _lastCheckpointAt = -1;
@@ -448,6 +454,31 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     Sfx.ui();
     setState(() => _showSelect = false);
   }
+
+  bool _isChapterExpanded(String chapter) =>
+      _chapterExpanded[chapter] ?? (chapter == kLevels[_level].chapter);
+
+  void _toggleChapter(String chapter) {
+    setState(() {
+      _chapterExpanded[chapter] = !_isChapterExpanded(chapter);
+    });
+  }
+
+  /// 选关页的「继续」入口：回到最近玩过的关卡，有检查点就恢复局面。
+  int get _resumeIndex {
+    var index = (_progress.lastPlayed - 1).clamp(0, kLevels.length - 1).toInt();
+    if (!_progress.isUnlocked(index)) {
+      index = (_progress.highestUnlocked - 1)
+          .clamp(0, kLevels.length - 1)
+          .toInt();
+    }
+    return index;
+  }
+
+  bool get _hasProgress =>
+      _progress.completedCount > 0 ||
+      _progress.highestUnlocked > 1 ||
+      _progress.hasCheckpoint;
 
   void _bindAudio(Engine e) {
     e.onSettle = () => _safeSfx(Sfx.settle);
@@ -807,19 +838,30 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     _dragLast = null;
   }
 
-  ({double width, double height}) _boardSize(Size screen, bool wide) {
-    final contentW = math.min(screen.width - 28, 760.0);
-    // 棋盘优先：去掉重复的 pill 与底部动作行后，board 吃满剩余视口。
-    // 固定占高约为 头部 56 + bodyTop + 标题(20) + 8 + 排行榜 42
-    // + boardGap 8 + 正在玩条 56.7 + bodyBottom 12。
+  /// 棋盘尺寸：宽度取自舞台内容区约束（横屏已扣除左右侧栏），
+  /// 高度在页面约束里扣除顶栏 / 正在玩 / 滚动内边距，再按 0.6 的
+  /// 宽高比收敛，竖屏、横屏、平板、桌面都不会被裁切。
+  ///
+  /// 这里读父级 [LayoutBuilder] 约束而不是 `MediaQuery.sizeOf`：
+  /// GameScaffold 把 board 放进滚动视图，槽位的高度约束是无穷，
+  /// 只有页面约束能给出「扣除外壳后还剩多少」。
+  ({double width, double height}) _boardSize(
+    BoxConstraints page,
+    BoxConstraints area,
+    bool wide,
+  ) {
+    final contentW = area.maxWidth.isFinite
+        ? area.maxWidth
+        : math.max(260.0, page.maxWidth - 32);
+    // Windows 窗口多一层标题栏，扣掉后棋盘不会被顶出视口。
     final chromeInset = platform.isWindows ? 40.0 : 0.0;
-    final maxH = wide
-        ? math.max(260.0, screen.height - 130 - chromeInset)
-        : math.max(260.0, screen.height - 240 - chromeInset);
-    final capH = math.min(900.0, maxH);
+    final budget = wide
+        ? page.maxHeight - 40 - chromeInset
+        : page.maxHeight - 160 - chromeInset;
+    final capH = math.min(900.0, math.max(260.0, budget));
     final width = math.min(
       contentW,
-      math.min(560.0, math.max(260.0, capH * 0.75)),
+      math.min(640.0, math.max(260.0, capH * 0.75)),
     );
     final height = math.min(capH, width / 0.60);
     return (width: width, height: height);
@@ -831,48 +873,80 @@ class _KnockwaterPageState extends State<KnockwaterPage>
       KnockwaterPage.debugBuildCount++;
       return true;
     }());
-    final mq = MediaQuery.sizeOf(context);
-    final wide = mq.width >= 1100 && mq.width > mq.height;
-    final size = _boardSize(mq, wide);
     return Focus(
       focusNode: _focus,
       autofocus: true,
       onKeyEvent: _onKey,
-      child: ValueListenableBuilder<GameHudSnapshot>(
-        valueListenable: _hud,
-        builder: (context, hud, _) {
-          assert(() {
-            KnockwaterPage.debugHudBuildCount++;
-            return true;
-          }());
-          return GameScaffold(
-            gameKey: 'gknockwater',
-            title: '铃渡',
-            titleSize: 20,
-            rankGame: 'knockwater',
-            liveProgress: _live,
-            boardGap: 8,
-            actions: <Widget>[
-              GameActionButton(
-                key: const ValueKey('kw-rank'),
-                label: '排行榜',
-                icon: GameIcons.trophy,
-                onTap: () =>
-                    showGameRank(context, game: 'knockwater', title: '铃渡'),
-              ),
-            ],
-            board: SizedBox(
-              key: const ValueKey('kw-board'),
-              width: size.width,
-              height: size.height,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                  boxShadow: CitroColors.shadows.card(context.c),
+      child: LayoutBuilder(
+        builder: (context, page) {
+          // 横屏判定与 GameScaffold 的 landscape 保持一致（宽 > 高即出侧栏）。
+          final wide = page.maxWidth > page.maxHeight;
+          return ValueListenableBuilder<GameHudSnapshot>(
+            valueListenable: _hud,
+            builder: (context, hud, _) {
+              assert(() {
+                KnockwaterPage.debugHudBuildCount++;
+                return true;
+              }());
+              return GameScaffold(
+                gameKey: 'gknockwater',
+                title: '铃渡',
+                titleSize: 20,
+                rankGame: 'knockwater',
+                liveProgress: _live,
+                boardGap: 8,
+                actions: <Widget>[
+                  GameActionButton(
+                    key: const ValueKey('kw-rank'),
+                    label: '排行榜',
+                    icon: GameIcons.trophy,
+                    onTap: () => showGameRank(
+                      context,
+                      game: 'knockwater',
+                      title: '铃渡',
+                    ),
+                  ),
+                ],
+                board: LayoutBuilder(
+                  builder: (context, area) {
+                    final size = _boardSize(page, area, wide);
+                    final identity = GameIdentityScope.of(context);
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.card,
+                        ),
+                        // 身份色微光描在水面板外缘，和页面顶光、正在玩条
+                        // 连成同一层颜色，而不是一块悬浮的深色贴纸。
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: identity.primary.withValues(alpha: 0.22),
+                            blurRadius: 26,
+                            offset: const Offset(0, 8),
+                          ),
+                          const BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: SizedBox(
+                        key: const ValueKey('kw-board'),
+                        width: size.width,
+                        height: size.height,
+                        child: _buildBoard(
+                          hud,
+                          size.width,
+                          size.height,
+                          identity,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                child: _buildBoard(hud, size.width, size.height),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
@@ -883,9 +957,15 @@ class _KnockwaterPageState extends State<KnockwaterPage>
   // 水面板
   // -------------------------------------------------------------------------
 
-  Widget _buildBoard(GameHudSnapshot hud, double width, double height) {
+  Widget _buildBoard(
+    GameHudSnapshot hud,
+    double width,
+    double height,
+    GameIdentity identity,
+  ) {
     final s = (width / _boardBaseWidth).clamp(0.66, 1.12);
-    final knockSize = 84 * s;
+    // 重叩钮保持 72-84px：小面板也要能稳住拇指，不随缩放掉下去。
+    final knockSize = (84 * s).clamp(72.0, 84.0);
     final circleSize = 50 * s;
     final chromeHidden = _showTitle || _showEnd || _introVisible;
     final playRect = Rect.fromLTWH(4, 4, width - 8, height - 8);
@@ -893,7 +973,9 @@ class _KnockwaterPageState extends State<KnockwaterPage>
       decoration: BoxDecoration(
         color: const Color(0xFF030A0B),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kGold.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: (identity.secondary ?? kGold).withValues(alpha: 0.28),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -940,6 +1022,25 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               ),
             ),
           ),
+          // 身份色微光铺在水面之上，和页面顶光、正在玩条连成同一层颜色；
+          // 水面板是主场景，不是贴在浅色底上的一张深色卡。
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[
+                      identity.primary.withValues(alpha: 0.16),
+                      identity.primary.withValues(alpha: 0.0),
+                    ],
+                    stops: const <double>[0, 0.42],
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             top: 0,
             left: 0,
@@ -978,7 +1079,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
           _buildBoardHint(hud, s, width),
           _buildBoardBottom(circleSize, knockSize, s, chromeHidden),
           _buildIntro(s, width),
-          _buildTitle(s, width, height < 430),
+          _buildTitle(s, width, height < 430 || width < 320),
           if (_showEnd) _buildEnd(s, width),
           _buildToast(s, knockSize),
           if (_showSelect) _buildLevelSelect(s, width),
@@ -1019,8 +1120,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                           Text(
                             '第 ${hud.levelIndex + 1} 关',
                             style: TextStyle(
-                              fontSize: 10 * s,
-                              letterSpacing: 2.2 * s,
+                              fontSize: 10,
+                              letterSpacing: 2.2,
                               color: kGlow.withValues(alpha: 0.42),
                             ),
                           ),
@@ -1031,8 +1132,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: _serif.copyWith(
-                                fontSize: 20 * s,
-                                letterSpacing: 4.6 * s,
+                                fontSize: 20,
+                                letterSpacing: 4.6,
                                 color: _paper.withValues(alpha: 0.94),
                                 height: 1.1,
                               ),
@@ -1049,8 +1150,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                             child: Text(
                               '铃息',
                               style: TextStyle(
-                                fontSize: 10 * s,
-                                letterSpacing: 2 * s,
+                                fontSize: 10,
+                                letterSpacing: 2,
                                 color: kGlow.withValues(alpha: 0.38),
                               ),
                             ),
@@ -1080,8 +1181,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       key: const ValueKey('kw-sound'),
                       onTap: _toggleSound,
                       child: Container(
-                        width: 32 * s,
-                        height: 32 * s,
+                        width: (32 * s).clamp(28.0, 34.0),
+                        height: (32 * s).clamp(28.0, 34.0),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: const Color(0xFF07181A)
@@ -1094,7 +1195,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                           _soundOn
                               ? Icons.volume_up_rounded
                               : Icons.volume_off_rounded,
-                          size: 16 * s,
+                          size: math.max(14.0, 16 * s),
                           color: kGlow.withValues(alpha: _soundOn ? 0.7 : 0.3),
                         ),
                       ),
@@ -1108,15 +1209,15 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                         Text(
                           '花瓣',
                           style: TextStyle(
-                            fontSize: 10 * s,
-                            letterSpacing: 1.4 * s,
+                            fontSize: 10,
+                            letterSpacing: 1.4,
                             color: kGlow.withValues(alpha: 0.4),
                           ),
                         ),
                         SizedBox(width: 4 * s),
                         Text(
                           '${hud.petalsInBay}/${hud.petalCount}',
-                          style: context.hand(size: 13 * s, color: kCoral),
+                          style: context.hand(size: 13, color: kCoral),
                         ),
                       ],
                     ),
@@ -1125,7 +1226,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       '星数 $_starTotal/$_maxStars',
                       key: const ValueKey('kw-hud-stars'),
                       style: context.hand(
-                        size: 9 * s,
+                        size: 10,
                         color: kGold.withValues(alpha: 0.55),
                       ),
                     ),
@@ -1143,7 +1244,9 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     return Positioned(
       left: 0,
       right: 0,
-      top: 86 * s,
+      // HUD 字号固定后高度不再随面板缩，提示条固定在 HUD 之下，
+      // 小面板里也不会盖住花瓣 / 星数。
+      top: 96,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: _hintVisible ? 1 : 0,
@@ -1208,7 +1311,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     return Positioned(
       left: 14 * s,
       right: 14 * s,
-      bottom: 12 * s,
+      // 底部行固定留 12px 安全区，不随面板缩放被挤到边上。
+      bottom: 12,
       child: IgnorePointer(
         ignoring: chromeHidden,
         child: AnimatedOpacity(
@@ -1273,7 +1377,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               Text(
                 '重叩',
                 style: _serif.copyWith(
-                  fontSize: 18 * s,
+                  fontSize: math.max(15.0, 18 * s),
                   letterSpacing: 3 * s,
                   color: kGold,
                 ),
@@ -1282,7 +1386,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               Text(
                 coach ? '按住蓄力' : '3',
                 style: TextStyle(
-                  fontSize: (coach ? 8.5 : 9) * s,
+                  fontSize: math.max(9.0, (coach ? 8.5 : 9) * s),
                   letterSpacing: 0.6 * s,
                   color: kGold.withValues(alpha: coach ? 0.8 : 0.45),
                 ),
@@ -1546,18 +1650,8 @@ class _KnockwaterPageState extends State<KnockwaterPage>
   }
 
   Widget _buildTitle(double s, double width, bool compact) {
-    final hasProgress =
-        _progress.completedCount > 0 ||
-        _progress.highestUnlocked > 1 ||
-        _progress.hasCheckpoint;
-    var resumeIndex = (_progress.lastPlayed - 1)
-        .clamp(0, kLevels.length - 1)
-        .toInt();
-    if (!_progress.isUnlocked(resumeIndex)) {
-      resumeIndex = (_progress.highestUnlocked - 1)
-          .clamp(0, kLevels.length - 1)
-          .toInt();
-    }
+    final hasProgress = _hasProgress;
+    final resumeIndex = _resumeIndex;
     final startLabel = !_progressReady ? '水面初醒' : (hasProgress ? '继 续' : '入 水');
     return IgnorePointer(
       ignoring: !_showTitle,
@@ -1741,13 +1835,13 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               ? '它留在了浅滩上。\n再轻一点，或者换一条路。'
               : '水面安静下来，还有花瓣没有回到湾心。');
 
-    return Positioned.fill(
+    return _WaterOverlay(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {},
         child: Container(
           key: const ValueKey('kw-end'),
-          color: const Color(0xFF030B0C).withValues(alpha: 0.62),
+          color: Colors.transparent,
           alignment: Alignment.center,
           padding: EdgeInsets.all(6 * s),
           child: Center(
@@ -1755,13 +1849,13 @@ class _KnockwaterPageState extends State<KnockwaterPage>
               fit: BoxFit.scaleDown,
               child: TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 520),
+                duration: _overlayFade,
                 curve: Curves.easeOutCubic,
                 builder: (context, t, child) {
                   return Opacity(
                     opacity: t,
                     child: Transform.translate(
-                      offset: Offset(0, 14 * (1 - t)),
+                      offset: Offset(0, 12 * (1 - t)),
                       child: child,
                     ),
                   );
@@ -1884,29 +1978,29 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                       ),
                       SizedBox(height: 20 * s),
                       if (won) ...<Widget>[
-                        _ActionButton(
+                        GameActionButton(
                           key: const ValueKey('kw-next'),
                           label: finalLevel ? '回到第一关' : '下一关',
                           primary: true,
-                          scale: s,
+                          expand: true,
                           onTap: _nextLevel,
                         ),
                         SizedBox(height: 9 * s),
                       ] else if (e.canUndo) ...<Widget>[
-                        _ActionButton(
+                        GameActionButton(
                           key: const ValueKey('kw-end-undo'),
                           label: '回溯一步',
                           primary: true,
-                          scale: s,
+                          expand: true,
                           onTap: _undo,
                         ),
                         SizedBox(height: 9 * s),
                       ],
-                      _ActionButton(
+                      GameActionButton(
                         key: const ValueKey('kw-end-restart'),
                         label: won ? '再走一次' : '重开',
                         primary: !won && !e.canUndo,
-                        scale: s,
+                        expand: true,
                         onTap: _restart,
                       ),
                       SizedBox(height: 2 * s),
@@ -1944,11 +2038,20 @@ class _KnockwaterPageState extends State<KnockwaterPage>
     }
     const gap = 8.0;
     // 78 关一次性铺开会把所有格子都建出来；按 4 列切成行交给
-    // ListView.builder，只构建当前可见的几行。
+    // ListView.builder，只构建当前可见的几行。章节可折叠，
+    // 默认只展开当前关卡所在的那一章。
     final rows = <_LevelRow>[];
     for (final entry in byChapter.entries) {
       final done = entry.value.where(_progress.isCompleted).length;
-      rows.add(_LevelRow.chapter(entry.key, '$done/${entry.value.length}'));
+      final expanded = _isChapterExpanded(entry.key);
+      rows.add(
+        _LevelRow.chapter(
+          entry.key,
+          '$done/${entry.value.length}',
+          expanded: expanded,
+        ),
+      );
+      if (!expanded) continue;
       for (var i = 0; i < entry.value.length; i += 4) {
         final end = math.min(i + 4, entry.value.length);
         rows.add(
@@ -1959,13 +2062,13 @@ class _KnockwaterPageState extends State<KnockwaterPage>
         );
       }
     }
-    return Positioned.fill(
+    return _WaterOverlay(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {},
         child: Container(
           key: const ValueKey('kw-select'),
-          color: const Color(0xF7030B0C),
+          color: Colors.transparent,
           child: Column(
             children: <Widget>[
               Padding(
@@ -2010,6 +2113,22 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                   ],
                 ),
               ),
+              if (_hasProgress)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(14 * s, 4 * s, 14 * s, 8 * s),
+                  child: GameActionButton(
+                    key: const ValueKey('kw-select-continue'),
+                    label: '继续 · 第 ${_resumeIndex + 1} 关',
+                    icon: GameIcons.play,
+                    primary: true,
+                    expand: true,
+                    height: 46,
+                    onTap: () => _startLevel(
+                      _resumeIndex,
+                      resume: _progress.hasCheckpoint,
+                    ),
+                  ),
+                ),
               Expanded(
                 child: ListView.builder(
                   padding: EdgeInsets.fromLTRB(14 * s, 6 * s, 14 * s, 22 * s),
@@ -2019,29 +2138,42 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                     if (row.chapter != null) {
                       return Padding(
                         padding: EdgeInsets.only(bottom: 8 * s),
-                        child: Row(
-                          children: <Widget>[
-                            Flexible(
-                              child: Text(
-                                row.chapter!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11 * s,
-                                  letterSpacing: 2.2 * s,
-                                  color: kGold.withValues(alpha: 0.72),
+                        child: GestureDetector(
+                          key: ValueKey<String>('kw-chapter-${row.chapter}'),
+                          onTap: () => _toggleChapter(row.chapter!),
+                          behavior: HitTestBehavior.opaque,
+                          child: Row(
+                            children: <Widget>[
+                              Flexible(
+                                child: Text(
+                                  row.chapter!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11 * s,
+                                    letterSpacing: 2.2 * s,
+                                    color: kGold.withValues(alpha: 0.72),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              row.count!,
-                              style: TextStyle(
-                                fontSize: 10 * s,
-                                color: _paper.withValues(alpha: 0.35),
+                              const Spacer(),
+                              Text(
+                                row.count!,
+                                style: TextStyle(
+                                  fontSize: 10 * s,
+                                  color: _paper.withValues(alpha: 0.35),
+                                ),
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 4 * s),
+                              Icon(
+                                row.expanded
+                                    ? Icons.expand_less_rounded
+                                    : Icons.expand_more_rounded,
+                                size: 16 * s,
+                                color: kGold.withValues(alpha: 0.6),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
@@ -2346,7 +2478,8 @@ class _CircleButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11 * scale,
+              // 底部操作钮字号固定，小面板里也不掉到 10px 以下。
+              fontSize: math.max(10.0, 11 * scale),
               letterSpacing: 0.6 * scale,
               color: _paper.withValues(alpha: 0.8),
             ),
@@ -2409,52 +2542,34 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    super.key,
-    required this.label,
-    required this.scale,
-    required this.onTap,
-    this.primary = false,
-  });
+/// 统一浮层外壳：结算 / 选关共用同一种遮罩与同一种淡入。
+///
+/// 遮罩颜色从 0 淡到 0.93，内容由调用方自己画（结算卡另有自己的
+/// 上移 + 淡入）。浮层关闭时直接从树上移除，不退场动画——这和页面
+/// 测试与源版手感一致。
+class _WaterOverlay extends StatelessWidget {
+  const _WaterOverlay({required this.child});
 
-  final String label;
-  final double scale;
-  final VoidCallback onTap;
-  final bool primary;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 12 * scale),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(CitroColors.radii.button),
-          gradient: primary
-              ? const LinearGradient(
-                  colors: <Color>[Color(0x8C34584F), Color(0xBF0C2222)],
-                )
-              : null,
-          color: primary ? null : Colors.white.withValues(alpha: 0.03),
-          border: Border.all(
-            color: primary
-                ? kGold.withValues(alpha: 0.5)
-                : _paper.withValues(alpha: 0.12),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13 * scale,
-            letterSpacing: 2.2 * scale,
-            color: primary
-                ? const Color(0xFFF6ECD9)
-                : _paper.withValues(alpha: 0.72),
-          ),
-        ),
+    return Positioned.fill(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: _overlayFade,
+        curve: Curves.easeOutCubic,
+        builder: (context, t, _) {
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: Container(
+              color: const Color(0xFF030B0C).withValues(alpha: 0.93 * t),
+              alignment: Alignment.center,
+              child: Opacity(opacity: t, child: child),
+            ),
+          );
+        },
       ),
     );
   }
@@ -2503,14 +2618,21 @@ class _KnockRingPainter extends CustomPainter {
 class _LevelRow {
   final String? chapter;
   final String? count;
+
+  /// 章节行是否展开（折叠状态下不构建关卡行）。
+  final bool expanded;
   final List<int> levels;
   final bool last;
 
-  const _LevelRow.chapter(this.chapter, this.count)
-    : levels = const <int>[],
-      last = false;
+  const _LevelRow.chapter(
+    this.chapter,
+    this.count, {
+    this.expanded = true,
+  }) : levels = const <int>[],
+       last = false;
 
   const _LevelRow.levels(this.levels, {required this.last})
     : chapter = null,
-      count = null;
+      count = null,
+      expanded = true;
 }

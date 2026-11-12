@@ -1,11 +1,9 @@
-// 数织（Nonogram）页 —— 像素级复刻 web 版 #gnonoPage（390×844 light）。
-// 视觉基准：_tmp/ref/games/gnono-m-l.png
-// web 结构来源：index.html `#gnonoPage`（h1 → gnono-hud → g-hud → gnono-wrap →
-// gnono-board → gnono-overlay → g-live）与 styles/citro-games.css 第 10 节。
-// 移动端实测（390 宽）：h1 顶 129.2；难度条 50..340 × 184..217（290×33，
-// 三个 82/97/97 药丸、gap6、选中 accent）；HUD 行 56.64 高（2 个 62 宽 pill +
-// 2 个 103.73×56.64 按钮）；棋盘 382×402 @ (6,315)：border1 #D2C8B0、bg #E4DCC9、
-// radius14、inset 阴影；内部 padding6 + gap2，行提示列 48、列提示行 68、格子 30。
+// 数织（Nonogram）页 —— 纸面网格，按内容区约束自适应。
+// 版式：难度 / 填色模式分段器（GameSegTabs）→ HUD → 棋盘 → 操作行 → 正在玩。
+// cell 由内容宽算出并夹在 32–72：手机竖屏 15 阶会超出内容区，
+// 由 InteractiveViewer 提供双指缩放 + 拖动；横屏 / 平板 / 桌面自动放大。
+// 配色只来自 GameIdentity：格线 identity.soft 低透明、填色格 identity.primary、
+// 标记叉 identity.deep、提示数字 identity.primaryInk（完成行划线 + 降饱和）。
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -15,11 +13,10 @@ import 'package:flutter/material.dart';
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 class GameNonoPage extends StatefulWidget {
   const GameNonoPage({super.key});
@@ -210,7 +207,10 @@ class _GameNonoPageState extends State<GameNonoPage> {
 }
 
 /// 纯视觉层 —— 可在 golden 测试中用固定数据渲染。
-class GameNonoView extends StatelessWidget {
+///
+/// 「填色 / 标记」是视图层的输入模式（[onTap] 路由到填色或标记），
+/// 页面状态机与长按标记手势都不变；默认仍是填色。
+class GameNonoView extends StatefulWidget {
   const GameNonoView({
     super.key,
     this.diff = 'std',
@@ -255,185 +255,95 @@ class GameNonoView extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
+  State<GameNonoView> createState() => _GameNonoViewState();
+}
+
+class _GameNonoViewState extends State<GameNonoView> {
+  bool _markMode = false;
+
+  void _handleTap(int r, int c) {
+    if (_markMode) {
+      widget.onMark?.call(r, c);
+    } else {
+      widget.onTap?.call(r, c);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GameScaffold(
       gameKey: 'gnono',
       title: '数织',
-      liveProgress: liveProgress,
+      liveProgress: widget.liveProgress,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
-      rankInitial: diff,
-      above: [_NonoTabs(value: diff, onChanged: onDiff)],
+      rankInitial: widget.diff,
+      above: [
+        GameSegTabs<String>(
+          items: const [
+            ('easy', '简单 5×5'),
+            ('std', '标准 10×10'),
+            ('hard', '困难 15×15'),
+          ],
+          value: widget.diff,
+          onChanged: (v) => widget.onDiff?.call(v),
+        ),
+        GameSegTabs<String>(
+          items: const [('fill', '填色'), ('mark', '标记')],
+          value: _markMode ? 'mark' : 'fill',
+          onChanged: (v) => setState(() => _markMode = v == 'mark'),
+          dense: true,
+        ),
+      ],
       pills: [
-        GameScorePill(label: '用时', value: gameFmtDuration(seconds)),
+        GameScorePill(label: '用时', value: gameFmtDuration(widget.seconds)),
         GameScorePill(
           label: '最佳',
-          value: bestSeconds > 0 ? gameFmtDuration(bestSeconds) : '--',
+          value: widget.bestSeconds > 0
+              ? gameFmtDuration(widget.bestSeconds)
+              : '--',
         ),
       ],
       actions: [
-        _NonoButton(
+        GameActionButton(
           label: '新游戏',
           icon: GameIcons.refresh,
           primary: true,
-          onTap: onNew,
+          onTap: widget.onNew,
         ),
         GameRankAction(
-          child: _NonoButton(
+          child: GameActionButton(
             label: '排行榜',
             icon: GameIcons.trophy,
-            onTap: onRank,
+            onTap: widget.onRank,
           ),
         ),
       ],
       board: _NonoBoard(
-        size: size,
-        grid: grid,
-        marks: marks,
-        rowHints: rowHints,
-        colHints: colHints,
-        rowDone: rowDone,
-        colDone: colDone,
-        over: over,
-        seconds: seconds,
-        score: score,
-        onTap: onTap,
-        onMark: onMark,
-        onRetry: onRetry,
+        size: widget.size,
+        grid: widget.grid,
+        marks: widget.marks,
+        rowHints: widget.rowHints,
+        colHints: widget.colHints,
+        rowDone: widget.rowDone,
+        colDone: widget.colDone,
+        over: widget.over,
+        seconds: widget.seconds,
+        score: widget.score,
+        onTap: _handleTap,
+        onMark: widget.onMark,
+        onRetry: widget.onRetry,
       ),
     );
   }
 }
 
-/// 难度分段器（web .gnono-diff：290×33、bg #DFD7C4、border #E4DCC9、
-/// gap6、三个按钮 82/97/97、选中 accent）。
-class _NonoTabs extends StatelessWidget {
-  const _NonoTabs({required this.value, this.onChanged});
-
-  static const _items = [
-    ('easy', '简单 5×5', 82.0),
-    ('std', '标准 10×10', 97.0),
-    ('hard', '困难 15×15', 97.0),
-  ];
-
-  final String value;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.bg2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < _items.length; i++) ...[
-            if (i > 0) const SizedBox(width: 6),
-            _tab(context, c, _items[i]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _tab(
-    BuildContext context,
-    CitroColors c,
-    (String, String, double) it,
-  ) {
-    final on = it.$1 == value;
-    return GameHover(
-      enabled: onChanged != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged?.call(it.$1),
-        child: Container(
-          width: it.$3,
-          height: 31,
-          alignment: Alignment.center,
-          decoration: on
-              ? BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                )
-              : null,
-          child: Text(
-            it.$2,
-            style: context.body(
-              size: CitroType.caption,
-              weight: CitroType.strong,
-              color: on ? c.accentText : c.inkSoft,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 单行 HUD 里的拉伸按钮（nosh 胶囊）。
-class _NonoButton extends StatelessWidget {
-  const _NonoButton({
-    required this.label,
-    required this.icon,
-    this.primary = false,
-    this.onTap,
-  });
-
-  final String label;
-  final String icon;
-  final bool primary;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final fg = primary ? c.accentText : c.ink2;
-    return GameHover(
-      enabled: onTap != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          width: 103.73,
-          height: 56.64,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: primary ? c.accent : c.surface,
-            borderRadius: BorderRadius.circular(CitroColors.radii.button),
-            border: Border.all(color: primary ? c.accent : c.line),
-            boxShadow: primary
-                ? CitroColors.shadows.float(c)
-                : CitroColors.shadows.sm(c),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                gameIcon(icon, size: 15, color: fg),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: context.body(
-                    size: CitroType.meta,
-                    weight: CitroType.strong,
-                    color: fg,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 棋盘：382×402 的米黄画框 + 行/列提示 + 30×30 白格。
-class _NonoBoard extends StatelessWidget {
+/// 棋盘：纸卡画框 + 行/列提示 + 可缩放网格。
+///
+/// cell 只吃内容区宽度（[LayoutBuilder]），夹在 32–72 之间：手机竖屏
+/// 15 阶算出的 cell 会小于 32，夹到 32 后棋盘宽于内容区，由
+/// [InteractiveViewer] 提供双指缩放 + 拖动；横屏 / 平板 / 桌面按剩余
+/// 宽度自动放大，不再读 MediaQuery。
+class _NonoBoard extends StatefulWidget {
   const _NonoBoard({
     required this.size,
     required this.grid,
@@ -465,98 +375,184 @@ class _NonoBoard extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final media = MediaQuery.sizeOf(context);
-    final tablet = media.width >= 900;
-    final duoPortrait =
-        CitroForm.duoInner(media) && media.height >= media.width;
-    final cell = size == 5
-        ? (tablet
-              ? 64.0
-              : duoPortrait
-              ? 58.0
-              : 48.0)
-        : size == 10
-        ? (tablet
-              ? 48.0
-              : duoPortrait
-              ? 38.0
-              : 30.0)
-        : (tablet
-              ? 30.0
-              : duoPortrait
-              ? 23.0
-              : 18.0);
-    var maxRowHints = 1;
-    for (final h in rowHints) {
-      maxRowHints = math.max(maxRowHints, h.length);
-    }
-    var maxColHints = 1;
-    for (final h in colHints) {
-      maxColHints = math.max(maxColHints, h.length);
-    }
-    final hintColW = maxRowHints * 6.0 + (maxRowHints - 1) * 3.0 + 6.0;
-    final hintRowH = maxColHints * 10.0 + (maxColHints - 1) * 3.0 + 6.0;
-    final boardW = 16.0 + hintColW + size * cell + size * 2.0;
-    final boardH = 16.0 + hintRowH + size * cell + size * 2.0;
+  State<_NonoBoard> createState() => _NonoBoardState();
+}
 
+class _NonoBoardState extends State<_NonoBoard> {
+  static const double _pad = 8;
+  static const double _gap = 2;
+  // RoundedCN 700 的数字步进是 0.589em（13px 下 7.66px），留 0.84px 余量。
+  static const double _hintDigitW = 8.5;
+  static const double _hintGap = 3;
+  static const double _hintPad = 6;
+  static const double _hintLineH = 13;
+  static const double _minCell = 32;
+  static const double _maxCell = 72;
+
+  final TransformationController _viewer = TransformationController();
+  bool _interacted = false;
+  double? _fitScale;
+  Offset? _fitOffset;
+
+  @override
+  void dispose() {
+    _viewer.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _NonoBoard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 换难度 / 重开题面会改变提示宽度与棋盘尺寸，重置缩放让初始适配重新生效。
+    if (oldWidget.size != widget.size ||
+        !identical(oldWidget.rowHints, widget.rowHints) ||
+        !identical(oldWidget.colHints, widget.colHints)) {
+      _interacted = false;
+      _fitScale = null;
+      _fitOffset = null;
+    }
+  }
+
+  int get _maxRowHints {
+    var m = 1;
+    for (final h in widget.rowHints) m = math.max(m, h.length);
+    return m;
+  }
+
+  int get _maxColHints {
+    var m = 1;
+    for (final h in widget.colHints) m = math.max(m, h.length);
+    return m;
+  }
+
+  double get _hintColW =>
+      _maxRowHints * _hintDigitW + (_maxRowHints - 1) * _hintGap + _hintPad;
+
+  double get _hintRowH =>
+      _maxColHints * _hintLineH + (_maxColHints - 1) * 2 + _hintPad;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final availW = cons.maxWidth.isFinite && cons.maxWidth > 0
+            ? cons.maxWidth
+            : 360.0;
+        final hintColW = _hintColW;
+        final hintRowH = _hintRowH;
+        final cell =
+            ((availW - 2 * _pad - hintColW - widget.size * _gap) / widget.size)
+                .clamp(_minCell, _maxCell);
+        final boardW = 2 * _pad + hintColW + widget.size * (cell + _gap);
+        final boardH = 2 * _pad + hintRowH + widget.size * (cell + _gap);
+        // 高度约束在共享骨架里是未定的（棋盘区可滚动），退化成方形视口，
+        // 保证双向都能拖动；有界时用真实视口高。
+        final viewportW = availW;
+        final viewportH = cons.maxHeight.isFinite && cons.maxHeight > 0
+            ? cons.maxHeight
+            : availW;
+        final board = _buildBoard(
+          context,
+          cell,
+          hintColW,
+          hintRowH,
+          boardW,
+          boardH,
+        );
+        final fits = boardW <= viewportW && boardH <= viewportH;
+        if (fits) return Center(child: board);
+        // 初始缩放到整盘可见并居中；用户可再双指缩放 / 拖动。
+        final scale = math.min(
+          1.0,
+          math.min(viewportW / boardW, viewportH / boardH),
+        );
+        final offset = Offset(
+          (viewportW - boardW * scale) / 2,
+          (viewportH - boardH * scale) / 2,
+        );
+        if (!_interacted && (_fitScale != scale || _fitOffset != offset)) {
+          _fitScale = scale;
+          _fitOffset = offset;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _viewer.value = Matrix4.identity()
+              ..translate(offset.dx, offset.dy)
+              ..scale(scale);
+          });
+        }
+        return SizedBox(
+          width: viewportW,
+          height: viewportH,
+          child: InteractiveViewer(
+            transformationController: _viewer,
+            constrained: false,
+            boundaryMargin: const EdgeInsets.all(double.infinity),
+            minScale: 0.25,
+            maxScale: 4,
+            onInteractionStart: (_) => _interacted = true,
+            child: board,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBoard(
+    BuildContext context,
+    double cell,
+    double hintColW,
+    double hintRowH,
+    double boardW,
+    double boardH,
+  ) {
+    final c = context.c;
+    final id = GameIdentityScope.of(context);
     return SizedBox(
-      width: double.infinity,
+      width: boardW,
       height: boardH,
-      child: OverflowBox(
-        minWidth: boardW,
-        maxWidth: boardW,
-        minHeight: boardH,
-        maxHeight: boardH,
-        alignment: Alignment.center,
-        child: Transform.translate(
-          offset: const Offset(2, 0),
-          child: SizedBox(
-            width: boardW,
-            height: boardH,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                      border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.card(c),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: _grid(context, c, cell, hintColW, hintRowH),
-                  ),
-                ),
-                if (over)
-                  Positioned.fill(
-                    child: _NonoOverlay(
-                      seconds: seconds,
-                      score: score,
-                      onRetry: onRetry,
-                    ),
-                  ),
-              ],
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                border: Border.all(color: id.deep.withAlpha(80)),
+                boxShadow: CitroColors.shadows.card(c),
+              ),
             ),
           ),
-        ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(_pad),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  // 格线：身份色浅端低透明，只暗示网格，不抢格面。
+                  color: id.soft.withAlpha(c.dark ? 60 : 120),
+                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                ),
+                child: _grid(cell, hintColW, hintRowH),
+              ),
+            ),
+          ),
+          if (widget.over)
+            Positioned.fill(
+              child: _NonoOverlay(
+                seconds: widget.seconds,
+                score: widget.score,
+                onRetry: widget.onRetry,
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _grid(
-    BuildContext context,
-    CitroColors c,
-    double cell,
-    double hintColW,
-    double hintRowH,
-  ) {
-    final gap = const SizedBox(width: 2, height: 2);
+  Widget _grid(double cell, double hintColW, double hintRowH) {
+    // 纸面谜题：空格与提示区都铺 identity.paper，格线由 2px 间隙里的
+    // identity.soft 低透明透出来；深 / 浅主题下提示数字都压得在纸面上。
+    const paper = GameIdentity.paper;
+    final gap = const SizedBox(width: _gap, height: _gap);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -567,14 +563,17 @@ class _NonoBoard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(width: hintColW, height: hintRowH),
-              for (var col = 0; col < size; col++) ...[
+              Container(width: hintColW, height: hintRowH, color: paper),
+              for (var col = 0; col < widget.size; col++) ...[
                 gap,
-                SizedBox(
+                Container(
                   width: cell,
+                  color: paper,
                   child: _ColHint(
-                    hints: colHints.length > col ? colHints[col] : const [0],
-                    done: colDone.length > col && colDone[col],
+                    hints: widget.colHints.length > col
+                        ? widget.colHints[col]
+                        : const [0],
+                    done: widget.colDone.length > col && widget.colDone[col],
                   ),
                 ),
               ],
@@ -582,34 +581,39 @@ class _NonoBoard extends StatelessWidget {
           ),
         ),
         // 每行：行提示 + 格子
-        for (var r = 0; r < size; r++) ...[
-          const SizedBox(height: 2),
+        for (var r = 0; r < widget.size; r++) ...[
+          const SizedBox(height: _gap),
           SizedBox(
             height: cell,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                Container(
                   width: hintColW,
+                  height: cell,
+                  color: paper,
                   child: _RowHint(
-                    hints: rowHints.length > r ? rowHints[r] : const [0],
-                    done: rowDone.length > r && rowDone[r],
+                    hints: widget.rowHints.length > r
+                        ? widget.rowHints[r]
+                        : const [0],
+                    done: widget.rowDone.length > r && widget.rowDone[r],
                   ),
                 ),
-                for (var col = 0; col < size; col++) ...[
+                for (var col = 0; col < widget.size; col++) ...[
                   gap,
                   _NonoCell(
                     size: cell,
                     filled:
-                        grid.length > r &&
-                        grid[r].length > col &&
-                        grid[r][col] == 1,
+                        widget.grid.length > r &&
+                        widget.grid[r].length > col &&
+                        widget.grid[r][col] == 1,
                     marked:
-                        marks.length > r &&
-                        marks[r].length > col &&
-                        marks[r][col] == 1,
-                    onTap: () => onTap?.call(r, col),
-                    onLongPress: () => onMark?.call(r, col),
+                        widget.marks.length > r &&
+                        widget.marks[r].length > col &&
+                        widget.marks[r][col] == 1,
+                    emptyCell: paper,
+                    onTap: () => widget.onTap?.call(r, col),
+                    onLongPress: () => widget.onMark?.call(r, col),
                   ),
                 ],
               ],
@@ -629,30 +633,33 @@ class _RowHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final id = GameIdentityScope.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (var i = 0; i < hints.length; i++) ...[
-              if (i > 0) const SizedBox(width: 3),
-              Text(
-                '${hints[i]}',
-                style: context.body(
-                  size: CitroType.micro,
-                  weight: CitroType.strong,
-                  color: done ? c.line2 : c.mintInk,
-                ),
-              ),
-            ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (var i = 0; i < hints.length; i++) ...[
+            if (i > 0) const SizedBox(width: 3),
+            Text(
+              '${hints[i]}',
+              style: context
+                  .body(
+                    size: CitroType.meta,
+                    weight: CitroType.strong,
+                    // 完成行：划线 + 降饱和的深色，不用低对比的浅色。
+                    color: done ? id.deep : id.primaryInk,
+                  )
+                  .copyWith(
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    decorationColor: id.primaryInk,
+                    decorationThickness: 1.5,
+                  ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -666,30 +673,33 @@ class _ColHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final id = GameIdentityScope.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (var i = 0; i < hints.length; i++) ...[
-              if (i > 0) const SizedBox(height: 2),
-              Text(
-                '${hints[i]}',
-                style: context.body(
-                  size: CitroType.micro,
-                  weight: CitroType.strong,
-                  height: 1,
-                  color: done ? c.line2 : c.mintInk,
-                ),
-              ),
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (var i = 0; i < hints.length; i++) ...[
+            if (i > 0) const SizedBox(height: 2),
+            Text(
+              '${hints[i]}',
+              style: context
+                  .body(
+                    size: CitroType.meta,
+                    weight: CitroType.strong,
+                    height: 1,
+                    color: done ? id.deep : id.primaryInk,
+                  )
+                  .copyWith(
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    decorationColor: id.primaryInk,
+                    decorationThickness: 1.5,
+                  ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -700,6 +710,7 @@ class _NonoCell extends StatelessWidget {
     required this.size,
     required this.filled,
     required this.marked,
+    required this.emptyCell,
     this.onTap,
     this.onLongPress,
   });
@@ -707,12 +718,13 @@ class _NonoCell extends StatelessWidget {
   final double size;
   final bool filled;
   final bool marked;
+  final Color emptyCell;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final id = GameIdentityScope.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -721,17 +733,20 @@ class _NonoCell extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: filled ? c.accent : c.surface2,
+          color: filled ? id.primary : emptyCell,
           borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+          border: filled
+              ? Border.all(color: id.deep.withAlpha(140), width: 1)
+              : null,
         ),
         child: marked
             ? Center(
                 child: Text(
                   '×',
                   style: context.body(
-                    size: CitroType.body,
+                    size: (size * 0.42).clamp(14.0, 26.0),
                     weight: CitroType.strong,
-                    color: c.inkSoft,
+                    color: id.deep,
                   ),
                 ),
               )
@@ -755,6 +770,7 @@ class _NonoOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(CitroColors.radii.card),
       child: CitroBackdropBlur(
@@ -762,7 +778,7 @@ class _NonoOverlay extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: c.surface.withValues(alpha: 0.96),
-            border: Border.all(color: c.line),
+            border: Border.all(color: id.deep.withAlpha(80)),
             borderRadius: BorderRadius.circular(CitroColors.radii.card),
           ),
           child: Column(
@@ -770,7 +786,10 @@ class _NonoOverlay extends StatelessWidget {
             children: [
               Text(
                 '恭喜完成！',
-                style: context.heading(size: CitroType.heading, color: c.mintInk),
+                style: context.heading(
+                  size: CitroType.heading,
+                  color: c.dark ? id.onDark() : id.primaryInk,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -794,10 +813,6 @@ class _NonoRetryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GameActionButton(
-      label: '再来一局',
-      primary: true,
-      onTap: onTap,
-    );
+    return GameActionButton(label: '再来一局', primary: true, onTap: onTap);
   }
 }

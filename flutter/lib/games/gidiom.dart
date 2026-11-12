@@ -12,10 +12,9 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 
+import 'game_identity.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
-const double _stageH = 506.39;
 /// 接龙链上的一条（seed 系统起手 / you 玩家 / ai 电脑）。
 class ChainItem {
   final String text;
@@ -387,20 +386,14 @@ class GameIdiomView extends StatelessWidget {
   final VoidCallback? onEnter;
   final VoidCallback? onRank;
 
-  TextStyle get _emStyle => TextStyle(
-    color: c.accentInk,
+  TextStyle _emStyle(GameIdentity id) => TextStyle(
+    color: id.primaryInk,
     fontWeight: FontWeight.w700,
     letterSpacing: 0,
   );
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
-    final w = media.width;
-    final tablet = w >= 900;
-    final stageH = tablet
-        ? math.min(640.0, math.max(520.0, media.height - 340))
-        : _stageH;
     return GameScaffold(
       gameKey: 'gidiom',
       title: '成语接龙',
@@ -419,31 +412,37 @@ class GameIdiomView extends StatelessWidget {
         ),
         GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
       ],
-      board: SizedBox(
-        width: math.max(0.0, w - GameMetrics.sidePad * 2),
-        height: phase == IdiomPhase.playing
-            ? math.min(
-                stageH,
-                math.max(
-                  280.0,
-                  media.height - MediaQuery.viewInsetsOf(context).bottom - 240,
-                ),
-              )
-            : stageH,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.card(c),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            child: phase == IdiomPhase.menu
-                ? _menu(context)
-                : (phase == IdiomPhase.playing ? _board(context) : _result(context)),
-          ),
-        ),
+      // 舞台只吃内容区约束：竖屏扣除 HUD / 操作行 / 正在玩，横屏扣除左右侧栏，
+      // 不再读 MediaQuery（按整屏宽算在横屏必然裁切）。
+      board: LayoutBuilder(
+        builder: (context, constraints) {
+          final w =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+          final h = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : math.min(600.0, math.max(420.0, w * 1.5));
+          final id = GameIdentityScope.of(context);
+          return SizedBox(
+            width: w,
+            height: h,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                border: Border.all(color: id.primary.withAlpha(46)),
+                boxShadow: CitroColors.shadows.card(c),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                child: phase == IdiomPhase.menu
+                    ? _menu(context)
+                    : (phase == IdiomPhase.playing
+                          ? _board(context)
+                          : _result(context)),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -451,6 +450,7 @@ class GameIdiomView extends StatelessWidget {
   // --- 菜单 --------------------------------------------------------------
 
   Widget _menu(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -463,12 +463,12 @@ class GameIdiomView extends StatelessWidget {
               height: 56,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: c.accentLt.withAlpha(140),
+                color: id.soft,
                 borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               ),
               child: Text(
                 '接',
-                style: context.heading(size: CitroType.titleLg, color: c.accentInk),
+                style: context.heading(size: CitroType.titleLg, color: id.primaryInk),
               ),
             ),
             const SizedBox(height: 14),
@@ -505,25 +505,26 @@ class GameIdiomView extends StatelessWidget {
   }
 
   Widget _rules(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     const ord = ['壹', '贰', '叁', '肆'];
     final texts = <List<InlineSpan>>[
       [
         const TextSpan(text: '你与 AI 轮流接龙，'),
-        TextSpan(text: '只要尾字与首字同音', style: _emStyle),
+        TextSpan(text: '只要尾字与首字同音', style: _emStyle(id)),
         const TextSpan(text: '即可，不区分声调'),
       ],
       [
         const TextSpan(text: '每回合 '),
-        TextSpan(text: '60 秒', style: _emStyle),
+        TextSpan(text: '60 秒', style: _emStyle(id)),
         const TextSpan(text: '，超时即结束本局'),
       ],
       [
         const TextSpan(text: '接对一个基础 '),
-        TextSpan(text: '+10 分', style: _emStyle),
+        TextSpan(text: '+10 分', style: _emStyle(id)),
         const TextSpan(text: '；答对 '),
-        TextSpan(text: '2 个后 ×2', style: _emStyle),
+        TextSpan(text: '2 个后 ×2', style: _emStyle(id)),
         const TextSpan(text: '、'),
-        TextSpan(text: '4 个后 ×4', style: _emStyle),
+        TextSpan(text: '4 个后 ×4', style: _emStyle(id)),
         const TextSpan(text: '，之后每多 2 个倍率再加 2 倍'),
       ],
       [const TextSpan(text: '成语需真实存在，由 AI 判定；本局用过的不能重复')],
@@ -534,6 +535,7 @@ class GameIdiomView extends StatelessWidget {
         for (var i = 0; i < texts.length; i++) ...[
           if (i > 0) const SizedBox(height: 10),
           _ruleRow(
+            id,
             ord[i],
             TextSpan(
               style: context.body(size: CitroType.body, color: c.ink2),
@@ -545,7 +547,7 @@ class GameIdiomView extends StatelessWidget {
     );
   }
 
-  Widget _ruleRow(String ord, TextSpan span) {
+  Widget _ruleRow(GameIdentity id, String ord, TextSpan span) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -554,11 +556,11 @@ class GameIdiomView extends StatelessWidget {
           height: 22,
           margin: const EdgeInsets.only(top: 2),
           decoration: BoxDecoration(
-            color: c.accentLt.withAlpha(120),
+            color: id.soft,
             borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           ),
           alignment: Alignment.center,
-          child: OrdinalGlyph(ord, color: c.accentText),
+          child: OrdinalGlyph(ord, color: id.primaryInk),
         ),
         const SizedBox(width: 10),
         Expanded(child: Text.rich(span)),
@@ -569,7 +571,9 @@ class GameIdiomView extends StatelessWidget {
   // --- 运行中棋盘 --------------------------------------------------------
 
   Widget _board(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     final frac = (deadline / 60).clamp(0.0, 1.0);
+    final warn = deadline <= 10;
     return Column(
       children: [
         Padding(
@@ -584,7 +588,7 @@ class GameIdiomView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: c.accentLt.withAlpha(150),
+                  color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Text(
@@ -592,7 +596,7 @@ class GameIdiomView extends StatelessWidget {
                   style: context.hand(
                     size: CitroType.titleLg,
                     weight: CitroType.strong,
-                    color: c.accentInk,
+                    color: id.primaryInk,
                   ),
                 ),
               ),
@@ -605,7 +609,7 @@ class GameIdiomView extends StatelessWidget {
                   style: context.hand(
                     size: CitroType.titleLg,
                     weight: CitroType.strong,
-                    color: deadline <= 10 ? c.stamp : c.ink,
+                    color: warn ? id.deep : c.ink,
                   ),
                 ),
               ),
@@ -615,7 +619,8 @@ class GameIdiomView extends StatelessWidget {
                 child: CitroProgressBar(
                   value: frac,
                   height: 6,
-                  color: deadline <= 10 ? c.stamp : c.accent,
+                  color: warn ? id.deep : id.primary,
+                  track: id.deep.withAlpha(40),
                 ),
               ),
             ],
@@ -632,7 +637,11 @@ class GameIdiomView extends StatelessWidget {
                   itemCount: chain.length,
                   itemBuilder: (context, index) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: _chainRow(context, chain[index]),
+                    child: _chainRow(
+                      context,
+                      chain[index],
+                      isLast: index == chain.length - 1,
+                    ),
                   ),
                 ),
               ),
@@ -650,7 +659,7 @@ class GameIdiomView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
           child: SizedBox(
-            height: 46,
+            height: 48,
             child: Row(
               children: [
                 Expanded(
@@ -668,26 +677,26 @@ class GameIdiomView extends StatelessWidget {
                       hintText: '输入成语，选候选词后回车或点「接」',
                       hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
                       filled: true,
-                      fillColor: c.surface2,
+                      fillColor: id.soft.withAlpha(90),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.accent),
+                        borderSide: BorderSide(color: id.primary, width: 1.5),
                       ),
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                     ),
                   ),
@@ -696,6 +705,8 @@ class GameIdiomView extends StatelessWidget {
                 GameActionButton(
                   label: '接',
                   width: 66,
+                  height: 48,
+                  primary: true,
                   onTap: aiThinking ? null : onSubmit,
                 ),
               ],
@@ -714,9 +725,9 @@ class GameIdiomView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: c.surface2,
+                  color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  border: Border.all(color: c.accentLt),
+                  border: Border.all(color: id.primary.withAlpha(60)),
                 ),
                 child: Text.rich(
                   TextSpan(
@@ -728,7 +739,7 @@ class GameIdiomView extends StatelessWidget {
                         style: context.body(
                           size: CitroType.body,
                           weight: CitroType.strong,
-                          color: c.accentInk,
+                          color: id.primaryInk,
                         ),
                       ),
                     ],
@@ -746,7 +757,7 @@ class GameIdiomView extends StatelessWidget {
                       style: context.body(
                         size: CitroType.body,
                         weight: CitroType.strong,
-                        color: c.accentInk,
+                        color: id.primaryInk,
                       ),
                     ),
                   ],
@@ -759,16 +770,23 @@ class GameIdiomView extends StatelessWidget {
     );
   }
 
-  Widget _chainRow(BuildContext context, ChainItem item) {
+  Widget _chainRow(
+    BuildContext context,
+    ChainItem item, {
+    bool isLast = false,
+  }) {
+    final id = GameIdentityScope.of(context);
+    // 成语块统一身份色：soft 底 + deep 描边 + ink 字；角色只靠小标签区分。
     final bar = item.role == 'ai'
-        ? c.mint
-        : (item.role == 'you' ? c.accent : c.stamp);
+        ? id.deep
+        : (item.role == 'you' ? id.primary : id.ink);
     final tagText = item.role == 'ai' ? 'AI' : (item.role == 'you' ? '你' : '起手');
+    final text = item.text;
     return Container(
       decoration: BoxDecoration(
-        color: c.surface2,
+        color: id.soft,
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.line),
+        border: Border.all(color: id.deep.withAlpha(70)),
       ),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -796,7 +814,7 @@ class GameIdiomView extends StatelessWidget {
                             style: context.body(
                               size: CitroType.micro,
                               weight: CitroType.strong,
-                              color: c.accentText,
+                              color: id.onPrimary,
                             ),
                           ),
                         ),
@@ -812,9 +830,23 @@ class GameIdiomView extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.text,
-                      style: context.heading(size: CitroType.title, color: c.ink),
+                    Text.rich(
+                      TextSpan(
+                        style: context.heading(size: CitroType.title, color: id.ink),
+                        children: [
+                          if (isLast && text.isNotEmpty) ...[
+                            TextSpan(text: text.substring(0, text.length - 1)),
+                            TextSpan(
+                              text: text.substring(text.length - 1),
+                              style: TextStyle(
+                                color: id.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ] else
+                            TextSpan(text: text),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -829,7 +861,8 @@ class GameIdiomView extends StatelessWidget {
   // --- 结算 --------------------------------------------------------------
 
   Widget _result(BuildContext context) {
-    final titleColor = won ? c.mintInk : c.stamp;
+    final id = GameIdentityScope.of(context);
+    final titleColor = won ? id.primaryInk : id.deep;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
@@ -848,13 +881,14 @@ class GameIdiomView extends StatelessWidget {
               style: context.body(size: CitroType.meta, color: c.ink2),
             ),
             const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // 窄屏（横屏 / 小窗）改成 Wrap，三个统计块自动换行不挤爆。
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 20,
+              runSpacing: 12,
               children: [
                 _stat(context, '本局接龙', '$count'),
-                const SizedBox(width: 20),
                 _stat(context, '最长链', '${chain.length}'),
-                const SizedBox(width: 20),
                 _stat(context, '本局得分', '$score', accent: true),
               ],
             ),
@@ -872,6 +906,7 @@ class GameIdiomView extends StatelessWidget {
   }
 
   Widget _stat(BuildContext context, String label, String value, {bool accent = false}) {
+    final id = GameIdentityScope.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -882,7 +917,7 @@ class GameIdiomView extends StatelessWidget {
           style: context.hand(
             size: CitroType.heading,
             weight: CitroType.strong,
-            color: accent ? c.accentInk : c.ink,
+            color: accent ? id.primaryInk : id.ink,
           ),
         ),
       ],
@@ -893,12 +928,13 @@ class GameIdiomView extends StatelessWidget {
 
   /// 链表区顶部的错误 / AI 判定提示胶囊。
   Widget _fbChip(BuildContext context, String text) {
+    final id = GameIdentityScope.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-        border: Border.all(color: c.line2),
+        border: Border.all(color: id.primary.withAlpha(90)),
         boxShadow: CitroColors.shadows.card(c),
       ),
       child: Text(
@@ -908,7 +944,7 @@ class GameIdiomView extends StatelessWidget {
         style: context.body(
           size: CitroType.meta,
           weight: CitroType.strong,
-          color: c.ink2,
+          color: id.ink,
         ),
       ),
     );
@@ -934,7 +970,7 @@ class OrdinalGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolved = color ?? context.c.stamp;
+    final resolved = color ?? context.c.ink;
     return SizedBox(
       width: fontSize * 0.92,
       height: fontSize,

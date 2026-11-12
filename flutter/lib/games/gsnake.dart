@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'game_common.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 
 class GameSnakePage extends StatefulWidget {
@@ -298,20 +299,21 @@ class GameSnakeView extends StatelessWidget {
       // 方向盘并排，不再读 MediaQuery（按屏幕宽算在横屏必然裁切）。
       board: LayoutBuilder(builder: (context, cons) {
         final w = cons.maxWidth.isFinite ? cons.maxWidth : 360.0;
-        final h = cons.maxHeight.isFinite ? cons.maxHeight : 420.0;
+        final h = cons.maxHeight.isFinite ? cons.maxHeight : double.infinity;
         final wide = w >= 600;
         final keyboard = keyboardMode && !kIsWeb;
         const dpad = 240.0;
         final hint = (keyboard || kIsWeb) ? 26.0 : 0.0;
         var maxW = w;
         var maxH = h;
+        // 竖屏棋盘按内容宽算：方向盘在棋盘下方，整页可滚，不必给它预留高度
+        // （棋盘区在 SingleChildScrollView 里，maxHeight 恒为无限，扣了反而把
+        // 棋盘压到 148px，比方向盘还小）。横屏 / 平板与方向盘并排时才扣宽度。
         if (keyboard) {
-          maxH = h - hint;
+          if (h.isFinite) maxH = h - hint;
         } else if (wide) {
           maxW = w - dpad - 24;
-          if (kIsWeb) maxH = h - hint;
-        } else {
-          maxH = h - dpad - 6 - hint;
+          if (kIsWeb && h.isFinite) maxH = h - hint;
         }
         final boardW = math.max(140.0, math.min(520.0, math.min(maxW, maxH)));
         return Column(
@@ -362,9 +364,11 @@ class GameSnakeView extends StatelessWidget {
         width: boardW,
         height: boardW,
         decoration: BoxDecoration(
-          color: identity.soft,
+          // 底板：主题卡面 + 身份色描边，与 2048 底板同一套。
+          color: context.c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.card),
-          border: Border.all(color: identity.deep.withAlpha(70)),
+          border: Border.all(color: identity.primary.withAlpha(60)),
+          boxShadow: CitroColors.shadows.card(context.c),
         ),
         child: GestureDetector(
           onPanEnd: (d) {
@@ -384,15 +388,20 @@ class GameSnakeView extends StatelessWidget {
                     snake: snake,
                     food: food,
                     grid: 17,
-                    // 格线用主色低透明：比 identity.soft 深一档，浅底上才读得出。
-                    line: identity.primary.withAlpha(70),
-                    body: identity.primary,
+                    // 极浅静态网格：identity.soft 低透明叠在主题卡面上，
+                    // 只交代格子位置，不跟蛇身抢视线。
+                    line: identity.soft.withAlpha(context.c.dark ? 46 : 180),
+                    // 暗色底板是深面，身份色实底要提亮一档才压得住。
+                    body: context.c.dark ? identity.onDark() : identity.primary,
                     deep: identity.deep,
-                    foodColor: identity.secondary ?? identity.deep,
+                    foodColor: context.c.dark
+                        ? identity.onDark()
+                        : (identity.secondary ?? identity.deep),
                     paper: GameIdentity.paper,
                     // (棋盘宽 - 左右边框2 - 上下左右留白12 - 16个1px间隙) / 17
                     // 370 宽时 = 20，与 web 一致；窄屏时等比缩小保证两侧对称
-                    cell: math.max(8.0, (boardW - 30) / 17),
+                    // （最小 6：保证 17 格 + 留白仍落在最小棋盘里）
+                    cell: math.max(6.0, (boardW - 30) / 17),
                   ),
                 ),
               ),
@@ -558,6 +567,13 @@ class _SnakeBoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // 底板圆角由容器画，画布内容（网格 / 蛇）收在同一个圆角里。
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        Offset.zero & size,
+        Radius.circular(CitroColors.radii.card),
+      ),
+    );
     final origin = 1 + _pad;
     final step = cell + _gap;
     double center(int i) => origin + i * step + cell / 2;

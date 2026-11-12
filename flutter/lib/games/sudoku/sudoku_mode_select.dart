@@ -8,7 +8,6 @@ import '../../widgets/paper.dart';
 import '../game_ui.dart';
 import 'sudoku_modes.dart';
 import 'sudoku_resume.dart';
-import '../game_theme.dart';
 
 /// 统一数独入口的模式选择：经典 / 异形 / 高级阶数。
 class SudokuModeSelect extends StatelessWidget {
@@ -28,6 +27,7 @@ class SudokuModeSelect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final classic = kSudokuModes.first;
     final jigsaw = kSudokuModes.firstWhere((m) => m.key == 'jigsaw');
     final windmill = kSudokuModes.firstWhere((m) => m.key == 'windmill');
@@ -66,8 +66,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
-            final two = box.maxWidth >= 560;
-            final w = two ? (box.maxWidth - 12) / 2 : box.maxWidth;
+            // 固定 2 列：手机上也不再把卡片单列拉长。
+            final w = math.max(1.0, (box.maxWidth - 12) / 2);
             return Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -110,8 +110,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, box) {
-            final columns = box.maxWidth >= 620 ? 3 : 2;
-            final w = (box.maxWidth - 10 * (columns - 1)) / columns;
+            const columns = 2;
+            final w = math.max(1.0, (box.maxWidth - 10 * (columns - 1)) / columns);
             return Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -146,8 +146,8 @@ class SudokuModeSelect extends StatelessWidget {
         const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, box) {
-            final columns = box.maxWidth >= 620 ? 3 : 2;
-            final w = (box.maxWidth - 10 * (columns - 1)) / columns;
+            const columns = 2;
+            final w = math.max(1.0, (box.maxWidth - 10 * (columns - 1)) / columns);
             return Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -177,7 +177,7 @@ class SudokuModeSelect extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          gameIcon(GameIcons.sparkle, size: 15, color: c.accentInk),
+          gameIcon(GameIcons.sparkle, size: 15, color: identity.primaryInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -260,13 +260,14 @@ class _ResumeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final filled = resume.board.where((v) => v != 0).length;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: c.accentLt.withAlpha(150),
+        color: identity.soft.withAlpha(210),
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.accent.withValues(alpha: .5)),
+        border: Border.all(color: identity.primary.withValues(alpha: .55)),
         boxShadow: CitroColors.shadows.card(c),
       ),
       child: Row(
@@ -276,10 +277,10 @@ class _ResumeCard extends StatelessWidget {
             height: 34,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: c.accent.withValues(alpha: .18),
+              color: identity.primary.withValues(alpha: .18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: gameIcon(GameIcons.play, size: 14, color: c.accentText),
+            child: gameIcon(GameIcons.play, size: 14, color: identity.primaryInk),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -300,7 +301,7 @@ class _ResumeCard extends StatelessWidget {
                   '${resume.remainingLabel(DateTime.now())}',
                   style: context.body(
                     size: 11,
-                    color: c.accentText,
+                    color: identity.primaryInk,
                     height: 1.4,
                   ),
                 ),
@@ -329,15 +330,19 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           decoration: BoxDecoration(
-            color: c.surface,
+            color: Color.alphaBlend(
+              identity.soft.withValues(alpha: c.dark ? .22 : .42),
+              c.surface,
+            ),
             borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: c.line),
+            border: Border.all(color: identity.primary.withAlpha(52)),
             boxShadow: CitroColors.shadows.card(c),
           ),
           child: Row(
@@ -349,7 +354,7 @@ class _Hero extends StatelessWidget {
                     Text(
                       'SUDOKU · 数独',
                       style: context
-                          .hand(size: 12, color: c.accentInk)
+                          .hand(size: 12, color: identity.primaryInk)
                           .copyWith(letterSpacing: 1.6),
                     ),
                     const SizedBox(height: 4),
@@ -390,6 +395,7 @@ class _GroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,7 +406,7 @@ class _GroupHeader extends StatelessWidget {
               height: 25,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: c.accent,
+                color: identity.primary,
                 borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               ),
               child: Text(
@@ -408,7 +414,7 @@ class _GroupHeader extends StatelessWidget {
                 style: context.hand(
                   size: CitroType.small,
                   weight: CitroType.strong,
-                  color: c.accentText,
+                  color: identity.onPrimary,
                 ),
               ),
             ),
@@ -645,10 +651,11 @@ class _Tag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: c.accentLt.withValues(alpha: c.dark ? .24 : .55),
+        color: identity.soft.withValues(alpha: c.dark ? .42 : .85),
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       ),
       child: Text(
@@ -656,7 +663,7 @@ class _Tag extends StatelessWidget {
         style: context.body(
           size: 9,
           weight: FontWeight.w700,
-          color: c.accentText,
+          color: identity.primaryInk,
           height: 1.2,
         ),
       ),
@@ -677,18 +684,18 @@ class _StartChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Pressable(
       onTap: onTap,
       borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       scale: .96,
       child: Container(
-        height: compact ? 25 : 28,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
+        height: 44,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
         decoration: BoxDecoration(
-          color: c.accentLt.withAlpha(150),
+          color: identity.soft.withAlpha(215),
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: c.accent.withValues(alpha: .55)),
+          border: Border.all(color: identity.primary.withValues(alpha: .6)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -696,17 +703,17 @@ class _StartChip extends StatelessWidget {
             Text(
               label,
               style: context.body(
-                size: compact ? 10 : 11,
+                size: compact ? 11 : 12,
                 weight: FontWeight.w700,
-                color: c.accentText,
+                color: identity.primaryInk,
                 height: 1,
               ),
             ),
             const SizedBox(width: 3),
             gameIcon(
               GameIcons.arrowRightSolid,
-              size: compact ? 8 : 9,
-              color: c.accentText,
+              size: compact ? 8 : 10,
+              color: identity.primaryInk,
             ),
           ],
         ),
@@ -732,14 +739,18 @@ class _VariantGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Container(
       width: size,
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: c.bg2,
+        color: Color.alphaBlend(
+          identity.soft.withValues(alpha: c.dark ? .30 : .55),
+          c.bg2,
+        ),
         borderRadius: BorderRadius.circular(size * .22),
-        border: Border.all(color: c.line),
+        border: Border.all(color: identity.primary.withAlpha(70)),
       ),
       child: CustomPaint(
         painter: _GlyphPainter(
@@ -747,7 +758,7 @@ class _VariantGlyph extends StatelessWidget {
           overlapCount: overlapCount,
           windmill: windmill,
           ink: c.ink2,
-          accent: c.accent,
+          accent: identity.primary,
           soft: c.line2,
           paper: c.surface2,
         ),

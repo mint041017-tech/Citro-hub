@@ -602,8 +602,10 @@ class _Tile24 extends StatelessWidget {
     return switch (v) {
       2 => (id.soft, id.deep, null, false, false),
       4 => (bg(.30), id.deep, null, false, false),
-      8 => (bg(.50), id.onPrimary, null, false, false),
-      16 => (bg(.50), id.onPrimary, null, false, false),
+      // 深色主题下同样只能压在浅底上用 deep：bg(.50) 是浅橘，
+      // 配 onPrimary（纸白）只有 1.8:1，数字几乎看不见。
+      8 => (bg(.50), id.deep, null, false, false),
+      16 => (bg(.50), id.deep, null, false, false),
       32 => (id.primary, id.onPrimary, null, false, true),
       64 => (id.primary, id.onPrimary, null, false, true),
       128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),

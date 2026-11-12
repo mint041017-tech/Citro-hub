@@ -10,13 +10,12 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 // 序数印章字「壹贰叁肆」在内置子集字体里缺字，统一复用成语接龙页里的
 // OrdinalGlyph（内嵌 ZCOOL KuaiLe 字形轮廓），两页保持同一套渲染。
 import 'gidiom.dart' show OrdinalGlyph;
-import 'game_theme.dart';
 
-const double _stageH = 506.39;
 /// 飞花令链上的一句（you 玩家 / ai 电脑）。
 class FhItem {
   final String line;
@@ -387,27 +386,21 @@ class GameFeihuaView extends StatelessWidget {
   final VoidCallback? onSwap;
   final VoidCallback? onRank;
 
-  TextStyle get _emStyle => TextStyle(
-    color: c.accentInk,
+  TextStyle _emStyle(GameIdentity id) => TextStyle(
+    color: id.primaryInk,
     fontWeight: FontWeight.w700,
     letterSpacing: 0,
   );
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
-    final w = media.width;
-    final tablet = w >= 900;
-    final stageH = tablet
-        ? math.min(640.0, math.max(520.0, media.height - 340))
-        : _stageH;
     return GameScaffold(
       gameKey: 'gfeihua',
       title: '飞花令',
       boardGap: 12,
       liveProgress: liveProgress,
+      // 顶栏只留两粒：得分 / 最佳（对句数在底部条外不再重复占位）。
       pills: [
-        GameScorePill(label: '本局对句', value: '$count'),
         GameScorePill(label: '本局得分', value: '$score'),
         GameScorePill(label: '最长记录', value: '$best'),
       ],
@@ -420,31 +413,37 @@ class GameFeihuaView extends StatelessWidget {
         ),
         GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
       ],
-      board: SizedBox(
-        width: math.max(0.0, w - GameMetrics.sidePad * 2),
-        height: phase == FeihuaPhase.playing
-            ? math.min(
-                stageH,
-                math.max(
-                  280.0,
-                  media.height - MediaQuery.viewInsetsOf(context).bottom - 240,
-                ),
-              )
-            : stageH,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: c.line),
-            boxShadow: CitroColors.shadows.card(c),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            child: phase == FeihuaPhase.menu
-                ? _menu(context)
-                : (phase == FeihuaPhase.playing ? _board(context) : _result(context)),
-          ),
-        ),
+      // 舞台只吃内容区约束：竖屏扣除 HUD / 操作行 / 正在玩，横屏扣除左右侧栏，
+      // 不再读 MediaQuery（按整屏宽算在横屏必然裁切）。
+      board: LayoutBuilder(
+        builder: (context, constraints) {
+          final w =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+          final h = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : math.min(600.0, math.max(420.0, w * 1.5));
+          final id = GameIdentityScope.of(context);
+          return SizedBox(
+            width: w,
+            height: h,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                border: Border.all(color: id.primary.withAlpha(46)),
+                boxShadow: CitroColors.shadows.card(c),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(CitroColors.radii.card),
+                child: phase == FeihuaPhase.menu
+                    ? _menu(context)
+                    : (phase == FeihuaPhase.playing
+                          ? _board(context)
+                          : _result(context)),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -452,6 +451,7 @@ class GameFeihuaView extends StatelessWidget {
   // --- 菜单 --------------------------------------------------------------
 
   Widget _menu(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -464,12 +464,12 @@ class GameFeihuaView extends StatelessWidget {
               height: 56,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: c.tintBlue,
+                color: id.soft,
                 borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               ),
               child: Text(
                 '令',
-                style: context.heading(size: CitroType.titleLg, color: c.accentInk),
+                style: context.heading(size: CitroType.titleLg, color: id.primaryInk),
               ),
             ),
             const SizedBox(height: 14),
@@ -506,30 +506,31 @@ class GameFeihuaView extends StatelessWidget {
   }
 
   Widget _rules(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     const ord = ['壹', '贰', '叁', '肆'];
     final texts = <List<InlineSpan>>[
       [
         const TextSpan(text: '系统随机抽一个'),
-        TextSpan(text: '令字', style: _emStyle),
+        TextSpan(text: '令字', style: _emStyle(id)),
         const TextSpan(text: '，你与 AI 轮流说出含这个字的诗句'),
       ],
       [
         const TextSpan(text: '每回合 '),
-        TextSpan(text: '120 秒', style: _emStyle),
+        TextSpan(text: '120 秒', style: _emStyle(id)),
         const TextSpan(text: '，超时即结束本局'),
       ],
       [
         const TextSpan(text: '每句基础 '),
-        TextSpan(text: '+10 分', style: _emStyle),
+        TextSpan(text: '+10 分', style: _emStyle(id)),
         const TextSpan(text: '；答对 '),
-        TextSpan(text: '2 句后 ×2', style: _emStyle),
+        TextSpan(text: '2 句后 ×2', style: _emStyle(id)),
         const TextSpan(text: '、'),
-        TextSpan(text: '4 句后 ×4', style: _emStyle),
+        TextSpan(text: '4 句后 ×4', style: _emStyle(id)),
         const TextSpan(text: '，之后每多 2 句倍率再加 2 倍'),
       ],
       [
         const TextSpan(text: '答满 2 句后即可'),
-        TextSpan(text: '随时换个令字', style: _emStyle),
+        TextSpan(text: '随时换个令字', style: _emStyle(id)),
         const TextSpan(text: '，换字不影响已累计的倍数'),
       ],
     ];
@@ -539,6 +540,7 @@ class GameFeihuaView extends StatelessWidget {
         for (var i = 0; i < texts.length; i++) ...[
           if (i > 0) const SizedBox(height: 10),
           _ruleRow(
+            id,
             ord[i],
             TextSpan(
               style: context.body(size: CitroType.body, color: c.ink2),
@@ -550,7 +552,7 @@ class GameFeihuaView extends StatelessWidget {
     );
   }
 
-  Widget _ruleRow(String ord, TextSpan span) {
+  Widget _ruleRow(GameIdentity id, String ord, TextSpan span) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -559,11 +561,11 @@ class GameFeihuaView extends StatelessWidget {
           height: 22,
           margin: const EdgeInsets.only(top: 2),
           decoration: BoxDecoration(
-            color: c.tintBlue,
+            color: id.soft,
             borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           ),
           alignment: Alignment.center,
-          child: OrdinalGlyph(ord, color: c.accentText),
+          child: OrdinalGlyph(ord, color: id.primaryInk),
         ),
         const SizedBox(width: 10),
         Expanded(child: Text.rich(span)),
@@ -574,8 +576,9 @@ class GameFeihuaView extends StatelessWidget {
   // --- 运行中棋盘 --------------------------------------------------------
 
   Widget _board(BuildContext context) {
+    final id = GameIdentityScope.of(context);
     final frac = (seconds / 120).clamp(0.0, 1.0);
-    final mult = math.max(1, (count ~/ 2) * 2);
+    final warn = seconds <= 10;
     return Column(
       children: [
         Padding(
@@ -587,7 +590,7 @@ class GameFeihuaView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(
-                  color: c.accentLt.withAlpha(150),
+                  color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                 ),
                 child: Text(
@@ -595,7 +598,7 @@ class GameFeihuaView extends StatelessWidget {
                   style: context.hand(
                     size: CitroType.titleLg,
                     weight: CitroType.strong,
-                    color: c.accentInk,
+                    color: id.primaryInk,
                   ),
                 ),
               ),
@@ -608,7 +611,7 @@ class GameFeihuaView extends StatelessWidget {
                   style: context.hand(
                     size: CitroType.titleLg,
                     weight: CitroType.strong,
-                    color: seconds <= 10 ? c.stamp : c.ink,
+                    color: warn ? id.deep : c.ink,
                   ),
                 ),
               ),
@@ -618,7 +621,8 @@ class GameFeihuaView extends StatelessWidget {
                 child: CitroProgressBar(
                   value: frac,
                   height: 6,
-                  color: seconds <= 10 ? c.stamp : c.accent,
+                  color: warn ? id.deep : id.primary,
+                  track: id.deep.withAlpha(40),
                 ),
               ),
             ],
@@ -653,7 +657,7 @@ class GameFeihuaView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
           child: SizedBox(
-            height: 46,
+            height: 48,
             child: Row(
               children: [
                 Expanded(
@@ -671,26 +675,26 @@ class GameFeihuaView extends StatelessWidget {
                       hintText: '输入一句诗，选候选词后回车或点「对」',
                       hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
                       filled: true,
-                      fillColor: c.surface2,
+                      fillColor: id.soft.withAlpha(90),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.accent),
+                        borderSide: BorderSide(color: id.primary, width: 1.5),
                       ),
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(CitroColors.radii.field),
-                        borderSide: BorderSide(color: c.line2),
+                        borderSide: BorderSide(color: id.deep.withAlpha(70)),
                       ),
                     ),
                   ),
@@ -699,12 +703,15 @@ class GameFeihuaView extends StatelessWidget {
                 GameActionButton(
                   label: '对',
                   width: 66,
+                  height: 48,
+                  primary: true,
                   onTap: thinking ? null : onSubmit,
                 ),
               ],
             ),
           ),
         ),
+        // 底部条只留令字 + 换字，倍数与句数不再占位。
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: Row(
@@ -712,9 +719,9 @@ class GameFeihuaView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: c.surface2,
+                  color: id.soft,
                   borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  border: Border.all(color: c.accentLt),
+                  border: Border.all(color: id.primary.withAlpha(60)),
                 ),
                 child: Text.rich(
                   TextSpan(
@@ -726,7 +733,7 @@ class GameFeihuaView extends StatelessWidget {
                         style: context.body(
                           size: CitroType.body,
                           weight: CitroType.strong,
-                          color: c.accentInk,
+                          color: id.primaryInk,
                         ),
                       ),
                     ],
@@ -744,7 +751,7 @@ class GameFeihuaView extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                      border: Border.all(color: c.line2),
+                      border: Border.all(color: id.primary.withAlpha(80)),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -752,28 +759,10 @@ class GameFeihuaView extends StatelessWidget {
                       style: context.body(
                         size: CitroType.meta,
                         weight: CitroType.strong,
-                        color: c.accentInk,
+                        color: id.primaryInk,
                       ),
                     ),
                   ),
-                ),
-              ),
-              const Spacer(),
-              Text.rich(
-                TextSpan(
-                  style: context.body(size: CitroType.small, color: c.inkSoft),
-                  children: [
-                    const TextSpan(text: '当前 '),
-                    TextSpan(
-                      text: '×$mult',
-                      style: context.body(
-                        size: CitroType.body,
-                        weight: CitroType.strong,
-                        color: c.mintInk,
-                      ),
-                    ),
-                    TextSpan(text: ' · 本局已答 $count 句'),
-                  ],
                 ),
               ),
             ],
@@ -784,13 +773,15 @@ class GameFeihuaView extends StatelessWidget {
   }
 
   Widget _chainRow(BuildContext context, FhItem item) {
-    final bar = item.role == 'ai' ? c.mint : c.accent;
+    final id = GameIdentityScope.of(context);
+    // 诗卡统一身份色：soft 底 + deep 描边 + ink 字；左对齐，出处右对齐。
+    final bar = item.role == 'ai' ? id.deep : id.primary;
     final tagText = item.role == 'ai' ? 'AI' : '你';
     return Container(
       decoration: BoxDecoration(
-        color: item.role == 'ai' ? c.surface2 : c.accentLt.withAlpha(90),
+        color: id.soft,
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: item.role == 'ai' ? c.line : c.accentLt),
+        border: Border.all(color: id.deep.withAlpha(70)),
       ),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -818,7 +809,7 @@ class GameFeihuaView extends StatelessWidget {
                             style: context.body(
                               size: CitroType.micro,
                               weight: CitroType.strong,
-                              color: c.accentText,
+                              color: id.onPrimary,
                             ),
                           ),
                         ),
@@ -846,9 +837,10 @@ class GameFeihuaView extends StatelessWidget {
     );
   }
 
-  /// 诗句里的令字用朱砂高亮。
+  /// 诗句里的令字用身份主色高亮。
   TextSpan _markedLine(BuildContext context, String line) {
-    final base = context.heading(size: CitroType.title, color: c.ink);
+    final id = GameIdentityScope.of(context);
+    final base = context.heading(size: CitroType.title, color: id.ink);
     if (ch.isEmpty || !line.contains(ch)) {
       return TextSpan(style: base, text: line);
     }
@@ -861,7 +853,7 @@ class GameFeihuaView extends StatelessWidget {
           if (i < parts.length - 1)
             TextSpan(
               text: ch,
-              style: TextStyle(color: c.accentInk, fontWeight: FontWeight.w700),
+              style: TextStyle(color: id.primary, fontWeight: FontWeight.w700),
             ),
         ],
       ],
@@ -871,7 +863,8 @@ class GameFeihuaView extends StatelessWidget {
   // --- 结算 --------------------------------------------------------------
 
   Widget _result(BuildContext context) {
-    final titleColor = won ? c.mintInk : c.stamp;
+    final id = GameIdentityScope.of(context);
+    final titleColor = won ? id.primaryInk : id.deep;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
@@ -890,13 +883,14 @@ class GameFeihuaView extends StatelessWidget {
               style: context.body(size: CitroType.meta, color: c.ink2),
             ),
             const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // 窄屏（横屏 / 小窗）改成 Wrap，三个统计块自动换行不挤爆。
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 20,
+              runSpacing: 12,
               children: [
                 _stat(context, '本局对句', '$count'),
-                const SizedBox(width: 20),
                 _stat(context, '最长链', '${chain.length}'),
-                const SizedBox(width: 20),
                 _stat(context, '本局得分', '$score', accent: true),
               ],
             ),
@@ -914,6 +908,7 @@ class GameFeihuaView extends StatelessWidget {
   }
 
   Widget _stat(BuildContext context, String label, String value, {bool accent = false}) {
+    final id = GameIdentityScope.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -924,7 +919,7 @@ class GameFeihuaView extends StatelessWidget {
           style: context.hand(
             size: CitroType.heading,
             weight: CitroType.strong,
-            color: accent ? c.accentInk : c.ink,
+            color: accent ? id.primaryInk : id.ink,
           ),
         ),
       ],
@@ -935,12 +930,13 @@ class GameFeihuaView extends StatelessWidget {
 
   /// 链表区顶部的错误 / AI 判定提示胶囊。
   Widget _fbChip(BuildContext context, String text) {
+    final id = GameIdentityScope.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-        border: Border.all(color: c.line2),
+        border: Border.all(color: id.primary.withAlpha(90)),
         boxShadow: CitroColors.shadows.card(c),
       ),
       child: Text(
@@ -950,7 +946,7 @@ class GameFeihuaView extends StatelessWidget {
         style: context.body(
           size: CitroType.meta,
           weight: CitroType.strong,
-          color: c.ink2,
+          color: id.ink,
         ),
       ),
     );

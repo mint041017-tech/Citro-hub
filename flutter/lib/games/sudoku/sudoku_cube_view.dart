@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
+import '../game_identity.dart';
+import '../game_ui.dart';
 import 'sudoku_puzzle.dart';
 
 /// 图六式三面立方体：顶面、左前面、右前面。
@@ -58,6 +60,7 @@ class _SudokuCubeViewState extends State<SudokuCubeView> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final available = constraints.maxWidth.isFinite
@@ -117,6 +120,7 @@ class _SudokuCubeViewState extends State<SudokuCubeView> {
                             focusFace: widget.focusFace,
                             revision: widget.revision,
                             colors: c,
+                            identity: identity,
                             geometry: geometry,
                           ),
                           size: Size(width, geometry.height),
@@ -359,6 +363,7 @@ class _SudokuCubePainter extends CustomPainter {
     required this.focusFace,
     required this.revision,
     required this.colors,
+    required this.identity,
     required this.geometry,
   });
 
@@ -370,6 +375,7 @@ class _SudokuCubePainter extends CustomPainter {
   final SudokuCubeFace focusFace;
   final int revision;
   final CitroColors colors;
+  final GameIdentity identity;
   final _CubeGeometry geometry;
 
   Set<int> _peers() {
@@ -410,9 +416,13 @@ class _SudokuCubePainter extends CustomPainter {
       SudokuCubeFace.frontLeft => .05,
       SudokuCubeFace.frontRight => .09,
     };
+    final base = Color.alphaBlend(
+      identity.soft.withValues(alpha: colors.dark ? .26 : .58),
+      colors.surface2,
+    );
     return Color.alphaBlend(
       colors.ink.withValues(alpha: colors.dark ? shade * .45 : shade),
-      colors.surface2,
+      base,
     );
   }
 
@@ -437,22 +447,25 @@ class _SudokuCubePainter extends CustomPainter {
         var color = base;
         if (face == focusFace) {
           color = Color.alphaBlend(
-            colors.accent.withValues(alpha: .035),
+            identity.primary.withValues(alpha: .035),
             color,
           );
         }
         if (peers.contains(index)) {
-          color = Color.alphaBlend(colors.mintSoft, color);
+          color = Color.alphaBlend(
+            identity.primary.withValues(alpha: .10),
+            color,
+          );
         }
         if (selectedValue != 0 && value == selectedValue) {
-          color = Color.alphaBlend(colors.accent.withValues(alpha: .18), color);
+          color = Color.alphaBlend(identity.primary.withValues(alpha: .18), color);
         }
         if (index == selected) {
-          color = Color.alphaBlend(colors.accent.withValues(alpha: .28), color);
+          color = Color.alphaBlend(identity.primary.withValues(alpha: .28), color);
         }
         if (conflicts.contains(index)) {
           color = Color.alphaBlend(
-            colors.stamp.withValues(alpha: index == selected ? .26 : .14),
+            colors.danger.withValues(alpha: index == selected ? .26 : .14),
             color,
           );
         }
@@ -464,7 +477,7 @@ class _SudokuCubePainter extends CustomPainter {
       final border = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = .06
-        ..color = conflicts.contains(selected) ? colors.stamp : colors.accent;
+        ..color = conflicts.contains(selected) ? colors.danger : identity.primary;
       for (var r = 0; r < 9; r++) {
         for (var c = 0; c < 9; c++) {
           if (map.cellAt(r, c) != selected) continue;
@@ -565,8 +578,8 @@ class _SudokuCubePainter extends CustomPainter {
               fontFamilyFallback: AppFonts.fallback,
               fontWeight: given ? FontWeight.w700 : FontWeight.w700,
               color: conflict
-                  ? colors.stamp
-                  : (given ? colors.ink : colors.accentInk),
+                  ? colors.danger
+                  : (given ? identity.deep : identity.primaryInk),
               height: 1,
             ),
           );
@@ -657,7 +670,7 @@ class _SudokuCubePainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(2.4, geometry.u * .085)
-        ..color = colors.accent.withValues(alpha: .92),
+        ..color = identity.primary.withValues(alpha: .92),
     );
   }
 
@@ -667,6 +680,7 @@ class _SudokuCubePainter extends CustomPainter {
       old.selected != selected ||
       old.focusFace != focusFace ||
       old.puzzle != puzzle ||
+      old.identity != identity ||
       old.colors != colors ||
       old.geometry.u != geometry.u ||
       old.geometry.yaw != geometry.yaw ||

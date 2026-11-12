@@ -12,11 +12,13 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
+import 'game_identity.dart';
 import 'game_ui.dart'
     show
         GameActionButton,
         GameHead,
         GameIcons,
+        GameIdentityScope,
         GameLiveBar,
         GameScaffold,
         GameScorePill,
@@ -302,63 +304,73 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
     // 与 Web 的 GameScaffold 判定保持一致：横屏一律标准壳，同窗口同罐子。
-    final standard = media.width > media.height;
+    final standard = MediaQuery.orientationOf(context) == Orientation.landscape;
     _syncShellMode(standard);
     return standard ? _buildStandardShell(context) : _buildPhoneShell(context);
   }
 
   Widget _buildPhoneShell(BuildContext context) {
     final c = context.c;
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: GameHead(
-              onBack: () => Navigator.maybePop(context),
-              buttonSize: 42,
-              iconSize: 20,
-              centerBrand: true,
-              extraActions: [
-                _RankButton(
-                  onTap: () =>
-                      showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+    final identity = identityOf('gliquid');
+    // 紧凑壳自己就是页顶：在这里注入身份色，GameHead / 正在玩 / 排行圆钮
+    // 才不会回落到中性灰。
+    return GameIdentityScope(
+      identity: identity,
+      child: Scaffold(
+        backgroundColor: c.bg,
+        body: DecoratedBox(
+          // 身份色只以极低透明度铺在顶部，像舞台顶光（与标准壳同源）。
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [identity.primary.withAlpha(c.dark ? 34 : 30), c.bg],
+              stops: const [0, 0.62],
+            ),
+          ),
+          child: Column(
+            children: [
+              SafeArea(
+                bottom: false,
+                child: GameHead(
+                  onBack: () => Navigator.maybePop(context),
+                  buttonSize: 42,
+                  iconSize: 20,
+                  centerBrand: true,
+                  extraActions: [
+                    _RankButton(
+                      onTap: () =>
+                          showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                // 紧凑壳的棋盘在 Expanded 里：宽高都有界，直接按内容区尺寸来。
+                child: LayoutBuilder(
+                  builder: (context, cons) {
+                    final size = LiquidBoardMetrics.boardSizeFor(
+                      maxWidth: cons.maxWidth - LiquidBoardMetrics.sidePad * 2,
+                      maxHeight: cons.maxHeight,
+                    );
+                    return Center(
+                      child: SizedBox(
+                        width: size.width,
+                        height: size.height,
+                        child: platform.isTest
+                            ? _testBody(context)
+                            : _webPanel(context),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (!platform.isTest)
+                SafeArea(top: false, child: GameLiveBar(list: _live)),
+            ],
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, cons) {
-                final media = MediaQuery.sizeOf(context);
-                final boardW = LiquidBoardMetrics.boardWidth(
-                  math.min(
-                    cons.maxWidth,
-                    media.width - LiquidBoardMetrics.sidePad * 2,
-                  ),
-                );
-                final boardH = LiquidBoardMetrics.compactBoardHeight(
-                  media,
-                  MediaQuery.paddingOf(context),
-                );
-                return Center(
-                  child: SizedBox(
-                    width: boardW,
-                    height: boardH,
-                    child: platform.isTest
-                        ? _testBody(context)
-                        : _webPanel(context),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (!platform.isTest)
-            SafeArea(top: false, child: GameLiveBar(list: _live)),
-        ],
+        ),
       ),
     );
   }
@@ -395,18 +407,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       boardGap: 12,
       board: LayoutBuilder(
         builder: (context, cons) {
-          final media = MediaQuery.sizeOf(context);
-          final avail = cons.maxWidth.isFinite
-              ? cons.maxWidth
-              : LiquidBoardMetrics.maxBoardWidth;
-          final boardW = LiquidBoardMetrics.boardWidth(avail);
-          final boardH = LiquidBoardMetrics.standardBoardHeight(
-            media,
-            MediaQuery.paddingOf(context),
-          );
+          // GameScaffold 的 board 区在滚动视图里：宽度有界、高度无界，
+          // 高度按宽度折算（见 LiquidBoardMetrics.boardSizeFor）。
+          final size = LiquidBoardMetrics.boardSizeFor(maxWidth: cons.maxWidth);
           return SizedBox(
-            width: boardW,
-            height: boardH,
+            width: size.width,
+            height: size.height,
             child: platform.isTest
                 ? _testBody(context)
                 : _webPanel(context, clipped: true),
@@ -417,7 +423,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   }
 
   Widget _webPanel(BuildContext context, {bool clipped = false}) {
-    final c = context.c;
     final panel = Stack(
       children: [
         Positioned.fill(
@@ -485,58 +490,10 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
           ),
         ),
         if (_loading && _error == null)
-          Positioned.fill(
-            child: ColoredBox(
-              color: c.surface,
-              child: Center(
-                child: SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: c.accent,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: _LiquidBoot()),
         if (_error != null)
           Positioned.fill(
-            child: ColoredBox(
-              color: c.surface,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '果冻铺没有开门',
-                        style: context.heading(size: CitroType.titleLg, color: c.ink),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _error!,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: context.body(
-                          size: CitroType.caption,
-                          color: c.inkSoft,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      CitroButton(
-                        label: '重试',
-                        style: CitroButtonStyle.accent,
-                        onPressed: _retry,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: _LiquidBootError(message: _error!, onRetry: _retry),
           ),
       ],
     );
@@ -564,7 +521,7 @@ class _RankButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Pressable(
       onTap: onTap,
       borderRadius: BorderRadius.circular(99),
@@ -572,12 +529,109 @@ class _RankButton extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: c.surface2,
+          color: identity.primary.withAlpha(26),
           shape: BoxShape.circle,
-          border: Border.all(color: c.line2),
+          border: Border.all(color: identity.primary.withAlpha(70)),
         ),
         child: Center(
-          child: gameIcon(GameIcons.trophy, size: 18, color: c.ink2),
+          child: gameIcon(
+            GameIcons.trophy,
+            size: 18,
+            color: identity.primaryInk,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字），替代白底转圈。
+class _LiquidBoot extends StatelessWidget {
+  const _LiquidBoot();
+
+  @override
+  Widget build(BuildContext context) {
+    final identity = GameIdentityScope.of(context);
+    return ColoredBox(
+      color: identity.soft,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 132,
+              height: 4,
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                color: identity.primary,
+                backgroundColor: identity.primary.withAlpha(40),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '正在准备果冻铺',
+              style: context.body(
+                size: CitroType.body,
+                weight: CitroType.strong,
+                color: identity.deep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '咕噜果冻铺 · 软体合并',
+              style: context.body(
+                size: CitroType.small,
+                color: identity.deep.withAlpha(160),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 错误态：身份色底 + 主色实底按钮（按钮文字走 identity.onPrimary）。
+class _LiquidBootError extends StatelessWidget {
+  const _LiquidBootError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final identity = GameIdentityScope.of(context);
+    return ColoredBox(
+      color: identity.soft,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '果冻铺没有开门',
+                style: context.heading(
+                  size: CitroType.titleLg,
+                  color: identity.deep,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: context.body(
+                  size: CitroType.caption,
+                  color: identity.primaryInk,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 14),
+              GameActionButton(label: '重试', primary: true, onTap: onRetry),
+            ],
+          ),
         ),
       ),
     );

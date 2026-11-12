@@ -9,6 +9,7 @@ import '../services/game_sfx.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ class _PengColorPair {
   final Color d;
 }
 
-/// 淘气小球调色板：全部由 token 派生（亮色粉彩 / 深色深青）。
+/// 淘气小球调色板：全部由游戏身份派生（固定颜色，不随主题切换）。
 class PengPalette {
   const PengPalette({
     required this.balls,
@@ -43,6 +44,8 @@ class PengPalette {
     required this.floatInk,
     required this.timebarBg,
     required this.timebarFill,
+    required this.vignetteCenter,
+    required this.vignetteEdge,
   });
 
   final List<_PengColorPair> balls;
@@ -53,99 +56,72 @@ class PengPalette {
   final Color floatInk;
   final Color timebarBg;
   final Color timebarFill;
+  final Color vignetteCenter;
+  final Color vignetteEdge;
 }
 
-PengPalette pengPalette(CitroColors c) {
-  Color shade(Color base, double amount) => Color.lerp(base, c.ink, amount)!;
+PengPalette pengPalette(GameIdentity identity, CitroColors c) {
   final balls = <_PengColorPair>[
-    _PengColorPair(c.tintPink, shade(c.tintPink, .28)),
-    _PengColorPair(c.tintBlue, shade(c.tintBlue, .28)),
-    _PengColorPair(c.tintYellow, shade(c.tintYellow, .24)),
-    _PengColorPair(c.tintGreen, shade(c.tintGreen, .28)),
-    _PengColorPair(c.accentLt, c.accent2),
-    _PengColorPair(c.tintNeutral, shade(c.tintNeutral, .22)),
+    _PengColorPair(identity.primary, identity.deep),
+    _PengColorPair(identity.soft, identity.primary),
+    _PengColorPair(GameIdentity.paper, identity.primary),
+    _PengColorPair(identity.primaryInk, identity.deep),
+    _PengColorPair(identity.deep, identity.ink),
+    _PengColorPair(
+      Color.lerp(identity.primary, GameIdentity.paper, .5)!,
+      identity.primary,
+    ),
   ];
-  if (!c.dark) {
-    return PengPalette(
-      balls: balls,
-      wall: c.ink2.withAlpha(178),
-      gapDot: c.accent2,
-      danger: c.danger,
-      dangerInk: c.stamp,
-      floatInk: c.ink2,
-      timebarBg: c.surface2,
-      timebarFill: c.accent,
-    );
-  }
   return PengPalette(
     balls: balls,
-    wall: c.inkSoft.withAlpha(150),
-    gapDot: c.accent,
+    wall: identity.primary,
+    gapDot: identity.deep,
     danger: c.danger,
     dangerInk: c.stamp,
-    floatInk: c.ink2,
-    timebarBg: c.surface2,
-    timebarFill: c.accent,
+    floatInk: identity.primaryInk,
+    timebarBg: identity.primary.withAlpha(40),
+    timebarFill: identity.primary,
+    vignetteCenter: GameIdentity.paper.withAlpha(70),
+    vignetteEdge: identity.deep.withAlpha(30),
   );
 }
 
 const double _cardRadius = 24;
 
-/// web 暗角 = createRadialGradient(中心, r0=30 → 外半径 max(w,h)*0.8，
-/// rgba(255,255,255,.34) → rgba(120,86,48,.12)) 叠加在卡片底色 #FFFDF8 上。
-///
-/// Flutter 的 shader 渐变与 Chrome 的取整方式不同（Skia 截断、Chrome 四舍五入），
-/// 整卡会系统性偏 1。这里不用 shader，而是从 web 参考图按半径统计出每个 1px
-/// 环带的众数颜色（已含合成结果），再从外到内画不透明实心圆盘：像素距离 d
-/// 最终取 LUT[ceil(d)] 的颜色，与 Chrome 的最终像素值一致。
-/// 暗角：中心柔光 → 边缘轻压暗，颜色由 token 派生（亮色暖白、深色深青）。
+/// 暗角：直接画 shader 径向渐变（中心柔光 → 边缘轻压暗），
+/// 不再走多层 LUT / ImageFiltered。颜色由身份色派生。
 void _paintVignette(Canvas canvas, Size size, PengPalette palette) {
-  final cx = size.width / 2;
-  final cy = size.height * 0.42;
-  final maxR = math.sqrt(
-    math.pow(math.max(cx, size.width - cx), 2) +
-        math.pow(math.max(cy, size.height - cy), 2),
-  );
+  final radius = math.max(size.width, size.height) * 0.72;
   canvas.drawRect(
     Offset.zero & size,
     Paint()
       ..shader = RadialGradient(
-        center: Alignment(cx / size.width * 2 - 1, cy / size.height * 2 - 1),
-        radius: maxR / math.max(size.width, size.height),
-        colors: [palette.timebarBg, palette.wall],
+        center: const Alignment(0, -0.1),
+        radius: radius,
+        colors: [palette.vignetteCenter, palette.vignetteEdge],
         stops: const [0, 1],
       ).createShader(Offset.zero & size),
   );
 }
 
-ui.Image? _vignetteImage;
-Size _vignetteLogicalSize = Size.zero;
-double _vignetteDpr = 0;
-int? _vignettePaletteKey;
-
-ui.Image _cachedVignette(Size size, PengPalette palette) {
-  final views = ui.PlatformDispatcher.instance.views;
-  final dpr = views.isEmpty ? 1.0 : views.first.devicePixelRatio;
-  final paletteKey = Object.hash(palette.wall, palette.timebarBg);
-  if (_vignetteImage != null &&
-      _vignetteLogicalSize == size &&
-      _vignetteDpr == dpr &&
-      _vignettePaletteKey == paletteKey) {
-    return _vignetteImage!;
+/// 舞台可用高度：竖屏扣除顶栏 / HUD / 操作行 / 正在玩；横屏扣除左右侧栏。
+///
+/// GameScaffold 的 board 槽位是 SingleChildScrollView（高度无界），
+/// 这里按版式常量估算内容区高度，避免棋盘在横屏 / 平板被裁。
+double _stageHeight(BuildContext context) {
+  final mq = MediaQuery.of(context);
+  final screen = mq.size;
+  final landscape = screen.width > screen.height;
+  const double head = 64; // GameMetrics.headHeight
+  const double hud = 76; // HUD 条（pill + 内外边距）
+  const double actions = 74; // 操作行（boardGap + 按钮 + bodyBottom）
+  const double live = 60; // 正在玩（48 + 12 下边距）
+  const double pad = 8; // board 槽位顶部留白
+  if (landscape) {
+    // 横屏：HUD 与操作行在中间滚动区内，正在玩在右侧栏。
+    return screen.height - mq.padding.top - hud - actions - 20;
   }
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder)..scale(dpr);
-  _paintVignette(canvas, size, palette);
-  final picture = recorder.endRecording();
-  final w = math.max(1, (size.width * dpr).ceil());
-  final h = math.max(1, (size.height * dpr).ceil());
-  final image = picture.toImageSync(w, h);
-  picture.dispose();
-  _vignetteImage = image;
-  _vignetteLogicalSize = size;
-  _vignetteDpr = dpr;
-  _vignettePaletteKey = paletteKey;
-  return image;
+  return screen.height - head - hud - actions - live - mq.padding.bottom - pad;
 }
 
 double _normA(double a) {
@@ -267,6 +243,7 @@ class _GamePengPageState extends State<GamePengPage>
   final Stopwatch _clock = Stopwatch()..start();
   final ValueNotifier<String> _progress = ValueNotifier<String>('得分 0');
   CitroColors _colors = CitroColors.light;
+  GameIdentity _identity = identityOf('gpeng');
 
   late final Ticker _ticker;
   bool _tickerReady = false;
@@ -364,7 +341,7 @@ class _GamePengPageState extends State<GamePengPage>
   void _spawnBall() {
     final a = _rnd.nextDouble() * math.pi * 2;
     final sp = _ballSpeed;
-    final palette = pengPalette(_colors).balls;
+    final palette = pengPalette(_identity, _colors).balls;
     _balls.add(
       _PengBall(
         x: _layout.cx,
@@ -428,7 +405,7 @@ class _GamePengPageState extends State<GamePengPage>
       _layout.cx,
       _layout.cy - _layout.radius * 0.5,
       big: true,
-      color: pengPalette(_colors).dangerInk,
+      color: pengPalette(_identity, _colors).dangerInk,
     );
     GameSfx.warn();
   }
@@ -568,14 +545,14 @@ class _GamePengPageState extends State<GamePengPage>
   void _bounceFx(double x, double y) {
     _bounces++;
     _score += _bouncePts.toInt();
-    _burst(x, y, _colors.accent, 8);
-    _addFloat('+2', x, y - 16 * _layout.sc, color: pengPalette(_colors).floatInk);
+    _burst(x, y, _identity.primary, 8);
+    _addFloat('+2', x, y - 16 * _layout.sc, color: pengPalette(_identity, _colors).floatInk);
     _shake = math.min(8, _shake + 2);
     GameSfx.bounce();
   }
 
   void _escape(_PengBall b) {
-    _burst(b.x, b.y, _colors.stamp, 16);
+    _burst(b.x, b.y, _identity.deep, 16);
     _shake = _shakeMax;
     GameSfx.lose();
     _addFloat(
@@ -583,7 +560,7 @@ class _GamePengPageState extends State<GamePengPage>
       _layout.cx,
       _layout.cy - _layout.radius * 0.5,
       big: true,
-      color: pengPalette(_colors).dangerInk,
+      color: pengPalette(_identity, _colors).dangerInk,
     );
     _end();
   }
@@ -613,7 +590,7 @@ class _GamePengPageState extends State<GamePengPage>
     bool big = false,
     Color? color,
   }) {
-    color ??= pengPalette(_colors).floatInk;
+    color ??= pengPalette(_identity, _colors).floatInk;
     _floats.add(_PengFloat(text: text, x: x, y: y, big: big, color: color));
   }
 
@@ -713,6 +690,7 @@ class _GamePengPageState extends State<GamePengPage>
   @override
   Widget build(BuildContext context) {
     _colors = context.c;
+    _identity = GameIdentityScope.of(context);
     final best = math.max(_best, context.app.localBest('peng'));
     return GamePengView(
       score: _score,
@@ -777,6 +755,7 @@ class GamePengView extends StatelessWidget {
     this.onRank,
     this.onRetry,
     this.onBoardSize,
+    this.identity,
   });
 
   /// golden 预览：参考图首屏（ready 态 / 两个 58° 缺口 / 粉色小球 / 时间条 0）
@@ -786,6 +765,7 @@ class GamePengView extends StatelessWidget {
     time: 0,
     phi: 0,
     nowMs: 0,
+    identity: identityOf('gpeng'),
     gaps: [
       _PengGap(0.0593, 1.01229, -100000),
       _PengGap(0.0593 + math.pi, 1.01229, -100000),
@@ -797,7 +777,7 @@ class GamePengView extends StatelessWidget {
         r: 9.3,
         vx: 108.0,
         vy: 225.0,
-        color: pengPalette(CitroColors.light).balls[0],
+        color: pengPalette(identityOf('gpeng'), CitroColors.light).balls[0],
       ),
     ],
   );
@@ -833,145 +813,51 @@ class GamePengView extends StatelessWidget {
   final VoidCallback? onRetry;
   final ValueChanged<Size>? onBoardSize;
 
+  /// 游戏身份；缺省从 [GameIdentityScope] 取（预览 / 测试直接指定）。
+  final GameIdentity? identity;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = identity ?? GameIdentityScope.of(context);
     final board = LayoutBuilder(
       builder: (context, constraints) {
-        final screen = MediaQuery.sizeOf(context);
-        final availableW = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : screen.width - 30;
-        final side = math.min(availableW, math.max(300.0, screen.height - 260));
-        onBoardSize?.call(Size(side, side));
-        final palette = pengPalette(c);
+        final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+        // 优先用父级给的高度约束；GameScaffold 的 board 槽位目前无界，
+        // 回退到按版式常量估算的内容区高度。
+        final avail = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : _stageHeight(context);
+        const double hintH = 34.0;
+        const double gap = 8.0;
+        // 棋盘随内容区：竖屏铺满剩余高度（圆填满宽度），横屏铺满高度（圆填满高度）。
+        final h = math.max(160.0, avail - hintH - gap);
+        onBoardSize?.call(Size(w, h));
+        final palette = pengPalette(id, c);
         return Center(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(_cardRadius),
-              boxShadow: CitroColors.shadows.card(c),
-            ),
-            child: Container(
-              width: side,
-              height: side,
-              decoration: BoxDecoration(
-                color: c.surface,
-                border: Border.all(color: c.line),
-                borderRadius: BorderRadius.circular(_cardRadius),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Listener(
-                      behavior: HitTestBehavior.opaque,
-                      onPointerDown: overlayVisible
-                          ? null
-                          : (e) => onPointerDown?.call(e.localPosition),
-                      onPointerMove: overlayVisible
-                          ? null
-                          : (e) => onPointerMove?.call(e.localPosition),
-                      onPointerUp: overlayVisible
-                          ? null
-                          : (_) => onPointerUp?.call(),
-                      onPointerCancel: overlayVisible
-                          ? null
-                          : (_) => onPointerUp?.call(),
-                      child: ClipRect(
-                        child: RepaintBoundary(
-                          child: CustomPaint(
-                            painter: _PengPainter(
-                              frameData ??
-                                  (_PengFrameData()
-                                    ..phi = phi
-                                    ..gaps = gaps
-                                    ..balls = balls
-                                    ..parts = parts
-                                    ..floats = floats
-                                    ..shake = shake
-                                    ..nowMs = nowMs
-                                    ..state = state
-                                    ..addGapT = addGapT),
-                              repaint: sceneRepaint,
-                              palette: palette,
-                              showVignette:
-                                  MediaQuery.sizeOf(context).width < 900,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+          child: SizedBox(
+            width: w,
+            height: h + gap + hintH,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: w,
+                  height: h,
+                  child: _boardCard(context, c, id, palette, w, h),
+                ),
+                const SizedBox(height: gap),
+                IgnorePointer(
+                  child: Center(
+                    child: _PengHint(identity: id, active: hintOn, height: hintH),
                   ),
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      child: SizedBox(
-                        height: 3,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ColoredBox(color: palette.timebarBg),
-                            ),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: barProgress == null
-                                  ? FractionallySizedBox(
-                                      widthFactor: timeProgress
-                                          .clamp(0.0, 1.0)
-                                          .toDouble(),
-                                      heightFactor: 1,
-                                      child: ColoredBox(
-                                        color: palette.timebarFill,
-                                      ),
-                                    )
-                                  : ValueListenableBuilder<double>(
-                                      valueListenable: barProgress!,
-                                      builder: (_, v, __) =>
-                                          FractionallySizedBox(
-                                            widthFactor: v
-                                                .clamp(0.0, 1.0)
-                                                .toDouble(),
-                                            heightFactor: 1,
-                                            child: ColoredBox(
-                                              color: palette.timebarFill,
-                                            ),
-                                          ),
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (hintOn)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 11.745,
-                      child: IgnorePointer(
-                        child: Center(child: _PengHint(c: c)),
-                      ),
-                    ),
-                  if (overlayVisible)
-                    Positioned.fill(
-                      child: _PengOverlay(
-                        secs: overlaySecs,
-                        bounces: overlayBounces,
-                        score: overlayScore,
-                        improved: overlayImproved,
-                        onRetry: onRetry,
-                      ),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
-
     // HUD 三粒 pill 在 web 中是定宽（62 / 63.0469 / 62），kit 的内容自适应宽度
     // 会让整组窄 ~1px，这里用 SizedBox 显式定宽还原。
     final hud = Row(
@@ -1023,22 +909,167 @@ class GamePengView extends StatelessWidget {
       liveProgress: liveProgress,
     );
   }
+
+  /// 棋盘卡：底座用身份色 soft + primary 边框，时间条 7px 带秒数。
+  Widget _boardCard(
+    BuildContext context,
+    CitroColors c,
+    GameIdentity id,
+    PengPalette palette,
+    double w,
+    double h,
+  ) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_cardRadius),
+        boxShadow: CitroColors.shadows.card(c),
+      ),
+      child: Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: id.soft,
+          border: Border.all(color: id.primary.withAlpha(150)),
+          borderRadius: BorderRadius.circular(_cardRadius),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: overlayVisible
+                    ? null
+                    : (e) => onPointerDown?.call(e.localPosition),
+                onPointerMove: overlayVisible
+                    ? null
+                    : (e) => onPointerMove?.call(e.localPosition),
+                onPointerUp: overlayVisible
+                    ? null
+                    : (_) => onPointerUp?.call(),
+                onPointerCancel: overlayVisible
+                    ? null
+                    : (_) => onPointerUp?.call(),
+                child: ClipRect(
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      painter: _PengPainter(
+                        frameData ??
+                            (_PengFrameData()
+                              ..phi = phi
+                              ..gaps = gaps
+                              ..balls = balls
+                              ..parts = parts
+                              ..floats = floats
+                              ..shake = shake
+                              ..nowMs = nowMs
+                              ..state = state
+                              ..addGapT = addGapT),
+                        repaint: sceneRepaint,
+                        palette: palette,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // 时间条：加粗到 7px。
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: SizedBox(
+                  height: 7,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: ColoredBox(color: palette.timebarBg),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: barProgress == null
+                            ? FractionallySizedBox(
+                                widthFactor: timeProgress
+                                    .clamp(0.0, 1.0)
+                                    .toDouble(),
+                                heightFactor: 1,
+                                child: ColoredBox(
+                                  color: palette.timebarFill,
+                                ),
+                              )
+                            : ValueListenableBuilder<double>(
+                                valueListenable: barProgress!,
+                                builder: (_, v, __) => FractionallySizedBox(
+                                  widthFactor: v
+                                      .clamp(0.0, 1.0)
+                                      .toDouble(),
+                                  heightFactor: 1,
+                                  child: ColoredBox(
+                                    color: palette.timebarFill,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 秒数：时间条右下。
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IgnorePointer(
+                child: Text(
+                  '$time',
+                  style: context.body(
+                    size: CitroType.micro,
+                    weight: CitroType.strong,
+                    color: id.primaryInk,
+                  ),
+                ),
+              ),
+            ),
+            if (overlayVisible)
+              Positioned.fill(
+                child: _PengOverlay(
+                  secs: overlaySecs,
+                  bounces: overlayBounces,
+                  score: overlayScore,
+                  improved: overlayImproved,
+                  identity: id,
+                  onRetry: onRetry,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-/// `.gpeng-hint`：188.25×33.797，纸底 + line-2 边 + r99 + 前置 6px 橙点
+/// 提示胶囊：纸底 + 身份色描边 + 前置圆点，移到棋盘外常驻。
 class _PengHint extends StatelessWidget {
-  const _PengHint({required this.c});
-  final CitroColors c;
+  const _PengHint({
+    required this.identity,
+    required this.active,
+    this.height = 34,
+  });
+
+  final GameIdentity identity;
+  final bool active;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Container(
-      width: 188.25,
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: c.surface,
-        border: Border.all(color: c.line),
+        border: Border.all(color: identity.primary.withAlpha(70)),
         borderRadius: BorderRadius.circular(CitroColors.radii.button),
         boxShadow: CitroColors.shadows.card(c),
       ),
@@ -1048,7 +1079,10 @@ class _PengHint extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: active ? identity.primary : identity.deep.withAlpha(120),
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 8),
           Flexible(
@@ -1077,21 +1111,24 @@ class _PengOverlay extends StatelessWidget {
     required this.bounces,
     required this.score,
     required this.improved,
+    required this.identity,
     required this.onRetry,
   });
   final int secs;
   final int bounces;
   final int score;
   final bool improved;
+  final GameIdentity identity;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = identity;
     return Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
-        border: Border.all(color: c.line),
+        border: Border.all(color: id.primary.withAlpha(70)),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
@@ -1111,7 +1148,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$secs',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1119,7 +1156,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$bounces',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1127,7 +1164,7 @@ class _PengOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1161,11 +1198,9 @@ class _PengPainter extends CustomPainter {
     this.data, {
     Listenable? repaint,
     required this.palette,
-    this.showVignette = true,
   }) : super(repaint: repaint);
 
   final _PengFrameData data;
-  final bool showVignette;
   final PengPalette palette;
 
   double get phi => data.phi;
@@ -1204,15 +1239,7 @@ class _PengPainter extends CustomPainter {
       );
     }
 
-    if (showVignette) {
-      final vig = _cachedVignette(size, palette);
-      canvas.drawImageRect(
-        vig,
-        Rect.fromLTWH(0, 0, vig.width.toDouble(), vig.height.toDouble()),
-        Offset.zero & size,
-        Paint()..filterQuality = FilterQuality.low,
-      );
-    }
+    _paintVignette(canvas, size, palette);
 
     _drawWalls(canvas, center, radius, sc);
     _drawGapWarn(canvas, center, radius, sc);
@@ -1277,7 +1304,7 @@ class _PengPainter extends CustomPainter {
         canvas.drawArc(rect, s2, e2 - s2, false, wall);
       }
     }
-    // 缺口两端橙色圆点
+    // 缺口两端身份色圆点
     final dot = Paint()..color = palette.gapDot;
     for (final iv in ivs) {
       for (final t in [iv.s, iv.s + iv.w]) {
@@ -1385,7 +1412,7 @@ class _PengPainter extends CustomPainter {
         width: b.r * 0.6,
         height: b.r * 0.36,
       ),
-      Paint()..color = palette.timebarBg.withAlpha(150),
+      Paint()..color = GameIdentity.paper.withAlpha(150),
     );
     canvas.restore();
   }

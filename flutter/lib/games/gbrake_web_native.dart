@@ -10,8 +10,8 @@ import '../services/refresh_rate.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 /// 极限刹车：内嵌原始版（three.js 构建产物），完全离线、不依赖任何 URL。
 ///
@@ -262,6 +262,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final identity = identityOf('gbrake');
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -272,180 +273,170 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
       ),
       child: PopScope(
         canPop: true,
-        child: Scaffold(
-          backgroundColor: context.c.surface,
-          body: Column(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: GameHead(
-                  onBack: () => Navigator.maybePop(context),
-                  buttonSize: 42,
-                  iconSize: 20,
-                  centerBrand: true,
+        // 本页是全屏 WebView，不走 GameScaffold；在这里注入身份色，
+        // GameHead / 加载态 / 错误态才不会回落到中性灰。
+        child: GameIdentityScope(
+          identity: identity,
+          child: Scaffold(
+            backgroundColor: context.c.surface,
+            body: Column(
+              children: [
+                SafeArea(
+                  bottom: false,
+                  child: GameHead(
+                    onBack: () => Navigator.maybePop(context),
+                    buttonSize: 42,
+                    iconSize: 20,
+                    centerBrand: true,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: InAppWebView(
-                        initialSettings: InAppWebViewSettings(
-                          javaScriptEnabled: true,
-                          domStorageEnabled: true,
-                          mediaPlaybackRequiresUserGesture: false,
-                          allowsInlineMediaPlayback: true,
-                          hardwareAcceleration: true,
-                          transparentBackground: false,
-                          supportZoom: false,
-                          isTextInteractionEnabled: false,
-                          disableContextMenu: true,
-                          allowsLinkPreview: false,
-                          safeBrowsingEnabled: false,
-                          disableVerticalScroll: true,
-                          disableHorizontalScroll: true,
-                          useOnDownloadStart: false,
-                          allowFileAccess: false,
-                          allowContentAccess: false,
-                        ),
-                        onWebViewCreated: (controller) {
-                          _web = controller;
-                          controller.addJavaScriptHandler(
-                            handlerName: 'citroScore',
-                            callback: (args) async {
-                              final body = args.isNotEmpty && args.first is Map
-                                  ? Map<String, dynamic>.from(args.first as Map)
-                                  : <String, dynamic>{};
-                              return _onScore(body);
-                            },
-                          );
-                          controller.addJavaScriptHandler(
-                            handlerName: 'citroLeaderboard',
-                            callback: (args) async {
-                              final limit = args.isNotEmpty && args.first is num
-                                  ? (args.first as num).toInt()
-                                  : 50;
-                              return {'entries': await _entries(limit)};
-                            },
-                          );
-                          controller.addJavaScriptHandler(
-                            handlerName: 'citroLive',
-                            callback: (args) async => _fetchLive(),
-                          );
-                          controller.addJavaScriptHandler(
-                            handlerName: 'citroRank',
-                            callback: (args) {
-                              if (mounted) {
-                                showGameRank(
-                                  context,
-                                  game: 'brake',
-                                  title: '极限刹车',
-                                );
-                              }
-                              return {'ok': true};
-                            },
-                          );
-                          _load();
-                        },
-                        onLoadStop: (controller, url) async {
-                          if (!mounted) return;
-                          setState(() => _stage = 1);
-                          try {
-                            final hasCanvas = await controller
-                                .evaluateJavascript(
-                                  source: "!!document.querySelector('canvas')",
-                                );
-                            if (!mounted) return;
-                            if (hasCanvas != true) {
-                              setState(
-                                () => _bootError = '页面已加载但画布未初始化（WebGL 不可用？）',
-                              );
-                              return;
-                            }
-                            // 画布出现后等一帧让首屏渲染完成，再撤掉加载动画
-                            await Future<void>.delayed(
-                              const Duration(milliseconds: 260),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: InAppWebView(
+                          initialSettings: InAppWebViewSettings(
+                            javaScriptEnabled: true,
+                            domStorageEnabled: true,
+                            mediaPlaybackRequiresUserGesture: false,
+                            allowsInlineMediaPlayback: true,
+                            hardwareAcceleration: true,
+                            transparentBackground: false,
+                            supportZoom: false,
+                            isTextInteractionEnabled: false,
+                            disableContextMenu: true,
+                            allowsLinkPreview: false,
+                            safeBrowsingEnabled: false,
+                            disableVerticalScroll: true,
+                            disableHorizontalScroll: true,
+                            useOnDownloadStart: false,
+                            allowFileAccess: false,
+                            allowContentAccess: false,
+                          ),
+                          onWebViewCreated: (controller) {
+                            _web = controller;
+                            controller.addJavaScriptHandler(
+                              handlerName: 'citroScore',
+                              callback: (args) async {
+                                final body =
+                                    args.isNotEmpty && args.first is Map
+                                    ? Map<String, dynamic>.from(
+                                        args.first as Map,
+                                      )
+                                    : <String, dynamic>{};
+                                return _onScore(body);
+                              },
                             );
+                            controller.addJavaScriptHandler(
+                              handlerName: 'citroLeaderboard',
+                              callback: (args) async {
+                                final limit =
+                                    args.isNotEmpty && args.first is num
+                                    ? (args.first as num).toInt()
+                                    : 50;
+                                return {'entries': await _entries(limit)};
+                              },
+                            );
+                            controller.addJavaScriptHandler(
+                              handlerName: 'citroLive',
+                              callback: (args) async => _fetchLive(),
+                            );
+                            controller.addJavaScriptHandler(
+                              handlerName: 'citroRank',
+                              callback: (args) {
+                                if (mounted) {
+                                  showGameRank(
+                                    context,
+                                    game: 'brake',
+                                    title: '极限刹车',
+                                  );
+                                }
+                                return {'ok': true};
+                              },
+                            );
+                            _load();
+                          },
+                          onLoadStop: (controller, url) async {
                             if (!mounted) return;
-                            setState(() {
-                              _stage = 2;
-                              _loading = false;
-                            });
-                          } catch (_) {}
-                        },
-                      ),
-                    ),
-                    if (_loading && _bootError == null)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: _BrakeLoading(stage: _stage),
+                            setState(() => _stage = 1);
+                            try {
+                              final hasCanvas = await controller
+                                  .evaluateJavascript(
+                                    source:
+                                        "!!document.querySelector('canvas')",
+                                  );
+                              if (!mounted) return;
+                              if (hasCanvas != true) {
+                                setState(
+                                  () => _bootError = '页面已加载但画布未初始化（WebGL 不可用？）',
+                                );
+                                return;
+                              }
+                              // 画布出现后等一帧让首屏渲染完成，再撤掉加载动画
+                              await Future<void>.delayed(
+                                const Duration(milliseconds: 260),
+                              );
+                              if (!mounted) return;
+                              setState(() {
+                                _stage = 2;
+                                _loading = false;
+                              });
+                            } catch (_) {}
+                          },
                         ),
                       ),
-                    if (_bootError != null)
-                      Positioned.fill(
-                        child: ColoredBox(
-                          color: context.c.surface,
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '游戏加载失败',
-                                    style: context.heading(
-                                      size: CitroType.titleLg,
-                                      color: context.c.ink,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _bootError!,
-                                    textAlign: TextAlign.center,
-                                    style: context.body(
-                                      size: CitroType.caption,
-                                      color: context.c.inkSoft,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  GestureDetector(
-                                    onTap: _retry,
-                                    behavior: HitTestBehavior.opaque,
-                                    child: Container(
-                                      height: 40,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 26,
-                                      ),
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: context.c.accent,
-                                        borderRadius: BorderRadius.circular(
-                                          CitroColors.radii.button,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '重新加载',
-                                        style: context.body(
-                                          size: CitroType.label,
-                                          weight: CitroType.strong,
-                                          color: context.c.accentText,
-                                        ),
+                      if (_loading && _bootError == null)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: _BrakeLoading(stage: _stage),
+                          ),
+                        ),
+                      if (_bootError != null)
+                        Positioned.fill(
+                          child: ColoredBox(
+                            color: identity.soft,
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '游戏加载失败',
+                                      style: context.heading(
+                                        size: CitroType.titleLg,
+                                        color: identity.deep,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _bootError!,
+                                      textAlign: TextAlign.center,
+                                      style: context.body(
+                                        size: CitroType.caption,
+                                        color: identity.primaryInk,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    GameActionButton(
+                                      label: '重新加载',
+                                      primary: true,
+                                      onTap: _retry,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -453,7 +444,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
   }
 }
 
-/// 加载动画：暗色底 + 旋转金色弧 + 速度表意象 + 阶段文案。
+/// 加载动画：身份色浅底 + 旋转主色弧 + 速度表意象 + 深色端阶段文案。
 /// 原版页面初始化 three.js 需要一两百毫秒到数秒（视机型），这里做成
 /// 有明确进度的等待，而不是一个白色空屏。
 class _BrakeLoading extends StatefulWidget {
@@ -487,9 +478,9 @@ class _BrakeLoadingState extends State<_BrakeLoading>
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return ColoredBox(
-      color: c.bg,
+      color: identity.soft,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -502,14 +493,18 @@ class _BrakeLoadingState extends State<_BrakeLoading>
                 builder: (ctx, _) => CustomPaint(
                   painter: _LoadingArcPainter(
                     t: _c.value,
-                    base: c.line,
-                    arc: c.accent,
-                    tick: c.accentInk,
+                    base: identity.deep.withAlpha(70),
+                    arc: identity.primary,
+                    tick: identity.deep,
                   ),
                   child: Center(
                     child: Opacity(
                       opacity: 0.75 + 0.25 * (1 - (_c.value - 0.5).abs() * 2),
-                      child: Icon(Icons.speed_rounded, size: 36, color: c.accent),
+                      child: Icon(
+                        Icons.speed_rounded,
+                        size: 36,
+                        color: identity.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -521,13 +516,16 @@ class _BrakeLoadingState extends State<_BrakeLoading>
               style: context.body(
                 size: CitroType.body,
                 weight: CitroType.strong,
-                color: c.ink,
+                color: identity.deep,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               '极限刹车 · 原版赛道',
-              style: context.body(size: CitroType.small, color: c.inkSoft),
+              style: context.body(
+                size: CitroType.small,
+                color: identity.deep.withAlpha(160),
+              ),
             ),
           ],
         ),

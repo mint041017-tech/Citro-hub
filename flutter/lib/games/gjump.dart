@@ -11,6 +11,7 @@ import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 
 /// 跳一跳 —— 1:1 复刻 web `#gjumpPage`（index.html 8509-8555 / 19749-20529）。
@@ -117,69 +118,134 @@ class _JumpParticle {
 
 double _clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
 
-/// web GJUMP_STYLES 的 nosh 重绘：亮色暖纸 / 深色冷灰，全部由 token 派生。
-List<_JumpStyle> _jumpStyles(CitroColors c) {
-  if (!c.dark) {
-    return [
-      _JumpStyle(shape: 'box', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'inset'),
-      _JumpStyle(shape: 'box', top: c.surface, left: c.surface2, right: c.surface2, pat: 'checker', ac: c.accent2),
-      _JumpStyle(shape: 'box', top: c.accentLt, left: c.accent, right: c.accent2, pat: 'rubik'),
-      _JumpStyle(shape: 'box', top: c.tintPink, left: c.accentLt, right: c.accentLt, pat: 'ribbon', ac: c.accent),
-      _JumpStyle(shape: 'box', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'wood'),
-      _JumpStyle(shape: 'box', top: c.surface, left: c.surface2, right: c.surface2, pat: 'grid'),
-      _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'dots', ac: c.accent2),
-      _JumpStyle(shape: 'cyl', top: c.tintPink, left: c.accentLt, right: c.accentLt, pat: 'ring'),
-      _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accent2, right: c.accent2, pat: 'lantern', ac: c.tintYellow),
-      _JumpStyle(shape: 'cyl', top: c.tintGreen, left: c.mintSoft, right: c.mintSoft, pat: 'floral', ac: c.mintInk),
-      _JumpStyle(shape: 'cone', top: c.tintYellow, left: c.accentLt, right: c.accentLt, pat: 'ring'),
-      _JumpStyle(shape: 'hex', top: c.surface, left: c.surface2, right: c.surface2, pat: 'inset'),
-    ];
-  }
+/// web GJUMP_STYLES 的 nosh 重绘：台面统一用身份色（soft 顶面 + primary/deep 侧面），
+/// 花纹用身份色的深墨 / 浅面，不再读主题 accent / tint。
+List<_JumpStyle> _jumpStyles(GameIdentity identity) {
   return [
-    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'inset'),
-    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'checker', ac: c.accent),
-    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'rubik'),
-    _JumpStyle(shape: 'box', top: c.tintPink, left: c.bg2, right: c.bg2, pat: 'ribbon', ac: c.accent),
-    _JumpStyle(shape: 'box', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'wood'),
-    _JumpStyle(shape: 'box', top: c.tintBlue, left: c.bg2, right: c.bg2, pat: 'grid'),
-    _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.bg2, right: c.bg2, pat: 'dots', ac: c.accent),
-    _JumpStyle(shape: 'cyl', top: c.tintPink, left: c.bg2, right: c.bg2, pat: 'ring'),
-    _JumpStyle(shape: 'cyl', top: c.tintYellow, left: c.accent2, right: c.accent2, pat: 'lantern', ac: c.tintYellow),
-    _JumpStyle(shape: 'cyl', top: c.tintGreen, left: c.bg2, right: c.bg2, pat: 'floral', ac: c.mint),
-    _JumpStyle(shape: 'cone', top: c.surface2, left: c.bg2, right: c.bg2, pat: 'ring'),
-    _JumpStyle(shape: 'hex', top: c.tintBlue, left: c.bg2, right: c.bg2, pat: 'inset'),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'inset',
+    ),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'checker',
+      ac: identity.primaryInk,
+    ),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'rubik',
+      ac: identity.primary,
+    ),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'ribbon',
+      ac: identity.primary,
+    ),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'wood',
+    ),
+    _JumpStyle(
+      shape: 'box',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'grid',
+    ),
+    _JumpStyle(
+      shape: 'cyl',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'dots',
+      ac: identity.primaryInk,
+    ),
+    _JumpStyle(
+      shape: 'cyl',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'ring',
+      ac: identity.primary,
+    ),
+    _JumpStyle(
+      shape: 'cyl',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'lantern',
+      ac: identity.primaryInk,
+    ),
+    _JumpStyle(
+      shape: 'cyl',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'floral',
+      ac: identity.primaryInk,
+    ),
+    _JumpStyle(
+      shape: 'cone',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'ring',
+      ac: identity.primary,
+    ),
+    _JumpStyle(
+      shape: 'hex',
+      top: identity.soft,
+      left: identity.primary,
+      right: identity.deep,
+      pat: 'inset',
+    ),
   ];
 }
 
-_JumpStyle _musicStyle(CitroColors c) => _JumpStyle(
+_JumpStyle _musicStyle(GameIdentity identity) => _JumpStyle(
   shape: 'cyl',
-  top: c.surface2,
-  left: c.bg2,
-  right: c.bg2,
+  top: identity.soft,
+  left: identity.primary,
+  right: identity.deep,
   pat: 'none',
-  ac: c.accent,
+  ac: identity.primary,
 );
 
-_JumpStyle _manholeStyle(CitroColors c) => _JumpStyle(
+_JumpStyle _manholeStyle(GameIdentity identity) => _JumpStyle(
   shape: 'cyl',
-  top: c.surface2,
-  left: c.bg2,
-  right: c.bg2,
+  top: identity.deep,
+  left: identity.ink,
+  right: identity.ink,
   pat: 'none',
 );
 
-// 花纹用色（亮色用深棕、深色用亮面）
-Color _dk(CitroColors c) => c.ink.withAlpha(42);
-Color _edge2(CitroColors c) => c.ink.withAlpha(54);
-Color _dark18(CitroColors c) => c.ink.withAlpha(46);
-Color _dotDark15(CitroColors c) => c.ink.withAlpha(38);
-Color _white55(CitroColors c) => c.dark ? c.ink.withAlpha(140) : c.surface.withAlpha(140);
-Color _white25(CitroColors c) => c.dark ? c.ink.withAlpha(80) : c.surface.withAlpha(80);
-Color _white20(CitroColors c) => c.dark ? c.ink.withAlpha(60) : c.surface.withAlpha(60);
+// 花纹用色：全部由身份色派生（深墨 / 深端 / 纸面）。
+Color _jDk(GameIdentity i) => i.ink.withAlpha(46);
+Color _jEdge(GameIdentity i) => i.ink.withAlpha(58);
+Color _jDark(GameIdentity i) => i.deep.withAlpha(72);
+Color _jDot(GameIdentity i) => i.deep.withAlpha(56);
+Color _jPaper55(GameIdentity i) => GameIdentity.paper.withAlpha(150);
+Color _jPaper25(GameIdentity i) => GameIdentity.paper.withAlpha(80);
+Color _jPaper20(GameIdentity i) => GameIdentity.paper.withAlpha(60);
 
 /// 首屏参考图反解出的初始台面（唯一目标截图 _tmp/ref/games/gjump-m-l.png）
-List<_JumpBlock> _previewBlocks(CitroColors c) {
-  final styles = _jumpStyles(c);
+List<_JumpBlock> _previewBlocks(GameIdentity identity) {
+  final styles = _jumpStyles(identity);
   return [
     _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: styles[5]), // 窗格
     _JumpBlock(x: 132, y: 0, w: 46, h: 35, style: styles[0]), // 素纸
@@ -282,8 +348,11 @@ class _GameJumpPageState extends State<GameJumpPage>
   bool get _keyboardEnabled => platform.isWindows || kIsWeb;
   bool _spaceDown = false;
 
-  /// 当前主题色，供画布快照与样式选择使用。
-  CitroColors _colors = CitroColors.light;
+  /// 当前游戏身份（固定颜色，不随主题切换）。
+  GameIdentity _identity = identityOf('gjump');
+
+  /// 舞台实际尺寸，由视图回调；飘字起点按它投影，避免飘字与画面错位。
+  Size _boardSize = const Size(360, 566);
 
   double get _now => _clock.elapsedMilliseconds.toDouble();
 
@@ -310,13 +379,13 @@ class _GameJumpPageState extends State<GameJumpPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _colors = context.c;
-    // initState 里生成的初始台面用的是默认浅色样式；拿到真实主题后重铺一次。
+    _identity = GameIdentityScope.of(context);
+    // initState 里生成的初始台面用的是默认浅色样式；拿到真实身份后重铺一次。
     if (!_themeSynced) {
       _themeSynced = true;
       if (_blocks.isNotEmpty && !_over) {
         _blocks = [
-          _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: _jumpStyles(_colors)[5]),
+          _JumpBlock(x: 0, y: 0, w: 56, h: 34, style: _jumpStyles(_identity)[5]),
         ];
         _genNext();
         _genNext();
@@ -336,7 +405,7 @@ class _GameJumpPageState extends State<GameJumpPage>
   }
 
   _JumpStyle _pickStyle() {
-    final styles = _jumpStyles(_colors);
+    final styles = _jumpStyles(_identity);
     _JumpStyle s;
     do {
       s = styles[_rnd.nextInt(styles.length)];
@@ -455,10 +524,10 @@ class _GameJumpPageState extends State<GameJumpPage>
   void _burst(int n) {
     final p = _proj(_px, _py, _z + 8);
     final cols = [
-      _colors.accent,
-      _colors.accentLt,
-      _colors.surface,
-      _colors.tintYellow,
+      _identity.primary,
+      _identity.soft,
+      GameIdentity.paper,
+      _identity.deep,
     ];
     for (var i = 0; i < n; i++) {
       final a = _rnd.nextDouble() * math.pi * 2;
@@ -721,11 +790,11 @@ class _GameJumpPageState extends State<GameJumpPage>
   }
 
   Offset _proj(double x, double y, double z) {
-    // 运行期投影按 360×566 基准近似（飘字起点用，最终由 painter 精确绘制）
-    const cw = 360.0;
-    const ch = 566.0;
-    const anchorY = ch * .66;
-    const sc = 360.0 / 700;
+    // 运行期投影按舞台实际尺寸归一化（飘字起点用，最终由 painter 精确绘制）
+    final cw = _boardSize.width;
+    final ch = _boardSize.height;
+    final anchorY = ch * .66;
+    final sc = math.min(1.0, math.min(cw / 700, ch / 300));
     return Offset(
       cw * .5 + ((x - y) - _camX) * _ix * sc,
       anchorY + (_cam - (x + y)) * _iy * sc - z,
@@ -734,7 +803,7 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   @override
   Widget build(BuildContext context) {
-    _colors = context.c;
+    _identity = GameIdentityScope.of(context);
     final best = math.max(_best, context.app.localBest('jump'));
     _syncScene(_now);
     final view = GameJumpView(
@@ -753,6 +822,7 @@ class _GameJumpPageState extends State<GameJumpPage>
       onNew: _newGame,
       onRank: () => showGameRank(context, game: 'jump', title: '跳一跳'),
       onRetry: _newGame,
+      onBoardSize: (size) => _boardSize = size,
     );
     if (!_keyboardEnabled) return view;
     return Focus(
@@ -806,16 +876,19 @@ class GameJumpView extends StatelessWidget {
     this.onNew,
     this.onRank,
     this.onRetry,
+    this.onBoardSize,
+    this.identity,
   });
 
   /// golden 预览：参考图首屏（分数 0 / 三个台面 / 棋子站立 / cam=0）
   factory GameJumpView.preview() => GameJumpView(
     score: 0,
     best: 0,
-    blocks: _previewBlocks(CitroColors.light),
+    blocks: _previewBlocks(identityOf('gjump')),
     cur: 0,
     playerZ: 35.5,
     groundH: 34,
+    identity: identityOf('gjump'),
   );
 
   final int score;
@@ -853,9 +926,16 @@ class GameJumpView extends StatelessWidget {
   final VoidCallback? onRank;
   final VoidCallback? onRetry;
 
+  /// 舞台尺寸回调：把 LayoutBuilder 量到的棋盘尺寸回传给逻辑层（飘字投影用）。
+  final ValueChanged<Size>? onBoardSize;
+
+  /// 游戏身份；缺省从 [GameIdentityScope] 取（预览 / 测试直接指定）。
+  final GameIdentity? identity;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = identity ?? GameIdentityScope.of(context);
     final hud = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -865,84 +945,117 @@ class GameJumpView extends StatelessWidget {
       ],
     );
 
-    final board = DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
-      child: Container(
-        width: double.infinity,
-        height: 568,
-        decoration: BoxDecoration(
-          color: c.bg,
-          border: Border.all(color: c.line),
-          borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: overlayVisible
-                    ? null
-                    : (_) => onPressDown?.call(),
-                onPointerUp: overlayVisible ? null : (_) => onPressUp?.call(),
-                onPointerCancel: overlayVisible
-                    ? null
-                    : (_) => onPressUp?.call(),
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _JumpPainter(
-                      frameData ??
-                          (_JumpFrameData()
-                            ..blocks = blocks
-                            ..cur = cur
-                            ..playerX = playerX
-                            ..playerY = playerY
-                            ..playerZ = playerZ
-                            ..groundH = groundH
-                            ..pieceScaleX = pieceScaleX
-                            ..pieceScaleY = pieceScaleY
-                            ..pieceRot = pieceRot
-                            ..cam = cam
-                            ..camX = camX
-                            ..power = power
-                            ..charging = charging
-                            ..stayOn = stayOn
-                            ..stayProgress = stayProgress
-                            ..floats = floats
-                            ..particles = particles),
-                      repaint: sceneRepaint,
-                      colors: c,
-                      musicStyle: _musicStyle(c),
-                      manholeStyle: _manholeStyle(c),
+    final board = LayoutBuilder(
+      builder: (context, cons) {
+        final w = cons.maxWidth.isFinite ? cons.maxWidth : 360.0;
+        // 优先用父级给的高度约束；GameScaffold 的 board 槽位目前无界，
+        // 回退到按版式常量估算的内容区高度。
+        final avail = cons.maxHeight.isFinite
+            ? cons.maxHeight
+            : _stageHeight(context);
+        const double hintH = 34.0;
+        const double gap = 8.0;
+        final h = math.min(w / 0.62, math.max(160.0, avail - hintH - gap));
+        onBoardSize?.call(Size(w, h));
+        return SizedBox(
+          width: w,
+          height: h + gap + hintH,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: w,
+                height: h,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.card,
+                    ),
+                    boxShadow: CitroColors.shadows.card(c),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [id.primary.withAlpha(30), c.bg],
+                        stops: const [0, 0.55],
+                      ),
+                      border: Border.all(color: id.primary.withAlpha(90)),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.card,
+                      ),
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Listener(
+                            behavior: HitTestBehavior.opaque,
+                            onPointerDown: overlayVisible
+                                ? null
+                                : (_) => onPressDown?.call(),
+                            onPointerUp: overlayVisible
+                                ? null
+                                : (_) => onPressUp?.call(),
+                            onPointerCancel: overlayVisible
+                                ? null
+                                : (_) => onPressUp?.call(),
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: _JumpPainter(
+                                  frameData ??
+                                      (_JumpFrameData()
+                                        ..blocks = blocks
+                                        ..cur = cur
+                                        ..playerX = playerX
+                                        ..playerY = playerY
+                                        ..playerZ = playerZ
+                                        ..groundH = groundH
+                                        ..pieceScaleX = pieceScaleX
+                                        ..pieceScaleY = pieceScaleY
+                                        ..pieceRot = pieceRot
+                                        ..cam = cam
+                                        ..camX = camX
+                                        ..power = power
+                                        ..charging = charging
+                                        ..stayOn = stayOn
+                                        ..stayProgress = stayProgress
+                                        ..floats = floats
+                                        ..particles = particles),
+                                  repaint: sceneRepaint,
+                                  identity: id,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (overlayVisible)
+                          Positioned.fill(
+                            child: _JumpOverlay(
+                              score: overlayScore,
+                              maxCombo: overlayMaxCombo,
+                              improved: overlayImproved,
+                              identity: id,
+                              onRetry: onRetry,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ),
-            if (hintOn)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 12,
-                child: IgnorePointer(
-                  child: Center(child: _JumpHint(c: c)),
+              const SizedBox(height: gap),
+              // 提示移到棋盘外常驻：不再跟随首次蓄力消失。
+              IgnorePointer(
+                child: Center(
+                  child: _JumpHint(identity: id, active: hintOn, height: hintH),
                 ),
               ),
-            if (overlayVisible)
-              Positioned.fill(
-                child: _JumpOverlay(
-                  score: overlayScore,
-                  maxCombo: overlayMaxCombo,
-                  improved: overlayImproved,
-                  onRetry: onRetry,
-                ),
-              ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
 
     return GameScaffold(
@@ -965,30 +1078,58 @@ class GameJumpView extends StatelessWidget {
   }
 }
 
-/// `.gjump-hint`：163.062×33.797，纸底 + line-2 边 + r99 + 前置 6px 橙点
+/// 舞台可用高度：竖屏扣除顶栏 / HUD / 操作行 / 正在玩；横屏扣除左右侧栏。
+///
+/// GameScaffold 的 board 槽位是 SingleChildScrollView（高度无界），
+/// 这里按版式常量估算内容区高度，避免棋盘在横屏 / 平板被裁。
+double _stageHeight(BuildContext context) {
+  final mq = MediaQuery.of(context);
+  final screen = mq.size;
+  final landscape = screen.width > screen.height;
+  const double head = 64; // GameMetrics.headHeight
+  const double hud = 76; // HUD 条（pill + 内外边距）
+  const double actions = 74; // 操作行（boardGap + 按钮 + bodyBottom）
+  const double live = 60; // 正在玩（48 + 12 下边距）
+  const double pad = 8; // board 槽位顶部留白
+  if (landscape) {
+    // 横屏：HUD 与操作行在中间滚动区内，正在玩在右侧栏。
+    return screen.height - mq.padding.top - hud - actions - 20;
+  }
+  return screen.height - head - hud - actions - live - mq.padding.bottom - pad;
+}
+
+/// 提示胶囊：纸底 + 身份色描边 + 前置圆点，移到棋盘外常驻。
 class _JumpHint extends StatelessWidget {
-  const _JumpHint({required this.c});
-  final CitroColors c;
+  const _JumpHint({
+    required this.identity,
+    required this.active,
+    this.height = 34,
+  });
+
+  final GameIdentity identity;
+  final bool active;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Container(
-      width: 163.062,
-      height: 33.797,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: c.surface,
-        border: Border.all(color: c.line),
+        border: Border.all(color: identity.primary.withAlpha(70)),
         borderRadius: BorderRadius.circular(CitroColors.radii.button),
         boxShadow: CitroColors.shadows.card(c),
       ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: c.accent,
+                color: active ? identity.primary : identity.deep.withAlpha(120),
                 shape: BoxShape.circle,
               ),
             ),
@@ -1000,7 +1141,7 @@ class _JumpHint extends StatelessWidget {
                     : '按住蓄力 · 松手起跳',
                 maxLines: 1,
                 softWrap: false,
-                overflow: TextOverflow.visible,
+                overflow: TextOverflow.ellipsis,
                 style: context.body(
                   size: CitroType.caption,
                   weight: CitroType.strong,
@@ -1020,21 +1161,24 @@ class _JumpOverlay extends StatelessWidget {
     required this.score,
     required this.maxCombo,
     required this.improved,
+    required this.identity,
     this.onRetry,
   });
 
   final int score;
   final int maxCombo;
   final bool improved;
+  final GameIdentity identity;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = identity;
     return Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
-        border: Border.all(color: c.line),
+        border: Border.all(color: id.primary.withAlpha(70)),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
@@ -1054,7 +1198,7 @@ class _JumpOverlay extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1084,15 +1228,11 @@ class _JumpPainter extends CustomPainter {
   _JumpPainter(
     this.data, {
     Listenable? repaint,
-    required this.colors,
-    required this.musicStyle,
-    required this.manholeStyle,
+    required this.identity,
   }) : super(repaint: repaint);
 
   final _JumpFrameData data;
-  final CitroColors colors;
-  final _JumpStyle musicStyle;
-  final _JumpStyle manholeStyle;
+  final GameIdentity identity;
 
   List<_JumpBlock> get blocks => data.blocks;
   int get cur => data.cur;
@@ -1121,8 +1261,8 @@ class _JumpPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _cw = size.width;
     _ch = size.height;
-    _sc = math.min(1.0, _cw / 700);
-    if (_ch < 400) _sc *= .88;
+    // 投影同时按舞台的宽与高归一化：竖屏 / 横屏都按内容区等比缩放。
+    _sc = math.min(1.0, math.min(_cw / 700, _ch / 300));
     _anchorY = _ch * .66;
 
     final arr = List<_JumpBlock>.of(blocks)
@@ -1137,6 +1277,7 @@ class _JumpPainter extends CustomPainter {
     if (charging) _drawChargeRing(canvas);
     _drawPiece(canvas);
     _drawFx(canvas);
+    if (charging) _drawChargeBar(canvas);
   }
 
   Offset _proj(double x, double y, double z) => Offset(
@@ -1374,7 +1515,7 @@ class _JumpPainter extends CustomPainter {
 
   void _drawPattern(Canvas canvas, _JumpBlock b, _JumpStyle st) {
     final x = b.x, y = b.y, w = b.w, h = b.h;
-    final ac = st.ac ?? _dk(colors);
+    final ac = st.ac ?? _jDk(identity);
     switch (st.pat) {
       case 'inset':
         if (st.shape == 'box') {
@@ -1389,7 +1530,7 @@ class _JumpPainter extends CustomPainter {
             x - w * .68,
             y + w * .68,
             h,
-            _dk(colors),
+            _jDk(identity),
             2,
           );
         } else if (st.shape == 'hex') {
@@ -1398,10 +1539,10 @@ class _JumpPainter extends CustomPainter {
             Paint()
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2
-              ..color = _dk(colors),
+              ..color = _jDk(identity),
           );
         } else {
-          _isoRing(canvas, x, y, h, w * .66, _dk(colors), 2);
+          _isoRing(canvas, x, y, h, w * .66, _jDk(identity), 2);
         }
         break;
       case 'checker':
@@ -1439,8 +1580,8 @@ class _JumpPainter extends CustomPainter {
         for (var i = -1; i <= 1; i++) {
           for (var j = -1; j <= 1; j++) {
             final f = (i == 0 && j == 0)
-                ? colors.accent
-                : (((i + j) % 2 == 0) ? _white55(colors) : _dark18(colors));
+                ? identity.primary
+                : (((i + j) % 2 == 0) ? _jPaper55(identity) : _jDark(identity));
             _quadFill(
               canvas,
               x + i * off - cs,
@@ -1484,7 +1625,7 @@ class _JumpPainter extends CustomPainter {
           h,
           ac,
         );
-        _isoDot(canvas, x, y, h, w * .10, colors.surface);
+        _isoDot(canvas, x, y, h, w * .10, GameIdentity.paper);
         break;
       case 'wood':
         _quadFill(
@@ -1498,7 +1639,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .36,
           y + w,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         _quadFill(
           canvas,
@@ -1511,7 +1652,7 @@ class _JumpPainter extends CustomPainter {
           x + w * .28,
           y + w,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         _quadStroke(
           canvas,
@@ -1524,7 +1665,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .82,
           y + w * .82,
           h,
-          _edge2(colors),
+          _jEdge(identity),
           2,
         );
         break;
@@ -1540,7 +1681,7 @@ class _JumpPainter extends CustomPainter {
           x - w,
           y - w * .47,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         _quadFill(
           canvas,
@@ -1553,7 +1694,7 @@ class _JumpPainter extends CustomPainter {
           x - w,
           y + w * .55,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         _quadFill(
           canvas,
@@ -1566,7 +1707,7 @@ class _JumpPainter extends CustomPainter {
           x - w * .55,
           y + w,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         _quadFill(
           canvas,
@@ -1579,7 +1720,7 @@ class _JumpPainter extends CustomPainter {
           x + w * .47,
           y + w,
           h,
-          _dk(colors),
+          _jDk(identity),
         );
         break;
       case 'dots':
@@ -1591,8 +1732,8 @@ class _JumpPainter extends CustomPainter {
         break;
       case 'ring':
         final k = st.shape == 'cone' ? .58 : 1.0;
-        _isoRing(canvas, x, y, h, w * .62 * k, _dark18(colors), 2.5);
-        _isoRing(canvas, x, y, h, w * .30 * k, _dotDark15(colors), 2);
+        _isoRing(canvas, x, y, h, w * .62 * k, _jDark(identity), 2.5);
+        _isoRing(canvas, x, y, h, w * .30 * k, _jDot(identity), 2);
         break;
       case 'lantern':
         _isoArc(canvas, x, y, h * .66, w * 1.01, st.ac!, 3);
@@ -1611,16 +1752,16 @@ class _JumpPainter extends CustomPainter {
 
   void _drawBlock(Canvas canvas, _JumpBlock b) {
     if (b.special == 'music') {
-      _drawCyl(canvas, b, musicStyle, 1);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .62, _white25(colors), 2);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .34, _white20(colors), 2);
-      _isoDot(canvas, b.x, b.y, b.h, b.w * .13, colors.accent);
+      _drawCyl(canvas, b, _musicStyle(identity), 1);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .62, _jPaper25(identity), 2);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .34, _jPaper20(identity), 2);
+      _isoDot(canvas, b.x, b.y, b.h, b.w * .13, identity.primary);
       return;
     }
     if (b.special == 'manhole') {
-      _drawCyl(canvas, b, manholeStyle, 1);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .66, colors.ink.withAlpha(90), 2.5);
-      _isoRing(canvas, b.x, b.y, b.h, b.w * .30, colors.ink.withAlpha(80), 2);
+      _drawCyl(canvas, b, _manholeStyle(identity), 1);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .66, identity.ink.withAlpha(90), 2.5);
+      _isoRing(canvas, b.x, b.y, b.h, b.w * .30, identity.ink.withAlpha(80), 2);
       return;
     }
     final st = b.style;
@@ -1654,7 +1795,7 @@ class _JumpPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round
-        ..color = colors.accent,
+        ..color = identity.primary,
     );
   }
 
@@ -1670,11 +1811,70 @@ class _JumpPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = colors.accent.withValues(alpha: .30 + .45 * power),
+        ..color = identity.primary.withValues(alpha: .30 + .45 * power),
     );
     canvas.drawOval(
       Rect.fromCenter(center: p, width: rr * 2 * .72, height: rr2 * 2 * .72),
-      Paint()..color = colors.accent.withAlpha(24),
+      Paint()..color = identity.primary.withAlpha(24),
+    );
+  }
+
+  /// 蓄力指示：底部力度条（identity.primary）+ 指向下一台面的方向箭头。
+  void _drawChargeBar(Canvas canvas) {
+    if (cur < 0 || cur >= blocks.length) return;
+    final b = blocks[cur];
+    final barW = _cw * .56;
+    final barH = 8.0;
+    final left = (_cw - barW) / 2;
+    final top = _ch - barH - 18;
+    final radius = Radius.circular(barH / 2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(left, top, barW, barH), radius),
+      Paint()..color = identity.primary.withAlpha(40),
+    );
+    final fw = barW * power;
+    if (fw > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, top, math.max(barH, fw), barH),
+          radius,
+        ),
+        Paint()..color = identity.primary,
+      );
+    }
+    // 方向：下一台面在 +x（右下）或 +y（左下）。
+    final nb = cur + 1 < blocks.length ? blocks[cur + 1] : null;
+    if (nb == null) return;
+    final dir = nb.ax == 0 ? const Offset(_ix, _iy) : const Offset(-_ix, _iy);
+    final dl = dir.distance;
+    final dirN = Offset(dir.dx / dl, dir.dy / dl);
+    final p = _proj(playerX, playerY, b.h);
+    final start = p + dirN * (b.w * 1.414 * _ix * _sc * .9 + 8);
+    final len = 26.0 * _sc * (.55 + .45 * power);
+    final end = start + dirN * len;
+    canvas.drawLine(
+      start,
+      end,
+      Paint()
+        ..color = identity.primary
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
+    final perp = Offset(-dirN.dy, dirN.dx);
+    final head = 7.0 * _sc;
+    canvas.drawPath(
+      Path()
+        ..moveTo(end.dx, end.dy)
+        ..lineTo(
+          end.dx - dirN.dx * head + perp.dx * head * .62,
+          end.dy - dirN.dy * head + perp.dy * head * .62,
+        )
+        ..lineTo(
+          end.dx - dirN.dx * head - perp.dx * head * .62,
+          end.dy - dirN.dy * head - perp.dy * head * .62,
+        )
+        ..close(),
+      Paint()..color = identity.primary,
     );
   }
 
@@ -1688,7 +1888,7 @@ class _JumpPainter extends CustomPainter {
         width: 17 * _sc * e * 2,
         height: 6.5 * _sc * e * 2,
       ),
-      Paint()..color = (colors.dark ? colors.bg : colors.ink).withValues(alpha: .30 * shK),
+      Paint()..color = identity.ink.withValues(alpha: .30 * shK),
     );
 
     final p = _proj(playerX, playerY, playerZ);
@@ -1696,7 +1896,7 @@ class _JumpPainter extends CustomPainter {
     canvas.translate(p.dx, p.dy);
     if (pieceRot != 0) canvas.rotate(pieceRot);
     canvas.scale(pieceScaleX * _sc, pieceScaleY * _sc);
-    final body = Paint()..color = colors.ink;
+    final body = Paint()..color = identity.ink;
     canvas.drawPath(
       Path()
         ..moveTo(-11, 1)
@@ -1713,7 +1913,7 @@ class _JumpPainter extends CustomPainter {
     canvas.rotate(-.5);
     canvas.drawOval(
       Rect.fromCenter(center: Offset.zero, width: 6.4, height: 4.2),
-      Paint()..color = colors.surface.withAlpha(60),
+      Paint()..color = GameIdentity.paper.withAlpha(60),
     );
     canvas.restore();
     canvas.save();
@@ -1721,7 +1921,7 @@ class _JumpPainter extends CustomPainter {
     canvas.rotate(.12);
     canvas.drawOval(
       Rect.fromCenter(center: Offset.zero, width: 6, height: 14),
-      Paint()..color = colors.surface.withAlpha(30),
+      Paint()..color = GameIdentity.paper.withAlpha(30),
     );
     canvas.restore();
     canvas.restore();
@@ -1746,7 +1946,7 @@ class _JumpPainter extends CustomPainter {
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: f.big ? 18 : 14,
             fontWeight: FontWeight.w700,
-            color: (f.big ? colors.accentInk : colors.ink).withValues(alpha: a),
+            color: (f.big ? identity.primaryInk : identity.ink).withValues(alpha: a),
           ),
         ),
         textDirection: TextDirection.ltr,

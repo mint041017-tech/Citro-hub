@@ -14,6 +14,7 @@ import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
 import 'sudoku/sudoku_board_view.dart';
 import 'sudoku/sudoku_cube_face_view.dart';
@@ -22,7 +23,6 @@ import 'sudoku/sudoku_kernel.dart';
 import 'sudoku/sudoku_mode_select.dart';
 import 'sudoku/sudoku_resume.dart';
 import 'sudoku/sudoku_scoring.dart';
-import 'game_theme.dart';
 
 /// 统一数独入口。
 ///
@@ -1326,69 +1326,29 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   }
 
   Widget _buildBoardArea(BuildContext context, SudokuPuzzle puzzle) {
+    // 设备分类只用来挑棋盘宽度上限；棋盘尺寸由内容区约束与实测视口算出，
+    // 不直接读 MediaQuery 的尺寸（横屏会被裁）。
     final media = MediaQuery.sizeOf(context);
-    final screenW = media.width;
-    final tablet = screenW >= 900;
+    final tablet = media.width >= 900;
     final duoShort = CitroForm.duoInner(media) && media.width > media.height;
     return LayoutBuilder(
       builder: (context, constraints) {
         final contentW = constraints.maxWidth.isFinite
             ? constraints.maxWidth
-            : screenW - GameMetrics.sidePad * 2;
-        if (puzzle.isCube3d && puzzle.cubeFaces.isNotEmpty) {
-          return _buildCubeBoardArea(
-            context,
-            puzzle,
-            contentW,
-            tablet,
-            screenW,
-          );
-        }
-        final boardMax = duoShort
-            ? math.max(240.0, media.height - 386)
-            : tablet
-            ? (puzzle.variant == SudokuVariant.overlap
-                  ? 600.0
-                  : (kIsWeb ? 500.0 : 520.0))
-            : math.min(
-                screenW * 0.92,
-                puzzle.variant == SudokuVariant.overlap ? 520.0 : 470.0,
-              );
-        final boardW = math.min(contentW, boardMax);
-        final boardH = boardW * puzzle.rows / puzzle.cols;
-        final stage = SizedBox(
-          width: boardW,
-          height: boardH,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                child: SudokuBoardView(
-                  puzzle: puzzle,
-                  board: _board,
-                  notes: _notes,
-                  conflicts: _conflicts,
-                  selected: _selected,
-                  layer: _layer,
-                  focusGrid: puzzle.variant == SudokuVariant.overlap
-                      ? _focusGrid
-                      : -1,
-                  revision: _revision,
-                  maxSide: boardW,
-                  interactive: puzzle.variant == SudokuVariant.overlap,
-                  paused: _paused,
-                  over: _over,
-                  onSelect: _select,
-                ),
-              ),
-              ..._stageOverlays(puzzle),
-            ],
-          ),
-        );
+            : media.width - GameMetrics.sidePad * 2;
+        // 折叠屏内屏横屏：数字盘在右侧，棋盘给它让出位置。
         final padW = duoShort
-            ? math.max(190.0, math.min(340.0, contentW - boardW - 20))
+            ? math.max(190.0, math.min(340.0, contentW * .45))
             : contentW;
-        final pad = _SudokuPad(
+        final double maxSide;
+        if (duoShort) {
+          maxSide = math.max(160.0, contentW - 20.0 - padW);
+        } else if (tablet) {
+          maxSide = puzzle.variant == SudokuVariant.overlap ? 600.0 : 520.0;
+        } else {
+          maxSide = puzzle.variant == SudokuVariant.overlap ? 520.0 : 470.0;
+        }
+        Widget pad = _SudokuPad(
           contentW: padW,
           remaining: _remaining(),
           noteMode: _noteMode,
@@ -1401,67 +1361,84 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           onNote: () => setState(() => _noteMode = !_noteMode),
         );
         final legend = _Legend(puzzle: puzzle, mode: _mode!);
-        if (duoShort) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [stage, const SizedBox(width: 20), pad],
-              ),
-              const SizedBox(height: 8),
-              legend,
-            ],
+        if (puzzle.isCube3d && puzzle.cubeFaces.isNotEmpty) {
+          final flat = _cubeFlat;
+          return _GameCore(
+            contentW: contentW,
+            maxSide: math.min(maxSide, 500.0),
+            aspect: flat ? 1.0 : SudokuCubeView.heightForWidth(1000) / 1000,
+            buildBoard: (side) => _buildCubeStage(puzzle, side, flat),
+            pad: pad,
+            legend: legend,
           );
         }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            stage,
-            if (puzzle.isCube3d &&
-                puzzle.cubeFaces.isEmpty &&
-                _selected >= 0) ...[
-              const SizedBox(height: 8),
-              _ColumnPeek(
-                puzzle: puzzle,
-                board: _board,
-                conflicts: _conflicts,
-                selected: _selected,
-                layer: _layer,
-                onLayer: (l) => _changeLayer(l - _layer),
-              ),
-            ],
-            const SizedBox(height: 10),
-            pad,
-            const SizedBox(height: 8),
-            legend,
-          ],
+        final showPeek = puzzle.isCube3d &&
+            puzzle.cubeFaces.isEmpty &&
+            _selected >= 0;
+        return _GameCore(
+          contentW: contentW,
+          maxSide: maxSide,
+          aspect: puzzle.rows / puzzle.cols,
+          sideBySide: duoShort,
+          buildBoard: (side) => _buildBoardStage(puzzle, side),
+          between: showPeek
+              ? _ColumnPeek(
+                  puzzle: puzzle,
+                  board: _board,
+                  conflicts: _conflicts,
+                  selected: _selected,
+                  layer: _layer,
+                  onLayer: (l) => _changeLayer(l - _layer),
+                )
+              : null,
+          pad: pad,
+          legend: legend,
         );
       },
     );
   }
 
-  Widget _buildCubeBoardArea(
-    BuildContext context,
-    SudokuPuzzle puzzle,
-    double contentW,
-    bool tablet,
-    double screenW,
-  ) {
-    final side = math.min(
-      contentW,
-      tablet ? 500.0 : math.min(screenW * .94, 470.0),
-    );
-    final boardH = _cubeFlat ? side : SudokuCubeView.heightForWidth(side);
-    final stage = SizedBox(
+  Widget _buildBoardStage(SudokuPuzzle puzzle, double side) {
+    return SizedBox(
       width: side,
-      height: boardH,
+      height: side * puzzle.rows / puzzle.cols,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: _cubeFlat
+            child: SudokuBoardView(
+              puzzle: puzzle,
+              board: _board,
+              notes: _notes,
+              conflicts: _conflicts,
+              selected: _selected,
+              layer: _layer,
+              focusGrid: puzzle.variant == SudokuVariant.overlap
+                  ? _focusGrid
+                  : -1,
+              revision: _revision,
+              maxSide: side,
+              interactive: puzzle.variant == SudokuVariant.overlap,
+              paused: _paused,
+              over: _over,
+              onSelect: _select,
+            ),
+          ),
+          ..._stageOverlays(puzzle),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCubeStage(SudokuPuzzle puzzle, double side, bool flat) {
+    return SizedBox(
+      width: side,
+      height: flat ? side : SudokuCubeView.heightForWidth(side),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: flat
                 ? SudokuCubeFaceView(
                     puzzle: puzzle,
                     face: _cubeFace,
@@ -1501,28 +1478,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           ..._stageOverlays(puzzle),
         ],
       ),
-    );
-    final pad = _SudokuPad(
-      contentW: contentW,
-      remaining: const [],
-      noteMode: _noteMode,
-      hints: _hints,
-      keyboardMode: _keyboardModeHint(puzzle),
-      onInput: _input,
-      onErase: _erase,
-      onUndo: _undo,
-      onHint: _hint,
-      onNote: () => setState(() => _noteMode = !_noteMode),
-    );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        stage,
-        const SizedBox(height: 10),
-        pad,
-        const SizedBox(height: 8),
-        _Legend(puzzle: puzzle, mode: _mode!),
-      ],
     );
   }
 
@@ -1567,6 +1522,171 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   }
 }
 
+/// 对局核心：棋盘 + 数字盘（+ 图例）。
+///
+/// GameScaffold 的棋盘区是滚动视图，高度不受限，光靠 LayoutBuilder 拿不到
+/// 剩余高度。这里在首帧后沿渲染树找到棋盘区视口，按
+/// 「视口 − 数字盘 − 图例」收缩棋盘，让核心恰好放得下、数字盘固定底部。
+class _GameCore extends StatefulWidget {
+  const _GameCore({
+    required this.contentW,
+    required this.maxSide,
+    required this.aspect,
+    required this.buildBoard,
+    required this.pad,
+    required this.legend,
+    this.between,
+    this.sideBySide = false,
+  });
+
+  final double contentW;
+
+  /// 棋盘宽度硬上限（按设备分类）。
+  final double maxSide;
+
+  /// 棋盘高 / 宽。
+  final double aspect;
+
+  final Widget Function(double side) buildBoard;
+  final Widget pad;
+  final Widget legend;
+  final Widget? between;
+
+  /// 折叠屏内屏横屏：数字盘放到棋盘右侧。
+  final bool sideBySide;
+
+  @override
+  State<_GameCore> createState() => _GameCoreState();
+}
+
+class _GameCoreState extends State<_GameCore> {
+  static const double _gapAbovePad = 10;
+  static const double _gapAboveLegend = 8;
+  static const double _gapBelowBoard = 8;
+
+  /// 棋盘区滚动视图的顶部内边距（GameScaffold 固定 8）。
+  static const double _scrollPadTop = 8;
+
+  final GlobalKey _padKey = GlobalKey();
+  final GlobalKey _legendKey = GlobalKey();
+  final GlobalKey _betweenKey = GlobalKey();
+  double? _viewportH;
+  double _padH = 0;
+  double _legendH = 0;
+  double _betweenH = 0;
+  bool _pending = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_pending) {
+      _pending = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pending = false;
+        _measure();
+      });
+    }
+    final viewport = _viewportH;
+    final pad = KeyedSubtree(key: _padKey, child: widget.pad);
+    final legend = KeyedSubtree(key: _legendKey, child: widget.legend);
+    final between = widget.between == null
+        ? null
+        : KeyedSubtree(key: _betweenKey, child: widget.between!);
+    final side = viewport == null || _padH <= 0
+        ? math.min(widget.contentW, widget.maxSide)
+        : _fitSide(viewport);
+    return _assemble(side, pad, legend, between);
+  }
+
+  double _fitSide(double viewport) {
+    final betweenGap = widget.between == null
+        ? 0.0
+        : _gapBelowBoard + _betweenH;
+    final chrome = betweenGap + _gapAbovePad + _gapAboveLegend + _padH + _legendH;
+    final natural = math.min(widget.contentW, widget.maxSide) * widget.aspect;
+    final fitted = viewport - _scrollPadTop - chrome;
+    return math.max(0.0, math.min(natural, fitted) / widget.aspect);
+  }
+
+  Widget _assemble(
+    double side,
+    Widget pad,
+    Widget legend,
+    Widget? between,
+  ) {
+    final board = widget.buildBoard(side);
+    if (widget.sideBySide) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [board, const SizedBox(width: 20), pad],
+          ),
+          if (between != null) ...[
+            const SizedBox(height: _gapBelowBoard),
+            between,
+          ],
+          const SizedBox(height: _gapAboveLegend),
+          legend,
+        ],
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        board,
+        if (between != null) ...[
+          const SizedBox(height: _gapBelowBoard),
+          between,
+        ],
+        const SizedBox(height: _gapAbovePad),
+        pad,
+        const SizedBox(height: _gapAboveLegend),
+        legend,
+      ],
+    );
+  }
+
+  void _measure() {
+    if (!mounted) return;
+    final viewport = _probeViewport(context);
+    final padH = _boxHeight(_padKey.currentContext);
+    final legendH = _boxHeight(_legendKey.currentContext);
+    final betweenH = _boxHeight(_betweenKey.currentContext);
+    if (viewport != _viewportH ||
+        padH != _padH ||
+        legendH != _legendH ||
+        betweenH != _betweenH) {
+      setState(() {
+        _viewportH = viewport;
+        _padH = padH;
+        _legendH = legendH;
+        _betweenH = betweenH;
+      });
+    }
+  }
+
+  double _boxHeight(BuildContext? context) {
+    final ro = context?.findRenderObject();
+    return ro is RenderBox && ro.hasSize ? ro.size.height : 0;
+  }
+
+  /// 沿渲染树向上找棋盘区视口：第一个 maxHeight 有限的祖先就是滚动视口。
+  double? _probeViewport(BuildContext context) {
+    RenderObject? node = context.findRenderObject();
+    while (node != null) {
+      if (node is RenderBox &&
+          node.hasSize &&
+          node.constraints.maxHeight.isFinite) {
+        return node.size.height;
+      }
+      node = node.parent;
+    }
+    return null;
+  }
+}
+
 class _ModeBar extends StatelessWidget {
   const _ModeBar({
     required this.mode,
@@ -1583,6 +1703,7 @@ class _ModeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final label = mode.variant == SudokuVariant.classic ? '经典九宫' : mode.title;
     return Wrap(
       alignment: WrapAlignment.center,
@@ -1624,98 +1745,34 @@ class _ModeBar extends StatelessWidget {
           ),
         ),
         if (mode.difficulties.length > 1)
-          _DiffTabs(mode: mode, value: difficulty, onChanged: onDifficulty)
+          GameSegTabs<SudokuDifficulty>(
+            items: [
+              for (final d in mode.difficulties) (d, d.label),
+            ],
+            value: difficulty,
+            onChanged: onDifficulty,
+          )
         else
           Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: c.hl,
+              color: identity.soft.withAlpha(215),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: c.accent.withValues(alpha: .45)),
+              border: Border.all(color: identity.primary.withValues(alpha: .5)),
             ),
             child: Text(
               '${difficulty.label} · 唯一解',
               style: context.body(
                 size: 11,
                 weight: FontWeight.w700,
-                color: c.accentText,
+                color: identity.primaryInk,
                 height: 1.2,
               ),
             ),
           ),
       ],
-    );
-  }
-}
-
-class _DiffTabs extends StatelessWidget {
-  const _DiffTabs({
-    required this.mode,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final SudokuModeSpec mode;
-  final SudokuDifficulty value;
-  final ValueChanged<SudokuDifficulty> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: c.bg2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < mode.difficulties.length; i++) ...[
-            if (i > 0) const SizedBox(width: 3),
-            _tab(context, c, mode.difficulties[i]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _tab(
-    BuildContext context,
-    CitroColors c,
-    SudokuDifficulty difficulty,
-  ) {
-    final on = difficulty == value;
-    return GameHover(
-      enabled: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged(difficulty),
-        child: Container(
-          height: 28,
-          constraints: const BoxConstraints(minWidth: 44),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: on
-              ? BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: CitroColors.shadows.float(c),
-                )
-              : null,
-          child: Text(
-            difficulty.label,
-            style: context.body(
-              size: CitroType.caption,
-              weight: CitroType.strong,
-              color: on ? c.accentText : c.ink2,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1729,6 +1786,7 @@ class _CubeViewToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     Widget item(String label, bool value) {
       final on = flat == value;
       return Pressable(
@@ -1740,7 +1798,7 @@ class _CubeViewToggle extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: on ? c.accent : Colors.transparent,
+            color: on ? identity.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
@@ -1748,7 +1806,7 @@ class _CubeViewToggle extends StatelessWidget {
             style: context.body(
               size: 11,
               weight: FontWeight.w700,
-              color: on ? c.accentText : c.ink2,
+              color: on ? identity.onPrimary : c.ink2,
               height: 1,
             ),
           ),
@@ -1806,6 +1864,7 @@ class _CubeFaceTabs extends StatelessWidget {
 
   Widget _cubeChip(BuildContext context, CitroColors c, SudokuCubeFace item) {
     final on = item == face;
+    final identity = GameIdentityScope.of(context);
     final label = switch (item) {
       SudokuCubeFace.top => '顶面',
       SudokuCubeFace.frontLeft => '左面',
@@ -1820,16 +1879,16 @@ class _CubeFaceTabs extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: on ? c.accent : c.surface2,
+          color: on ? identity.primary : c.surface2,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: on ? c.accent : c.line2),
+          border: Border.all(color: on ? identity.primary : c.line2),
         ),
         child: Text(
           label,
           style: context.body(
             size: 11,
             weight: FontWeight.w700,
-            color: on ? c.accentText : c.ink2,
+            color: on ? identity.onPrimary : c.ink2,
             height: 1,
           ),
         ),
@@ -1919,6 +1978,7 @@ class _LayerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final base = index * rows * cols;
     var filled = 0;
     var total = 0;
@@ -1939,10 +1999,12 @@ class _LayerChip extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? c.accent : c.surface2,
+          color: selected ? identity.primary : c.surface2,
           borderRadius: BorderRadius.circular(9),
           border: Border.all(
-            color: bad ? c.stamp : (selected ? c.accent : c.line2),
+            color: bad
+                ? c.danger
+                : (selected ? identity.primary : c.line2),
             width: bad ? 1.6 : 1,
           ),
         ),
@@ -1955,7 +2017,7 @@ class _LayerChip extends StatelessWidget {
                 fontFamily: AppFonts.mono,
                 fontSize: CitroType.body,
                 fontWeight: FontWeight.w700,
-                color: selected ? c.accentText : c.ink2,
+                color: selected ? identity.onPrimary : c.ink2,
                 height: 1,
               ),
             ),
@@ -1965,10 +2027,10 @@ class _LayerChip extends StatelessWidget {
               height: 2,
               decoration: BoxDecoration(
                 color: bad
-                    ? c.stamp
+                    ? c.danger
                     : (selected
-                          ? c.accentText
-                          : (complete ? c.accentInk : c.line2)),
+                          ? identity.onPrimary
+                          : (complete ? identity.primaryInk : c.line2)),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1999,7 +2061,7 @@ class _OverlapTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final palette = sudokuSubgridPalette(c);
+    final palette = sudokuSubgridPalette(GameIdentityScope.of(context));
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -2081,7 +2143,9 @@ class _OverlapChip extends StatelessWidget {
               : c.surface2,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: bad ? c.stamp : (selected ? color : c.line2),
+            color: bad
+                ? c.danger
+                : (selected ? color : c.line2),
             width: bad ? 1.5 : (selected ? 1.6 : 1),
           ),
         ),
@@ -2170,6 +2234,7 @@ class _ColumnPeek extends StatelessWidget {
     final value = index >= 0 && index < board.length ? board[index] : 0;
     final bad = conflicts.contains(index);
     final on = l == layer;
+    final identity = GameIdentityScope.of(context);
     return Pressable(
       onTap: () => onLayer(l),
       borderRadius: BorderRadius.circular(8),
@@ -2179,10 +2244,12 @@ class _ColumnPeek extends StatelessWidget {
         height: 33,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: on ? c.accent : c.surface2,
+          color: on ? identity.primary : c.surface2,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: bad ? c.stamp : (on ? c.accent : c.line2),
+            color: bad
+                ? c.danger
+                : (on ? identity.primary : c.line2),
             width: bad ? 1.5 : 1,
           ),
         ),
@@ -2194,7 +2261,7 @@ class _ColumnPeek extends StatelessWidget {
               style: context.body(
                 size: CitroType.micro,
                 weight: CitroType.strong,
-                color: on ? c.accentText : c.inkSoft,
+                color: on ? identity.onPrimary : c.inkSoft,
               ),
             ),
             const SizedBox(height: 1),
@@ -2205,8 +2272,8 @@ class _ColumnPeek extends StatelessWidget {
                 fontSize: CitroType.meta,
                 fontWeight: FontWeight.w700,
                 color: bad
-                    ? c.stamp
-                    : (on ? c.accentText : c.accentInk),
+                    ? c.danger
+                    : (on ? identity.onPrimary : identity.primaryInk),
                 height: 1,
               ),
             ),
@@ -2254,23 +2321,27 @@ class _LargeBoardNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
       decoration: BoxDecoration(
-        color: c.hl,
+        color: identity.soft.withAlpha(215),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.accent.withValues(alpha: .38)),
+        border: Border.all(color: identity.primary.withValues(alpha: .4)),
       ),
       child: Row(
         children: [
-          gameIcon(GameIcons.lightbulb, size: 14, color: c.accentText),
+          gameIcon(GameIcons.lightbulb, size: 14, color: identity.primaryInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               '手机屏幕较小，建议使用 iPad / 桌面端 / 网页端游玩；可双指放大。',
-              style: context.body(size: 11, color: c.accentText, height: 1.5),
+              style: context.body(
+                size: 11,
+                color: identity.primaryInk,
+                height: 1.5,
+              ),
             ),
           ),
           GestureDetector(
@@ -2278,7 +2349,11 @@ class _LargeBoardNotice extends StatelessWidget {
             onTap: onClose,
             child: Padding(
               padding: const EdgeInsets.all(3),
-              child: gameIcon(GameIcons.close, size: 12, color: c.accentText),
+              child: gameIcon(
+                GameIcons.close,
+                size: 12,
+                color: identity.primaryInk,
+              ),
             ),
           ),
         ],
@@ -2315,13 +2390,15 @@ class _SudokuPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final keySize = math.min(56.0, math.max(40.0, (contentW - 8 * 4) / 5));
+    final identity = GameIdentityScope.of(context);
+    // 数字盘：44px 键（内容区太窄时等比收缩），固定在核心底部。
+    final keySize = math.min(44.0, math.max(28.0, (contentW - 8 * 4) / 5));
     Widget row(List<int> digits) => Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < digits.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
-          _key(context, c, digits[i], keySize),
+          _key(context, identity, digits[i], keySize),
         ],
       ],
     );
@@ -2342,7 +2419,7 @@ class _SudokuPad extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               row(const [1, 2, 3, 4, 5]),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               row(const [6, 7, 8, 9]),
             ],
           ),
@@ -2373,7 +2450,12 @@ class _SudokuPad extends StatelessWidget {
     );
   }
 
-  Widget _key(BuildContext context, CitroColors c, int n, double size) {
+  Widget _key(
+    BuildContext context,
+    GameIdentity identity,
+    int n,
+    double size,
+  ) {
     return GameHover(
       enabled: onInput != null,
       scale: 1.04,
@@ -2388,9 +2470,9 @@ class _SudokuPad extends StatelessWidget {
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: c.surface2,
+                    color: identity.soft.withAlpha(235),
                     borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                    border: Border.all(color: c.line2, width: 1),
+                    border: Border.all(color: identity.primary.withAlpha(72)),
                   ),
                 ),
               ),
@@ -2400,7 +2482,7 @@ class _SudokuPad extends StatelessWidget {
                   style: context.hand(
                     size: size * .42,
                     weight: CitroType.strong,
-                    color: c.ink,
+                    color: identity.primaryInk,
                   ),
                 ),
               ),
@@ -2413,7 +2495,7 @@ class _SudokuPad extends StatelessWidget {
                     style: context.hand(
                       size: size * .18,
                       weight: CitroType.strong,
-                      color: c.inkSoft,
+                      color: identity.primaryInk.withValues(alpha: .65),
                     ),
                   ),
                 ),
@@ -2443,7 +2525,8 @@ class _ToolBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fg = primary ? c.accentText : c.ink2;
+    final identity = GameIdentityScope.of(context);
+    final fg = primary ? identity.onPrimary : identity.primaryInk;
     return GameHover(
       enabled: onTap != null,
       child: GestureDetector(
@@ -2453,9 +2536,11 @@ class _ToolBtn extends StatelessWidget {
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
-            color: primary ? c.accent : c.surface,
+            color: primary ? identity.primary : identity.soft.withAlpha(220),
             borderRadius: BorderRadius.circular(CitroColors.radii.button),
-            border: Border.all(color: primary ? c.accent : c.line),
+            border: Border.all(
+              color: primary ? identity.primary : identity.primary.withAlpha(90),
+            ),
             boxShadow: primary
                 ? CitroColors.shadows.float(c)
                 : CitroColors.shadows.sm(c),
@@ -2501,6 +2586,7 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final parityComplete =
         puzzle.evenCells.length + puzzle.oddCells.length >= puzzle.activeCount;
     final text = switch (puzzle.variant) {
@@ -2532,7 +2618,7 @@ class _Legend extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          gameIcon(GameIcons.sparkle, size: 13, color: c.accentInk),
+          gameIcon(GameIcons.sparkle, size: 13, color: identity.primaryInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2566,11 +2652,12 @@ class _BoardOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     final card = Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line),
+        border: Border.all(color: identity.primary.withAlpha(60)),
         boxShadow: CitroColors.shadows.lg(c),
       ),
       padding: const EdgeInsets.all(16),
@@ -2583,7 +2670,7 @@ class _BoardOverlay extends StatelessWidget {
             textAlign: TextAlign.center,
             style: context.heading(
               size: CitroType.heading,
-              color: fail ? c.stamp : c.mintInk,
+              color: fail ? c.danger : identity.primaryInk,
             ),
           ),
           if (description.isNotEmpty) ...[
@@ -2626,6 +2713,7 @@ class _LoadingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 380),
       child: Container(
@@ -2643,7 +2731,10 @@ class _LoadingPanel extends StatelessWidget {
             SizedBox(
               width: 34,
               height: 34,
-              child: CircularProgressIndicator(strokeWidth: 3, color: c.accent),
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: identity.primary,
+              ),
             ),
             const SizedBox(height: 14),
             Text(

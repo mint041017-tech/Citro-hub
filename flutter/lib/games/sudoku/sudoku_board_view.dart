@@ -4,17 +4,27 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
+import '../game_identity.dart';
+import '../game_ui.dart';
 import 'sudoku_modes.dart';
 import 'sudoku_puzzle.dart';
 
-/// 子盘/选中盘配色：重叠、风车模式切换盘时使用。
-List<Color> sudokuSubgridPalette(CitroColors c) => [
-  c.accent,
-  c.mintInk,
-  c.accent2,
-  c.stamp,
-  c.accentInk,
-];
+/// 子盘 / 选中盘配色：重叠、风车模式切换盘时使用。
+///
+/// 由身份主色按色相旋转生成——各盘仍然可区分，但整盘始终是数独自己的颜色，
+/// 不读主题强调色。
+List<Color> sudokuSubgridPalette(GameIdentity id) {
+  final base = HSLColor.fromColor(id.primary);
+  const shifts = <double>[0, 46, -46, 92, -92];
+  return [
+    for (final shift in shifts)
+      base
+          .withHue((base.hue + shift) % 360)
+          .withSaturation((base.saturation * .95).clamp(0.0, 1.0))
+          .withLightness((base.lightness * .92).clamp(0.0, 1.0))
+          .toColor(),
+  ];
+}
 
 /// 杀手笼的图着色：返回每个笼的颜色下标，保证上下左右相邻的笼不同色。
 ///
@@ -135,6 +145,7 @@ class SudokuBoardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final available = constraints.maxWidth.isFinite
@@ -181,6 +192,7 @@ class SudokuBoardView extends StatelessWidget {
                   revision: revision,
                   cell: cell,
                   colors: c,
+                  identity: identity,
                   paused: paused,
                   over: over,
                 ),
@@ -214,6 +226,7 @@ class _SudokuBoardPainter extends CustomPainter {
     this.focusGrid = -1,
     required this.cell,
     required this.colors,
+    required this.identity,
     required this.paused,
     required this.over,
   });
@@ -228,12 +241,26 @@ class _SudokuBoardPainter extends CustomPainter {
   final int revision;
   final double cell;
   final CitroColors colors;
+  final GameIdentity identity;
   final bool paused;
   final bool over;
 
   int get _rows => puzzle.rows;
   int get _cols => puzzle.cols;
   int get _base => layer * _rows * _cols;
+
+  /// 格面底色：主题面上叠一层身份色浅端，整盘一眼是数独的颜色。
+  Color get _cellBase => Color.alphaBlend(
+    identity.soft.withValues(alpha: colors.dark ? .26 : .58),
+    colors.surface2,
+  );
+
+  /// 有规则 3×3 宫结构的变体：隔宫铺一层极淡的身份色。
+  bool get _hasBoxStructure =>
+      puzzle.variant == SudokuVariant.classic ||
+      puzzle.variant == SudokuVariant.evenOdd ||
+      puzzle.variant == SudokuVariant.diagonal ||
+      puzzle.variant == SudokuVariant.inequality;
 
   bool _active(int index) =>
       index >= 0 && index < puzzle.active.length ? puzzle.active[index] : true;
@@ -269,10 +296,10 @@ class _SudokuBoardPainter extends CustomPainter {
   }
 
   void _paintBoardBackground(Canvas canvas, Size size) {
-    // 风车/重叠棋盘的空缺区域留白，和格面同色，只靠粗线勾出五盘轮廓。
+    // 风车/重叠棋盘的空缺区域与格面同色，只靠粗线勾出各盘轮廓。
     final paint = Paint()
       ..color = puzzle.variant == SudokuVariant.overlap
-          ? colors.surface2
+          ? _cellBase
           : colors.bg2;
     canvas.drawRect(Offset.zero & size, paint);
   }
@@ -303,7 +330,14 @@ class _SudokuBoardPainter extends CustomPainter {
         final index = _base + row * _cols + col;
         if (!_active(index)) continue;
         final value = _valueAt(index) ?? 0;
-        var color = colors.surface2;
+        var color = _cellBase;
+        // 规则 3×3 宫：隔宫铺极淡身份色，读盘时宫块更清楚。
+        if (_hasBoxStructure && ((row ~/ 3) + (col ~/ 3)).isEven) {
+          color = Color.alphaBlend(
+            identity.primary.withValues(alpha: colors.dark ? .05 : .07),
+            color,
+          );
+        }
         if (puzzle.variant == SudokuVariant.killer &&
             index < cageOf.length &&
             cageOf[index] >= 0 &&
@@ -313,13 +347,14 @@ class _SudokuBoardPainter extends CustomPainter {
         if (puzzle.variant == SudokuVariant.overlap &&
             index < cover.length &&
             cover[index].length > 1) {
-          // 参考图一样式：只有共享格铺淡黄/淡粉，整盘不上色。
+          // 只有共享格铺一层身份色，整盘不上色；相邻盘用不同色相区分。
           final pair = cover[index][0] < cover[index][1]
               ? cover[index][0]
               : cover[index][1];
+          final palette = sudokuSubgridPalette(identity);
           color = Color.alphaBlend(
-            (pair.isEven ? colors.tintYellow : colors.tintPink).withValues(
-              alpha: colors.dark ? .16 : .38,
+            palette[pair % palette.length].withValues(
+              alpha: colors.dark ? .16 : .30,
             ),
             color,
           );
@@ -328,7 +363,10 @@ class _SudokuBoardPainter extends CustomPainter {
           if (puzzle.variant == SudokuVariant.overlap) {
             color = Color.alphaBlend(focusColor.withValues(alpha: .10), color);
           } else {
-            color = Color.alphaBlend(colors.mintSoft, color);
+            color = Color.alphaBlend(
+              identity.primary.withValues(alpha: .10),
+              color,
+            );
           }
         }
         if (selectedValue != 0 && value == selectedValue) {
@@ -339,7 +377,7 @@ class _SudokuBoardPainter extends CustomPainter {
         }
         if (conflicts.contains(index)) {
           color = Color.alphaBlend(
-            colors.stamp.withValues(alpha: index == selected ? .26 : .14),
+            colors.danger.withValues(alpha: index == selected ? .26 : .14),
             color,
           );
         }
@@ -355,7 +393,7 @@ class _SudokuBoardPainter extends CustomPainter {
         final stroke = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = math.max(1.5, cell * .055)
-          ..color = conflicts.contains(selected) ? colors.stamp : focusColor;
+          ..color = conflicts.contains(selected) ? colors.danger : focusColor;
         canvas.drawRect(r.deflate(stroke.strokeWidth / 2), stroke);
       }
     }
@@ -365,9 +403,9 @@ class _SudokuBoardPainter extends CustomPainter {
     if (puzzle.variant != SudokuVariant.overlap ||
         focusGrid < 0 ||
         focusGrid >= puzzle.grids.length) {
-      return colors.accent;
+      return identity.primary;
     }
-    final palette = sudokuSubgridPalette(colors);
+    final palette = sudokuSubgridPalette(identity);
     return palette[focusGrid % palette.length];
   }
 
@@ -430,18 +468,20 @@ class _SudokuBoardPainter extends CustomPainter {
   }
 
   /// 六种色相明确的浅色笼底；相邻笼由 [_cageColors] 保证不同色。
+  /// 色相由身份主色旋转而来，明度跟着主题亮 / 暗走。
   List<Color> _cageFillPalette() {
-    final warm = colors.dark ? .18 : .26;
-    final pastel = colors.dark ? .16 : .70;
-    Color tint(Color base, double alpha) =>
-        Color.alphaBlend(base.withValues(alpha: alpha), colors.surface2);
+    final base = HSLColor.fromColor(identity.primary);
+    final alpha = colors.dark ? .24 : .58;
+    Color tone(double shift) => base
+        .withHue((base.hue + shift) % 360)
+        .withLightness(colors.dark ? .58 : .70)
+        .toColor();
     return [
-      tint(colors.accentLt, warm),
-      tint(colors.mint, warm),
-      tint(colors.tintBlue, pastel),
-      tint(colors.tintPink, pastel),
-      tint(colors.tintYellow, pastel),
-      tint(colors.line2, colors.dark ? .30 : .50),
+      for (var i = 0; i < 6; i++)
+        Color.alphaBlend(
+          tone(i * 58.0).withValues(alpha: i == 0 ? alpha : alpha * .85),
+          _cellBase,
+        ),
     ];
   }
 
@@ -454,8 +494,8 @@ class _SudokuBoardPainter extends CustomPainter {
         final i = palette.length;
         palette.add(
           Color.alphaBlend(
-            colors.accentLt.withValues(alpha: .12 + .04 * (i % 4)),
-            colors.surface2,
+            identity.soft.withValues(alpha: .12 + .04 * (i % 4)),
+            _cellBase,
           ),
         );
       }
@@ -467,7 +507,7 @@ class _SudokuBoardPainter extends CustomPainter {
   void _paintDiagonalBands(Canvas canvas, Size size) {
     if (puzzle.variant != SudokuVariant.diagonal) return;
     final paint = Paint()
-      ..color = colors.accent.withValues(alpha: .20)
+      ..color = identity.primary.withValues(alpha: .20)
       ..strokeWidth = cell * .72
       ..strokeCap = StrokeCap.butt;
     canvas.drawLine(Offset.zero, Offset(size.width, size.height), paint);
@@ -512,8 +552,8 @@ class _SudokuBoardPainter extends CustomPainter {
           fontSize: fontSize,
           fontWeight: FontWeight.w700,
           color: conflict
-              ? colors.stamp
-              : (given ? colors.ink : colors.accentInk),
+              ? colors.danger
+              : (given ? identity.deep : identity.primaryInk),
           height: 1,
         ),
       ),
@@ -655,7 +695,7 @@ class _SudokuBoardPainter extends CustomPainter {
       ..color = colors.ink.withValues(alpha: .78)
       ..strokeWidth = math.max(1.4, cell * .05)
       ..style = PaintingStyle.stroke;
-    final palette = sudokuSubgridPalette(colors);
+    final palette = sudokuSubgridPalette(identity);
     for (var gi = 0; gi < puzzle.grids.length; gi++) {
       final g = puzzle.grids[gi];
       final left = g.left * cell;
@@ -803,7 +843,7 @@ class _SudokuBoardPainter extends CustomPainter {
   void _paintInequalities(Canvas canvas) {
     if (puzzle.inequalities.isEmpty) return;
     final stroke = Paint()
-      ..color = colors.accentInk
+      ..color = identity.primaryInk
       ..strokeWidth = math.max(1.2, cell * .045)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -857,6 +897,7 @@ class _SudokuBoardPainter extends CustomPainter {
       old.paused != paused ||
       old.over != over ||
       old.puzzle != puzzle ||
+      old.identity != identity ||
       old.colors != colors ||
       old.colors.ink != colors.ink ||
       old.colors.surface2 != colors.surface2;

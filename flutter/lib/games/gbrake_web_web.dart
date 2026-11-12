@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:math' as math;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
@@ -159,38 +160,87 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
       showLive: false,
       showSidePanels: false,
       onBack: () => Navigator.maybePop(context),
-      board: Stack(
-        children: [
-          Positioned.fill(child: HtmlElementView(viewType: _viewType)),
-          if (_loading)
-            Positioned.fill(child: _BrakeLoading(key: const ValueKey('brake-loading'))),
-        ],
+      board: LayoutBuilder(
+        builder: (context, cons) {
+          // GameScaffold 的 board 区在滚动视图里：宽度有界、高度无界，
+          // 高度按宽度折算（见 _brakeBoardSize）。
+          final board = _brakeBoardSize(cons.maxWidth);
+          return SizedBox(
+            width: board.width,
+            height: board.height,
+            child: Stack(
+              children: [
+                Positioned.fill(child: HtmlElementView(viewType: _viewType)),
+                if (_loading)
+                  const Positioned.fill(
+                    child: _BrakeLoading(key: ValueKey('brake-loading')),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
+/// 刹车棋盘（内嵌网页视口）按内容区约束推导。
+///
+/// 内容区宽度有界、高度无界，所以高度按宽度折算：窄内容区（手机）给竖屏
+/// 比例，宽内容区（桌面横屏）给接近 16:10 的驾驶视角。
+const double _kBrakeMaxWidth = 900;
+const double _kBrakeMaxHeight = 640;
+const double _kBrakeCompactRatio = 1.35;
+const double _kBrakeWideRatio = 0.62;
+const double _kBrakeCompactMaxWidth = 560;
+
+Size _brakeBoardSize(double maxWidth) {
+  final w = math.min(maxWidth, _kBrakeMaxWidth);
+  final ratio = w < _kBrakeCompactMaxWidth
+      ? _kBrakeCompactRatio
+      : _kBrakeWideRatio;
+  final h = (w * ratio).clamp(240.0, _kBrakeMaxHeight).toDouble();
+  return Size(w, h);
+}
+
+/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字）。
 class _BrakeLoading extends StatelessWidget {
   const _BrakeLoading({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return ColoredBox(
-      color: c.bg,
+      color: identity.soft,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-              width: 26,
-              height: 26,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            SizedBox(
+              width: 132,
+              height: 4,
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                color: identity.primary,
+                backgroundColor: identity.primary.withAlpha(40),
+              ),
             ),
             const SizedBox(height: 14),
             Text(
               '正在进入刹车场…',
-              style: context.body(size: CitroType.caption, color: c.inkSoft),
+              style: context.body(
+                size: CitroType.body,
+                weight: CitroType.strong,
+                color: identity.deep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '极限刹车 · 原版赛道',
+              style: context.body(
+                size: CitroType.small,
+                color: identity.deep.withAlpha(160),
+              ),
             ),
           ],
         ),

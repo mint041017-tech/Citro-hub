@@ -8,10 +8,17 @@ import 'package:web/web.dart' as web;
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
 import 'game_ui.dart'
-    show GameActionButton, GameIcons, GameScaffold, GameScorePill, showGameRank;
+    show
+        GameActionButton,
+        GameIcons,
+        GameIdentityScope,
+        GameScaffold,
+        GameScorePill,
+        showGameRank;
 
 /// Web 端用 iframe 装载同一份 liquid2048 资源；桌面 / iPad 与 Web 统一标准骨架。
 class GameLiquidPage extends StatefulWidget {
@@ -166,7 +173,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return GameScaffold(
       gameKey: 'gliquid',
       title: '咕噜果冻铺',
@@ -198,41 +204,66 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       boardGap: 12,
       board: LayoutBuilder(
         builder: (context, cons) {
-          final media = MediaQuery.sizeOf(context);
-          final avail = cons.maxWidth.isFinite
-              ? cons.maxWidth
-              : LiquidBoardMetrics.maxBoardWidth;
-          final boardW = LiquidBoardMetrics.boardWidth(avail);
-          final boardH = LiquidBoardMetrics.standardBoardHeight(
-            media,
-            MediaQuery.paddingOf(context),
-          );
+          // GameScaffold 的 board 区在滚动视图里：宽度有界、高度无界，
+          // 高度按宽度折算（见 LiquidBoardMetrics.boardSizeFor）。
+          final size = LiquidBoardMetrics.boardSizeFor(maxWidth: cons.maxWidth);
           return SizedBox(
-            width: boardW,
-            height: boardH,
+            width: size.width,
+            height: size.height,
             child: Stack(
               children: [
                 Positioned.fill(child: HtmlElementView(viewType: _viewType)),
-                if (_loading)
-                  Positioned.fill(
-                    child: ColoredBox(
-                      color: c.surface,
-                      child: Center(
-                        child: SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: c.accent,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                if (_loading) const Positioned.fill(child: _LiquidBoot()),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字），替代白底转圈。
+class _LiquidBoot extends StatelessWidget {
+  const _LiquidBoot();
+
+  @override
+  Widget build(BuildContext context) {
+    final identity = GameIdentityScope.of(context);
+    return ColoredBox(
+      color: identity.soft,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 132,
+              height: 4,
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                color: identity.primary,
+                backgroundColor: identity.primary.withAlpha(40),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '正在准备果冻铺',
+              style: context.body(
+                size: CitroType.body,
+                weight: CitroType.strong,
+                color: identity.deep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '咕噜果冻铺 · 软体合并',
+              style: context.body(
+                size: CitroType.small,
+                color: identity.deep.withAlpha(160),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
