@@ -739,21 +739,14 @@ class _SplashScreenState extends State<SplashScreen>
                                   ),
                                   Transform.scale(
                                     scale: .94 + .06 * t,
-                                    child: Container(
-                                      width: 108,
-                                      height: 108,
-                                      padding: const EdgeInsets.all(18),
-                                      decoration: BoxDecoration(
-                                        color: c.surface,
-                                        borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(color: c.line),
-                                        boxShadow: CitroColors.shadows.float(c),
-                                      ),
-                                      child: Image.asset(
-                                        'assets/images/logo.webp',
-                                        fit: BoxFit.contain,
-                                        cacheWidth: 220,
-                                      ),
+                                    // logo 直接上屏：不套圆角框/描边/底卡，
+                                    // 原图是透明底的，直接压在青瓷柔光上。
+                                    child: Image.asset(
+                                      'assets/images/logo.webp',
+                                      width: 148,
+                                      height: 148,
+                                      fit: BoxFit.contain,
+                                      cacheWidth: 360,
                                     ),
                                   ),
                                   Positioned(
