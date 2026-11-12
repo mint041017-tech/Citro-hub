@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/card_morph.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'card_draw.dart';
@@ -409,30 +410,17 @@ class _CardTile extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
-    // 透明 PageRoute：Hero 只在 PageRoute 之间飞行，Dialog 路由不会。
-    Navigator.of(context, rootNavigator: true).push<void>(
-      PageRouteBuilder<void>(
-        opaque: false,
-        barrierColor: context.c.scrim,
-        barrierDismissible: true,
-        transitionDuration: CitroMotion.modal,
-        reverseTransitionDuration: CitroMotion.modalReverse,
-        pageBuilder: (_, __, ___) => _CardZoom(card: card),
-        transitionsBuilder: (ctx, animation, secondary, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: CitroMotion.easeOut,
-            reverseCurve: CitroMotion.exit,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: .965, end: 1).animate(curved),
-              child: child,
-            ),
-          );
-        },
-      ),
+    // 从被点的那一格长到屏幕中央：卡片放大统一走 CitroCardMorph，
+    // 起点就是这一格，「回」也回到这一格。
+    // （这里原来用 CitroHero，但网格在 DialogRoute 里，Hero 从来不飞，是死代码。）
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    CitroCardMorph.showPreview(
+      context,
+      source: rect,
+      barrier: context.c.scrim,
+      builder: (_) => _CardZoom(card: card),
     );
   }
 }
@@ -445,45 +433,38 @@ class _CardZoom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final size = MediaQuery.sizeOf(context);
-    final width = math.min(size.width - 28, 620.0);
-    final height = math.min(
-      size.height - 110,
-      width / card.aspect.clamp(.6, .85),
-    );
     return Material(
       type: MaterialType.transparency,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
-          ),
-          Center(
-            child: SizedBox(
-              width: width,
-              height: height,
-              child: InteractiveViewer(
-                minScale: .9,
-                maxScale: 4,
-                child: CitroHero(
-                  tag: CitroHero.tagOf('card', card.id),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+              Center(
+                // 保持卡面原始宽高比，别被目标矩形拉变形。
+                child: AspectRatio(
+                  aspectRatio: card.aspect.clamp(.6, .85),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(
                       CitroColors.radii.inner,
                     ),
-                    child: CardFaceImage(
-                      card: card,
-                      cacheWidth: 1200,
-                      borderRadius: BorderRadius.zero,
+                    child: InteractiveViewer(
+                      minScale: .9,
+                      maxScale: 4,
+                      child: CardFaceImage(
+                        card: card,
+                        cacheWidth: 1200,
+                        borderRadius: BorderRadius.zero,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
           Positioned(
             top: MediaQuery.paddingOf(context).top + 8,
             right: 14,
@@ -521,6 +502,8 @@ class _CardZoom extends StatelessWidget {
             ),
           ),
         ],
+          );
+        },
       ),
     );
   }
