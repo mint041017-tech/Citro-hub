@@ -242,10 +242,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         : math.max(120.0, heroBottom - topBarReserved);
     final bgHeight = math.min(rawBg, media.height * 0.55);
     _bgHeight = bgHeight;
-    // 抽屉（负一屏）高度：网格按卡片自然高度排（标题 + 3 行），
-    // 面板比内容高出一截，底部留一段呼吸位；原来 .44 用拉伸把抽屉
-    // 塞满，反而显得太干净。也不回到 .52 那种明显空一截。
-    final negHeight = (media.height * .47).clamp(320.0, 400.0);
+    // 抽屉（负一屏）高度：内容（标题 + 3 行卡片）自然高度约 322px，
+    // 390×844 上取 346px —— 底部留一小段呼吸位（约 24px）。
+    // 不回到 .52 那种空出一百多像素，也不用拉伸把抽屉塞满。
+    final negHeight = (media.height * .41).clamp(320.0, 380.0);
     _negThreshold = negHeight;
     // 下拉行程 = 抽屉高度，手指拖多少首页就往下走多少。
     final travel = negHeight;
