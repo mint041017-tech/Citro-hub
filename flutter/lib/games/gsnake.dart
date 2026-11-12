@@ -9,12 +9,10 @@ import '../services/game_sfx.dart';
 import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'game_common.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 class GameSnakePage extends StatefulWidget {
   const GameSnakePage({super.key});
@@ -271,7 +269,13 @@ class GameSnakeView extends StatelessWidget {
       liveProgress: liveProgress,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
-      above: [_diffTabs(context)],
+      above: [
+        GameSegTabs<String>(
+          items: _diffItems,
+          value: diff,
+          onChanged: (d) => onDiff?.call(d),
+        ),
+      ],
       pills: [
         GameScorePill(label: '分数', value: '$score', bump: score > 0),
         GameScorePill(label: '最高分', value: best > 0 ? '$best' : '0'),
@@ -290,135 +294,78 @@ class GameSnakeView extends StatelessWidget {
         ),
       ],
       boardGap: 0,
-      board: LayoutBuilder(
-        builder: (context, cons) {
-          final media = MediaQuery.sizeOf(context);
-          final duoShort =
-              CitroForm.duoInner(media) && media.width > media.height;
-          final duoPortrait =
-              CitroForm.duoInner(media) && media.height >= media.width;
-          final landscapeTablet =
-              (media.width >= 900 &&
-                  media.shortestSide >= 600 &&
-                  media.width > media.height) ||
-              duoShort;
-          final available = cons.maxWidth.isFinite ? cons.maxWidth : 760.0;
-          final heightCap = duoShort
-              ? math.max(260.0, media.height - 300)
-              : duoPortrait
-              ? math.max(320.0, media.height - 550)
-              : 520.0;
-          final keyboard = keyboardMode && !kIsWeb;
-          final boardW = keyboard
-              ? math.min(available, math.min(520.0, heightCap))
-              : landscapeTablet
-              ? math.min(
-                  520.0,
-                  math.max(320.0, math.min(available - 266, heightCap)),
-                )
-              : math.min(available, math.min(520.0, heightCap));
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (keyboard) ...[
-                _board(context, boardW),
-                const SizedBox(height: 8),
-                Text(
-                  'WASD / 方向键控制',
-                  style: context.body(size: 11, color: context.c.inkSoft),
-                ),
-              ] else if (landscapeTablet)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _board(context, boardW),
-                    const SizedBox(width: 24),
-                    _dpad(context),
-                  ],
-                )
-              else ...[
-                _board(context, boardW),
-                const SizedBox(height: 6),
-                _dpad(context),
-              ],
-              if (kIsWeb) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'WASD / 方向键控制',
-                  style: context.body(size: 11, color: context.c.inkSoft),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  /// .gsnake-diff：176x33，3 个 54x31 的按钮
-  Widget _diffTabs(BuildContext context) {
-    final c = context.c;
-    return SizedBox(
-      width: 176,
-      height: 33,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: c.bg2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.line),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      // 棋盘尺寸只吃内容区约束：竖屏扣除方向盘与键盘提示，横屏 / 平板与
+      // 方向盘并排，不再读 MediaQuery（按屏幕宽算在横屏必然裁切）。
+      board: LayoutBuilder(builder: (context, cons) {
+        final w = cons.maxWidth.isFinite ? cons.maxWidth : 360.0;
+        final h = cons.maxHeight.isFinite ? cons.maxHeight : 420.0;
+        final wide = w >= 600;
+        final keyboard = keyboardMode && !kIsWeb;
+        const dpad = 240.0;
+        final hint = (keyboard || kIsWeb) ? 26.0 : 0.0;
+        var maxW = w;
+        var maxH = h;
+        if (keyboard) {
+          maxH = h - hint;
+        } else if (wide) {
+          maxW = w - dpad - 24;
+          if (kIsWeb) maxH = h - hint;
+        } else {
+          maxH = h - dpad - 6 - hint;
+        }
+        final boardW = math.max(140.0, math.min(520.0, math.min(maxW, maxH)));
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (var i = 0; i < _diffItems.length; i++)
-              Padding(
-                padding: EdgeInsets.only(
-                  right: i == _diffItems.length - 1 ? 0 : 6,
-                ),
-                child: _diffTab(context, _diffItems[i]),
-              ),
+            if (keyboard) ...[
+              _board(context, boardW),
+              const SizedBox(height: 8),
+              _hint(context),
+            ] else if (wide)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _board(context, boardW),
+                  const SizedBox(width: 24),
+                  _dpad(context),
+                ],
+              )
+            else ...[
+              _board(context, boardW),
+              const SizedBox(height: 6),
+              _dpad(context),
+            ],
+            if (kIsWeb) ...[
+              const SizedBox(height: 8),
+              _hint(context),
+            ],
           ],
-        ),
-      ),
+        );
+      }),
     );
   }
 
-  Widget _diffTab(BuildContext context, (String, String) item) {
-    final c = context.c;
-    final on = diff == item.$1;
-    return GameHover(
-      enabled: onDiff != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onDiff == null ? null : () => onDiff!(item.$1),
-        child: Container(
-          width: 54,
-          height: 31,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: on ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(CitroColors.radii.button),
-            border: Border.all(color: Colors.transparent),
-          ),
-          child: Text(
-            item.$2,
-            style: context.body(
-              size: CitroType.caption,
-              weight: CitroType.strong,
-              color: on ? c.accentText : c.ink2,
-            ),
-          ),
-        ),
-      ),
+  /// 键盘提示：保持在棋盘外，用身份色读出。
+  Widget _hint(BuildContext context) {
+    final identity = GameIdentityScope.of(context);
+    return Text(
+      'WASD / 方向键控制',
+      style: context.body(size: 11, color: identity.primaryInk),
     );
   }
 
   Widget _board(BuildContext context, double boardW) {
+    final identity = GameIdentityScope.of(context);
     return Center(
-      child: SizedBox(
+      child: Container(
         width: boardW,
         height: boardW,
+        decoration: BoxDecoration(
+          color: identity.soft,
+          borderRadius: BorderRadius.circular(CitroColors.radii.card),
+          border: Border.all(color: identity.deep.withAlpha(70)),
+        ),
         child: GestureDetector(
           onPanEnd: (d) {
             if (onTurn == null) return;
@@ -437,14 +384,15 @@ class GameSnakeView extends StatelessWidget {
                     snake: snake,
                     food: food,
                     grid: 17,
-                    cellBg: context.c.surface2,
-                    boardBg: context.c.line2,
-                    bodyColor: context.c.mint,
-                    headColor: context.c.mintInk,
-                    foodColor: context.c.accent,
+                    // 格线用主色低透明：比 identity.soft 深一档，浅底上才读得出。
+                    line: identity.primary.withAlpha(70),
+                    body: identity.primary,
+                    deep: identity.deep,
+                    foodColor: identity.secondary ?? identity.deep,
+                    paper: GameIdentity.paper,
                     // (棋盘宽 - 左右边框2 - 上下左右留白12 - 16个1px间隙) / 17
                     // 370 宽时 = 20，与 web 一致；窄屏时等比缩小保证两侧对称
-                    cell: math.max(10.0, (boardW - 30) / 17),
+                    cell: math.max(8.0, (boardW - 30) / 17),
                   ),
                 ),
               ),
@@ -460,6 +408,7 @@ class GameSnakeView extends StatelessWidget {
   /// （半透明纸面 / 圆角 22 / Kalam 标题 / 灰描述金棕数字 / 主按钮垂直居中）。
   Widget _overlay(BuildContext context, double size) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
@@ -483,7 +432,7 @@ class GameSnakeView extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: identity.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -503,7 +452,7 @@ class GameSnakeView extends StatelessWidget {
 
   /// .gsnake-dpad：240x240 grid 3x3，gap 8，四个 74.67 圆钮
   Widget _dpad(BuildContext context) {
-    final c = context.c;
+    final identity = GameIdentityScope.of(context);
     const cell = 74.6719;
     const step = cell + 8;
     const size = step * 3 - 8; // 240.0157
@@ -521,15 +470,15 @@ class GameSnakeView extends StatelessWidget {
             onTap: onTurn == null ? null : () => onTurn!(dx, dy),
             child: Container(
               decoration: BoxDecoration(
-                color: c.surface2,
+                color: identity.soft,
                 shape: BoxShape.circle,
-                border: Border.all(color: c.line2),
+                border: Border.all(color: identity.primary.withAlpha(90)),
               ),
               child: Center(
                 child: AppIcon(
                   '<svg viewBox="0 0 24 24" fill="#000000">$path</svg>',
                   size: 26,
-                  color: c.accentInk,
+                  color: identity.primaryInk,
                 ),
               ),
             ),
@@ -563,91 +512,146 @@ class Point {
   int get hashCode => Object.hash(x, y);
 }
 
-/// .gsnake-board：370x370 的 17x17 网格（cell 20，gap 1，padding 6）
+/// .gsnake-board：17×17 网格棋盘。
+///
+/// v2：底座是带身份色的容器，棋盘里只画极浅静态网格线；蛇身是一条圆角
+/// 折线（identity.primary），头部补眼睛 / 舌头（identity.deep），食物用
+/// identity.secondary ?? identity.deep。不再用整屏 CustomPaint 方格当底座。
 class _SnakeBoardPainter extends CustomPainter {
   _SnakeBoardPainter({
     required this.snake,
     required this.food,
     required this.grid,
-    required this.cellBg,
-    required this.boardBg,
-    required this.bodyColor,
-    required this.headColor,
+    required this.line,
+    required this.body,
+    required this.deep,
     required this.foodColor,
+    required this.paper,
     this.cell = 20,
   });
 
   final List<Point> snake;
   final Point food;
   final int grid;
-  final Color cellBg;
-  final Color boardBg;
-  final Color bodyColor;
-  final Color headColor;
+
+  /// 网格线。
+  final Color line;
+
+  /// 蛇身（identity.primary）。
+  final Color body;
+
+  /// 头部细节（identity.deep）。
+  final Color deep;
+
+  /// 食物（identity.secondary ?? identity.deep）。
   final Color foodColor;
+
+  /// 眼睛白（identity.paper）。
+  final Color paper;
 
   /// 格子边长。v1.6.0：随棋盘宽度缩放（旧实现固定 20px，内容区 < 370 的
   /// 机型上棋盘被右侧裁掉一截，看起来没居中）。
   final double cell;
 
-  static const double _radius = 24;
   static const double _pad = 6; // board padding
   static const double _gap = 1;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rr = RRect.fromRectAndRadius(rect, const Radius.circular(_radius));
-    canvas.save();
-    canvas.clipRRect(rr);
-    canvas.drawRect(rect, Paint()..color = boardBg);
-
     final origin = 1 + _pad;
     final step = cell + _gap;
-    final body = Paint()..color = bodyColor;
-    final head = Paint()..color = headColor;
-    final bg = Paint()..color = cellBg;
-    final headPt = snake.isNotEmpty ? snake.first : null;
-    for (var row = 0; row < grid; row++) {
-      for (var col = 0; col < grid; col++) {
-        final cellRect = Rect.fromLTWH(
-          origin + col * step,
-          origin + row * step,
-          cell,
-          cell,
-        );
-        final p = Point(col, row);
-        final isHead = headPt != null && headPt == p;
-        if (isHead) {
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
-            head,
-          );
-          continue;
-        }
-        if (snake.length > 1 && snake.contains(p)) {
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
-            body,
-          );
-          continue;
-        }
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(cellRect, Radius.circular(CitroColors.radii.xs)),
-          bg,
-        );
-      }
-    }
-    if (food.x >= 0 && food.x < grid && food.y >= 0 && food.y < grid) {
-      final fr = Rect.fromLTWH(
-        origin + food.x * step,
-        origin + food.y * step,
-        cell,
-        cell,
+    double center(int i) => origin + i * step + cell / 2;
+
+    // 静态网格：只画线，不画整屏方格。
+    final linePaint = Paint()
+      ..color = line
+      ..strokeWidth = 1;
+    for (var i = 0; i <= grid; i++) {
+      final p = origin + i * step - (i == 0 ? 0 : _gap);
+      canvas.drawLine(
+        Offset(p, origin),
+        Offset(p, size.height - origin),
+        linePaint,
       );
-      canvas.drawOval(fr, Paint()..color = foodColor);
+      canvas.drawLine(
+        Offset(origin, p),
+        Offset(size.width - origin, p),
+        linePaint,
+      );
     }
-    canvas.restore();
+
+    if (food.x >= 0 && food.x < grid && food.y >= 0 && food.y < grid) {
+      canvas.drawCircle(
+        Offset(center(food.x), center(food.y)),
+        cell * 0.40,
+        Paint()..color = foodColor,
+      );
+    }
+
+    if (snake.isEmpty) return;
+
+    // 蛇身：圆角折线穿过每个格子中心。
+    final path = Path()
+      ..moveTo(center(snake.first.x), center(snake.first.y));
+    for (var i = 1; i < snake.length; i++) {
+      path.lineTo(center(snake[i].x), center(snake[i].y));
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = body
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cell * 0.66
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // 头部：朝向第二格的方向。
+    final head = snake.first;
+    final hx = center(head.x);
+    final hy = center(head.y);
+    var dx = 1.0, dy = 0.0;
+    if (snake.length > 1) {
+      dx = (head.x - snake[1].x).toDouble();
+      dy = (head.y - snake[1].y).toDouble();
+    }
+    canvas.drawCircle(Offset(hx, hy), cell * 0.50, Paint()..color = body);
+
+    // 眼睛：纸白底 + 深墨瞳。
+    final px = -dy, py = dx;
+    for (final s in const [1.0, -1.0]) {
+      final ex = hx + px * cell * 0.20 * s + dx * cell * 0.12;
+      final ey = hy + py * cell * 0.20 * s + dy * cell * 0.12;
+      canvas.drawCircle(Offset(ex, ey), cell * 0.13, Paint()..color = paper);
+      canvas.drawCircle(
+        Offset(ex + dx * cell * 0.05, ey + dy * cell * 0.05),
+        cell * 0.06,
+        Paint()..color = deep,
+      );
+    }
+
+    // 舌头：朝向前方的分叉细线。
+    final tongue = Paint()
+      ..color = deep
+      ..strokeWidth = cell * 0.09
+      ..strokeCap = StrokeCap.round;
+    final tx0 = hx + dx * cell * 0.44;
+    final ty0 = hy + dy * cell * 0.44;
+    final tx1 = hx + dx * cell * 0.80;
+    final ty1 = hy + dy * cell * 0.80;
+    canvas.drawLine(Offset(tx0, ty0), Offset(tx1, ty1), tongue);
+    final angle = math.atan2(dy, dx);
+    for (final s in const [1.0, -1.0]) {
+      final a = angle + s * 0.55;
+      canvas.drawLine(
+        Offset(tx1, ty1),
+        Offset(
+          tx1 + math.cos(a) * cell * 0.22,
+          ty1 + math.sin(a) * cell * 0.22,
+        ),
+        tongue,
+      );
+    }
   }
 
   @override
@@ -655,9 +659,10 @@ class _SnakeBoardPainter extends CustomPainter {
       old.snake != snake ||
       old.food != food ||
       old.grid != grid ||
-      old.cellBg != cellBg ||
-      old.boardBg != boardBg ||
-      old.bodyColor != bodyColor ||
-      old.headColor != headColor ||
-      old.foodColor != foodColor;
+      old.line != line ||
+      old.body != body ||
+      old.deep != deep ||
+      old.foodColor != foodColor ||
+      old.paper != paper ||
+      old.cell != cell;
 }

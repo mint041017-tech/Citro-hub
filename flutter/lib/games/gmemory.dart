@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 /// 记忆卡牌（web `#gmemPage`：index.html:8109-8143 + gmem JS 18096-18239）。
 ///
@@ -246,7 +246,6 @@ class GameMemoryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final meta = _diffSpecs[diff] ?? _diffSpecs['std']!;
-    final boardW = math.min(MediaQuery.sizeOf(context).width * 0.92, 480.0);
     return GameScaffold(
       gameKey: 'gmem',
       title: '记忆卡牌',
@@ -254,7 +253,17 @@ class GameMemoryView extends StatelessWidget {
       liveInScroll: true,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
-      above: [_DiffTabs(value: diff, onChanged: onDiff)],
+      above: [
+        GameSegTabs<String>(
+          items: const [
+            ('easy', '简单 4×3'),
+            ('std', '标准 4×4'),
+            ('hard', '困难 5×4'),
+          ],
+          value: diff,
+          onChanged: (d) => onDiff?.call(d),
+        ),
+      ],
       pills: [
         GameScorePill(label: '步数', value: '$moves'),
         GameScorePill(label: '用时', value: '${seconds}s'),
@@ -269,83 +278,28 @@ class GameMemoryView extends StatelessWidget {
         ),
         GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
       ],
-      board: _MemoryBoard(
-        cards: cards,
-        cols: meta.cols,
-        rows: meta.rows,
-        boardW: boardW,
-        over: over,
-        score: score,
-        moves: moves,
-        seconds: seconds,
-        onFlip: onFlip,
-        onNew: onNew,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 难度分段器：棋盘上方
-// ---------------------------------------------------------------------------
-
-/// 难度分段器（web .gmem-diff：274.672×41 / padding 4 / gap 2 / 按钮 86.89×31）。
-class _DiffTabs extends StatelessWidget {
-  const _DiffTabs({required this.value, this.onChanged});
-
-  final String value;
-  final ValueChanged<String>? onChanged;
-
-  static const _tabW = 86.8906;
-  static const _tabH = 31.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final entries = _diffSpecs.entries.toList();
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: c.bg2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < entries.length; i++) ...[
-            if (i > 0) const SizedBox(width: 2),
-            _tab(context, c, entries[i].key, entries[i].value.label),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _tab(BuildContext context, CitroColors c, String key, String label) {
-    final on = key == value;
-    return GameHover(
-      enabled: onChanged != null,
-      child: GestureDetector(
-        onTap: onChanged == null ? null : () => onChanged!(key),
-        child: Container(
-          width: _tabW,
-          height: _tabH,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: on ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(CitroColors.radii.button),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            style: context.body(
-              size: CitroType.caption,
-              weight: CitroType.strong,
-              color: on ? c.accentText : c.ink2,
-            ),
-          ),
-        ),
+      // 棋盘尺寸只吃内容区约束：竖屏约 0.92 内容宽，横屏用侧栏剩余宽度，
+      // 高度再按舞台剩余收一档，保证任何比例下整块棋盘可见（不裁切）。
+      board: LayoutBuilder(
+        builder: (context, cons) {
+          final w = cons.maxWidth.isFinite ? cons.maxWidth : 358.0;
+          final h = cons.maxHeight.isFinite ? cons.maxHeight : 480.0;
+          final portrait = h >= w;
+          final maxW = portrait ? math.min(w * 0.92, 480.0) : math.min(w, 480.0);
+          return _MemoryBoard(
+            cards: cards,
+            cols: meta.cols,
+            rows: meta.rows,
+            maxWidth: maxW,
+            maxHeight: math.max(120.0, h),
+            over: over,
+            score: score,
+            moves: moves,
+            seconds: seconds,
+            onFlip: onFlip,
+            onNew: onNew,
+          );
+        },
       ),
     );
   }
@@ -360,7 +314,8 @@ class _MemoryBoard extends StatelessWidget {
     required this.cards,
     required this.cols,
     required this.rows,
-    required this.boardW,
+    required this.maxWidth,
+    required this.maxHeight,
     required this.over,
     required this.score,
     required this.moves,
@@ -372,7 +327,10 @@ class _MemoryBoard extends StatelessWidget {
   final List<MemoryCardData> cards;
   final int cols;
   final int rows;
-  final double boardW;
+
+  /// 内容区给棋盘的最大宽 / 高（来自 LayoutBuilder，不读 MediaQuery）。
+  final double maxWidth;
+  final double maxHeight;
   final bool over;
   final int score;
   final int moves;
@@ -382,48 +340,45 @@ class _MemoryBoard extends StatelessWidget {
 
   static const _gap = 10.0;
 
-  // 版面绝对坐标（390 宽、844 高的 web 页面实测值）。
-  // Chrome 会把布局里的圆角矩形边框四舍五入到整数设备像素（pixel snapping），
-  // 所以这里按绝对坐标 snap 后再放每个卡位，边框/内环才不会出现 1px 灰边。
-  static const _wrapAbsLeft = 14.6;
-  static const _wrapAbsTop = 318.303;
-  static const _boardAbsLeft = 15.6;
-  static const _boardAbsTop = 335.303;
+  /// 纸板内边距：卡牌左右各收 9px（手机两侧贴边的用户反馈），上下各 17px。
+  static const _sideInset = 9.0;
+  static const _boardSide = 17.0;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // 2026-10-23：web 原版卡牌左右直接顶到纸卡内缘（0 内边距），手机上两侧
-    // 卡面与游戏区边界贴得过近（用户反馈）。这里给左右各收进 9px，
-    // 卡片整体按剩余宽度重排，上下边距保持原样。
-    const sideInset = 9.0;
-    final cardW = (boardW - sideInset * 2 - _gap * (cols - 1)) / cols;
-    // web 上卡片行高来自 grid 的 3:4 轨道（109.594），这里留 0.01 余量避免
-    // 第 3 行 574.5 被 round 到 575（Chrome 是 574）。
-    final cardH = cardW * 4 / 3 - 0.01;
+    final identity = GameIdentityScope.of(context);
+    // 卡面保持 3:4；宽度优先吃满内容区，高度不够时（横屏 / 矮屏）按高度
+    // 反推卡宽，整块棋盘始终完整落在舞台里。
+    final maxCardW = (maxWidth - _sideInset * 2 - _gap * (cols - 1)) / cols;
+    final maxCardH = (maxHeight - _boardSide * 2 - _gap * (rows - 1)) / rows;
+    var cardW = maxCardW;
+    var cardH = cardW * 4 / 3 - 0.01;
+    if (cardH > maxCardH) {
+      cardH = math.max(24.0, maxCardH);
+      cardW = cardH * 3 / 4;
+    }
     final pitchX = cardW + _gap;
     final pitchY = cardH + _gap;
+    final boardW = cardW * cols + _gap * (cols - 1) + _sideInset * 2;
     final boardH = cardH * rows + _gap * (rows - 1);
     final wrapW = boardW + 2;
     // v1.6.0：底排卡牌距纸卡下缘只有 1px（wrapH = boardH + 18，而顶部留
     // 17px），用户反馈下部太贴边。改为与顶部对称的 17px。
-    final wrapH = boardH + 34;
+    final wrapH = boardH + _boardSide * 2;
 
     final tiles = <Widget>[];
     for (var r = 0; r < rows; r++) {
       for (var col = 0; col < cols; col++) {
         final i = r * cols + col;
-        final x0 = (_boardAbsLeft + sideInset + col * pitchX).roundToDouble();
-        final x1 = (_boardAbsLeft + sideInset + col * pitchX + cardW)
-            .roundToDouble();
-        final y0 = (_boardAbsTop + r * pitchY).roundToDouble();
-        final y1 = (_boardAbsTop + r * pitchY + cardH).roundToDouble();
+        final x = _sideInset + col * pitchX;
+        final y = _boardSide + r * pitchY;
         tiles.add(
           Positioned(
-            left: x0 - _wrapAbsLeft,
-            top: y0 - _wrapAbsTop,
-            width: x1 - x0,
-            height: y1 - y0,
+            left: x,
+            top: y,
+            width: cardW,
+            height: cardH,
             child: i < cards.length
                 ? _MemoryTile(
                     key: ValueKey<String>('card-$i'),
@@ -447,9 +402,10 @@ class _MemoryBoard extends StatelessWidget {
             top: 0,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: c.surface,
+                // 纸板底：主题面上叠一层极低透明的主色，不铺死色。
+                color: Color.lerp(c.surface, identity.primary, 0.12),
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                border: Border.all(color: c.line),
+                border: Border.all(color: identity.deep.withAlpha(70)),
                 boxShadow: CitroColors.shadows.card(c),
               ),
               child: SizedBox(width: wrapW, height: wrapH),
@@ -491,6 +447,7 @@ class _MemoryOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(CitroColors.radii.card),
       child: CitroBackdropBlur(
@@ -502,7 +459,10 @@ class _MemoryOverlay extends StatelessWidget {
             children: [
               Text(
                 '配对完成！',
-                style: context.heading(size: CitroType.heading, color: c.mintInk),
+                style: context.heading(
+                  size: CitroType.heading,
+                  color: identity.primaryInk,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -519,7 +479,7 @@ class _MemoryOverlay extends StatelessWidget {
   }
 }
 
-/// 单张卡牌：500ms cubic-bezier(.22,1,.36,1) 绕 Y 翻转（web .gmem-inner）。
+/// 单张卡牌：320ms 绕 Y 翻转（web 原版 500ms，节奏统一到 CitroMotion）。
 class _MemoryTile extends StatefulWidget {
   const _MemoryTile({super.key, required this.data, this.onTap});
 
@@ -532,9 +492,11 @@ class _MemoryTile extends StatefulWidget {
 
 class _MemoryTileState extends State<_MemoryTile>
     with SingleTickerProviderStateMixin {
+  static const _flip = Duration(milliseconds: 320);
+
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 500),
+    duration: _flip,
     value: widget.data.open || widget.data.matched ? 1 : 0,
   );
 
@@ -545,8 +507,8 @@ class _MemoryTileState extends State<_MemoryTile>
     if ((_ctrl.value - target).abs() > 0.0001) {
       _ctrl.animateTo(
         target,
-        duration: const Duration(milliseconds: 500),
-        curve: const Cubic(0.22, 1, 0.36, 1),
+        duration: CitroMotion.guard(context, _flip),
+        curve: CitroMotion.curveFor(context, CitroMotion.easeOut),
       );
     }
   }
@@ -589,48 +551,90 @@ class _MemoryTileState extends State<_MemoryTile>
   }
 }
 
-/// 卡背：品牌橙纯色 + 大圆角（nosh 的贴纸卡）。
+/// 卡背：身份浅色端（identity.soft）+ 主色斜纹，文字用深色端。
 class _CardBack extends StatelessWidget {
   const _CardBack();
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
+    final radius = BorderRadius.circular(CitroColors.radii.small);
     return SizedBox.expand(
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: c.accent,
-          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          color: identity.soft,
+          borderRadius: radius,
           boxShadow: CitroColors.shadows.sm(c),
         ),
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'CITRO',
-              style: context.hand(
-                size: CitroType.micro,
-                weight: CitroType.strong,
-                color: c.accentText,
+        child: ClipRRect(
+          borderRadius: radius,
+          child: CustomPaint(
+            painter: _CardStripePainter(color: identity.primary.withAlpha(72)),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'CITRO',
+                    style: context.hand(
+                      size: CitroType.micro,
+                      weight: CitroType.strong,
+                      color: identity.deep,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '橘',
+                    style: context.heading(
+                      size: CitroType.titleLg,
+                      color: identity.deep,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              '橘',
-              style: context.heading(
-                size: CitroType.titleLg,
-                color: c.accentText,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// 卡正面：白卡 + 圆体汉字（配成后薄荷绿）。
+/// 45° 斜纹：卡背主色条纹，极低透明叠在 identity.soft 上。
+class _CardStripePainter extends CustomPainter {
+  const _CardStripePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        Offset.zero & size,
+        Radius.circular(CitroColors.radii.small),
+      ),
+    );
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    const gap = 9.0;
+    for (var d = -size.height; d < size.width + size.height; d += gap) {
+      canvas.drawLine(
+        Offset(d, 0),
+        Offset(d + size.height, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CardStripePainter old) => old.color != color;
+}
+
+/// 卡正面：纸白卡（identity.paper）+ 主色可读深墨汉字；
+/// 配成后主色描边 + 轻放大。
 class _CardFront extends StatelessWidget {
   const _CardFront({required this.char, required this.matched});
 
@@ -640,20 +644,29 @@ class _CardFront extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final identity = GameIdentityScope.of(context);
     return SizedBox.expand(
-      child: Container(
-        decoration: BoxDecoration(
-          color: matched ? c.mintSoft : c.surface,
-          borderRadius: BorderRadius.circular(CitroColors.radii.small),
-          border: Border.all(color: matched ? c.mintLine : c.line),
-          boxShadow: CitroColors.shadows.sm(c),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          char,
-          style: context.heading(
-            size: CitroType.display,
-            color: matched ? c.mintInk : c.accentInk,
+      child: AnimatedScale(
+        scale: matched ? 1.05 : 1,
+        duration: CitroMotion.size,
+        curve: CitroMotion.easeOut,
+        child: Container(
+          decoration: BoxDecoration(
+            color: identity.paper,
+            borderRadius: BorderRadius.circular(CitroColors.radii.small),
+            border: Border.all(
+              color: matched ? identity.primary : identity.deep.withAlpha(70),
+              width: matched ? 1.8 : 1,
+            ),
+            boxShadow: CitroColors.shadows.sm(c),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            char,
+            style: context.heading(
+              size: CitroType.display,
+              color: matched ? identity.primary : identity.primaryInk,
+            ),
           ),
         ),
       ),

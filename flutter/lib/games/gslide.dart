@@ -10,7 +10,6 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_common.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 class GameSlidePage extends StatefulWidget {
   const GameSlidePage({super.key});
@@ -249,8 +248,6 @@ class GameSlideView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vw = MediaQuery.of(context).size.width;
-    final boardW = math.min(vw * 0.88, 500.0);
     return GameScaffold(
       gameKey: 'gslide',
       title: '数字华容道',
@@ -277,10 +274,17 @@ class GameSlideView extends StatelessWidget {
         GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
       ],
       boardGap: 30,
-      board: SizedBox(
-        width: boardW,
-        height: boardW,
-        child: _board(context, boardW),
+      // 按内容区宽度自适应：横屏扣掉左右侧栏、平板扣掉 rail 之后自动跟上。
+      board: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+          final boardW = math.min(w * .94, 500.0);
+          return SizedBox(
+            width: boardW,
+            height: boardW,
+            child: _board(context, boardW),
+          );
+        },
       ),
     );
   }
@@ -288,6 +292,7 @@ class GameSlideView extends StatelessWidget {
   /// .gslide-board：凹版底 + 空格 + 数字块 + 结算浮层
   Widget _board(BuildContext context, double boardW) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     final n = size;
     final pad = 10.0;
     final gap = 8.0;
@@ -305,7 +310,7 @@ class GameSlideView extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: c.accent,
+            color: id.primary,
             borderRadius: BorderRadius.circular(inner),
             boxShadow: CitroColors.shadows.sm(c),
           ),
@@ -314,7 +319,7 @@ class GameSlideView extends StatelessWidget {
             style: context.hand(
               size: cell * 0.34,
               weight: CitroType.strong,
-              color: c.accentText,
+              color: id.onPrimary,
             ),
           ),
         ),
@@ -331,7 +336,7 @@ class GameSlideView extends StatelessWidget {
             decoration: BoxDecoration(
               color: c.surface,
               borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: c.line),
+              border: Border.all(color: id.primary.withAlpha(60)),
               boxShadow: CitroColors.shadows.card(c),
             ),
           ),
@@ -344,9 +349,9 @@ class GameSlideView extends StatelessWidget {
           height: cell,
           child: Container(
             decoration: BoxDecoration(
-              color: c.surface2,
+              color: id.soft.withAlpha(120),
               borderRadius: BorderRadius.circular(inner),
-              border: Border.all(color: c.line2, width: 1),
+              border: Border.all(color: id.deep.withAlpha(60), width: 1),
             ),
           ),
         ),
@@ -371,6 +376,7 @@ class GameSlideView extends StatelessWidget {
   /// （半透明纸面 / 圆角 22 / Kalam 标题 / 灰描述金棕数字 / 主按钮垂直居中）。
   Widget _overlay(BuildContext context, double radius) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     final score = math.max(
       1,
       (diff == 'easy' ? 1200 : (diff == 'std' ? 3000 : 6000)) - seconds,
@@ -399,7 +405,7 @@ class GameSlideView extends StatelessWidget {
                   TextSpan(
                     text: fmtDuration(seconds),
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -407,7 +413,7 @@ class GameSlideView extends StatelessWidget {
                   TextSpan(
                     text: '$score',
                     style: TextStyle(
-                      color: c.accentInk,
+                      color: id.primaryInk,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -439,7 +445,7 @@ class _DiffTabs extends StatelessWidget {
       height: 33,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: c.bg2,
+          color: c.surface2,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: c.line),
         ),
@@ -473,7 +479,7 @@ class _DiffTabs extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: on ? c.accent : Colors.transparent,
+            color: on ? GameIdentityScope.of(context).primary : Colors.transparent,
             borderRadius: BorderRadius.circular(CitroColors.radii.button),
             border: Border.all(color: Colors.transparent),
           ),
@@ -482,7 +488,7 @@ class _DiffTabs extends StatelessWidget {
             style: context.body(
               size: CitroType.caption,
               weight: CitroType.strong,
-              color: on ? c.accentText : c.ink2,
+              color: on ? GameIdentityScope.of(context).onPrimary : c.ink2,
             ),
           ),
         ),

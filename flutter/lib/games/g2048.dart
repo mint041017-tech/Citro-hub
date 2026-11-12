@@ -5,10 +5,9 @@ import 'package:flutter/services.dart';
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
+import 'game_identity.dart';
 import 'game_ui.dart';
-import 'game_theme.dart';
 
 /// 2048 —— 1:1 复刻原版 Web：index.html 1745 行区 + styles/citro-games.css 第 7 节
 /// 移动端实测（390×844）：棋盘 335.39×335.39、cell 74.09、gap 7、pad 8、tile 圆角 10。
@@ -296,21 +295,6 @@ class Game2048View extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
-    final screenW = media.width;
-    final shortDuo = CitroForm.duoInner(media) && media.width > media.height;
-    final bs = math.min(
-      screenW * 0.86,
-      shortDuo ? math.max(260.0, media.height - 326) : 500.0,
-    );
-    final board = _Board24(
-      width: bs,
-      grid: grid,
-      tiles: tiles,
-      overlayTitle: overlayTitle,
-      overlayDesc: overlayDesc,
-      onRetry: onNew,
-    );
     return GameScaffold(
       gameKey: 'g2048',
       title: '2048',
@@ -334,18 +318,33 @@ class Game2048View extends StatelessWidget {
         ),
         GameActionButton(label: '排行榜', icon: GameIcons.trophy, onTap: onRank),
       ],
-      board: GestureDetector(
-        onPanEnd: onSwipe == null
-            ? null
-            : (d) {
-                final v = d.velocity.pixelsPerSecond;
-                if (v.dx.abs() > v.dy.abs()) {
-                  onSwipe!(v.dx > 0 ? 1 : -1, 0);
-                } else {
-                  onSwipe!(0, v.dy > 0 ? 1 : -1);
-                }
-              },
-        child: board,
+      // 棋盘按内容区宽度算：横屏扣除左右侧栏、平板扣除 rail 之后都自动跟上，
+      // 不再读整屏宽度（那样横屏必然裁切）。
+      board: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+          final bs = math.min(w * .94, 500.0);
+          return GestureDetector(
+            onPanEnd: onSwipe == null
+                ? null
+                : (d) {
+                    final v = d.velocity.pixelsPerSecond;
+                    if (v.dx.abs() > v.dy.abs()) {
+                      onSwipe!(v.dx > 0 ? 1 : -1, 0);
+                    } else {
+                      onSwipe!(0, v.dy > 0 ? 1 : -1);
+                    }
+                  },
+            child: _Board24(
+              width: bs,
+              grid: grid,
+              tiles: tiles,
+              overlayTitle: overlayTitle,
+              overlayDesc: overlayDesc,
+              onRetry: onNew,
+            ),
+          );
+        },
       ),
     );
   }
@@ -374,6 +373,7 @@ class _Board24 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final id = GameIdentityScope.of(context);
     final cell = (width - 2 - pad * 2 - gap * 3) / 4;
     final children = <Widget>[];
     // 16 个空格子
@@ -387,7 +387,8 @@ class _Board24 extends StatelessWidget {
           height: cell,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: c.surface2,
+              // 凹槽用身份色浅端，和数字块同一色系，整盘看起来是一套。
+              color: id.soft.withAlpha(120),
               borderRadius: BorderRadius.circular(CitroColors.radii.small),
             ),
           ),
@@ -454,8 +455,8 @@ class _Board24 extends StatelessWidget {
                     style: context.heading(
                       size: CitroType.display,
                       color: (overlayTitle ?? '').contains('2048')
-                          ? c.accentInk
-                          : c.mintInk,
+                          ? id.primaryInk
+                          : id.deep,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -492,7 +493,7 @@ class _Board24 extends StatelessWidget {
               decoration: BoxDecoration(
                 color: c.surface,
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                border: Border.all(color: c.line),
+                border: Border.all(color: id.primary.withAlpha(60)),
                 boxShadow: CitroColors.shadows.card(c),
               ),
             ),
@@ -580,33 +581,35 @@ class _Tile24 extends StatelessWidget {
     int v,
   ) {
     final c = context.c;
-    // nosh 色阶：浅纸 → 浅橙 → 品牌橙 → 深橙 → 近黑，单调递增。
-    // 深色主题用同一套逻辑，只是把「浅纸」换成内嵌面、把「近黑」换成近白。
+    final id = GameIdentityScope.of(context);
+    // 身份色阶：纸白 → 浅端 → 主色 → 深端，数值越大越沉。
+    // 数字一律跟着底色走：浅底用 deep，主色 / 深端实底用 onPrimary。
+    Color bg(double lerp) => Color.lerp(id.soft, id.primary, lerp)!;
     if (!c.dark) {
       return switch (v) {
-        2 => (c.surface2, c.ink2, null, false, false),
-        4 => (c.tintYellow, c.accentInk, null, false, false),
-        8 => (c.accentLt, c.accentInk, null, false, false),
-        16 => (c.accentLt, c.accentInk, null, false, false),
-        32 => (c.accent, c.accentText, null, false, true),
-        64 => (c.accent, c.accentText, null, false, true),
-        128 => (c.accent2, c.accentText, null, false, true),
-        256 => (c.accent2, c.accentText, null, false, true),
-        512 => (c.ink, c.bg, null, false, true),
-        _ => (c.ink, c.bg, null, false, true),
+        2 => (id.soft, id.deep, null, false, false),
+        4 => (bg(.30), id.deep, null, false, false),
+        8 => (bg(.50), id.deep, null, false, false),
+        16 => (bg(.50), id.deep, null, false, false),
+        32 => (id.primary, id.onPrimary, null, false, true),
+        64 => (id.primary, id.onPrimary, null, false, true),
+        128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
+        256 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
+        512 => (id.deep, GameIdentity.paper, null, false, true),
+        _ => (id.deep, GameIdentity.paper, null, false, true),
       };
     }
     return switch (v) {
-      2 => (c.surface2, c.ink, null, false, false),
-      4 => (c.tintYellow, c.accentInk, null, false, false),
-      8 => (c.accentLt, c.accentText, null, false, false),
-      16 => (c.accentLt, c.accentText, null, false, false),
-      32 => (c.accent, c.accentText, null, false, true),
-      64 => (c.accent, c.accentText, null, false, true),
-      128 => (c.accent2, c.accentText, null, false, true),
-      256 => (c.accent2, c.accentText, null, false, true),
-      512 => (c.ink, c.bg, null, false, true),
-      _ => (c.ink, c.bg, null, false, true),
+      2 => (id.soft, id.deep, null, false, false),
+      4 => (bg(.30), id.deep, null, false, false),
+      8 => (bg(.50), id.onPrimary, null, false, false),
+      16 => (bg(.50), id.onPrimary, null, false, false),
+      32 => (id.primary, id.onPrimary, null, false, true),
+      64 => (id.primary, id.onPrimary, null, false, true),
+      128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
+      256 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
+      512 => (id.deep, GameIdentity.paper, null, false, true),
+      _ => (id.deep, GameIdentity.paper, null, false, true),
     };
   }
 }
