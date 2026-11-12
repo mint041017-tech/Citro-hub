@@ -652,7 +652,7 @@ class _CardFront extends StatelessWidget {
         curve: CitroMotion.easeOut,
         child: Container(
           decoration: BoxDecoration(
-            color: identity.paper,
+            color: GameIdentity.paper,
             borderRadius: BorderRadius.circular(CitroColors.radii.small),
             border: Border.all(
               color: matched ? identity.primary : identity.deep.withAlpha(70),
