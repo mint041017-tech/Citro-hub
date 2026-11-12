@@ -346,7 +346,7 @@ class _CookPageState extends State<CookPage> {
       from: start,
       to: to,
       child: _coverArt(target),
-      duration: const Duration(milliseconds: 420),
+      duration: CitroMotion.cardOpen,
     );
     if (!mounted) return;
     setState(() {
@@ -397,7 +397,7 @@ class _CookPageState extends State<CookPage> {
       from: from,
       to: to,
       child: _coverArt(d),
-      duration: const Duration(milliseconds: 340),
+      duration: CitroMotion.cardClose,
       curve: Curves.easeInOutCubic,
       // 列表页刚重建（顺序、滚动都可能变了）：起飞前用它的实时矩形定落点。
       resolveTo: () => _coverRects[coverKey],
@@ -524,7 +524,7 @@ class _CookPageState extends State<CookPage> {
           _searchAndCats(context),
         Expanded(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+            duration: CitroMotion.tabContent,
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
             transitionBuilder: (child, anim) {

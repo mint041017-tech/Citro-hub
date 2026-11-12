@@ -21,7 +21,7 @@ class CitroCoverFlight {
     required Rect from,
     required Rect to,
     required Widget child,
-    Duration duration = const Duration(milliseconds: 420),
+    Duration duration = CitroMotion.cardOpen,
     Curve curve = Curves.easeOutCubic,
 
     /// 起飞前再解析一次精确落点：新页面刚插入时布局还没稳定，
