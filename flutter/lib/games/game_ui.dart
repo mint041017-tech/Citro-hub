@@ -279,23 +279,22 @@ class _GameScaffoldState extends State<GameScaffold> {
 
   Widget _portraitBody(BuildContext context) {
     final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return Stack(
+    // 顶栏参与布局，不再浮动：浮动时它的高度随系统状态栏变化，
+    // 而内容区写死 top:64，真机状态栏一高就压到 HUD / 棋盘上。
+    return Column(
       children: [
-        Positioned.fill(
-          child: Padding(
-            padding: const EdgeInsets.only(top: GameMetrics.headHeight),
-            child: Column(
-              children: [
-                _hudStrip(context),
-                Expanded(child: _boardArea(context)),
-                _actionsStrip(context),
-                if (widget.showLive && !kbOpen)
-                  SafeArea(top: false, child: GameLiveBar(list: _live)),
-              ],
-            ),
+        _floatingHeader(context),
+        Expanded(
+          child: Column(
+            children: [
+              _hudStrip(context),
+              Expanded(child: _boardArea(context)),
+              _actionsStrip(context),
+              if (widget.showLive && !kbOpen)
+                SafeArea(top: false, child: GameLiveBar(list: _live)),
+            ],
           ),
         ),
-        _floatingHeader(context),
       ],
     );
   }
@@ -317,17 +316,13 @@ class _GameScaffoldState extends State<GameScaffold> {
     final c = context.c;
     final identity = _identity;
     final rank = _rankButton;
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: GameMetrics.sidePad,
-            vertical: 6,
-          ),
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: GameMetrics.sidePad,
+          vertical: 6,
+        ),
           child: Row(
             children: [
               _RoundIconButton(
@@ -390,7 +385,6 @@ class _GameScaffoldState extends State<GameScaffold> {
             ],
           ),
         ),
-      ),
     );
   }
 
