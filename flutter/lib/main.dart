@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,16 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'app_keys.dart';
 import 'ledger/ledger_intake.dart';
 import 'overlays/pomodoro_sheet.dart';
+import 'overlays/profile_modal.dart';
 import 'overlays/timer_overlay.dart';
+import 'pages/login_page.dart';
+import 'pages/root_shell.dart';
 import 'perf_probe.dart';
 import 'routes.dart';
 import 'services/image_store.dart';
 import 'services/orientation.dart';
 import 'services/platform.dart' as platform;
+import 'services/prefs.dart';
 import 'services/refresh_rate.dart';
 import 'services/web_route.dart';
 import 'state/app_state.dart';
@@ -25,6 +30,8 @@ import 'theme/scroll_behavior.dart';
 import 'theme/tokens.dart';
 import 'widgets/corner_guard.dart';
 import 'widgets/desktop_shell.dart';
+import 'widgets/home_background.dart';
+import 'widgets/paper.dart';
 import 'widgets/tablet_shell.dart';
 
 Future<void> main() async {
@@ -174,6 +181,7 @@ class _MemoryGuardState extends State<_MemoryGuard>
     // HyperOS / MIUI 的 onTrimMemory 来得频繁，连同自建的内存图片缓存一起释放，
     // 否则 Flutter 画布缓存清了、原图字节还占着几十 MB。
     ImageStore.clearMemory();
+    CitroBlendImage.clearMemory();
   }
 
   @override
@@ -386,12 +394,24 @@ class SplashGate extends StatefulWidget {
 class _SplashGateState extends State<SplashGate> {
   bool _ready = false;
   bool _booted = false;
+  bool _enterMain = false;
+  bool _pendingProfilePrompt = false;
   String? _error;
+  Future<void>? _enterFuture;
+  bool _wasLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    _boot();
+    _wasLoggedIn = AppState.instance.loggedIn;
+    AppState.instance.addListener(_onAuthChanged);
+    unawaited(_boot());
+  }
+
+  @override
+  void dispose() {
+    AppState.instance.removeListener(_onAuthChanged);
+    super.dispose();
   }
 
   Future<void> _boot() async {
@@ -409,36 +429,138 @@ class _SplashGateState extends State<SplashGate> {
       _booted = false;
       _error = '$e';
     }
+    // 背景预载：登录页和主界面共用这一张，越早开始越好。
+    unawaited(CitroAmbientBackground.prepare());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(CitroAmbientBackground.prepare(context: context));
+    });
+    // 会话恢复（有本地 token / Web 的 httpOnly Cookie）与最长启动展示
+    // 并行等：不让登录页闪一帧，也不把启动时间无意义地拉长。
+    final needSessionWait = _booted &&
+        ((Prefs.getString(PrefKeys.token) ?? '').isNotEmpty || kIsWeb);
+    final waitSession = needSessionWait
+        ? _waitForSession(const Duration(milliseconds: 1000))
+        : Future<void>.value();
     // Windows 与 iPad 一样先完整展示启动插画，避免秒开时只闪一帧；
     // 安卓原生冷启动窗口没有插画，同样补足展示时间，否则一闪而过。
-    if (!kIsWeb && (platform.isWindows || platform.isAndroid)) {
-      const minSplash = Duration(milliseconds: 1000);
-      final elapsed = DateTime.now().difference(startedAt);
-      if (elapsed < minSplash) {
-        await Future<void>.delayed(minSplash - elapsed);
-      }
+    final minSplash = !kIsWeb && (platform.isWindows || platform.isAndroid)
+        ? const Duration(milliseconds: 1000)
+        : Duration.zero;
+    final splashRemaining = minSplash - DateTime.now().difference(startedAt);
+    try {
+      await Future.wait<void>([
+        waitSession,
+        if (splashRemaining > Duration.zero)
+          Future<void>.delayed(splashRemaining),
+      ]);
+    } catch (_) {}
+    if (!mounted) return;
+    _wasLoggedIn = AppState.instance.loggedIn;
+    setState(() => _ready = true);
+    if (_wasLoggedIn) unawaited(_enterMainFlow());
+  }
+
+  /// 会话恢复是异步的：有 token 但还没拿到用户时，短暂等一下，
+  /// 免得登录页闪一帧。超时也没关系，恢复完成后会走 late-restore 分支。
+  Future<void> _waitForSession(Duration limit) async {
+    final deadline = DateTime.now().add(limit);
+    while (AppState.instance.user == null && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
     }
-    if (mounted) setState(() => _ready = true);
+  }
+
+  void _onAuthChanged() {
+    if (!mounted) return;
+    final loggedIn = AppState.instance.loggedIn;
+    if (!_ready) {
+      // 启动期间可能收到会话恢复通知；只记状态，等 boot 收尾统一放行。
+      _wasLoggedIn = loggedIn;
+      return;
+    }
+    if (loggedIn && !_wasLoggedIn) {
+      // 登录页完成后才挂载壳：登录那一刻壳还没在，标记一次云端对齐。
+      RootShellState.syncOnNextMount = true;
+      unawaited(_enterMainFlow());
+    } else if (!loggedIn && _wasLoggedIn) {
+      // 登出 / 会话失效：回到登录页，必须重新登录才能进主界面。
+      _enterFuture = null;
+      _pendingProfilePrompt = false;
+      setState(() => _enterMain = false);
+    }
+    _wasLoggedIn = loggedIn;
+  }
+
+  /// 登录页在背景预载完成后回调：带上「这次登录是否要补资料」的信号。
+  void _handleAuthenticated(bool needProfilePrompt) {
+    _pendingProfilePrompt = needProfilePrompt;
+    if (_enterMain) {
+      _maybePromptProfile();
+    } else {
+      unawaited(_enterMainFlow());
+    }
+  }
+
+  Future<void> _enterMainFlow() {
+    final existing = _enterFuture;
+    if (existing != null) return existing;
+    final future = _doEnterMain();
+    _enterFuture = future;
+    return future;
+  }
+
+  /// 进入主界面前一定等背景就绪；超时也放行，不能把人卡在外面。
+  Future<void> _doEnterMain() async {
+    try {
+      await CitroAmbientBackground.prepare(context: context).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {},
+      );
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _enterMain = true);
+    _maybePromptProfile();
+  }
+
+  /// 新注册 / 新登录且资料没填完时，沿用原来的资料完善弹层。
+  void _maybePromptProfile() {
+    if (!_pendingProfilePrompt) return;
+    _pendingProfilePrompt = false;
+    final user = AppState.instance.user;
+    if (user == null || user.profileDone) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(showProfileModal(context));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final Widget child;
+    if (!_ready) {
+      child = const SplashScreen(key: ValueKey('splash'));
+    } else if (!_booted) {
+      child = _BootError(
+        error: _error,
+        onRetry: _boot,
+        key: const ValueKey('boot-error'),
+      );
+    } else if (!_enterMain && !AppState.instance.loggedIn) {
+      child = CitroLoginPage(
+        key: const ValueKey('login'),
+        onAuthenticated: _handleAuthenticated,
+      );
+    } else if (_enterMain) {
+      child = KeyedSubtree(
+        key: const ValueKey('shell'),
+        child: CitroRoutes.pageFor(widget.initialRoute),
+      );
+    } else {
+      child = const _EnteringHome(key: ValueKey('entering'));
+    }
     return AnimatedSwitcher(
       duration: CitroMotion.popover,
       switchInCurve: CitroMotion.easeOut,
       switchOutCurve: Curves.easeIn,
-      child: !_ready
-          ? const SplashScreen(key: ValueKey('splash'))
-          : (_booted
-                ? KeyedSubtree(
-                    key: const ValueKey('shell'),
-                    child: CitroRoutes.pageFor(widget.initialRoute),
-                  )
-                : _BootError(
-                    error: _error,
-                    onRetry: _boot,
-                    key: const ValueKey('boot-error'),
-                  )),
+      child: child,
     );
   }
 }
@@ -499,66 +621,253 @@ class _BootError extends StatelessWidget {
   }
 }
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 560),
+    value: 0,
+  );
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+    value: .5,
+  );
+  late final AnimationController _dots = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (CitroMotion.reduced(context)) {
+      _enter.value = 1;
+      return;
+    }
+    unawaited(_enter.forward());
+    unawaited(_breath.repeat(reverse: true));
+    unawaited(_dots.repeat());
+  }
+
+  @override
+  void dispose() {
+    _enter.dispose();
+    _breath.dispose();
+    _dots.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final size = MediaQuery.sizeOf(context);
-    final landscape = size.width > size.height;
-    // 以 logo 为主的启动页：中间一颗带柔光的 logo +  slogan，
-    // 底部是产品名和版权，留白给系统 home indicator。
     return Scaffold(
       backgroundColor: c.bg,
       body: Stack(
         children: [
+          // 奶米底 + 青瓷柔光 + 两侧粉彩：手账感的干净版本。
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, -.4),
-                  radius: 1.15,
-                  colors: [c.tintYellow.withAlpha(120), c.bg],
-                  stops: const [0, .72],
+                  center: const Alignment(0, -.35),
+                  radius: 1.25,
+                  colors: [c.tintYellow.withAlpha(160), c.bg],
+                  stops: const [0, .78],
                 ),
               ),
             ),
           ),
+          Positioned(
+            left: -72,
+            top: size.height * .14,
+            child: _Blob(color: c.tintBlue, size: 240, alpha: 50),
+          ),
+          Positioned(
+            right: -64,
+            top: size.height * .42,
+            child: _Blob(color: c.tintPink, size: 200, alpha: 45),
+          ),
           SafeArea(
             child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    key: ValueKey(
-                      landscape ? 'splash-landscape' : 'splash-portrait',
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_enter, _breath]),
+                      builder: (context, _) {
+                        final t = CitroMotion.easeOut.transform(_enter.value);
+                        final breath = Curves.easeInOut.transform(_breath.value);
+                        return Opacity(
+                          opacity: t,
+                          child: Transform.translate(
+                            offset: Offset(0, 16 * (1 - t)),
+                            child: SizedBox(
+                              width: 176,
+                              height: 176,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // 呼吸的墨色柔光：启动页的「仪式感」来源。
+                                  Container(
+                                    width: 148 + 24 * breath,
+                                    height: 148 + 24 * breath,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: RadialGradient(
+                                        colors: [
+                                          c.accentLt.withAlpha(
+                                            (70 + 55 * breath).round(),
+                                          ),
+                                          c.accentLt.withAlpha(0),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Transform.scale(
+                                    scale: .94 + .06 * t,
+                                    child: Container(
+                                      width: 108,
+                                      height: 108,
+                                      padding: const EdgeInsets.all(18),
+                                      decoration: BoxDecoration(
+                                        color: c.surface,
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(color: c.line),
+                                        boxShadow: CitroColors.shadows.float(c),
+                                      ),
+                                      child: Image.asset(
+                                        'assets/images/logo.webp',
+                                        fit: BoxFit.contain,
+                                        cacheWidth: 220,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 12,
+                                    child: Opacity(
+                                      opacity: .35 + .45 * breath,
+                                      child: AppIcon(
+                                        strokeSvg(AppIcons.sparkle, width: 2),
+                                        size: 18,
+                                        color: c.accent,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    width: 108,
-                    height: 108,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: c.line),
-                      boxShadow: CitroColors.shadows.float(c),
+                    const SizedBox(height: 28),
+                    FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _enter,
+                        curve: CitroMotion.easeOut,
+                      ),
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, .12),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _enter,
+                            curve: CitroMotion.easeOut,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Citro',
+                                  style: context.heading(
+                                    size: 34,
+                                    weight: CitroType.strong,
+                                    color: c.ink,
+                                    letterSpacing: .5,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: c.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '今天也要开心',
+                              style: context.body(
+                                size: CitroType.bodyLg,
+                                color: c.inkSoft,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: c.accentLt.withAlpha(c.dark ? 70 : 120),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.chip,
+                                ),
+                                border: Border.all(color: c.accent.withAlpha(60)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: c.accent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '记录 · 收藏 · 陪伴',
+                                    style: context.body(
+                                      size: CitroType.small,
+                                      weight: CitroType.medium,
+                                      color: c.accentInk,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: Image.asset(
-                      'assets/images/logo.webp',
-                      fit: BoxFit.contain,
-                      cacheWidth: 220,
-                    ),
-                  ),
-                  const SizedBox(height: 26),
-                  Text(
-                    '今天也要开心',
-                    style: context.body(
-                      size: CitroType.bodyLg,
-                      color: c.inkSoft,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -568,16 +877,8 @@ class SplashScreen extends StatelessWidget {
             bottom: 34,
             child: Column(
               children: [
-                Text(
-                  'Citro',
-                  style: context.heading(
-                    size: CitroType.title,
-                    weight: CitroType.strong,
-                    color: c.ink,
-                    letterSpacing: .6,
-                  ),
-                ),
-                const SizedBox(height: 5),
+                _LoadingDots(controller: _dots, color: c.accent),
+                const SizedBox(height: 12),
                 Text(
                   '© 2026 chimu',
                   style: context.body(
@@ -590,6 +891,103 @@ class SplashScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 启动页两侧的柔光斑：给奶米底一点层次，不抢 logo。
+class _Blob extends StatelessWidget {
+  final Color color;
+  final double size;
+  final int alpha;
+  const _Blob({required this.color, required this.size, required this.alpha});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color.withAlpha(alpha), color.withAlpha(0)],
+        ),
+      ),
+    );
+  }
+}
+
+/// 底部三点依次呼吸的加载指示。
+class _LoadingDots extends StatelessWidget {
+  final Animation<double> controller;
+  final Color color;
+  const _LoadingDots({required this.controller, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final t = (controller.value - i * .18) % 1.0;
+            final wave = math.sin(t * math.pi);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: color.withAlpha((70 + 160 * wave).round()),
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+/// 已登录但背景还在预载时的过渡页：避免直接闪出半加载的主界面。
+class _EnteringHome extends StatelessWidget {
+  const _EnteringHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: c.line),
+                boxShadow: CitroColors.shadows.float(c),
+              ),
+              child: Image.asset('assets/images/logo.webp', cacheWidth: 140),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: c.accent),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '正在进入…',
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
+            ),
+          ],
+        ),
       ),
     );
   }

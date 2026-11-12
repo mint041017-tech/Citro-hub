@@ -8,11 +8,15 @@ import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
 import 'package:image/image.dart' as img;
 
 import '../data/cards.dart';
+import '../services/background_cache.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 
 /// 背景图的信息：资源、原始尺寸、底部提取色。
+///
+/// 只放小的元数据：网络图的原始字节另存在 [_CitroBlendImageState._bytesCache]
+/// 里（有总量上限），避免缓存地图无限增长。
 class _BgInfo {
   final String asset;
   final Size size;
@@ -39,6 +43,9 @@ class CitroBlendImage extends StatefulWidget {
   /// 包内资源路径（assets/card/...）；优先于 [networkUrl]。
   final String? asset;
 
+  /// 系统内存紧张时由 App 主动清空内存缓存；磁盘缓存不受影响。
+  static void clearMemory() => _CitroBlendImageState.clearMemory();
+
   @override
   State<CitroBlendImage> createState() => _CitroBlendImageState();
 }
@@ -48,13 +55,70 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   /// 不能每进一页就重解码一次。
   static final Map<String, _BgInfo> _cache = {};
 
+  /// 网络图的原始字节缓存：磁盘命中后在这里再放一份，
+  /// 上屏直接用 [Image.memory]，不再走网络。
+  static final Map<String, Uint8List> _bytesCache = {};
+  static int _bytesCacheTotal = 0;
+  static const int _bytesCacheMaxEntries = 12;
+  static const int _bytesCacheMaxBytes = 32 << 20;
+
+  /// 同一张网络图可能被预取和下载同时请求，合并成一次。
+  static final Map<String, Future<Uint8List>> _networkInFlight = {};
+
+  static Uint8List? peekBytes(String key) => _bytesCache[key];
+
+  static void _putBytes(String key, Uint8List bytes) {
+    final old = _bytesCache.remove(key);
+    if (old != null) _bytesCacheTotal -= old.lengthInBytes;
+    _bytesCache[key] = bytes;
+    _bytesCacheTotal += bytes.lengthInBytes;
+    while ((_bytesCache.length > _bytesCacheMaxEntries ||
+            _bytesCacheTotal > _bytesCacheMaxBytes) &&
+        _bytesCache.isNotEmpty) {
+      final first = _bytesCache.keys.first;
+      final removed = _bytesCache.remove(first);
+      if (removed != null) _bytesCacheTotal -= removed.lengthInBytes;
+    }
+  }
+
   /// 提前解码一张背景图（供首页双击切换前预取）。
   ///
   /// 只写缓存、不碰界面：[_load] 随后会直接命中，切换时卡片区起点
   /// 不用等新图解码完才跟着动。
   static void prefetchDecoded(String key) {
     if (_cache.containsKey(key)) return;
-    unawaited(_decode(key).then((info) => _cache[key] = info));
+    unawaited(ensureReady(key));
+  }
+
+  /// 同一张背景可能被当前页和预取同时请求，合并成一次解码。
+  static final Map<String, Future<_BgInfo>> _inFlight = {};
+
+  /// 等待一张背景图解码完成并落盘缓存；登录页进入主界面用它来挡一帧。
+  static Future<_BgInfo> ensureReady(String key) {
+    final hit = _cache[key];
+    if (hit != null) return Future<_BgInfo>.value(hit);
+    final existing = _inFlight[key];
+    if (existing != null) return existing;
+    final future = _decode(key);
+    _inFlight[key] = future;
+    unawaited(future.then(
+      (info) => _cache[key] = info,
+      onError: (_) {},
+    ));
+    unawaited(future.then(
+      (_) => _inFlight.remove(key),
+      onError: (_) => _inFlight.remove(key),
+    ));
+    return future;
+  }
+
+  /// 只清内存：磁盘上的字节和元数据保留，下次启动仍然命中。
+  static void clearMemory() {
+    _cache.clear();
+    _bytesCache.clear();
+    _bytesCacheTotal = 0;
+    _networkInFlight.clear();
+    _inFlight.clear();
   }
 
   Future<_BgInfo>? _future;
@@ -74,50 +138,109 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
     }
   }
 
-  Future<_BgInfo> _load() async {
+  Future<_BgInfo> _load() {
     final key = widget.asset ??
         widget.networkUrl ??
         CitroTimeBackground.assetFor(DateTime.now());
-    final hit = _cache[key];
-    if (hit != null) return Future.value(hit);
-    final info = await _decode(key);
-    _cache[key] = info;
-    return info;
+    return ensureReady(key);
   }
 
   static Future<_BgInfo> _decode(String key) async {
-    if (key.startsWith('http')) {
-      try {
-        final bytes = await _loadNetwork(key);
+    // 磁盘缓存先命中：宽高和底部色已知，不用再解码一次。
+    final meta = await BackgroundCache.readMeta(key);
+    if (meta != null) {
+      unawaited(BackgroundCache.touch(key));
+      if (key.startsWith('http')) {
+        Uint8List? bytes;
+        try {
+          bytes = await BackgroundCache.readBytes(key);
+          // 元数据在、字节不在（清理删过 / 上次没下完）：补一次下载。
+          bytes ??= await _loadNetworkBytes(key);
+        } catch (_) {}
+        if (bytes != null) _putBytes(key, bytes);
+      }
+      return _BgInfo(
+        key,
+        Size(meta.w.toDouble(), meta.h.toDouble()),
+        Color.fromRGBO(meta.r, meta.g, meta.b, 1),
+      );
+    }
+    try {
+      if (key.startsWith('http')) {
+        final bytes = await _loadNetworkBytes(key);
+        _putBytes(key, bytes);
         final decoded = img.decodeImage(bytes);
         if (decoded != null) {
+          final bottom = _sampleBottom(decoded);
+          unawaited(
+            BackgroundCache.writeMeta(
+              key,
+              decoded.width,
+              decoded.height,
+              bottom.r.toInt(),
+              bottom.g.toInt(),
+              bottom.b.toInt(),
+            ),
+          );
           return _BgInfo(
             key,
             Size(decoded.width.toDouble(), decoded.height.toDouble()),
-            _sampleBottom(decoded),
+            bottom,
           );
         }
-      } catch (_) {}
-      return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
-    }
-    try {
-      final data = await rootBundle.load(key);
-      final decoded = img.decodeImage(data.buffer.asUint8List());
-      if (decoded != null) {
-        return _BgInfo(
-          key,
-          Size(decoded.width.toDouble(), decoded.height.toDouble()),
-          _sampleBottom(decoded),
-        );
+        // 解码失败但字节已经拿到：字节进内存缓存，让 Flutter 自己再解一次。
+        return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
+      } else {
+        final data = await rootBundle.load(key);
+        final decoded = img.decodeImage(data.buffer.asUint8List());
+        if (decoded != null) {
+          final bottom = _sampleBottom(decoded);
+          unawaited(
+            BackgroundCache.writeMeta(
+              key,
+              decoded.width,
+              decoded.height,
+              bottom.r.toInt(),
+              bottom.g.toInt(),
+              bottom.b.toInt(),
+            ),
+          );
+          return _BgInfo(
+            key,
+            Size(decoded.width.toDouble(), decoded.height.toDouble()),
+            bottom,
+          );
+        }
       }
     } catch (_) {}
     return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
   }
 
-  static Future<Uint8List> _loadNetwork(String url) async {
+  /// 网络图字节：先读磁盘缓存，没有再下载并写回。
+  static Future<Uint8List> _loadNetworkBytes(String url) async {
+    final cached = await BackgroundCache.readBytes(url);
+    if (cached != null && cached.isNotEmpty) {
+      unawaited(BackgroundCache.touch(url));
+      return cached;
+    }
+    final existing = _networkInFlight[url];
+    if (existing != null) return existing;
+    final future = _fetchNetworkBytes(url);
+    _networkInFlight[url] = future;
+    unawaited(future.then(
+      (_) => _networkInFlight.remove(url),
+      onError: (_) => _networkInFlight.remove(url),
+    ));
+    return future;
+  }
+
+  static Future<Uint8List> _fetchNetworkBytes(String url) async {
     final bundle = NetworkAssetBundle(Uri.parse(url));
-    final data = await bundle.load(url);
-    return data.buffer.asUint8List();
+    final data = await bundle.load(url).timeout(const Duration(seconds: 12));
+    final bytes = data.buffer.asUint8List();
+    if (bytes.isEmpty) throw Exception('background image is empty');
+    unawaited(BackgroundCache.writeBytes(url, bytes));
+    return bytes;
   }
 
   /// 取底部 15% 的平均色，作为下方混色的起点。
@@ -166,6 +289,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
           });
         }
         // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
+        // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
+        final bytes = url != null ? _bytesCache[url] : null;
         return ColoredBox(
           color: context.c.bg,
           child: Stack(
@@ -179,7 +304,15 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 )
-              else if (url != null)
+              else if (url != null && bytes != null)
+                Image.memory(
+                  bytes,
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  cacheWidth: 512,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                )
+              else if (url != null && info != null)
                 Image.network(
                   url,
                   fit: BoxFit.scaleDown,
@@ -187,6 +320,9 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 )
+              else if (url != null)
+                // 还在解码 / 下载：先露底色，避免 Image.network 重复下一次。
+                const SizedBox.shrink()
               else
                 Image.asset(
                   info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
@@ -320,6 +456,15 @@ class CitroAmbientBackground extends StatefulWidget {
     ),
   );
 
+  /// 进入主界面前把背景准备好（登录页等待用）。
+  /// 真正的实现在 [_CitroAmbientBackgroundState]，这里只做转发。
+  static Future<void> prepare({BuildContext? context}) =>
+      _CitroAmbientBackgroundState.prepare(context: context);
+
+  /// 把当前选中的背景预载进内存/磁盘缓存。
+  static void precache(BuildContext context) =>
+      _CitroAmbientBackgroundState.precache(context);
+
   /// 双击首页背景：在背景图列表里循环切换。
   ///
   /// 真正的状态在 [_CitroAmbientBackgroundState]（多个页面共享同一张背景），
@@ -411,19 +556,29 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
 
   /// 与 [CitroBlendImage] 的 `cacheWidth: 512` 完全一致的 provider：
   /// 预取要写进同一个 [ImageCache] key 才算数。
+  /// 网络图有缓存字节时用 [MemoryImage]，避免预取再走一次网络。
   static ImageProvider _providerFor(String? asset, String? url) {
     if (asset != null) return ResizeImage(AssetImage(asset), width: 512);
-    if (url != null) return ResizeImage(NetworkImage(url), width: 512);
+    if (url != null) {
+      final bytes = _CitroBlendImageState.peekBytes(url);
+      if (bytes != null) return ResizeImage(MemoryImage(bytes), width: 512);
+      return ResizeImage(NetworkImage(url), width: 512);
+    }
     return ResizeImage(
       AssetImage(CitroTimeBackground.assetFor(DateTime.now())),
       width: 512,
     );
   }
 
-  Future<void> _pick() async {
+  /// 已收藏卡面列表就绪流程：只在没就绪时跑一次，之后由 cycle() 换图。
+  static Future<void> _ensureList() async {
+    if (_listReady) return;
     await CardCatalog.ensureLoaded();
-    if (!mounted) return;
-    final owned = context.app.ownedCards
+    _applyOwned();
+  }
+
+  static void _applyOwned() {
+    final owned = AppState.instance.ownedCards
         .map((id) => CardCatalog.byId(id))
         .whereType<CardFace>()
         .toList();
@@ -435,27 +590,96 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
       _index = i;
       _cachedFace = i < 0 ? null : owned[i];
     }
-    if (owned.isNotEmpty) _timeAsset = null;
+    if (owned.isEmpty) {
+      // 没有卡面时显示时段背景图；固定下来，预载和首帧才是同一张。
+      _cachedFace = null;
+      _index = -1;
+      _timeAsset ??= CitroTimeBackground.assetFor(DateTime.now());
+    } else {
+      _timeAsset = null;
+    }
+  }
+
+  static Future<void>? _prepareFuture;
+
+  /// 登录页进入主界面前调用：选定背景并确保它已下载 / 解码、写入磁盘缓存。
+  ///
+  /// 返回同一个 future，可重复 await；失败不抛——背景加载失败
+  /// 不该把人挡在主界面之外。
+  static Future<void> prepare({BuildContext? context}) {
+    final existing = _prepareFuture;
+    if (existing != null) {
+      if (context != null) unawaited(existing.then((_) => precache(context)));
+      return existing;
+    }
+    final future = _prepare();
+    _prepareFuture = future;
+    if (context != null) return future.then((_) => precache(context));
+    return future;
+  }
+
+  static Future<void> _prepare() async {
+    try {
+      await _ensureList();
+      final source = _source;
+      // _applyOwned 在没有卡面时会固定一张时段背景图；这里的兜底
+      // 再防一次「列表还没就绪」的极端情况。
+      final key = source.$1 ??
+          source.$2 ??
+          CitroTimeBackground.assetFor(DateTime.now());
+      await _CitroBlendImageState.ensureReady(key);
+      _prefetchNextStatic();
+    } catch (_) {
+      // 背景准备失败不阻塞进入主界面。
+    }
+  }
+
+  /// 把当前背景提前塞进 Flutter 的 [ImageCache]，首帧不再现场解码。
+  static void precache(BuildContext context) {
+    if (!context.mounted) return;
+    final source = _source;
+    unawaited(
+      precacheImage(
+        _providerFor(source.$1, source.$2),
+        context,
+        onError: (_, _) {},
+      ),
+    );
+  }
+
+  static void _prefetchNextStatic() {
+    final source = _nextSource;
+    final key = source.$1 ?? source.$2;
+    if (key == null) return;
+    _CitroBlendImageState.prefetchDecoded(key);
+  }
+
+  Future<void> _pick() async {
+    await CardCatalog.ensureLoaded();
+    if (!mounted) return;
+    _applyOwned();
     if (mounted) {
       setState(() => _ready = true);
     }
-    _prefetchNext();
+    unawaited(_prefetchNext());
   }
 
   void _onRevision() {
     if (!mounted) return;
     // 只是让 build 重跑一次去读新的 [_source]；此刻 _ready 已经是 true。
     setState(() {});
-    _prefetchNext();
+    unawaited(_prefetchNext());
   }
 
   /// 预取下一张背景：图片进 [ImageCache]、尺寸进解码缓存，
   /// 切换时才不闪白、卡片区起点也不用等新图解码。
-  void _prefetchNext() {
+  Future<void> _prefetchNext() async {
     final source = _nextSource;
     final asset = source.$1;
     final url = source.$2;
     if (asset == null && url == null) return;
+    await _CitroBlendImageState.ensureReady(asset ?? url!);
+    if (!mounted) return;
     unawaited(
       precacheImage(
         _providerFor(asset, url),
@@ -465,7 +689,6 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
         onError: (_, _) {},
       ),
     );
-    _CitroBlendImageState.prefetchDecoded(asset ?? url!);
   }
 
   @override

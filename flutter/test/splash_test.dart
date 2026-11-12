@@ -18,21 +18,22 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('landscape splash keeps the logo artwork', (tester) async {
+  testWidgets('landscape splash keeps the brand block', (tester) async {
     addTearDown(tester.view.reset);
     await pumpAt(tester, const Size(951, 669));
-    expect(find.byKey(const ValueKey('splash-landscape')), findsOneWidget);
     expect(find.text('今天也要开心'), findsOneWidget);
     expect(find.text('Citro'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
 
-  testWidgets('portrait splash keeps the portrait artwork', (tester) async {
+  testWidgets('portrait splash keeps the brand block', (tester) async {
     addTearDown(tester.view.reset);
     await pumpAt(tester, const Size(466, 678));
-    expect(find.byKey(const ValueKey('splash-portrait')), findsOneWidget);
     expect(find.text('今天也要开心'), findsOneWidget);
+    expect(find.text('Citro'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });

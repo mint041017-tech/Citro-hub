@@ -503,7 +503,10 @@ class _CardZoom extends StatelessWidget {
   }
 }
 
-/// 「我的」页的卡面收藏入口：预览最近三张 + 收集进度。
+/// 首页的「卡面收藏」入口卡：和首页其他纸卡同一套语言。
+///
+/// 第一行是入口标题、可抽数与箭头（明示可点）；第二行左侧是收集数量 +
+/// 进度条，右侧扇形铺开最近收集的三张卡面。
 class CardCollectionEntry extends StatelessWidget {
   const CardCollectionEntry({super.key, this.compact = false});
 
@@ -520,142 +523,270 @@ class CardCollectionEntry extends StatelessWidget {
     ];
     final preview = unlockedCards.take(3).toList();
     final total = CardCatalog.all.length;
+    final progress = total == 0 ? 0.0 : unlockedCards.length / total;
+    final tileSize = compact ? 40.0 : 44.0;
+    final faceSize = compact ? 42.0 : 46.0;
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       onTap: () => showCardCollection(context),
-      child: Column(
-        children: [
-          // 第一行：图标 + 标题 + 可抽数 + 箭头
-          Row(
-            children: [
-              Container(
-                width: compact ? 38 : 44,
-                height: compact ? 38 : 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [c.accent, c.accent2]),
-                ),
-                child: Center(
-                  child: AppIcon(
-                    strokeSvg(AppIcons.sparkle, width: 2),
-                    size: compact ? 18 : 21,
-                    color: c.onAccent,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '卡面收藏',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.display(
-                    size: compact ? 16 : 18,
-                    weight: CitroType.medium,
-                    color: c.ink,
-                  ),
-                ),
-              ),
-              if (state.cardCredits > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: c.accent,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                  ),
-                  child: Text(
-                    '可抽 ${state.cardCredits}',
-                    maxLines: 1,
-                    style: context.body(
-                      size: CitroType.micro,
-                      weight: CitroType.medium,
-                      color: c.onAccent,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 4),
-              AppIcon(
-                strokeSvg(AppIcons.chevronRight, width: 2),
-                size: 15,
-                color: c.inkSoft.withAlpha(160),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第二行：进度文案 + 三张预览卡
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final body = Row(
             children: [
               Expanded(
-                child: Text(
-                  total == 0
-                      ? '正在整理卡面…'
-                      : '已收集 ${unlockedCards.length} / $total · 抽到才会点亮',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(size: CitroType.micro, color: c.inkSoft),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: compact ? 84 : 100,
-                height: compact ? 54 : 64,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    for (var i = 0; i < 3; i++)
-                      Positioned(
-                        left: i * (compact ? 21 : 26),
-                        top: i.isOdd ? 3 : 0,
-                        child: Transform.rotate(
-                          angle: (i - 1) * .1,
-                          child: Container(
-                            width: compact ? 36 : 43,
-                            height: compact ? 50 : 58,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                CitroColors.radii.xs,
-                              ),
-                              border: Border.all(color: c.surface, width: 1.4),
-                              boxShadow: CitroColors.shadows.card(c),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                CitroColors.radii.xs,
-                              ),
-                              child: i < preview.length
-                                  ? CardFaceImage(
-                                      card: preview[i],
-                                      cacheWidth: 120,
-                                      borderRadius: BorderRadius.zero,
-                                    )
-                                  : Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            c.accent.withAlpha(80),
-                                            c.ink.withAlpha(60),
-                                          ],
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.lock_outline_rounded,
-                                        size: 13,
-                                        color: c.surface.withAlpha(200),
-                                      ),
-                                    ),
-                            ),
+                child: total == 0
+                    ? Center(
+                        child: Text(
+                          '正在整理卡面…',
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
                           ),
                         ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '已收集',
+                            style: context.body(
+                              size: CitroType.small,
+                              color: c.inkSoft,
+                              height: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${unlockedCards.length}',
+                                style: context.hand(
+                                  size: compact ? 24.0 : 26.0,
+                                  weight: CitroType.strong,
+                                  color: c.ink,
+                                  height: 1,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '/ $total',
+                                style: context.body(
+                                  size: CitroType.meta,
+                                  color: c.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.chip,
+                            ),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 6,
+                              backgroundColor: c.surface2,
+                              valueColor: AlwaysStoppedAnimation(c.accent),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            '抽到才会点亮',
+                            style: context.body(
+                              size: CitroType.micro,
+                              color: c.inkSoft,
+                            ),
+                          ),
+                        ],
                       ),
+              ),
+              const SizedBox(width: AppSpacing.x2),
+              _PreviewFan(preview: preview, width: faceSize),
+            ],
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _EntryTile(size: tileSize),
+                  const SizedBox(width: AppSpacing.x2),
+                  Expanded(
+                    child: Text(
+                      '卡面收藏',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.heading(
+                        size: compact ? CitroType.title : CitroType.titleLg,
+                        color: c.ink,
+                      ),
+                    ),
+                  ),
+                  if (state.cardCredits > 0) ...[
+                    const SizedBox(width: AppSpacing.x1),
+                    _CreditPill(credits: state.cardCredits),
                   ],
+                  const SizedBox(width: AppSpacing.x1),
+                  _EntryArrow(size: compact ? 28.0 : 30.0),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x2),
+              // 首页 bento 的格子有固定高度，多余的部分吃掉；
+              // 没有高度上限时给第二行一个自然高度，避免 Expanded 报错。
+              if (constraints.hasBoundedHeight)
+                Expanded(child: body)
+              else
+                // 左侧「已收集 + 进度条 + 提示」约 70px，取整给一点余量。
+                SizedBox(height: 72, child: body),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 入口图标砖：粉彩底 + 圆角 + 青瓷图标，和首页其他卡片一致。
+class _EntryTile extends StatelessWidget {
+  const _EntryTile({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: c.tintYellow,
+        borderRadius: BorderRadius.circular(size * .3),
+      ),
+      child: Center(
+        child: AppIcon(
+          strokeSvg(AppIcons.sparkle, width: 2),
+          size: size * .5,
+          color: c.accentInk,
+        ),
+      ),
+    );
+  }
+}
+
+/// 可抽数胶囊：浅青瓷底，和卡片上其它状态胶囊同一档，不用实心强调色。
+class _CreditPill extends StatelessWidget {
+  const _CreditPill({required this.credits});
+
+  final int credits;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: c.accentLt,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+      ),
+      child: Text(
+        '可抽 $credits',
+        maxLines: 1,
+        style: context.body(
+          size: CitroType.small,
+          weight: CitroType.medium,
+          color: c.accentInk,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+/// 可点明示：和打卡卡、资源卡同一个箭头角标。
+class _EntryArrow extends StatelessWidget {
+  const _EntryArrow({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: c.tintYellow,
+        shape: BoxShape.circle,
+        border: Border.all(color: c.line),
+      ),
+      child: Center(
+        child: AppIcon(
+          strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+          size: size * .5,
+          color: c.accentInk,
+        ),
+      ),
+    );
+  }
+}
+
+/// 最近收集的三张卡面：扇形铺开，空位用占位块补满。
+class _PreviewFan extends StatelessWidget {
+  const _PreviewFan({required this.preview, required this.width});
+
+  final List<CardFace> preview;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final height = width * 4 / 3;
+    final step = width * .55;
+    return SizedBox(
+      width: step * 2 + width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (var i = 0; i < 3; i++)
+            Positioned(
+              left: i * step,
+              top: i.isOdd ? 2 : 0,
+              child: Transform.rotate(
+                angle: (i - 1) * .08,
+                child: Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                    border: Border.all(color: c.line),
+                    boxShadow: CitroColors.shadows.sm(c),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                    child: i < preview.length
+                        ? CardFaceImage(
+                            card: preview[i],
+                            cacheWidth: 120,
+                            borderRadius: BorderRadius.zero,
+                          )
+                        : DecoratedBox(
+                            decoration: BoxDecoration(color: c.surface2),
+                            child: Center(
+                              child: AppIcon(
+                                strokeSvg(AppIcons.lock, width: 2),
+                                size: width * .32,
+                                color: c.inkSoft,
+                              ),
+                            ),
+                          ),
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );

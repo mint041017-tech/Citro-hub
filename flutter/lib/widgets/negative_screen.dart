@@ -80,8 +80,10 @@ class NegativeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SliverFillRemaining(
-              hasScrollBody: false,
+            // 网格按卡片自己的高度排，多出来的高度留在抽屉底部当呼吸位。
+            // 上一版用 SliverFillRemaining + 每行 Expanded 把格子拉伸到
+            // 填满抽屉，卡片被拉高、内容居中反而显得空。
+            SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3),
                 child: _QuickGrid(items: _buildItems(context)),
@@ -147,17 +149,14 @@ class _QuickGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < tiles.length; i += 2) ...[
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _QuickTile(item: tiles[i])),
-                if (i + 1 < tiles.length) ...[
-                  const SizedBox(width: AppSpacing.x2),
-                  Expanded(child: _QuickTile(item: tiles[i + 1])),
-                ],
+          Row(
+            children: [
+              Expanded(child: _QuickTile(item: tiles[i])),
+              if (i + 1 < tiles.length) ...[
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(child: _QuickTile(item: tiles[i + 1])),
               ],
-            ),
+            ],
           ),
           if (i + 2 < tiles.length) const SizedBox(height: AppSpacing.x2),
         ],

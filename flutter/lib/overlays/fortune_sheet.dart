@@ -68,9 +68,24 @@ class _FortuneDialog extends StatefulWidget {
 class _FortuneDialogState extends State<_FortuneDialog>
     with TickerProviderStateMixin {
   static final _cardRadius = BorderRadius.all(Radius.circular(CitroColors.radii.card));
-  static const _flipDuration = Duration(milliseconds: 900);
-  // 翻面曲线：去掉 overshoot（原 Cubic(.22,1.12,.32,1) 会有「顿」一下的过冲）。
-  static const Curve _flipCurve = CitroMotion.easeInOut;
+  // 翻面：压到 560ms（原 900ms 是「拖沓」的主因）。曲线用强 ease-out 起步，
+  // 比 easeInOut 的起步更有「被弹起来」的仪式感。
+  static const _flipDuration = Duration(milliseconds: 560);
+  static const Curve _flipCurve = CitroMotion.easeOut;
+  // 入场 460ms（原 980ms）：位移/缩放/旋转用强 ease-out，fade 单独再提前，
+  // 两层叠出「落得稳、亮得快」的节奏。
+  static const _entranceDuration = Duration(milliseconds: 460);
+  // 循环光晕放慢一倍：它只是氛围底，不该抢翻面的戏。
+  static const _auraDuration = Duration(seconds: 10);
+  // 揭晓（翻面落定）：星尘 / 边缘高光 / 逐行浮现 / 收尾共用一条时间轴。
+  static const Duration _revealDuration = Duration(milliseconds: 1080);
+  // 各段在时间轴上的起点，越靠后越有「一层层揭开」的层次。
+  static const Duration _atSeal = Duration(milliseconds: 60);
+  static const Duration _atName = Duration(milliseconds: 170);
+  static const Duration _atPoem = Duration(milliseconds: 250);
+  static const Duration _atPoemLine = Duration(milliseconds: 80);
+  static const Duration _atDesc = Duration(milliseconds: 400);
+  static const Duration _atYiJi = Duration(milliseconds: 480);
 
   final GlobalKey _cardKey = GlobalKey();
   Offset? _downAt;
@@ -80,11 +95,14 @@ class _FortuneDialogState extends State<_FortuneDialog>
   late final AnimationController _flip;
   late final AnimationController _entrance;
   late final AnimationController _aura;
+  late final AnimationController _reveal;
   CardFace? _card;
   Timer? _introTimer;
+  Timer? _revealTimer;
   bool _frontUp = false;
   bool _flipBusy = false;
   bool _transferBusy = false;
+  bool _reduced = false;
 
   @override
   void initState() {
@@ -92,17 +110,28 @@ class _FortuneDialogState extends State<_FortuneDialog>
     _flip = AnimationController(vsync: this, duration: _flipDuration, value: 0);
     _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 980),
+      duration: _entranceDuration,
     )..forward();
-    _aura = AnimationController(
+    _aura = AnimationController(vsync: this, duration: _auraDuration)..forward();
+    // 揭晓进度：t = 已进行的时间 / 总时长。星尘 / 逐行浮现 / 收尾共用一个
+    // ticker，省掉多条 AnimatedBuilder 各算一遍时间。
+    _reveal = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
-    )..forward();
+      duration: _revealDuration,
+      value: 1,
+    );
+    _reduced = CitroMotion.reduced(context);
     _load();
     _loadCard();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _introTimer = Timer(const Duration(seconds: 1), _flipToFront);
+      if (_reduced) {
+        _flip.value = 1;
+        _frontUp = true;
+        return;
+      }
+      // 卡背先停 240ms 让用户看清「今天要翻什么」，再翻开。
+      _introTimer = Timer(const Duration(milliseconds: 240), _flipToFront);
     });
   }
 
@@ -115,17 +144,26 @@ class _FortuneDialogState extends State<_FortuneDialog>
   @override
   void dispose() {
     _introTimer?.cancel();
+    _revealTimer?.cancel();
     _flip.dispose();
     _entrance.dispose();
     _aura.dispose();
+    _reveal.dispose();
     super.dispose();
   }
 
-  void _flipToFront() {
+  void _flipToFront({bool withReveal = true}) {
     _introTimer?.cancel();
     if (!mounted || _flipBusy || _frontUp) return;
     _flipBusy = true;
     HapticFeedback.lightImpact();
+    // 揭晓比翻面晚 240ms 起：翻面将落未落时星尘先亮，文字随后一层层揭开，
+    // 两段叠在一起更密实；同时压掉「翻完了才开始」的空等。
+    _revealTimer?.cancel();
+    _revealTimer = Timer(const Duration(milliseconds: 240), () {
+      if (!mounted) return;
+      if (withReveal && !_reduced && !loading) _reveal.forward(from: 0);
+    });
     _flip.animateTo(1, duration: _flipDuration, curve: _flipCurve).then((_) {
       if (!mounted) return;
       setState(() {
@@ -139,6 +177,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
     if (!mounted || _flipBusy || !_frontUp) return;
     _flipBusy = true;
     HapticFeedback.selectionClick();
+    // 返回卡背时把没放完的揭晓收掉，避免下次翻开时停在半截。
+    _revealTimer?.cancel();
+    _reveal.stop();
+    _reveal.value = 1;
     await _flip.animateTo(0, duration: _flipDuration, curve: _flipCurve);
     if (!mounted) return;
     setState(() {
@@ -220,8 +262,8 @@ class _FortuneDialogState extends State<_FortuneDialog>
         idx = next;
         if (card != null) _card = card;
       });
-      // 留一点时间让用户看到卡背，再翻开新签。
-      await Future<void>.delayed(const Duration(milliseconds: 160));
+      // 留一点时间让用户看到新卡背，再翻开新签。
+      await Future<void>.delayed(const Duration(milliseconds: 120));
       if (!mounted) return;
       _flipToFront();
       HapticFeedback.lightImpact();
@@ -407,6 +449,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
           : [c.surface, c.tintYellow],
     );
 
+    // 揭晓时的「星尘」粒子要能跑出卡片圆角，所以单独一层画在整张卡之上。
+    final sparkles = _RevealSparkles(controller: _reveal, color: c.accent);
+
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (e) => _downAt = e.position,
@@ -427,16 +472,16 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   _entrance.value.clamp(0.0, 1.0),
                 );
                 final fade = Curves.easeOut.transform(
-                  (_entrance.value * 1.5).clamp(0.0, 1.0),
+                  (_entrance.value * 1.8).clamp(0.0, 1.0),
                 );
                 return Opacity(
                   opacity: fade,
                   child: Transform.translate(
-                    offset: Offset(0, 92 * (1 - t)),
+                    offset: Offset(0, 56 * (1 - t)),
                     child: Transform.rotate(
-                      angle: -.05 * (1 - t),
+                      angle: -.035 * (1 - t),
                       child: Transform.scale(
-                        scale: .84 + .16 * t,
+                        scale: .88 + .12 * t,
                         child: child,
                       ),
                     ),
@@ -457,15 +502,23 @@ class _FortuneDialogState extends State<_FortuneDialog>
                       // 不用每帧重画 24 条射线 + 16 个粒子（原来是 5s 无限 repeat
                       // 且每帧重绘整块区域，是打卡动画卡顿的主因）。
                       child: RepaintBoundary(
+                        // 亮度压在低位，避免盖过翻面和星尘。
                         child: AnimatedBuilder(
                           animation: _aura,
                           builder: (context, child) {
                             final t = _aura.value;
-                            return Transform.rotate(
-                              angle: t * math.pi * 2 / 24,
-                              child: Transform.scale(
-                                scale: .96 + .04 * math.sin(t * math.pi * 2),
-                                child: child,
+                            // 揭晓的瞬间光晕亮一下，平时保持很淡的呼吸。
+                            final boost = math.sin(
+                              math.pi * _reveal.value.clamp(0.0, 1.0),
+                            );
+                            return Opacity(
+                              opacity: .34 + .16 * boost,
+                              child: Transform.rotate(
+                                angle: t * math.pi * 2 / 24,
+                                child: Transform.scale(
+                                  scale: .96 + .04 * math.sin(t * math.pi * 2),
+                                  child: child,
+                                ),
                               ),
                             );
                           },
@@ -702,48 +755,54 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                             ],
                                           ),
                                           const SizedBox(height: 14),
-                                          AnimatedOpacity(
-                                            opacity: loading ? 0 : 1,
-                                            duration: const Duration(
-                                              milliseconds: 380,
-                                            ),
-                                            child: AnimatedScale(
-                                              scale: loading ? .97 : 1,
+                                          _RevealItem(
+                                            controller: _reveal,
+                                            child: AnimatedOpacity(
+                                              opacity: loading ? 0 : 1,
                                               duration: const Duration(
-                                                milliseconds: 380,
+                                                milliseconds: 220,
                                               ),
-                                              curve: Curves.easeOut,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                      14,
-                                                      16,
-                                                      14,
-                                                      16,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: c.surface.withAlpha(
-                                                    c.dark ? 26 : 148,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        CitroColors.radii.inner,
-                                                      ),
-                                                  border: Border.all(
-                                                    color: c.accent.withAlpha(
-                                                      c.dark ? 40 : 58,
-                                                    ),
-                                                  ),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: c.dark
-                                                          ? const Color(0x33000000)
-                                                          : const Color(0x0F000000),
-                                                      blurRadius: 12,
-                                                      offset: const Offset(0, 5),
-                                                    ),
-                                                  ],
+                                              child: AnimatedScale(
+                                                scale: loading ? .98 : 1,
+                                                duration: const Duration(
+                                                  milliseconds: 220,
                                                 ),
+                                                curve: Curves.easeOut,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.fromLTRB(
+                                                        14,
+                                                        16,
+                                                        14,
+                                                        16,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: c.surface.withAlpha(
+                                                      c.dark ? 26 : 148,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          CitroColors.radii.inner,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: c.accent.withAlpha(
+                                                        c.dark ? 40 : 58,
+                                                      ),
+                                                    ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: c.dark
+                                                            ? const Color(
+                                                                0x33000000,
+                                                              )
+                                                            : const Color(
+                                                                0x0F000000,
+                                                              ),
+                                                        blurRadius: 12,
+                                                        offset: const Offset(0, 5),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 child: loading
                                                     ? const SizedBox(
                                                         height: 168,
@@ -761,9 +820,15 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
-                                                              _fortuneSeal(
-                                                                context,
-                                                                fortune.lv,
+                                                              _StampIn(
+                                                                controller:
+                                                                    _reveal,
+                                                                at: _atSeal,
+                                                                child:
+                                                                    _fortuneSeal(
+                                                                  context,
+                                                                  fortune.lv,
+                                                                ),
                                                               ),
                                                               const SizedBox(
                                                                 width: 14,
@@ -774,71 +839,98 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                                       CrossAxisAlignment
                                                                           .stretch,
                                                                   children: [
-                                                                    Text(
-                                                                      fortune
-                                                                          .name,
-                                                                      textAlign:
-                                                                          TextAlign
-                                                                              .center,
-                                                                      maxLines:
-                                                                          1,
-                                                                      overflow:
-                                                                          TextOverflow
-                                                                              .ellipsis,
-                                                                      style: context.display(
-                                                                        size:
-                                                                            24,
-                                                                        weight:
-                                                                            FontWeight.w700,
-                                                                        color: c
-                                                                            .ink,
-                                                                        letterSpacing:
-                                                                            3.4,
+                                                                    // 签名用「从左往右写出来」的擦除式揭示，
+                                                                    // 比单纯淡入更像落笔。
+                                                                    _WritingReveal(
+                                                                      controller:
+                                                                          _reveal,
+                                                                      at: _atName,
+                                                                      color: c
+                                                                          .ink,
+                                                                      child:
+                                                                          Text(
+                                                                        fortune
+                                                                            .name,
+                                                                        textAlign:
+                                                                            TextAlign
+                                                                                .center,
+                                                                        maxLines:
+                                                                            1,
+                                                                        overflow:
+                                                                            TextOverflow
+                                                                                .ellipsis,
+                                                                        style: context.display(
+                                                                          size:
+                                                                              24,
+                                                                          weight:
+                                                                              FontWeight.w700,
+                                                                          color: c
+                                                                              .ink,
+                                                                          letterSpacing:
+                                                                              3.4,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                     const SizedBox(
                                                                       height: 6,
                                                                     ),
-                                                                    Container(
-                                                                      padding: const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            12,
-                                                                        vertical:
-                                                                            10,
-                                                                      ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: c.accent.withAlpha(
-                                                                          c.dark
-                                                                              ? 14
-                                                                              : 18,
+                                                                    _RevealItem(
+                                                                      controller:
+                                                                          _reveal,
+                                                                      at: _atPoem,
+                                                                      child:
+                                                                          Container(
+                                                                        padding: const EdgeInsets.symmetric(
+                                                                          horizontal:
+                                                                              12,
+                                                                          vertical:
+                                                                              10,
                                                                         ),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              CitroColors.radii.small,
+                                                                        decoration: BoxDecoration(
+                                                                          color: c.accent.withAlpha(
+                                                                            c.dark
+                                                                                ? 14
+                                                                                : 18,
+                                                                          ),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(
+                                                                            CitroColors.radii.small,
+                                                                          ),
+                                                                          border: Border.all(
+                                                                            color: c
+                                                                                .accent
+                                                                                .withAlpha(
+                                                                              48,
                                                                             ),
-                                                                        border: Border.all(
-                                                                          color: c
-                                                                              .accent
-                                                                              .withAlpha(
-                                                                                48,
-                                                                              ),
+                                                                          ),
                                                                         ),
-                                                                      ),
-                                                                      child: Column(
-                                                                        children: [
-                                                                          for (final line
-                                                                              in fortune.poem)
-                                                                            Text(
-                                                                              line,
-                                                                              textAlign: TextAlign.center,
-                                                                              style: context.display(
-                                                                                size: 14,
-                                                                                weight: FontWeight.w700,
-                                                                                color: c.ink,
-                                                                                height: 1.75,
+                                                                        child: Column(
+                                                                          children: [
+                                                                            for (var i = 0;
+                                                                                i < fortune.poem.length;
+                                                                                i++)
+                                                                              _RevealItem(
+                                                                                controller:
+                                                                                    _reveal,
+                                                                                at: _atPoem +
+                                                                                    _atPoemLine *
+                                                                                        i,
+                                                                                rise: 6,
+                                                                                child: Text(
+                                                                                  fortune
+                                                                                      .poem[i],
+                                                                                  textAlign:
+                                                                                      TextAlign.center,
+                                                                                  style: context.display(
+                                                                                    size: 14,
+                                                                                    weight: FontWeight.w700,
+                                                                                    color: c.ink,
+                                                                                    height: 1.75,
+                                                                                  ),
+                                                                                ),
                                                                               ),
-                                                                            ),
-                                                                        ],
+                                                                          ],
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   ],
@@ -890,46 +982,57 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                                           const SizedBox(
                                                             height: 10,
                                                           ),
-                                                          Text(
-                                                            fortune.desc,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style: context.body(
-                                                              size: 13,
-                                                              color: c.ink2,
-                                                              height: 1.65,
+                                                          _RevealItem(
+                                                            controller: _reveal,
+                                                            at: _atDesc,
+                                                            rise: 8,
+                                                            child: Text(
+                                                              fortune.desc,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: context.body(
+                                                                size: 13,
+                                                                color: c.ink2,
+                                                                height: 1.65,
+                                                              ),
                                                             ),
                                                           ),
                                                           const SizedBox(
                                                             height: 12,
                                                           ),
-                                                          Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: _yiJi(
-                                                                  context,
-                                                                  '宜',
-                                                                  fortune.yi,
-                                                                  good: true,
+                                                          _RevealItem(
+                                                            controller: _reveal,
+                                                            at: _atYiJi,
+                                                            child: Row(
+                                                              children: [
+                                                                Expanded(
+                                                                  child: _yiJi(
+                                                                    context,
+                                                                    '宜',
+                                                                    fortune.yi,
+                                                                    good: true,
+                                                                  ),
                                                                 ),
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 8,
-                                                              ),
-                                                              Expanded(
-                                                                child: _yiJi(
-                                                                  context,
-                                                                  '忌',
-                                                                  fortune.ji,
-                                                                  good: false,
+                                                                const SizedBox(
+                                                                  width: 8,
                                                                 ),
-                                                              ),
-                                                            ],
+                                                                Expanded(
+                                                                  child: _yiJi(
+                                                                    context,
+                                                                    '忌',
+                                                                    fortune.ji,
+                                                                    good: false,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ],
                                                       ),
                                               ),
                                             ),
+                                          ),
                                           ),
                                           if (!loading &&
                                               isBad &&
@@ -1062,6 +1165,22 @@ class _FortuneDialogState extends State<_FortuneDialog>
                               child: _FlipShine(controller: _flip),
                             ),
                           ),
+                        ),
+                        // 翻面落定的瞬间：沿卡片内圈扫过一圈高光。
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: ClipRRect(
+                              borderRadius: _cardRadius,
+                              child: _RevealEdge(
+                                controller: _reveal,
+                                color: c.accent,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 星尘可以跑出圆角，所以放在 ClipRRect 之外。
+                        Positioned.fill(
+                          child: IgnorePointer(child: sparkles),
                         ),
                         Positioned(
                           top: 6,
@@ -1452,6 +1571,8 @@ class _FortuneAuraPainter extends CustomPainter {
 }
 
 /// 翻面时扫过卡面的一道暖光；只在动画期间显形。
+///
+/// 主体是一条亮芯 + 一条更宽更淡的尾迹，比单条光带更有「扫过去」的层次。
 class _FlipShine extends StatelessWidget {
   final AnimationController controller;
 
@@ -1475,11 +1596,12 @@ class _FlipShine extends StatelessWidget {
               opacity: opacity,
               child: Stack(
                 children: [
+                  // 宽尾迹：先于亮芯半步，把卡面「铺亮」。
                   Positioned(
                     top: -h * .45,
                     bottom: -h * .45,
-                    left: (-1.1 + 2.2 * t) * w,
-                    width: w * .42,
+                    left: (-1.2 + 2.2 * (t * .94).clamp(0.0, 1.0)) * w,
+                    width: w * .58,
                     child: Transform.rotate(
                       angle: -.3,
                       child: DecoratedBox(
@@ -1489,7 +1611,29 @@ class _FlipShine extends StatelessWidget {
                             end: Alignment.centerRight,
                             colors: [
                               c.surface.withAlpha(0),
-                              c.surface.withAlpha(125),
+                              c.surface.withAlpha(58),
+                              c.surface.withAlpha(0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: -h * .45,
+                    bottom: -h * .45,
+                    left: (-1.1 + 2.2 * t) * w,
+                    width: w * .34,
+                    child: Transform.rotate(
+                      angle: -.3,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              c.surface.withAlpha(0),
+                              c.surface.withAlpha(150),
                               c.surface.withAlpha(0),
                             ],
                           ),
@@ -1505,4 +1649,316 @@ class _FlipShine extends StatelessWidget {
       },
     );
   }
+}
+
+// -----------------------------------------------------------------------------
+// 揭晓序列（翻面落定后的那 1 秒）
+// -----------------------------------------------------------------------------
+
+/// 揭晓序列里每个片段的时间窗与曲线（文件级，供 _RevealItem / _WritingReveal 等私有组件用）。
+const Duration _revealWindow = Duration(milliseconds: 420);
+const Curve _revealCurve = Curves.easeOutCubic;
+
+/// 时间轴上某一点的进度：`[at, at + window]` 映射到 0 → 1。
+double _revealLocal(
+  AnimationController controller,
+  Duration at,
+  Duration window,
+) {
+  final total = controller.duration?.inMicroseconds ?? 0;
+  if (total <= 0) return 1;
+  return ((controller.value * total - at.inMicroseconds) /
+          window.inMicroseconds)
+      .clamp(0.0, 1.0);
+}
+
+/// 揭晓序列的基本单位：在 [at] 处淡入 + 上浮（可选缩放）。
+///
+/// 动画结束后直接返回原 child，不再包一层 Opacity/Transform，
+/// 静止时不产生额外的合成层。
+class _RevealItem extends StatelessWidget {
+  const _RevealItem({
+    required this.controller,
+    required this.child,
+    this.at = Duration.zero,
+    this.rise = 10,
+    this.scale = 1,
+  });
+
+  final AnimationController controller;
+  final Widget child;
+  final Duration at;
+  final double rise;
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final t = _revealLocal(controller, at, _revealWindow);
+        if (t >= 1) return child;
+        final e = _revealCurve.transform(t);
+        return Opacity(
+          opacity: e,
+          child: Transform.translate(
+            offset: Offset(0, rise * (1 - e)),
+            child: scale == 1
+                ? child
+                : Transform.scale(
+                    scale: scale + (1 - scale) * e,
+                    child: child,
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 签名（运势名）的「书写」揭示：从左往右把字擦出来，边缘留一段软过渡。
+///
+/// 用 ShaderMask 做纯绘制层的揭示，不动布局——不像改 letterSpacing 那样
+/// 每帧重排文字。
+class _WritingReveal extends StatelessWidget {
+  const _WritingReveal({
+    required this.controller,
+    required this.child,
+    required this.color,
+    this.at = Duration.zero,
+  });
+
+  final AnimationController controller;
+  final Widget child;
+  final Color color;
+  final Duration at;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final t = _revealLocal(controller, at, _revealWindow);
+        if (t >= 1) return child;
+        final soft = math.min(.14, t);
+        return ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (rect) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [color, color, color.withAlpha(0), color.withAlpha(0)],
+            stops: [0, (t - soft).clamp(0.0, 1.0), t, 1],
+          ).createShader(rect),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// 印章落下：先放大微旋，落定时回稳，同时向外推一圈墨晕。
+class _StampIn extends StatelessWidget {
+  const _StampIn({
+    required this.controller,
+    required this.child,
+    this.at = Duration.zero,
+  });
+
+  final AnimationController controller;
+  final Widget child;
+  final Duration at;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final t = _revealLocal(controller, at, _revealWindow);
+        if (t >= 1) return child;
+        final e = Curves.easeOut.transform(t);
+        final settle = Curves.easeOutBack.transform(t.clamp(0.0, 1.0));
+        return SizedBox(
+          width: 78,
+          height: 78,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // 墨晕：随落章向外扩并淡出。
+              Positioned(
+                left: 5,
+                right: 5,
+                top: 5,
+                bottom: 5,
+                child: Opacity(
+                  opacity: (1 - e) * .45,
+                  child: Transform.scale(
+                    scale: .82 + .5 * e,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.stamp.withAlpha(150)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Opacity(
+                opacity: math.min(1.0, t * 2.4),
+                child: Transform.rotate(
+                  angle: .07 * (1 - e),
+                  child: Transform.scale(scale: 1.3 - .3 * settle, child: child),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 翻面落定时绕卡内圈扫过的一束光：转一圈即收，不循环。
+class _RevealEdge extends StatelessWidget {
+  const _RevealEdge({required this.controller, required this.color});
+
+  final AnimationController controller;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final t = controller.value.clamp(0.0, 1.0);
+        if (t <= 0 || t >= 1) return const SizedBox.shrink();
+        // 只扫前 62%，剩下时间留给星尘和文字。
+        final sweep = Curves.easeOut.transform((t / .62).clamp(0.0, 1.0));
+        final fade = math.sin(math.pi * t.clamp(0.0, 1.0));
+        return Opacity(
+          opacity: fade * .55,
+          child: Transform.rotate(
+            angle: sweep * math.pi * 2,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: SweepGradient(
+                  colors: [
+                    color.withAlpha(0),
+                    color.withAlpha(0),
+                    color.withAlpha(215),
+                    color.withAlpha(0),
+                    color.withAlpha(0),
+                  ],
+                  stops: const [0, .38, .5, .62, 1],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 揭晓瞬间从卡心炸开的星尘。
+///
+/// 粒子位置/大小在构造时一次性算好，paint 里只做画圆和画线，
+/// 没有随机数、没有路径分配，也没有模糊。
+class _RevealSparkles extends StatelessWidget {
+  const _RevealSparkles({required this.controller, required this.color});
+
+  final AnimationController controller;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          return CustomPaint(
+            painter: _SparklePainter(
+              progress: controller.value.clamp(0.0, 1.0),
+              color: color,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SparklePainter extends CustomPainter {
+  _SparklePainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  static const _count = 18;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = math.min(size.width, size.height) * .46;
+    // 星尘只在揭示的前 3/4 时间内活跃。
+    final window = (progress / .75).clamp(0.0, 1.0);
+    if (window >= 1) return;
+    for (var i = 0; i < _count; i++) {
+      // 黄金角分布，疏密均匀又不呆板。
+      final angle = i * 2.39996 + .35;
+      final dist = maxR * (.3 + .7 * ((i * 37) % 100) / 100);
+      final ease = Curves.easeOutCubic.transform(window);
+      final p = center +
+          Offset(math.cos(angle), math.sin(angle)) * dist * ease;
+      // 错峰闪烁：每颗粒子在自己那段时间里亮起再暗下去。
+      final local = ((window - (i % 5) * .06) / .62).clamp(0.0, 1.0);
+      final twinkle = math.sin(math.pi * local);
+      if (twinkle <= 0) continue;
+      final r = 1.1 + 2.4 * ((i * 53) % 100) / 100;
+      canvas.drawCircle(
+        p,
+        r * (.6 + .4 * twinkle),
+        Paint()..color = color.withAlpha((235 * twinkle).round()),
+      );
+      // 四角星芒：只给靠外的几颗，避免整片都是十字。
+      if (i % 3 == 0) {
+        final ray = r * 3.1 * twinkle;
+        final paint = Paint()
+          ..color = color.withAlpha((150 * twinkle).round())
+          ..strokeWidth = 1.1
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(
+          p - Offset(ray, 0),
+          p + Offset(ray, 0),
+          paint,
+        );
+        canvas.drawLine(
+          p - Offset(0, ray),
+          p + Offset(0, ray),
+          paint,
+        );
+      }
+    }
+    // 卡心一闪而过的亮斑，把视线先聚到签名上。
+    final core = math.sin(math.pi * (window / .34).clamp(0.0, 1.0));
+    if (core > 0) {
+      canvas.drawCircle(
+        center,
+        maxR * .34 * core,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              color.withAlpha((70 * core).round()),
+              color.withAlpha(0),
+            ],
+          ).createShader(Rect.fromCircle(center: center, radius: maxR * .34)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklePainter old) =>
+      old.progress != progress || old.color != color;
 }

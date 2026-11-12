@@ -42,7 +42,7 @@ class CiciComposer extends StatefulWidget {
 }
 
 class _CiciComposerState extends State<CiciComposer>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _voiceMode = false;
   bool _holding = false;
   bool _recognizing = false;
@@ -58,14 +58,27 @@ class _CiciComposerState extends State<CiciComposer>
   final GlobalKey _barKey = GlobalKey();
   // 录音启动中的 Future：松手时先等它落地，避免 finish() 在 _startedAt 为 null 时空转。
   Future<bool>? _starting;
+  // 启动看门狗：VoiceRecorder.start 内部已经有超时，这里再兜一层，
+  // 平台通道彻底不回时（hasPermission / startStream 卡死）也能把界面复位。
+  Timer? _startingTimer;
+  // 浮层退场动画的兜底清理：TickerFuture 在控制器被提前放掉、
+  // 或动画拿不到帧时不会完成，必须有一个不依赖它的收尾。
+  Timer? _entryCleanup;
+  final Set<AnimationController> _entryAnims = {};
+  bool _disposed = false;
 
   /// 麦克风按钮的「长按直接说话」：按下超过 0.42s 就开始录音，
   /// 松手发送； quick tap 仍然只切换语音模式。
   Timer? _micTimer;
   bool _micLongPressed = false;
 
+  /// 按住会话的代号：一次「按下—松手」算一代。松手时先等启动落地，
+  /// 这期间用户可能已经取消又再按一次，没有代号就会把新一次录音提前收尾。
+  int _holdGeneration = 0;
+
   static const String _voicePrefKey = 'citro_cici_voice_mode';
   static const double _cancelDistance = 54;
+  static const Duration _startWatchdog = Duration(seconds: 12);
 
   @override
   void initState() {
@@ -119,6 +132,7 @@ class _CiciComposerState extends State<CiciComposer>
 
   Future<void> _startHold([double downY = 0]) async {
     if (_holding || widget.sending) return;
+    final generation = ++_holdGeneration;
     HapticFeedback.lightImpact();
     _downY = downY;
     setState(() {
@@ -129,7 +143,24 @@ class _CiciComposerState extends State<CiciComposer>
       _level = 0;
     });
     _holdAt = DateTime.now();
-    _showOverlay();
+    try {
+      _showOverlay();
+    } catch (error) {
+      // 浮层起不来（Overlay 缺失、动画控制器创建失败）也不能把输入栏
+      // 卡在「按住说话」：复位状态，把录音停掉。
+      debugPrint('voice overlay failed: $error');
+      _hideOverlay();
+      unawaited(VoiceRecorder.cancel());
+      if (!mounted) return;
+      setState(() {
+        _holding = false;
+        _recognizing = false;
+        _slideCancel = false;
+        _preview = '';
+        _level = 0;
+      });
+      return;
+    }
     final starting = VoiceRecorder.start(
       onLevel: (level) {
         if (!mounted) return;
@@ -143,9 +174,38 @@ class _CiciComposerState extends State<CiciComposer>
       },
     );
     _starting = starting;
+    bool aborted = false;
+    _startingTimer?.cancel();
+    _startingTimer = Timer(_startWatchdog, () {
+      if (!identical(_starting, starting)) return;
+      aborted = true;
+      _holdGeneration++;
+      _starting = null;
+      _startingTimer = null;
+      _capTimer?.cancel();
+      _capTimer = null;
+      // 启动等不到结果：立刻停录音并复位，别让界面一直卡在「按住说话」。
+      unawaited(VoiceRecorder.cancel());
+      if (!mounted) return;
+      setState(() {
+        _holding = false;
+        _recognizing = false;
+        _slideCancel = false;
+        _preview = '';
+        _level = 0;
+      });
+      _hideOverlay();
+      AppToast.show(context, '麦克风没有启动，再说一次试试');
+      unawaited(
+        _showVoiceHelp(title: '麦克风没有启动', note: '录音启动超时。'),
+      );
+    });
     final started = await starting;
-    _starting = null;
-    if (!mounted) return;
+    _startingTimer?.cancel();
+    _startingTimer = null;
+    if (identical(_starting, starting)) _starting = null;
+    if (aborted) return;
+    if (!mounted || generation != _holdGeneration) return;
     if (!started) {
       final message = VoiceRecorder.lastError ?? '麦克风没有启动';
       setState(() => _holding = false);
@@ -173,6 +233,7 @@ class _CiciComposerState extends State<CiciComposer>
 
   Future<void> _endHold({bool abort = false}) async {
     if (!_holding) return;
+    final generation = _holdGeneration;
     // 松手可能早于录音启动完成：先等启动落地，再决定取消还是收尾，
     // 否则 finish() 会在 _startedAt == null 时直接返回，麦克风继续采集。
     final starting = _starting;
@@ -180,14 +241,21 @@ class _CiciComposerState extends State<CiciComposer>
       try {
         await starting;
       } catch (_) {}
-      _starting = null;
+      if (identical(_starting, starting)) _starting = null;
+      _startingTimer?.cancel();
+      _startingTimer = null;
     }
+    // 等启动的这段时间里看门狗可能已经复位（启动超时），
+    // 或者用户已经取消并重新按住——那都不是这一次松手的事了。
+    if (!mounted || !_holding || generation != _holdGeneration) return;
     final cancel = abort || _slideCancel;
     HapticFeedback.mediumImpact();
     _capTimer?.cancel();
     _capTimer = null;
     if (cancel) {
-      await VoiceRecorder.cancel();
+      // 立刻取消：VoiceRecorder 内部有超时，不会再被卡住；
+      // 不再等它完成才复位界面。
+      unawaited(VoiceRecorder.cancel());
       if (!mounted) return;
       setState(() {
         _holding = false;
@@ -222,7 +290,11 @@ class _CiciComposerState extends State<CiciComposer>
     if (text.isNotEmpty) {
       // 不再二次确认，识别完直接发送。
       setState(() => _preview = '');
-      await widget.onSubmitVoice(text.trim());
+      try {
+        await widget.onSubmitVoice(text.trim());
+      } catch (e) {
+        debugPrint('submit voice text failed: $e');
+      }
       return;
     }
     if (error != null) {
@@ -240,28 +312,24 @@ class _CiciComposerState extends State<CiciComposer>
   }
 
   void _cancelHold() {
-    if (_holding) {
-      final starting = _starting;
-      if (starting != null) {
-        // 启动还没完成：等它落地后再取消，确保麦克风一定停住。
-        () async {
-          try {
-            await starting;
-          } catch (_) {}
-          _starting = null;
-          await VoiceRecorder.cancel();
-        }();
-      } else {
-        unawaited(VoiceRecorder.cancel());
-      }
-      setState(() {
-        _holding = false;
-        _recognizing = false;
-        _slideCancel = false;
-        _preview = '';
-      });
-      _hideOverlay();
-    }
+    if (!_holding) return;
+    _holdGeneration++;
+    // 先停录音再复位：VoiceRecorder.cancel 内部有超时，
+    // 即使 startStream 还在半路上，它也会排队等它落地后把麦克风停掉。
+    unawaited(VoiceRecorder.cancel());
+    _starting = null;
+    _startingTimer?.cancel();
+    _startingTimer = null;
+    _capTimer?.cancel();
+    _capTimer = null;
+    setState(() {
+      _holding = false;
+      _recognizing = false;
+      _slideCancel = false;
+      _preview = '';
+      _level = 0;
+    });
+    _hideOverlay();
   }
 
   /// 录不上或转写失败时给出可复制的诊断信息。
@@ -340,12 +408,23 @@ class _CiciComposerState extends State<CiciComposer>
     // 写死数值必然有一边挡住输入框。
     _overlayBottom = _measureBarBottom();
     final overlay = Overlay.of(context);
+    // 正常不会走到：_holding 保证一次只有一个浮层。真要有残留，
+    // 直接摘掉并放走它的控制器，别让一个没有归属的 Ticker 一直活着。
+    final stale = _entry;
+    if (stale != null) {
+      _entry = null;
+      _entryCleanup?.cancel();
+      _entryCleanup = null;
+      stale.remove();
+      _disposeEntryAnim(_entryAnim);
+    }
     final anim = AnimationController(
       vsync: this,
       duration: CitroMotion.panel,
       reverseDuration: CitroMotion.panelReverse,
     )..forward();
     _entryAnim = anim;
+    _entryAnims.add(anim);
     _entry = OverlayEntry(
       builder: (context) => FadeTransition(
         opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
@@ -376,15 +455,40 @@ class _CiciComposerState extends State<CiciComposer>
     final entry = _entry;
     final anim = _entryAnim;
     _entry = null;
-    _entryAnim = null;
-    if (entry == null) return;
-    if (anim == null || !anim.isAnimating && anim.value == 0) {
-      entry.remove();
+    if (entry == null) {
+      _disposeEntryAnim(anim);
       return;
     }
-    anim.reverse().whenComplete(() {
+    if (anim == null || !anim.isAnimating && anim.value == 0) {
+      entry.remove();
+      _disposeEntryAnim(anim);
+      return;
+    }
+    var done = false;
+    void cleanup() {
+      if (done) return;
+      done = true;
+      _entryCleanup?.cancel();
+      _entryCleanup = null;
       if (entry.mounted) entry.remove();
-    });
+      _disposeEntryAnim(anim);
+    }
+
+    anim.reverse().whenComplete(cleanup);
+    // TickerFuture 在控制器被提前放掉、或动画拿不到帧时不会完成，
+    // 退场必须有一个不依赖它的兜底，否则控制器（和它的 Ticker）会一直活着。
+    _entryCleanup = Timer(
+      CitroMotion.panelReverse + const Duration(milliseconds: 1000),
+      cleanup,
+    );
+  }
+
+  /// 放走一任浮层控制器：退场播完、兜底到点、页面卸载都会走到这里。
+  void _disposeEntryAnim(AnimationController? anim) {
+    if (anim == null || _disposed) return;
+    if (identical(_entryAnim, anim)) _entryAnim = null;
+    if (!_entryAnims.remove(anim)) return;
+    anim.dispose();
   }
 
   Widget _buildOverlay(BuildContext context) {
@@ -476,13 +580,27 @@ class _CiciComposerState extends State<CiciComposer>
 
   @override
   void dispose() {
+    _disposed = true;
     _micTimer?.cancel();
-    // 同 global_search：卸载不播退场动画，直接摘掉浮层再放走控制器。
+    _micTimer = null;
+    _startingTimer?.cancel();
+    _startingTimer = null;
+    _capTimer?.cancel();
+    _capTimer = null;
+    _entryCleanup?.cancel();
+    _entryCleanup = null;
+    // 卸载不播退场动画，直接摘掉浮层再把所有控制器放走：
+    // 漏掉一个还活着的 Ticker，TickerProviderStateMixin 会在 super.dispose()
+    // 里直接抛「was disposed with an active Ticker」。
     final entry = _entry;
     _entry = null;
-    _entryAnim?.dispose();
     _entryAnim = null;
     entry?.remove();
+    final anims = List<AnimationController>.of(_entryAnims);
+    _entryAnims.clear();
+    for (final anim in anims) {
+      anim.dispose();
+    }
     VoiceRecorder.cancel();
     super.dispose();
   }

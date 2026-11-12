@@ -38,6 +38,16 @@ class VoiceRecorder {
 
   static const int _sampleRate = 16000;
 
+  /// 平台通道可能一直不回复（权限弹窗被系统吞掉、个别 ROM 的录音服务卡死、
+  /// 蓝牙 SCO 连接不回）。所有这些等待都必须有上限，否则调用方会永远等下去，
+  /// 界面卡在「按住说话」上。
+  static const Duration startTimeout = Duration(seconds: 6);
+  static const Duration stopTimeout = Duration(seconds: 4);
+
+  /// 一次录音会话的编号：取消 / 重启后，旧会话的回调与分片上传不能再写回状态，
+  /// 否则浮层会被已经取消的那次录音重新填字。
+  static int _sessionId = 0;
+
   /// 已转好的文本（松手前可用于预览）。
   static String get text => _text;
   static bool get isRecording => _startedAt != null;
@@ -50,19 +60,30 @@ class VoiceRecorder {
   }) async {
     try {
       if (isRecording) await cancel();
-      final ok = await _rec.hasPermission();
+      final session = ++_sessionId;
+      final ok = await _rec.hasPermission().timeout(startTimeout);
       _permissionOk = ok;
       if (!ok) {
         _lastError = '麦克风权限未授予';
         return false;
       }
-      final stream = await _rec.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: _sampleRate,
-          numChannels: 1,
-        ),
-      );
+      final stream = await _rec
+          .startStream(
+            const RecordConfig(
+              encoder: AudioEncoder.pcm16bits,
+              sampleRate: _sampleRate,
+              numChannels: 1,
+            ),
+          )
+          .timeout(startTimeout);
+      // 启动还没落地就被取消（松手 / 看门狗）：别再把流挂上来，
+      // 否则会出现「界面已经复位，麦克风还在采集」的情况。
+      if (session != _sessionId) {
+        try {
+          await _rec.stop().timeout(stopTimeout);
+        } catch (_) {}
+        return false;
+      }
       _startedAt = DateTime.now();
       _text = '';
       _lastError = null;
@@ -72,6 +93,7 @@ class VoiceRecorder {
 
       _pcm = stream.listen(
         (data) {
+          if (session != _sessionId) return;
           _pendingPcm.add(data);
         },
         onError: (Object error) => _lastError = '$error',
@@ -80,12 +102,18 @@ class VoiceRecorder {
       _amp = _rec
           .onAmplitudeChanged(const Duration(milliseconds: 120))
           .listen((a) {
+            if (session != _sessionId) return;
             final v = ((a.current + 60) / 6).clamp(0, 10).toDouble();
             _lastLevel = v;
             onLevel?.call(v);
           });
       _chunkTimer = Timer.periodic(chunk, (_) => _flush(onText));
       return true;
+    } on TimeoutException {
+      _lastError = '麦克风启动超时，请再试一次';
+      debugPrint('record start timed out');
+      await cancel();
+      return false;
     } catch (error) {
       _lastError = '$error';
       debugPrint('record start failed: $error');
@@ -97,6 +125,7 @@ class VoiceRecorder {
   /// 把当前缓冲区切成一片上传，结果追加到预览文本。
   static void _flush(void Function(String text)? onText) {
     if (_pendingPcm.isEmpty) return;
+    final session = _sessionId;
     final pcm = _pendingPcm.takeBytes();
     // 太短的片子（<0.3s）识别价值不大，攒到下一次。
     if (pcm.length < _sampleRate * 2 * 3 ~/ 10) {
@@ -105,6 +134,7 @@ class VoiceRecorder {
     }
     final wav = _wrapWav(pcm);
     _uploadChain = _uploadChain.then((_) async {
+      if (session != _sessionId) return;
       try {
         final piece = await _transcribe(base64Encode(wav));
         if (piece.isEmpty) return;
@@ -127,18 +157,21 @@ class VoiceRecorder {
     await _pcm?.cancel();
     _pcm = null;
     try {
-      await _rec.stop();
+      await _rec.stop().timeout(stopTimeout);
     } catch (error) {
       debugPrint('record stop failed: $error');
+      _lastError ??= '录音停止失败';
     }
     _startedAt = null;
     _lastLevel = 0;
 
     if (_pendingPcm.isNotEmpty) {
+      final session = _sessionId;
       final pcm = _pendingPcm.takeBytes();
       if (pcm.length >= _sampleRate) {
         final wav = _wrapWav(pcm);
         _uploadChain = _uploadChain.then((_) async {
+          if (session != _sessionId) return;
           try {
             final piece = await _transcribe(base64Encode(wav));
             if (piece.isEmpty) return;
@@ -156,6 +189,8 @@ class VoiceRecorder {
   }
 
   static Future<void> cancel() async {
+    // 先翻会话号：旧会话的回调和分片上传立刻失效。
+    _sessionId++;
     _chunkTimer?.cancel();
     _chunkTimer = null;
     await _amp?.cancel();
@@ -167,13 +202,16 @@ class VoiceRecorder {
     _pendingPcm.clear();
     _text = '';
     try {
-      await _rec.stop();
+      await _rec.stop().timeout(stopTimeout);
     } catch (_) {}
   }
 
   static Future<bool> hasPermission() async {
     try {
-      final ok = await _rec.hasPermission();
+      // 预热也要有上限：权限弹窗被系统吞掉时，这个 Future 不能永远挂着。
+      final ok = await _rec
+          .hasPermission()
+          .timeout(startTimeout, onTimeout: () => false);
       _permissionOk = ok;
       return ok;
     } catch (_) {

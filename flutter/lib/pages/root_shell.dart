@@ -39,6 +39,10 @@ class RootShell extends StatefulWidget {
 class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   static const double _sidebarWidth = 208;
   static RootShellState? instance;
+
+  /// 登录页完成后才挂载壳：登录那一刻壳还没在，需要补一次云端对齐。
+  /// 由 SplashGate 在登录成功时置位，壳挂载后读取并清零。
+  static bool syncOnNextMount = false;
   int index = 0;
   // 首帧只构建当前页；其余页首次切到时才挂载，避免社区页在后台拉动态/起轮询。
   late final List<bool> _visited;
@@ -79,6 +83,15 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     AppState.instance.cardPromptTick.addListener(_onCardPrompt);
     _wasLoggedIn = AppState.instance.loggedIn;
     AppState.instance.addListener(_onAuthChanged);
+    if (_wasLoggedIn && syncOnNextMount) {
+      // 强制登录后，壳是登录成功才挂载的：登录那一刻壳还没在，
+      // 这里补一次云端对齐，否则首页布局 / 待办 / 记账 / 日历都不同步。
+      syncOnNextMount = false;
+      unawaited(HomeLayoutStore.instance.syncFromAccount(force: true));
+      unawaited(TodoStore.instance.syncFromAccount(force: true));
+      unawaited(LedgerStore.instance.syncFromAccount(force: true));
+      unawaited(CalendarStore.instance.syncFromAccount(force: true));
+    }
     // 负一屏的展开信号：先回到首页，HomePage 自己会把负一屏展开。
     negativeScreenSignal.addListener(_onNegativeScreenRequest);
     _tabAnim = AnimationController(

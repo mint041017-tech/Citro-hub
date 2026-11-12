@@ -144,10 +144,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (_sending || _picking) return;
     if (_listening) {
       setState(() => _listening = false);
-      await SpeechInput.stop();
+      // 系统听写的 stop 在某些 ROM 上会一直不回，别让这次点击吊在这里。
+      await SpeechInput.stop().timeout(const Duration(seconds: 3), onTimeout: () {});
       return;
     }
-    final ready = await SpeechInput.ensureReady();
+    final ready = await SpeechInput.ensureReady().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => false,
+    );
     if (!mounted) return;
     if (!ready) {
       AppToast.show(context, '当前设备暂不支持语音输入，可以先打字。');

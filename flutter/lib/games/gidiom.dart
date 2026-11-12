@@ -61,7 +61,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     best = AppState.instance.localBest('idiom');
     _reset();
     // v1.6.4：键盘抬起时列表要停在最新的词上（用户反馈抬键盘看到的是旧词）。
-    _kbObserver = KeyboardObserver(_scrollBottom);
+    _kbObserver = KeyboardObserver(_scrollToLatest);
     WidgetsBinding.instance.addObserver(_kbObserver);
     focus.addListener(_onFocus);
   }
@@ -81,7 +81,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
 
   /// 输入框获得焦点（键盘弹出）时滚到最新一条。
   void _onFocus() {
-    if (focus.hasFocus) _scrollBottom();
+    if (focus.hasFocus) _scrollToLatest();
   }
 
   late final KeyboardObserver _kbObserver;
@@ -210,7 +210,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     });
     GameSfx.eat();
     _progress.value = '接龙 $count · 得分 $score';
-    _scrollBottom();
+    _scrollToLatest();
     timer?.cancel();
     Future.delayed(const Duration(milliseconds: 650), _aiTurn);
   }
@@ -250,7 +250,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       fb = '';
     });
     _startTimer();
-    _scrollBottom();
+    _scrollToLatest();
     focus.requestFocus();
   }
 
@@ -266,11 +266,14 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     });
   }
 
-  void _scrollBottom() {
+  /// 链表是 reverse 的：最新一条固定在偏移 0（视觉底部），所以「滚到最新」
+  /// 就是回到 0。列表短于视口时 maxScrollExtent 为 0，offset 天然停在 0。
+  void _scrollToLatest() {
     Future.delayed(const Duration(milliseconds: 80), () {
       if (!scroll.hasClients) return;
+      if (scroll.position.pixels <= 0) return;
       scroll.animateTo(
-        scroll.position.maxScrollExtent,
+        0,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );
@@ -563,14 +566,17 @@ class GameIdiomView extends StatelessWidget {
               Positioned.fill(
                 child: ListView.builder(
                   controller: scrollController,
+                  // 反向列表：最新一条从底部「长」出来，短链时条目贴在输入区上方，
+                  // 键盘弹出被顶掉的只是上面的旧词，最新词始终可见。
+                  reverse: true,
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   itemCount: chain.length,
                   itemBuilder: (context, index) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: _chainRow(
                       context,
-                      chain[index],
-                      isLast: index == chain.length - 1,
+                      chain[chain.length - 1 - index],
+                      isLast: index == 0,
                     ),
                   ),
                 ),

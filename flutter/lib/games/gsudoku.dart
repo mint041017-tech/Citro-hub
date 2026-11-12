@@ -335,19 +335,23 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
             Row(
               children: [
                 Expanded(
-                  child: GameActionButton(
-                    label: '换一个模式',
-                    expand: true,
-                    onTap: () => Navigator.pop(ctx, false),
+                  // GameActionButton 的 expand 会把 Row 顶在容器左端，文字看起来
+                  // 偏左；这里改成内容宽按钮 + Center，让两个文案水平居中。
+                  child: Center(
+                    child: GameActionButton(
+                      label: '换一个模式',
+                      onTap: () => Navigator.pop(ctx, false),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: GameActionButton(
-                    label: '仍然开始',
-                    primary: true,
-                    expand: true,
-                    onTap: () => Navigator.pop(ctx, true),
+                  child: Center(
+                    child: GameActionButton(
+                      label: '仍然开始',
+                      primary: true,
+                      onTap: () => Navigator.pop(ctx, true),
+                    ),
                   ),
                 ),
               ],
@@ -382,19 +386,21 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
             Row(
               children: [
                 Expanded(
-                  child: GameActionButton(
-                    label: '继续本局',
-                    expand: true,
-                    onTap: () => Navigator.pop(ctx, false),
+                  child: Center(
+                    child: GameActionButton(
+                      label: '继续本局',
+                      onTap: () => Navigator.pop(ctx, false),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: GameActionButton(
-                    label: '放弃并返回',
-                    primary: true,
-                    expand: true,
-                    onTap: () => Navigator.pop(ctx, true),
+                  child: Center(
+                    child: GameActionButton(
+                      label: '放弃并返回',
+                      primary: true,
+                      onTap: () => Navigator.pop(ctx, true),
+                    ),
                   ),
                 ),
               ],
@@ -1239,19 +1245,26 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         difficulty: _difficulty,
         onDifficulty: _changeDifficulty,
         onMode: _backToModes,
+        // 3D 的面切换 / 立体平面开关并到模式条所在的 Wrap：窄屏自动折到
+        // 同一行的下一 run，不再各自独占一行，把高度让给棋盘。
+        extra: [
+          if (puzzle.isCube3d && puzzle.cubeFaces.isNotEmpty) ...[
+            _CubeFaceTabs(face: _cubeFace, onChanged: _changeCubeFaceTo),
+            _CubeViewToggle(
+              flat: _cubeFlat,
+              onChanged: (value) => setState(() => _cubeFlat = value),
+            ),
+          ],
+        ],
       ),
       if (!puzzle.difficultyMet) const _DifficultyNotice(),
       if (_isPhone(context) && _isLargeBoard && !_hideLargeNotice)
         _LargeBoardNotice(
           onClose: () => setState(() => _hideLargeNotice = true),
         ),
-      if (puzzle.isCube3d && puzzle.cubeFaces.isNotEmpty) ...[
-        _CubeFaceTabs(face: _cubeFace, onChanged: _changeCubeFaceTo),
-        _CubeViewToggle(
-          flat: _cubeFlat,
-          onChanged: (value) => setState(() => _cubeFlat = value),
-        ),
-      ] else if (puzzle.isCube3d) ...[
+      // 图层 / 重叠盘号自带横向滚动（ chips 多，包进 Wrap 会溢出），
+      // 仍各自独占一行；它们只有一行高，且是模式必需的控制。
+      if (puzzle.isCube3d && puzzle.cubeFaces.isEmpty)
         _LayerTabs(
           layer: _layer,
           layers: puzzle.layers,
@@ -1265,8 +1278,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
             _changeLayer(delta);
           },
         ),
-      ],
-      if (puzzle.variant == SudokuVariant.overlap) ...[
+      if (puzzle.variant == SudokuVariant.overlap)
         _OverlapTabs(
           grids: puzzle.grids,
           selected: _focusGrid,
@@ -1282,7 +1294,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
             _keyFocus.requestFocus();
           },
         ),
-      ],
     ];
     return GameScaffold(
       gameKey: 'gsudoku',
@@ -1573,12 +1584,19 @@ class _ModeBar extends StatelessWidget {
     required this.difficulty,
     required this.onDifficulty,
     required this.onMode,
+    this.extra = const <Widget>[],
   });
 
   final SudokuModeSpec mode;
   final SudokuDifficulty difficulty;
   final ValueChanged<SudokuDifficulty> onDifficulty;
   final VoidCallback onMode;
+
+  /// 并入同一行的次要控制（3D 面切换 / 立体平面开关）。
+  ///
+  /// 只放紧凑的 Row/胶囊；自带横向滚动的长条（图层、重叠盘号）不能进 Wrap
+  /// （Wrap 给子节点无界宽度，滚动条会撑出父宽）。
+  final List<Widget> extra;
 
   @override
   Widget build(BuildContext context) {
@@ -1645,6 +1663,7 @@ class _ModeBar extends StatelessWidget {
               ),
             ),
           ),
+        ...extra,
       ],
     );
   }
@@ -2704,14 +2723,18 @@ class _ErrorPanel extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: GameActionButton(label: '返回模式', onTap: onBack),
+                  child: Center(
+                    child: GameActionButton(label: '返回模式', onTap: onBack),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: GameActionButton(
-                    label: '再试一次',
-                    primary: true,
-                    onTap: onRetry,
+                  child: Center(
+                    child: GameActionButton(
+                      label: '再试一次',
+                      primary: true,
+                      onTap: onRetry,
+                    ),
                   ),
                 ),
               ],
