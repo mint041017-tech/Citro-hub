@@ -667,14 +667,12 @@ class CitroDuoRailItem extends StatelessWidget {
                       top: -5,
                       child: CitroPop(
                         child: Container(
-                          constraints: const BoxConstraints(
-                            minWidth: 14,
-                            minHeight: 14,
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          // 圆形角标：直径随字数长，始终是正圆。
+                          width: _sideBadgeSide(badge),
+                          height: _sideBadgeSide(badge),
                           decoration: BoxDecoration(
                             color: c.accent,
-                            borderRadius: BorderRadius.circular(99),
+                            shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
@@ -843,14 +841,12 @@ class _SidebarItem extends StatelessWidget {
               if (badge > 0)
                 CitroPop(
                   child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    // 圆形角标：直径随字数长，始终是正圆。
+                    width: _railBadgeSide(badge),
+                    height: _railBadgeSide(badge),
                     decoration: BoxDecoration(
                       color: c.accent,
-                      borderRadius: BorderRadius.circular(99),
+                      shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -890,3 +886,9 @@ class _SidebarItem extends StatelessWidget {
     );
   }
 }
+
+/// 侧栏角标直径：1 位 14，2 位 20，3 位 26 —— 保证正圆。
+double _sideBadgeSide(int badge) => badge > 99 ? 26 : (badge > 9 ? 20.0 : 14.0);
+
+/// 右栏（duo 侧轨）角标直径：1 位 20，2 位 26，3 位 32 —— 保证正圆。
+double _railBadgeSide(int badge) => badge > 99 ? 32 : (badge > 9 ? 26.0 : 20.0);

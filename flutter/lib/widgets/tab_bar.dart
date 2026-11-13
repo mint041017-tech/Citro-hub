@@ -153,17 +153,13 @@ class _TabContent extends StatelessWidget {
                 top: -2,
                 child: CitroPop(
                   child: ExcludeSemantics(
+                    // 圆形角标：直径随字数长，始终是正圆（不再是胶囊）。
                     child: Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 15,
-                        minHeight: 15,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      width: _badgeSide(badge),
+                      height: _badgeSide(badge),
                       decoration: BoxDecoration(
                         color: c.danger,
-                        borderRadius: BorderRadius.circular(
-                          CitroColors.radii.chip,
-                        ),
+                        shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -226,3 +222,6 @@ class CiciAvatarButton extends StatelessWidget {
     );
   }
 }
+
+/// 角标直径：1 位数 15，2 位数 21，3 位（99+）27 —— 保证正圆。
+double _badgeSide(int badge) => badge > 99 ? 27 : (badge > 9 ? 21.0 : 15.0);

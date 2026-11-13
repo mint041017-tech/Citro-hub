@@ -62,6 +62,8 @@ class _ResPageState extends State<ResPage> {
         )
         .toList();
     final drivers = [...kDriversWeb, ...kDriversClient];
+    // iPad 上装不了 PC 外设驱动，整块不展示（用户要求）。
+    final hideDrivers = platform.isIOS && (layout?.tabletNav ?? false);
     return Scaffold(
       body: CitroBackground(
         child: SafeArea(
@@ -160,7 +162,7 @@ class _ResPageState extends State<ResPage> {
                         ),
                       ),
                     ],
-                    if (drivers.isNotEmpty) ...[
+                    if (drivers.isNotEmpty && !hideDrivers) ...[
                       const SizedBox(height: AppSpacing.x2),
                       CitroCard(
                         padding: const EdgeInsets.all(16),
