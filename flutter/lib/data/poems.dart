@@ -209,3 +209,37 @@ const List<PoemLine> kPoemLines = [
   PoemLine('三山半落青天外，二水中分白鹭洲', '李白', '登金陵凤凰台'),
   PoemLine('吴宫花草埋幽径，晋代衣冠成古丘', '李白', '登金陵凤凰台'),
 ];
+
+/// 诗句的归一化键：只留汉字（去掉标点 / 空格）。
+///
+/// 同一句诗在词库里可能有多个标点版本（「春花秋月何时了，往事知多少」
+/// 和「春花秋月何时了？往事知多少」），归一化之后才算得上「同一句」。
+String poemKey(String s) => s.replaceAll(RegExp(r'[^一-龥]'), '');
+
+/// 把一句诗归一化到词库里的**整句**（联）。
+///
+/// 玩家经常只打半句（「床前明月光」），而 [kPoemLines] 存的是整句
+/// （「床前明月光，疑是地上霜」）。不归一化的话，接龙时 AI 会拿整句来
+/// 「重复」玩家刚说过的那半句。命中多条时取最短的一条 —— 那才是最贴近
+/// 玩家字面的句子。
+String canonicalPoemLine(String s) {
+  final key = poemKey(s);
+  if (key.isEmpty) return s;
+  for (final p in kPoemLines) {
+    if (poemKey(p.line) == key) return p.line;
+  }
+  // 半句：词库里包含这串字的最短一句。按去掉标点的文本匹配，
+  // 这样玩家横跨标点打过来（「明月光疑是」）也能接上。
+  final inner = kPoemLines
+      .where((p) => poemKey(p.line).contains(key))
+      .toList()
+    ..sort((a, b) => a.line.length.compareTo(b.line.length));
+  if (inner.isNotEmpty) return inner.first.line;
+  // 玩家多打了下半句：被某一整句包含，取最长的那条（最具体）。
+  final outer = kPoemLines
+      .where((p) => key.contains(poemKey(p.line)))
+      .toList()
+    ..sort((a, b) => b.line.length.compareTo(a.line.length));
+  if (outer.isNotEmpty) return outer.first.line;
+  return s;
+}

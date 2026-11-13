@@ -38,7 +38,23 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
   final scroll = ScrollController();
   List<ChainItem> chain = [];
   Set<String> used = {};
-  String need = '';
+  /// 当前需要接的首字**默认读音**。
+  ///
+  /// 只用于展示与喂给 AI —— 判定同音一律走 [_hitNeed]（按所有读法），
+  /// 不要再拿它做相等比较。
+  String needPinyin = '';
+
+  /// 当前需要接的那个**字**本身 —— 判定同音要按它的所有读法算，
+  /// 多音字只比默认读法会误杀（玩家接「月」接「乐(yuè)」被拒）。
+  String needChar = '';
+
+  /// 界面上的「需接」文案：把字和它的全部读法都列出来，
+  /// 免得出现「显示需接 chang、实际 zhāng 也放行」的自相矛盾。
+  String get _needLabel {
+    if (needChar.isEmpty) return '—';
+    final rs = _readings(needChar).toList()..sort();
+    return rs.length <= 1 ? needChar : '$needChar（${rs.join('/')}）';
+  }
   bool running = false;
   bool over = false;
   bool won = false;
@@ -90,7 +106,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     timer?.cancel();
     chain = [];
     used = {};
-    need = '';
+    needPinyin = '';
     count = 0;
     score = 0;
     running = false;
@@ -110,7 +126,8 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     final seed = kIdiomSeeds[rnd.nextInt(kIdiomSeeds.length)];
     chain.add(ChainItem(seed, 'seed', '起手'));
     used.add(seed);
-    need = _pinyin(seed.substring(seed.length - 1));
+    needChar = seed.substring(seed.length - 1);
+    needPinyin = _pinyin(needChar);
     running = true;
     _startTimer();
     setState(() {});
@@ -139,6 +156,59 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     }
   }
 
+  /// 生僻读法白名单：lpinyin 的字典里混着不少现代汉语基本不用的读法
+  /// （乐 lào/yào、落 là/lào、说 shuì/yuè、数 shuò、女 rǔ、地 de…），
+  /// 全放进去会出现「亡羊补牢(láo) → 落井下石(luò)」这种碍眼的误放。
+  /// 这里只保留成语里真正会用到的读法。
+  static const Map<String, Set<String>> _commonReadings = {
+    '乐': {'le', 'yue'},
+    '说': {'shuo'},
+    '数': {'shu'},
+    '女': {'nv'},
+    '地': {'di'},
+    '石': {'shi'},
+    '大': {'da'},
+    '合': {'he'},
+    '种': {'zhong'},
+    '车': {'che'},
+    '尾': {'wei'},
+    '家': {'jia'},
+    '趋': {'qu'},
+    '丁': {'ding'},
+    '宿': {'su'},
+    '会': {'hui'},
+    '厂': {'chang'},
+    '落': {'luo'},
+    '着': {'zhuo'},
+  };
+
+  /// 一个字的可用读音（不带声调）。多音字会有多个，例如「乐」→ {le, yue}。
+  Set<String> _readings(String ch) {
+    if (ch.isEmpty) return const {};
+    try {
+      final all = PinyinHelper.convertToPinyinArray(
+        ch.substring(0, 1),
+        PinyinFormat.WITHOUT_TONE,
+      ).map((e) => e.toLowerCase()).toSet();
+      final common = _commonReadings[ch.substring(0, 1)];
+      // 白名单只用来**删掉**生僻读法；万一字典给的读音不在白名单里
+      // （版本差异），保留字典原样，避免把能接的词误杀。
+      if (common != null && all.containsAll(common)) {
+        return all.intersection(common);
+      }
+      return all;
+    } catch (_) {
+      return {ch.toLowerCase()};
+    }
+  }
+
+  /// 首字与 needChar 是否同音（任一方任一读法相同即可）。
+  bool _hitNeed(String firstChar) {
+    final a = _readings(firstChar);
+    if (a.isEmpty) return false;
+    return a.any(_readings(needChar).contains);
+  }
+
   int _mult() => math.max(1, (count ~/ 2) * 2);
 
   void _submitFromEnter() {
@@ -165,8 +235,8 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       _feedback('本局用过的成语不能重复');
       return;
     }
-    if (_pinyin(raw.substring(0, 1)) != need) {
-      _feedback('首字读音要接上「$need」，再想想');
+    if (!_hitNeed(raw.substring(0, 1))) {
+      _feedback('首字读音要接上「$_needLabel」，再想想');
       return;
     }
     if (!kIdioms.contains(raw)) {
@@ -204,7 +274,8 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     if (aiVerified) _feedback('AI 判定：「$raw」通过 ✓');
     setState(() {
       chain.add(ChainItem(raw, 'you', '接龙 ${mult > 1 ? '×$mult' : ''}'));
-      need = _pinyin(raw.substring(raw.length - 1));
+      needChar = raw.substring(raw.length - 1);
+      needPinyin = _pinyin(needChar);
       aiThinking = true;
       if (!aiVerified) fb = '';
     });
@@ -218,7 +289,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
   Future<void> _aiTurn() async {
     if (!mounted || !running) return;
     final candidates = kIdioms
-        .where((e) => !used.contains(e) && _pinyin(e.characters.first) == need)
+        .where((e) => !used.contains(e) && _hitNeed(e.characters.first))
         .toList();
     String? pick;
     if (candidates.isEmpty) {
@@ -226,14 +297,15 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       setState(() => fb = 'AI 兜底中…');
       pick = await AiService.suggestIdiom(
         last: chain.isEmpty ? '' : chain.last.text,
-        pinyin: need,
+        char: needChar,
+        pinyin: _readings(needChar).join('/'),
         used: used.toList(),
       );
       if (!mounted || !running) return;
       if (pick == null ||
           pick.length != 4 ||
           used.contains(pick) ||
-          _pinyin(pick.substring(0, 1)) != need) {
+          !_hitNeed(pick.substring(0, 1))) {
         _finish(win: true);
         return;
       }
@@ -245,7 +317,8 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     GameSfx.flip();
     setState(() {
       chain.add(ChainItem(chosen, 'ai', 'AI 接龙'));
-      need = _pinyin(chosen.substring(chosen.length - 1));
+      needChar = chosen.substring(chosen.length - 1);
+      needPinyin = _pinyin(needChar);
       aiThinking = false;
       fb = '';
     });
@@ -314,7 +387,7 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
       score: score,
       best: best,
       chain: chain,
-      need: need,
+      need: _needLabel,
       deadline: deadline,
       aiThinking: aiThinking,
       fb: fb,
@@ -612,26 +685,35 @@ class GameIdiomView extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: id.soft,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                ),
-                child: Text.rich(
-                  TextSpan(
-                    style: context.body(size: CitroType.small, color: c.ink2),
-                    children: [
-                      const TextSpan(text: '需接 '),
-                      TextSpan(
-                        text: need.isEmpty ? '—' : need,
-                        style: context.body(
-                          size: CitroType.body,
-                          weight: CitroType.strong,
-                          color: id.primaryInk,
+              // 多读法全列出来时胶囊会变长（「需接 差（cha/chai/ci）」），
+              // 用 Flexible 兜住，窄屏换成两行而不是把整行顶爆。
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: id.soft,
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.chip,
+                    ),
+                  ),
+                  child: Text.rich(
+                    TextSpan(
+                      style: context.body(size: CitroType.small, color: c.ink2),
+                      children: [
+                        const TextSpan(text: '需接 '),
+                        TextSpan(
+                          text: need,
+                          style: context.body(
+                            size: CitroType.body,
+                            weight: CitroType.strong,
+                            color: id.primaryInk,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

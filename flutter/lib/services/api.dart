@@ -9,7 +9,13 @@ import 'models.dart';
 class ApiException implements Exception {
   final String message;
   final int code;
-  ApiException(this.message, [this.code = 0]);
+
+  /// 服务端返回的响应体（解析失败时为 null）。
+  ///
+  /// 抽签的 429 有两种：冷却（body 带 cd / records）和限流（只有 err），
+  /// 客户端要按它区分提示，所以把 body 一起带出来。
+  final Map<String, dynamic>? body;
+  ApiException(this.message, [this.code = 0, this.body]);
   @override
   String toString() => message;
 }
@@ -72,7 +78,11 @@ class Api {
       final msg = data is Map
           ? '${data['err'] ?? '请求失败'}'
           : '请求失败（${res.statusCode}）';
-      throw ApiException(msg, res.statusCode);
+      throw ApiException(
+        msg,
+        res.statusCode,
+        data is Map ? Map<String, dynamic>.from(data) : null,
+      );
     }
     return data;
   }

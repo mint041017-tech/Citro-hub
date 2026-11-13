@@ -194,13 +194,14 @@ class AiService {
 
   static Future<String?> suggestIdiom({
     required String last,
+    required String char,
     required String pinyin,
     required List<String> used,
   }) async {
     try {
       final text = await complete(
         prompt:
-            '上一个成语是「$last」，下一个成语首字读音必须是「$pinyin」（同音，声调不限），四字，不能与这些重复：${used.take(30).join('、')}。只输出一个四字成语，不要标点、解释。',
+            '上一个成语是「$last」，下一个成语首字必须是「$char」的同音字（读音 $pinyin，声调不限；多音字按任意一读都算），四字，不能与这些重复：${used.take(30).join('、')}。只输出一个四字成语，不要标点、解释。',
         system: '你是中文成语接龙高手，只输出一个四字成语。',
         maxTokens: 260,
         temperature: 0.7,

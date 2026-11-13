@@ -125,6 +125,21 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
     _submit();
   }
 
+  /// 这句（或它的半句/整句）是不是已经说过。
+  ///
+  /// [used] 里存的是归一化键（见 [poemKey]），所以同一句诗的
+  /// 不同标点写法、以及玩家打的半句，都算同一条。
+  bool _isUsed(String line) {
+    final key = poemKey(canonicalPoemLine(line));
+    if (used.contains(key)) return true;
+    // 词库外的句子（AI 判定收下的）没有归一化键，退回原文互含判断。
+    for (final u in used) {
+      if (u.length < 5) continue;
+      if (line.contains(u) || u.contains(line)) return true;
+    }
+    return false;
+  }
+
   void _submit() {
     if (!running || thinking || validating) return;
     final raw = input.text.trim().replaceAll(RegExp(r'\s+'), '');
@@ -144,11 +159,13 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
       _feedback('请只输入中文诗句');
       return;
     }
-    if (used.contains(raw)) {
+    if (_isUsed(raw)) {
       _feedback('这句已经说过了');
       return;
     }
-    if (!kPoemLines.any((p) => p.line == raw)) {
+    // 半句命中词库整句时直接收下，不必再等 AI 判定。
+    final canon = canonicalPoemLine(raw);
+    if (canon == raw && !kPoemLines.any((p) => p.line == raw)) {
       // 本地诗句库没有 → AI 判定兜底（web 端由服务端查词库后才问 AI）。
       _verifyAndAccept(raw);
       return;
@@ -173,7 +190,7 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
   }
 
   void _accept(String raw, {bool aiVerified = false}) {
-    used.add(raw);
+    used.add(poemKey(canonicalPoemLine(raw)));
     count++;
     final mult = math.max(1, (count ~/ 2) * 2);
     score += 10 * mult;
@@ -194,7 +211,7 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
   Future<void> _aiTurn() async {
     if (!mounted || !running) return;
     final pool = kPoemLines
-        .where((p) => p.line.contains(ch) && !used.contains(p.line))
+        .where((p) => p.line.contains(ch) && !used.contains(poemKey(p.line)))
         .toList();
     String? line;
     String? meta;
@@ -203,11 +220,11 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
       setState(() => fb = 'AI 兜底中…');
       final suggestion = await AiService.suggestPoem(
         char: ch,
-        used: used.toList(),
+        used: used.map(canonicalPoemLine).toList(),
       );
       if (!mounted || !running) return;
       if (suggestion == null ||
-          used.contains(suggestion.line) ||
+          _isUsed(suggestion.line) ||
           !suggestion.line.contains(ch)) {
         _end(true);
         return;
@@ -223,7 +240,7 @@ class _GameFeihuaPageState extends State<GameFeihuaPage> {
       line = p.line;
       meta = '${p.author}《${p.title}》';
     }
-    used.add(line);
+    used.add(poemKey(canonicalPoemLine(line)));
     GameSfx.flip();
     setState(() {
       chain.add(FhItem(line!, meta!, 'ai'));

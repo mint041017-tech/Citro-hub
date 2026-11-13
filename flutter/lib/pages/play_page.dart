@@ -107,8 +107,11 @@ class _PlayPageState extends State<PlayPage> {
   void _applyRemote(Map<String, dynamic> j) {
     final list = _parseRemote(j['records']);
     final cd = int.tryParse('${j['cd'] ?? 0}') ?? 0;
+    // 只许延长、不许缩短：页面打开时可能还挂着一次更早的 GET /api/play，
+    // 它带回来的 cd 是旧快照（甚至 0），直接覆盖会把刚设好的冷却清掉，
+    // 用户接着点就吃 429 —— 这正是「抽了没计入」的来源之一。
     final until = DateTime.now().millisecondsSinceEpoch + cd;
-    if (until != cooldownUntil) {
+    if (until > cooldownUntil) {
       cooldownUntil = until;
       Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
     }
@@ -169,7 +172,7 @@ class _PlayPageState extends State<PlayPage> {
     if (!mounted) return;
     final state = AppState.instance;
     Map<String, dynamic>? remote;
-    var cooling = false;
+    var coolingMs = 0;
     String? drawError;
     try {
       remote = await Api.playDraw(
@@ -178,21 +181,36 @@ class _PlayPageState extends State<PlayPage> {
       );
     } on ApiException catch (e) {
       if (e.code == 429) {
-        cooling = true;
+        // 429 有两种：冷却（body 带 cd / records）和限流（只有 err）。
+        // 只有真冷却才进冷却分支，限流按普通错误提示，别把按钮锁住。
+        final cd = int.tryParse('${e.body?['cd'] ?? 0}') ?? 0;
+        if (cd > 0 || e.body?['records'] != null) {
+          coolingMs = cd;
+        } else {
+          drawError = e.message.isEmpty ? '操作太频繁，稍后再试' : e.message;
+        }
       } else {
         drawError = e.message;
       }
     } catch (e) {
       drawError = '$e';
     }
-    if (!mounted) return;
-    if (cooling) {
+    // 先记住页面还在不在：就算用户在这几毫秒里退掉了页面，
+    // 抽到的签也要落盘，否则服务端记了、本机记录里没有，
+    // 用户会以为「抽了没计入」。
+    final alive = mounted;
+    if (coolingMs > 0) {
+      // 服务端这次没发签：本地不落账，否则和全站列表对不上。
+      cooldownUntil =
+          DateTime.now().millisecondsSinceEpoch + coolingMs;
+      await Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
+      if (!alive) return;
       setState(() {
         rolling = false;
-        stageText = '还在冷却，等一会儿再抽';
+        stageText = '服务器还在冷却，剩余 ${_fmtCd(coolingMs)}';
       });
       await _refreshRemote(silent: true);
-      if (mounted) AppToast.show(context, '冷却中，稍后再抽');
+      if (mounted) AppToast.show(context, '服务器还在冷却，稍后再抽');
       return;
     }
     final pick = remote != null && '${remote['t'] ?? ''}'.trim().isNotEmpty
@@ -203,15 +221,10 @@ class _PlayPageState extends State<PlayPage> {
         DateTime.now().millisecondsSinceEpoch;
     final rec = _PlayRecord(pick, ts, you: true);
     records.insert(0, rec);
-    cooldownUntil = ts + 10 * 60 * 1000;
-    await Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
-    final list = Prefs.getStringList(PrefKeys.playRecords)
-      ..add(jsonEncode({'t': pick, 'ts': ts}));
-    await Prefs.setStringList(
-      PrefKeys.playRecords,
-      list.length > 30 ? list.sublist(list.length - 30) : list,
-    );
-    if (!mounted) return;
+    // 本地不再自己加 10 分钟冷却：冷却完全由服务端下发（cd），
+    // 客户端跟着显示即可。写死 10 分钟会和服务端的实际限制打架。
+    await _saveRecord(rec);
+    if (!alive) return;
     setState(() {
       lastPun = pick;
       stageText = pick;
@@ -220,13 +233,30 @@ class _PlayPageState extends State<PlayPage> {
     });
     if (remote != null) {
       _applyRemote(remote);
+      // 服务端这会儿返回的 records 可能还没带上刚抽的这条（写入可见性 /
+      // 缓存延迟），补进去，别让用户以为没抽上。
+      // 注意：这里的局部变量 remote 是服务端响应（Map），
+      // 字段 remote 才是「大家的抽签」列表，别被局部变量盖住。
+      if (!this.remote.any((r) => r.text == rec.text && r.ts == rec.ts)) {
+        setState(() => this.remote.insert(0, rec));
+      }
     } else {
       // 服务端没抽成（离线）：本地照常展示，稍后刷新会带出真实冷却。
       unawaited(_refreshRemote(silent: true));
-      if (drawError != null) {
+      if (drawError != null && mounted) {
         AppToast.show(context, '网络开小差，已按本机记录抽签');
       }
     }
+  }
+
+  /// 落盘一条抽取记录（最多留 30 条）。
+  Future<void> _saveRecord(_PlayRecord rec) async {
+    final list = Prefs.getStringList(PrefKeys.playRecords)
+      ..add(jsonEncode({'t': rec.text, 'ts': rec.ts}));
+    await Prefs.setStringList(
+      PrefKeys.playRecords,
+      list.length > 30 ? list.sublist(list.length - 30) : list,
+    );
   }
 
   void _clear() {
@@ -291,7 +321,7 @@ class _PlayPageState extends State<PlayPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '不知道这局怎么玩？抽一个，整活正式开始。每 10 分钟限抽 1 次。',
+                          '不知道这局怎么玩？抽一个，整活正式开始。',
                           textAlign: TextAlign.center,
                           style: context.body(
                             size: CitroType.meta,
@@ -313,8 +343,10 @@ class _PlayPageState extends State<PlayPage> {
                                     stageText,
                                     key: ValueKey(stageText),
                                     textAlign: TextAlign.center,
+                                    // 签面长度差得很多（最短 5 字，最长快 60 字），
+                                    // 两档字号兜不住：长签在手机上有溢出卡片的风险。
                                     style: context.display(
-                                      size: stageText.length > 14 ? 24 : 30,
+                                      size: _stageSize(stageText.length),
                                       weight: CitroType.strong,
                                       color: rolling ? c.inkSoft : c.ink,
                                       height: 1.5,
@@ -356,7 +388,7 @@ class _PlayPageState extends State<PlayPage> {
                         if (left > 0) ...[
                           const SizedBox(height: AppSpacing.x1),
                           Text(
-                            '每 10 分钟限抽 1 次 · 剩余 ${_fmtCd(left)}',
+                            '冷却中 · 剩余 ${_fmtCd(left)}',
                             textAlign: TextAlign.center,
                             style: context.body(
                               size: CitroType.small,
@@ -678,6 +710,14 @@ class _PlayPageState extends State<PlayPage> {
         ],
       ),
     );
+  }
+
+  /// 签面字号：越长字越小，保证 180 高的卡面放得下（手机宽度约 290）。
+  double _stageSize(int len) {
+    if (len <= 14) return 30;
+    if (len <= 24) return 24;
+    if (len <= 36) return 20;
+    return 17;
   }
 
   String _fmtCd(int ms) {
