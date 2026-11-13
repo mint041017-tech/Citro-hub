@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_store.dart';
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
@@ -27,6 +28,8 @@ class PlanPage extends StatelessWidget {
     final maxWidth = width >= 780 ? 1120.0 : 760.0;
     final side = math.max(8.0, (width - maxWidth) / 2);
     final sideNav = layout?.tabletNav ?? false;
+    // 下面三处排版只在 Windows 生效：手机 / iPad 保持原来的竖排。
+    final windows = platform.isWindows;
     return Stack(
       children: [
         // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
@@ -39,7 +42,13 @@ class PlanPage extends StatelessWidget {
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
-              padding: EdgeInsets.fromLTRB(side, 8, side, sideNav ? 32 : 100),
+              padding: EdgeInsets.fromLTRB(
+                side,
+                // 与游戏页 / 社区页对齐（宽屏 48）；手机保持原来的 8。
+                windows ? AppSpacing.pageTop(width) : 8,
+                side,
+                sideNav ? 32 : 100,
+              ),
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxWidth),
@@ -57,16 +66,36 @@ class PlanPage extends StatelessWidget {
                             const SizedBox(height: AppSpacing.x3),
                             const _TodayCard(),
                             const SizedBox(height: AppSpacing.x3),
-                            SizedBox(
-                              height: (w * .82).clamp(250.0, 380.0),
-                              // 计划页的待办卡用全局品牌色，和下面的记账卡同一套强调色。
-                              child: const TodoHomeCard(globalAccent: true),
-                            ),
-                            const SizedBox(height: AppSpacing.x3),
-                            SizedBox(
-                              height: (w * .64).clamp(190.0, 280.0),
-                              child: const LedgerHomeCard(),
-                            ),
+                            if (windows)
+                              // Windows 宽屏：待办在左、记账在右，同高并排。
+                              SizedBox(
+                                height: (w * .72).clamp(300.0, 360.0),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: const TodoHomeCard(
+                                        globalAccent: true,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.x2),
+                                    Expanded(child: const LedgerHomeCard()),
+                                  ],
+                                ),
+                              )
+                            else ...[
+                              SizedBox(
+                                height: (w * .82).clamp(250.0, 380.0),
+                                // 计划页的待办卡用全局品牌色，和下面的记账卡同一套强调色。
+                                child: const TodoHomeCard(globalAccent: true),
+                              ),
+                              const SizedBox(height: AppSpacing.x3),
+                              SizedBox(
+                                height: (w * .64).clamp(190.0, 280.0),
+                                child: const LedgerHomeCard(),
+                              ),
+                            ],
                           ],
                         ),
                       );

@@ -18,6 +18,7 @@ import '../todo/todo_store.dart';
 import '../ledger/ledger_store.dart';
 import '../calendar/calendar_store.dart';
 import '../widgets/home_layout.dart';
+import '../pages/res_page.dart';
 import '../widgets/tab_bar.dart';
 import '../state/negative_screen.dart';
 import '../games/gbrake_web.dart';
@@ -63,9 +64,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   bool _wasLoggedIn = false;
   Size? _orientationSize;
 
-  /// 四格导航：首页、游戏、社区、自定义（默认待办，长按可切模块）。
-  /// 资源库收进首页下拉负一屏与「我的」，不再占独立 Tab。
-  static int get _tabCount => 4;
+  /// 五格导航：首页、计划、游戏、社区、资源库（资源库仅 Windows 侧栏到达）。
+  static int get _tabCount => 5;
 
   /// 当前页是否自己渲染左侧 rail。计划页把待办/记账/日历竖排在一页里，
   /// 不带 rail，所以恒为 false。
@@ -319,10 +319,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 关键：隐藏页和显示页必须返回同一棵 widget 结构，否则 Flutter 会整页重建，
     // 每次切 Tab 都重放入场动画并闪一下。
     final page = RepaintBoundary(
-      child: TickerMode(
-        enabled: active || leaving,
-        child: _pages[i],
-      ),
+      child: TickerMode(enabled: active || leaving, child: _pages[i]),
     );
     return Positioned.fill(
       child: Offstage(
@@ -349,7 +346,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   ///
   /// 位移用 [FractionalTranslation]（相对自身宽度），不需要知道画布有多宽；
   /// 5% 宽在 220ms 下能读出方向，又不会像整页横推那样「等页面」。
-  Widget _settlePage(Widget child, {required bool active, required bool leaving}) {
+  Widget _settlePage(
+    Widget child, {
+    required bool active,
+    required bool leaving,
+  }) {
     final reduce = CitroMotion.reduced(context);
     if (active) {
       final t = CitroMotion.easeOut.transform(_tabAnim.value);
@@ -382,6 +383,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
         return const GamesPage();
       case 3:
         return const CommunityPage();
+      case 4:
+        // Windows 侧栏的「资源库」Tab。
+        return const ResPage(embedded: true);
       default:
         return HomePage(onSwitchTab: switchTo);
     }
@@ -468,6 +472,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                           : constraints.maxWidth - _sidebarWidth,
                       tabletNav: true,
                       duo: duo,
+                      // Windows 桌面壳专属排版（首页左右分栏等）只在这里开。
+                      windowsDesktop: !kIsWeb && platform.isWindows,
                       child: _pageStack(),
                     ),
                   ),

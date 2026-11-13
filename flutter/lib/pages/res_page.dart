@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
+import '../pages/root_shell.dart';
 import '../services/platform.dart' as platform;
+import '../widgets/desktop_shell.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
@@ -76,7 +78,7 @@ class _ResPageState extends State<ResPage> {
                 padding: EdgeInsets.fromLTRB(
                   8,
                   AppSpacing.pageTop(contentWidth),
-                  8,
+                  8 + CitroDesktopShell.windowControlsInset,
                   tabBar ? 110 : 30,
                 ),
                 child: CitroStagger(
@@ -85,7 +87,14 @@ class _ResPageState extends State<ResPage> {
                     Row(
                       children: [
                         Pressable(
-                          onTap: () => popOrHome(context),
+                          onTap: () {
+                            if (widget.embedded) {
+                              // 作为壳内 Tab：回到首页 Tab，别叠一层新壳。
+                              RootShellState.instance?.switchTo(0);
+                              return;
+                            }
+                            popOrHome(context);
+                          },
                           child: Container(
                             height: 40,
                             padding: const EdgeInsets.symmetric(horizontal: 14),

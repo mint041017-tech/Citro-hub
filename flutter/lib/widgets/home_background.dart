@@ -30,7 +30,12 @@ class _BgInfo {
 /// 图只占上半部（按原始比例缩到屏宽，绝不放大），
 /// 未覆盖的下方区域从图底颜色渐变到主题底，避免直接一刀切。
 class CitroBlendImage extends StatefulWidget {
-  const CitroBlendImage({super.key, this.networkUrl, this.asset});
+  const CitroBlendImage({
+    super.key,
+    this.networkUrl,
+    this.asset,
+    this.cover = false,
+  });
 
   /// 背景图下边缘相对屏幕顶部的距离（像素）。
   ///
@@ -42,6 +47,12 @@ class CitroBlendImage extends StatefulWidget {
 
   /// 包内资源路径（assets/card/...）；优先于 [networkUrl]。
   final String? asset;
+
+  /// 铺满整个容器（cover）而不是按屏宽缩到顶部（scaleDown）。
+  ///
+  /// 首页左右分栏时左栏是个窄高的面板，scaleDown 会只占上半截、
+  /// 下半截露底色；cover 才能铺满整个「卡片背景」面板。
+  final bool cover;
 
   /// 系统内存紧张时由 App 主动清空内存缓存；磁盘缓存不受影响。
   static void clearMemory() => _CitroBlendImageState.clearMemory();
@@ -101,14 +112,13 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
     if (existing != null) return existing;
     final future = _decode(key);
     _inFlight[key] = future;
-    unawaited(future.then(
-      (info) => _cache[key] = info,
-      onError: (_) {},
-    ));
-    unawaited(future.then(
-      (_) => _inFlight.remove(key),
-      onError: (_) => _inFlight.remove(key),
-    ));
+    unawaited(future.then((info) => _cache[key] = info, onError: (_) {}));
+    unawaited(
+      future.then(
+        (_) => _inFlight.remove(key),
+        onError: (_) => _inFlight.remove(key),
+      ),
+    );
     return future;
   }
 
@@ -139,7 +149,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   }
 
   Future<_BgInfo> _load() {
-    final key = widget.asset ??
+    final key =
+        widget.asset ??
         widget.networkUrl ??
         CitroTimeBackground.assetFor(DateTime.now());
     return ensureReady(key);
@@ -227,10 +238,12 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
     if (existing != null) return existing;
     final future = _fetchNetworkBytes(url);
     _networkInFlight[url] = future;
-    unawaited(future.then(
-      (_) => _networkInFlight.remove(url),
-      onError: (_) => _networkInFlight.remove(url),
-    ));
+    unawaited(
+      future.then(
+        (_) => _networkInFlight.remove(url),
+        onError: (_) => _networkInFlight.remove(url),
+      ),
+    );
     return future;
   }
 
@@ -291,6 +304,10 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
         // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
         // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
         final bytes = url != null ? _bytesCache[url] : null;
+        final fit = widget.cover ? BoxFit.cover : BoxFit.scaleDown;
+        final alignment = widget.cover ? Alignment.center : Alignment.topCenter;
+        // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
+        // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
         return ColoredBox(
           color: context.c.bg,
           child: Stack(
@@ -299,24 +316,24 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
               if (asset != null)
                 Image.asset(
                   asset,
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
+                  fit: fit,
+                  alignment: alignment,
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 )
               else if (url != null && bytes != null)
                 Image.memory(
                   bytes,
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
+                  fit: fit,
+                  alignment: alignment,
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 )
               else if (url != null && info != null)
                 Image.network(
                   url,
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
+                  fit: fit,
+                  alignment: alignment,
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 )
@@ -326,8 +343,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
               else
                 Image.asset(
                   info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
+                  fit: fit,
+                  alignment: alignment,
                   cacheWidth: 512,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
@@ -423,6 +440,10 @@ class CitroAmbientBackground extends StatefulWidget {
   /// 深色模式下再压暗一档（0..1），让深色主题的背景图更沉稳。
   final double dim;
 
+  /// 背景图铺满容器（cover）而不是按屏宽缩到顶部。
+  /// 首页左右分栏的左栏（窄高面板）需要它才不会下半截露底色。
+  final bool cover;
+
   const CitroAmbientBackground({
     super.key,
     this.blurred = false,
@@ -430,6 +451,7 @@ class CitroAmbientBackground extends StatefulWidget {
     this.scrim = true,
     this.darkScrim = false,
     this.dim = 0,
+    this.cover = false,
   });
 
   /// 浅色主题罩面：压白，深色文字读得清。
@@ -624,7 +646,8 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
       final source = _source;
       // _applyOwned 在没有卡面时会固定一张时段背景图；这里的兜底
       // 再防一次「列表还没就绪」的极端情况。
-      final key = source.$1 ??
+      final key =
+          source.$1 ??
           source.$2 ??
           CitroTimeBackground.assetFor(DateTime.now());
       await _CitroBlendImageState.ensureReady(key);
@@ -699,6 +722,7 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
       key: ValueKey('${source.$1 ?? ''}|${source.$2 ?? ''}'),
       asset: source.$1,
       networkUrl: source.$2,
+      cover: widget.cover,
     );
     // 首帧不包 AnimatedSwitcher：从时段背景硬切到选中的卡面是原本的行为，
     // 不让它多一段淡入；就绪之后的每次换图才交叉淡化。
@@ -733,10 +757,8 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
             ? CitroAmbientBackground.scrimDark
             : CitroAmbientBackground.scrimLight,
         if (widget.dim > 0 && isDark)
-          ColoredBox(
-            color: Colors.black.withAlpha((widget.dim * 255).round()),
-          ),
-    ],
+          ColoredBox(color: Colors.black.withAlpha((widget.dim * 255).round())),
+      ],
     );
   }
 }

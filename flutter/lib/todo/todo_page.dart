@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/platform.dart' as platform;
+import '../widgets/desktop_shell.dart';
 import '../services/pomodoro.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
@@ -266,7 +268,8 @@ class _TodoPageState extends State<TodoPage>
                         if (!wide)
                           _bottomBar(
                             context,
-                            visible: MediaQuery.viewInsetsOf(context).bottom == 0,
+                            visible:
+                                MediaQuery.viewInsetsOf(context).bottom == 0,
                           ),
                       ],
                     ),
@@ -355,7 +358,11 @@ class _TodoPageState extends State<TodoPage>
     };
     return Padding(
       padding: wide
-          ? const EdgeInsets.only(bottom: 6)
+          ? EdgeInsets.only(
+              bottom: 6,
+              // 宽屏顶栏右侧避开 Windows 悬浮窗控。
+              right: CitroDesktopShell.windowControlsInset,
+            )
           : const EdgeInsets.fromLTRB(10, 0, 16, 6),
       child: Row(
         children: [
@@ -459,9 +466,15 @@ class _TodoPageState extends State<TodoPage>
     );
   }
 
-  /// 待办是从首页进来的，返回时直接回首页，不在中间页面停留。
+  /// 返回上一级：Windows 的待办是从计划页 push 出来的，pop 就回到计划页；
+  /// 其他端（以及深链把 /todo 当初始路由、没有上一级时）仍回首页。
   void _back(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+    final nav = Navigator.of(context);
+    if (platform.isWindows && nav.canPop()) {
+      nav.pop();
+      return;
+    }
+    nav.pushNamedAndRemoveUntil('/home', (_) => false);
   }
 
   Future<void> _openCreate(
@@ -585,7 +598,9 @@ class _DraftPreviewDialogState extends State<_DraftPreviewDialog> {
                     color: _selected[i]
                         ? c.accent.withAlpha(22)
                         : c.bg2.withAlpha(70),
-                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.small,
+                    ),
                     border: Border.all(
                       color: _selected[i] ? c.accent.withAlpha(120) : c.line,
                     ),
@@ -597,7 +612,9 @@ class _DraftPreviewDialogState extends State<_DraftPreviewDialog> {
                         height: 16,
                         decoration: BoxDecoration(
                           color: _selected[i] ? c.accent : Colors.transparent,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.xs,
+                          ),
                           border: Border.all(
                             color: _selected[i] ? c.accent : c.line2,
                           ),
@@ -1421,7 +1438,9 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                               padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
                               decoration: BoxDecoration(
                                 color: category.tint.withAlpha(24),
-                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.chip,
+                                ),
                                 border: Border.all(
                                   color: category.tint.withAlpha(70),
                                 ),
@@ -1455,7 +1474,9 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                               padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
                               decoration: BoxDecoration(
                                 color: c.bg2.withAlpha(c.dark ? 150 : 110),
-                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.chip,
+                                ),
                                 border: Border.all(color: c.line),
                               ),
                               child: Row(

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../widgets/desktop_shell.dart';
 import 'package:flutter/services.dart';
 
 import '../overlays/auth_modal.dart';
@@ -856,7 +858,12 @@ class _CookPageState extends State<CookPage> {
             _ => 'NOMBOOK · RECIPE DIARY',
           };
     return Padding(
-      padding: EdgeInsets.fromLTRB(10, AppSpacing.pageTop(media.width), 12, 2),
+      padding: EdgeInsets.fromLTRB(
+        10,
+        AppSpacing.pageTop(media.width),
+        12 + CitroDesktopShell.windowControlsInset,
+        2,
+      ),
       child: Row(
         children: [
           if (!duo && !tablet) ...[

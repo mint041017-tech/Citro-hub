@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../app_keys.dart';
+import '../services/platform.dart' as platform;
 import '../theme/motion.dart';
 import 'windows_title_bar.dart';
 
@@ -14,10 +15,17 @@ import 'windows_title_bar.dart';
 /// TitleBarStyle.hidden 去掉原生标题栏，保留 DWM 圆角/阴影；四周缩放由 DragToResizeArea 补齐。
 /// 窗口三键不再占一条标题栏，而是悬浮在内容右上角；顶部只留一条窄拖拽区。
 class CitroDesktopShell {
-  static bool get enabled => Platform.isWindows;
+  /// 是否走 Windows 桌面壳。
+  ///
+  /// 测试里要关掉：`flutter test` 在 Windows 主机上 `Platform.isWindows`
+  /// 同样为真，不排掉的话 windowControlsInset 会把所有页面顶栏撑开 118pt。
+  static bool get enabled => Platform.isWindows && !platform.isTest;
 
   /// 顶部安全留白：让页面 SafeArea 自动避开悬浮窗控。
-  static const double titleBarHeight = 30;
+  ///
+  /// 36 = 窗控底边（top 4 + 高 32）。取 30 时窗控会比 SafeArea 低 6pt，
+  /// 页面首行内容有概率落进那 6pt 的横带里（游戏竖屏头已经相切）。
+  static const double titleBarHeight = 36;
 
   /// 悬浮窗控占用的宽度：3 枚 32pt 圆钮 + 2 段 11pt 间距。
   static const double windowControlsWidth = 118;

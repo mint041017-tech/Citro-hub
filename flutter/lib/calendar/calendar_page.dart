@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../ledger/ledger_date_picker.dart';
+import '../widgets/desktop_shell.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
@@ -79,7 +80,12 @@ class _CalendarPageState extends State<CalendarPage> {
       body: SafeArea(
         bottom: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(side, top, side, 0),
+          padding: EdgeInsets.fromLTRB(
+            side,
+            top,
+            side + CitroDesktopShell.windowControlsInset,
+            0,
+          ),
           child: Column(
             children: [
               _header(context),

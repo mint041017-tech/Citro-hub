@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../overlays/ai_chat.dart';
+import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -94,7 +96,9 @@ class LedgerRail extends StatelessWidget {
                       color: active == item.$1
                           ? c.accent.withAlpha(30)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -119,6 +123,38 @@ class LedgerRail extends StatelessWidget {
                   ),
                 ),
               ),
+            // Windows 宽屏没有底部tab栏（CiCi 入口在那里），补一个在侧栏。
+            if (platform.isWindows) ...[
+              const SizedBox(height: 6),
+              Pressable(
+                onTap: () => showAiChat(context),
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      AppIcon(
+                        strokeSvg(AppIcons.sparkle, width: 1.9),
+                        size: 20,
+                        color: c.accentInk,
+                      ),
+                      const SizedBox(width: 14),
+                      Text(
+                        'CiCi',
+                        style: context.lui(
+                          size: CitroType.title,
+                          weight: CitroType.strong,
+                          color: c.accentInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const Spacer(),
             Text(
               '收支 · 预算 · 复盘',

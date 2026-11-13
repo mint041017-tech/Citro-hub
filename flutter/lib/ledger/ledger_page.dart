@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
+import '../services/platform.dart' as platform;
+import '../widgets/desktop_shell.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -65,8 +67,15 @@ class _LedgerPageState extends State<LedgerPage>
     if (!CitroMotion.reduced(context)) _fade.forward(from: 0);
   }
 
+  /// 返回上一级：Windows 的记账是从计划页 push 出来的，pop 就回到计划页；
+  /// 其他端（以及深链把 /ledger 当初始路由、没有上一级时）仍回首页。
   void _back(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+    final nav = Navigator.of(context);
+    if (platform.isWindows && nav.canPop()) {
+      nav.pop();
+      return;
+    }
+    nav.pushNamedAndRemoveUntil('/home', (_) => false);
   }
 
   @override
@@ -120,7 +129,8 @@ class _LedgerPageState extends State<LedgerPage>
                         if (!wide)
                           _bottomBar(
                             context,
-                            visible: MediaQuery.viewInsetsOf(context).bottom == 0,
+                            visible:
+                                MediaQuery.viewInsetsOf(context).bottom == 0,
                           ),
                       ],
                     ),
@@ -175,7 +185,12 @@ class _LedgerPageState extends State<LedgerPage>
     };
     return Padding(
       padding: wide
-          ? const EdgeInsets.fromLTRB(16, 0, 16, 6)
+          ? EdgeInsets.fromLTRB(
+              16,
+              0,
+              16 + CitroDesktopShell.windowControlsInset,
+              6,
+            )
           : const EdgeInsets.fromLTRB(10, 0, 12, 6),
       child: Row(
         children: [

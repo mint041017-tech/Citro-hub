@@ -5,6 +5,7 @@ import '../overlays/notes_modal.dart';
 import '../pages/web_resource_actions.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'desktop_shell.dart';
 import 'paper.dart';
 
 /// 首页下拉「负一屏」：只放 5 个真正常用的快捷入口。
@@ -27,10 +28,11 @@ class NegativeScreen extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   AppSpacing.x3,
                   AppSpacing.x2,
-                  AppSpacing.x3,
+                  // 右上角关闭钮要避开 Windows 悬浮窗控。
+                  AppSpacing.x3 + CitroDesktopShell.windowControlsInset,
                   AppSpacing.x2,
                 ),
                 child: Row(
@@ -231,7 +233,9 @@ class _QuickTile extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: wide ? CitroType.title : CitroType.label),
+                    style: context.heading(
+                      size: wide ? CitroType.title : CitroType.label,
+                    ),
                   ),
                   const SizedBox(height: 1),
                   Text(

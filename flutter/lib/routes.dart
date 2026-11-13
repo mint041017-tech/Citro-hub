@@ -19,6 +19,7 @@ import 'todo/todo_page.dart';
 
 class CitroRoutes {
   static const home = '/home';
+  static const plan = '/plan';
   static const resources = '/res';
   static const games = '/games';
   static const community = '/trash';
@@ -33,7 +34,9 @@ class CitroRoutes {
   static const ledger = '/ledger';
   static const calendar = '/calendar';
 
-  static const tabs = <String>[home, games, community, resources];
+  // Tab 顺序与 RootShell._pageAt 一致：0 首页 / 1 计划 / 2 游戏 / 3 社区 / 4 资源库。
+  // 资源库在 Windows 侧栏里是真 Tab，其他端 /res 仍开独立页。
+  static const tabs = <String>[home, plan, games, community, resources];
   static const _games = <String>{
     '/g2048',
     '/gmem',
@@ -63,6 +66,7 @@ class CitroRoutes {
     // 网页端已移除资源页，旧链接直接回首页；原生端仍保留资源库。
     if (kIsWeb && path == resources) return home;
     if (tabs.contains(path) ||
+        path == plan ||
         path == cook ||
         path == todo ||
         path == todoFocus ||
@@ -91,8 +95,8 @@ class CitroRoutes {
     if (route == calendar) return const CalendarPage();
     if (route == cook) return const CookPage();
     if (route == me) return const MePage();
-    // 资源库只在 Windows 的 Tab 里占位；其他端（含移动端深链）直接开独立页，
-    // 避免 /res 被解析成「我的」那一格。
+    // 资源库：非 Windows 直接开独立页；Windows 落进 RootShell 的第 5 个 Tab
+    // （见 CitroRoutes.tabs 与 RootShell._pageAt）。
     if (route == resources && !platform.isWindows) return const ResPage();
     if (route == play) return const PlayPage();
     if (route == sens) return const SensPage();

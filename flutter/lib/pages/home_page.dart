@@ -26,6 +26,7 @@ import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
+import '../widgets/desktop_shell.dart';
 import '../widgets/shared_element.dart';
 import '../widgets/home_background.dart';
 import '../widgets/home_bento.dart';
@@ -226,6 +227,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(12.0, (width - maxWidth) / 2);
+    // Windows 桌面壳：首页左右分栏（左栏卡片背景 / 右栏卡片区）。
+    // 手机 / iPad 都不带 windowsDesktop，走原来的上下结构。
+    final windowsSplit = (layout?.windowsDesktop ?? false) && wide;
 
     // 顶栏（账号 + 日期）固定占位，卡片从它下缘开始滚，两者不重叠。
     final topBarReserved = MediaQuery.paddingOf(context).top + 56;
@@ -297,94 +301,170 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // 背景层：铺满全屏，固定不动，只随下拉整体下移；
                   // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
                   // 首页英雄区是白字，强制深色罩面。
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: CitroAmbientBackground(
-                        blurred: true,
-                        blurSigma: _bgCover * 16,
-                        darkScrim: true,
-                        // 深色主题下把背景图再压暗一点。
-                        dim: 0.18,
+                  // Windows 左右分栏时背景只属于左栏，不在这里铺。
+                  if (!windowsSplit)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CitroAmbientBackground(
+                          blurred: true,
+                          blurSigma: _bgCover * 16,
+                          darkScrim: true,
+                          // 深色主题下把背景图再压暗一点。
+                          dim: 0.18,
+                        ),
                       ),
                     ),
-                  ),
-                  // 顶栏固定 + 下方整页滚动：卡片上滑时逐渐盖住背景图。
+                  // 顶栏固定 + 下方内容。
                   Positioned.fill(
                     child: Column(
                       children: [
-                        _HomeTopBar(side: side),
+                        // Windows 左右分栏时顶栏自带底色：否则负一屏（在 Stack
+                        // 最底层）的关闭钮会从透明顶栏后面露出来，压在日期胶囊上。
+                        _HomeTopBar(side: side, solid: windowsSplit),
                         Expanded(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: _onScrollNotification,
-                            child: SingleChildScrollView(
-                              controller: _scroll,
-                              // 去掉回弹：到底 / 到顶都硬停，不弹。
-                              physics: const ClampingScrollPhysics(
-                                parent: AlwaysScrollableScrollPhysics(),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  SizedBox(
-                                    height: bgHeight,
-                                    // 双击这块可见背景换图：命中区就是英雄区
-                                    // （顶栏以下、卡片以上），不压到卡片点击。
-                                    // 用 Listener 而不是 GestureDetector：
-                                    // 后者要进手势竞技场，会把首页的下拉（负一屏）
-                                    // 拖拽一起拖住；Listener 只旁观指针，不参与竞争。
-                                    child: Listener(
-                                      behavior: HitTestBehavior.translucent,
-                                      onPointerDown: _onHeroPointerDown,
-                                      child: _HomeHeader(side: side),
+                          child: windowsSplit
+                              ? _splitBody(
+                                  width: width,
+                                  side: side,
+                                  sideNav: sideNav,
+                                  layoutKey: layoutKey,
+                                )
+                              : NotificationListener<ScrollNotification>(
+                                  onNotification: _onScrollNotification,
+                                  child: SingleChildScrollView(
+                                    controller: _scroll,
+                                    // 去掉回弹：到底 / 到顶都硬停，不弹。
+                                    physics: const ClampingScrollPhysics(
+                                      parent: AlwaysScrollableScrollPhysics(),
                                     ),
-                                  ),
-                                  _CardsPanel(
-                                    radiusTop: CitroColors.radii.card,
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
                                       children: [
-                                        Padding(
-                                          padding: EdgeInsets.fromLTRB(
-                                            side,
-                                            8,
-                                            side,
-                                            sideNav ? 92 : 108,
-                                          ),
-                                          child: HomeBento(
-                                            layoutKey: layoutKey,
-                                            editing: false,
-                                            scrollController: _scroll,
-                                            builder: _cardFor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 18),
-                                        Center(
-                                          child: Pressable(
-                                            onTap: () =>
-                                                showAppreciationSheet(context),
-                                            child: Text(
-                                              'Citro · 今天也要开心',
-                                              style: context.body(
-                                                size: CitroType.small,
-                                                color: context.c.inkSoft,
-                                              ),
-                                            ),
+                                        SizedBox(
+                                          height: bgHeight,
+                                          // 双击这块可见背景换图：命中区就是英雄区
+                                          // （顶栏以下、卡片以上），不压到卡片点击。
+                                          // 用 Listener 而不是 GestureDetector：
+                                          // 后者要进手势竞技场，会把首页的下拉（负一屏）
+                                          // 拖拽一起拖住；Listener 只旁观指针，不参与竞争。
+                                          child: Listener(
+                                            behavior:
+                                                HitTestBehavior.translucent,
+                                            onPointerDown: _onHeroPointerDown,
+                                            child: _HomeHeader(side: side),
                                           ),
                                         ),
-                                        const SizedBox(height: 18),
+                                        _cardsPanelWidget(
+                                          side: side,
+                                          sideNav: sideNav,
+                                          layoutKey: layoutKey,
+                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
+                                ),
                         ),
                       ],
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 卡片面板：上下结构的滚动视图与 Windows 左右分栏的右栏共用。
+  Widget _cardsPanelWidget({
+    required double side,
+    required bool sideNav,
+    required HomeLayoutKey layoutKey,
+  }) => _CardsPanel(
+    radiusTop: CitroColors.radii.card,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(side, 8, side, sideNav ? 92 : 108),
+          child: HomeBento(
+            layoutKey: layoutKey,
+            editing: false,
+            scrollController: _scroll,
+            builder: _cardFor,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Center(
+          child: Pressable(
+            onTap: () => showAppreciationSheet(context),
+            child: Text(
+              'Citro · 今天也要开心',
+              style: context.body(
+                size: CitroType.small,
+                color: context.c.inkSoft,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
+    ),
+  );
+
+  /// Windows 左右分栏：左栏是「卡片背景」（背景图满高 + 问候语），
+  /// 右栏是卡片区（独立滚动）。
+  Widget _splitBody({
+    required double width,
+    required double side,
+    required bool sideNav,
+    required HomeLayoutKey layoutKey,
+  }) {
+    final leftWidth = (width * .36).clamp(320.0, 440.0);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: leftWidth,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              IgnorePointer(
+                child: CitroAmbientBackground(
+                  blurred: false,
+                  blurSigma: 0,
+                  darkScrim: true,
+                  dim: 0.18,
+                  cover: true,
+                ),
+              ),
+              Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: _onHeroPointerDown,
+                child: _HomeHeader(side: side),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x2),
+        Expanded(
+          child: ColoredBox(
+            // 右栏铺底色：负一屏在 Stack 最底层，透明区域会把它露出来。
+            color: context.c.bg,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScrollNotification,
+              child: SingleChildScrollView(
+                controller: _scroll,
+                physics: const ClampingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                child: _cardsPanelWidget(
+                  side: side,
+                  sideNav: sideNav,
+                  layoutKey: layoutKey,
+                ),
               ),
             ),
           ),
@@ -483,7 +563,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 class _HomeTopBar extends StatelessWidget {
   final double side;
 
-  const _HomeTopBar({required this.side});
+  /// 是否给顶栏铺一层底色（Windows 左右分栏时需要，见调用处注释）。
+  final bool solid;
+
+  const _HomeTopBar({required this.side, this.solid = false});
 
   @override
   Widget build(BuildContext context) {
@@ -498,115 +581,124 @@ class _HomeTopBar extends StatelessWidget {
     // 卡片从它下缘开始滚，不会叠上来。
     return SafeArea(
       bottom: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(side, AppSpacing.x1, side, 0),
-        child: Row(
-          children: [
-            Expanded(
-              child: Pressable(
-                onTap: () => openMePage(context),
-                hoverLift: 0,
-                hoverShadow: false,
-                borderRadius: BorderRadius.circular(999),
-                child: Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CitroHero(
-                        tag: CitroHero.tagOf('profile', 'me'),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white54),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: avatarUrl.isEmpty
-                              ? Center(
-                                  child:
-                                      app.loggedIn &&
-                                          user != null &&
-                                          user.name.isNotEmpty
-                                      ? Text(
-                                          user.name[0],
-                                          style: context.heading(
-                                            size: CitroType.label,
-                                            color: c.ink,
+      child: Container(
+        color: solid ? c.bg : null,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            side,
+            AppSpacing.x1,
+            // 右侧避开 Windows 悬浮窗控（其他端 inset 为 0）。
+            side + CitroDesktopShell.windowControlsInset,
+            0,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Pressable(
+                  onTap: () => openMePage(context),
+                  hoverLift: 0,
+                  hoverShadow: false,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CitroHero(
+                          tag: CitroHero.tagOf('profile', 'me'),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white54),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: avatarUrl.isEmpty
+                                ? Center(
+                                    child:
+                                        app.loggedIn &&
+                                            user != null &&
+                                            user.name.isNotEmpty
+                                        ? Text(
+                                            user.name[0],
+                                            style: context.heading(
+                                              size: CitroType.label,
+                                              color: c.ink,
+                                            ),
+                                          )
+                                        : AppIcon(
+                                            strokeSvg(AppIcons.user, width: 2),
+                                            size: 16,
+                                            color: c.ink2,
                                           ),
-                                        )
-                                      : AppIcon(
-                                          strokeSvg(AppIcons.user, width: 2),
-                                          size: 16,
-                                          color: c.ink2,
-                                        ),
-                                )
-                              : Image.network(
-                                  avatarUrl,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 96,
-                                  errorBuilder: (_, _, _) => Center(
-                                    child: AppIcon(
-                                      strokeSvg(AppIcons.user, width: 2),
-                                      size: 16,
-                                      color: c.ink2,
+                                  )
+                                : Image.network(
+                                    avatarUrl,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 96,
+                                    errorBuilder: (_, _, _) => Center(
+                                      child: AppIcon(
+                                        strokeSvg(AppIcons.user, width: 2),
+                                        size: 16,
+                                        color: c.ink2,
+                                      ),
                                     ),
                                   ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.x1),
-                      Flexible(
-                        child: Text(
-                          app.loggedIn && user != null && user.name.isNotEmpty
-                              ? user.name
-                              : '点击进入我的',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.body(
-                            size: CitroType.label,
-                            weight: CitroType.medium,
-                            color: Colors.white,
                           ),
                         ),
-                      ),
-                      AppIcon(
-                        strokeSvg(AppIcons.chevronRight, width: 2),
-                        size: 15,
-                        color: Colors.white70,
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.x1),
+                        Flexible(
+                          child: Text(
+                            app.loggedIn && user != null && user.name.isNotEmpty
+                                ? user.name
+                                : '点击进入我的',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.body(
+                              size: CitroType.label,
+                              weight: CitroType.medium,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        AppIcon(
+                          strokeSvg(AppIcons.chevronRight, width: 2),
+                          size: 15,
+                          color: Colors.white70,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.x1),
-            if (LanternApi.currentWindow() != null) ...[
-              const LanternEntry(),
               const SizedBox(width: AppSpacing.x1),
-            ],
-            Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(28),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Center(
-                child: Text(
-                  '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
-                  style: context.body(
-                    size: CitroType.micro,
-                    color: Colors.white,
+              if (LanternApi.currentWindow() != null) ...[
+                const LanternEntry(),
+                const SizedBox(width: AppSpacing.x1),
+              ],
+              Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(28),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Center(
+                  child: Text(
+                    '${now.month} 月 ${now.day} 日 · ${_weekdayLabel(now)}',
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

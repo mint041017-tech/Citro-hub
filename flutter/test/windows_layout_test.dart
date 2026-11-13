@@ -78,25 +78,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop sidebar exposes the four destinations', (tester) async {
+  testWidgets('desktop sidebar exposes the destinations', (tester) async {
     tester.view.physicalSize = const Size(208, 560);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      _host(
-        CitroTabletSidebar(
-          index: 3,
-          onChanged: _noop,
-        ),
-      ),
+      _host(CitroTabletSidebar(index: 3, onChanged: _noop)),
     );
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('首页'), findsOneWidget);
     expect(find.text('游戏'), findsOneWidget);
     expect(find.text('社区'), findsOneWidget);
     expect(find.text('计划'), findsOneWidget);
-    // 资源库已收进首页下拉负一屏，不再占侧栏一格。
-    expect(find.text('资源库'), findsNothing);
+    if (platform.isWindows) {
+      // Windows 侧栏：资源库 / CiCi 直接进栏，也不要分组标题。
+      expect(find.text('资源库'), findsOneWidget);
+      expect(find.text('CiCi'), findsOneWidget);
+      expect(find.text('我的'), findsNothing);
+      expect(find.text('逛一逛'), findsNothing);
+      expect(find.text('我的 Citro'), findsNothing);
+    } else {
+      expect(find.text('资源库'), findsNothing);
+      expect(find.text('我的'), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -134,11 +138,7 @@ void main() {
           height: 600,
           child: Stack(
             children: [
-              CitroTabBar(
-                index: 3,
-                onChanged: _noop,
-                onCiciTap: _noopVoid,
-              ),
+              CitroTabBar(index: 3, onChanged: _noop, onCiciTap: _noopVoid),
             ],
           ),
         ),

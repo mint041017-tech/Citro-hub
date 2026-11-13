@@ -22,6 +22,7 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
+import '../widgets/desktop_shell.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'game_common.dart'
@@ -326,9 +327,12 @@ class _GameScaffoldState extends State<GameScaffold> {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: GameMetrics.sidePad,
-          vertical: 6,
+        padding: EdgeInsets.only(
+          left: GameMetrics.sidePad,
+          // 右侧避开 Windows 悬浮窗控（其他端 inset 为 0）。
+          right: GameMetrics.sidePad + CitroDesktopShell.windowControlsInset,
+          top: 6,
+          bottom: 6,
         ),
           child: Row(
             children: [
@@ -396,8 +400,8 @@ class _GameScaffoldState extends State<GameScaffold> {
   }
 
   /// 棋盘上方：above 槽位 + HUD 条。HUD 贴在棋盘之上，读分不用抬头。
-  Widget _hudStrip(BuildContext context) {
-    final hasHud = widget.hud != null || widget.pills.isNotEmpty;
+  Widget _hudStrip(BuildContext context, {bool showHud = true}) {
+    final hasHud = showHud && (widget.hud != null || widget.pills.isNotEmpty);
     if (widget.above.isEmpty && !hasHud) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -556,6 +560,15 @@ class _GameScaffoldState extends State<GameScaffold> {
     );
   }
 
+  /// Windows 横屏右栏是否有「数据看板」。
+  ///
+  /// 有看板时中间那份 HUD 就是重复的（同一个 hud / pills 画了两遍），
+  /// 只隐藏中间这份，右栏的看板保留。
+  bool get _sideDashboardVisible =>
+      CitroDesktopShell.enabled &&
+      widget.showSidePanels &&
+      MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+
   /// 横屏：HUD 与操作行分别钉在上下两端，中间棋盘可滚。
   ///
   /// 旧版把 HUD、棋盘、操作全塞进一条滚动视图，棋盘一大就把操作行顶到
@@ -564,7 +577,7 @@ class _GameScaffoldState extends State<GameScaffold> {
     final actions = _visibleActions();
     return Column(
       children: [
-        _hudStrip(context),
+        _hudStrip(context, showHud: !_sideDashboardVisible),
         Expanded(
           child: LayoutBuilder(
             builder: (ctx, area) {
@@ -965,7 +978,10 @@ class GameHead extends StatelessWidget {
     final identity = GameIdentityScope.of(context);
     return Container(
       height: GameMetrics.headHeight,
-      padding: const EdgeInsets.symmetric(horizontal: GameMetrics.sidePad),
+      padding: EdgeInsets.only(
+        left: GameMetrics.sidePad,
+        right: GameMetrics.sidePad + CitroDesktopShell.windowControlsInset,
+      ),
       decoration: BoxDecoration(color: c.surface),
       child: Stack(
         children: [

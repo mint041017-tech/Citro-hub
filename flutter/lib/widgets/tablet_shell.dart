@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../overlays/ai_chat.dart';
 import '../services/api.dart';
 import '../pages/me_page.dart';
 import '../services/orientation.dart';
+import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -20,11 +22,19 @@ class CitroLayoutScope extends InheritedWidget {
   final bool tabletNav;
   final bool duo;
 
+  /// 是否 Windows 桌面壳（无边框窗口 + 右上悬浮窗控）。
+  ///
+  /// 只由 RootShell 的 tablet 分支注入，用来做「仅 Windows」的排版分支。
+  /// 不要用 `Platform.isWindows` 直接判定：在 Windows 主机上跑
+  /// `flutter test` 时它也为真，会误伤 iPad / duo 的用例。
+  final bool windowsDesktop;
+
   const CitroLayoutScope({
     super.key,
     required this.contentWidth,
     required this.tabletNav,
     this.duo = false,
+    this.windowsDesktop = false,
     required super.child,
   });
 
@@ -38,7 +48,8 @@ class CitroLayoutScope extends InheritedWidget {
   bool updateShouldNotify(CitroLayoutScope oldWidget) =>
       contentWidth != oldWidget.contentWidth ||
       tabletNav != oldWidget.tabletNav ||
-      duo != oldWidget.duo;
+      duo != oldWidget.duo ||
+      windowsDesktop != oldWidget.windowsDesktop;
 }
 
 class CitroTabletSidebar extends StatelessWidget {
@@ -54,6 +65,7 @@ class CitroTabletSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final app = context.app;
+    final windows = platform.isWindows;
     final avatarUrl = Api.imageUrl(app.user?.av);
     Widget avatarFallback({Color? background}) => ColoredBox(
       color: background ?? c.surface2,
@@ -142,17 +154,21 @@ class CitroTabletSidebar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          '逛一逛',
-                          // 分栏标题用系统字体 + 负字距，像 macOS/iPadOS 的 section header。
-                          style: context.ui(
-                            size: 11,
-                            weight: FontWeight.w700,
-                            color: c.inkSoft,
-                            letterSpacing: .8,
+                        // Windows 不要分组标题（「逛一逛」「我的 Citro」），
+                        // 其它宽屏（iPad）保持原样。
+                        if (!windows) ...[
+                          Text(
+                            '逛一逛',
+                            // 分栏标题用系统字体 + 负字距，像 macOS/iPadOS 的 section header。
+                            style: context.ui(
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: c.inkSoft,
+                              letterSpacing: .8,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.x1),
+                          const SizedBox(height: AppSpacing.x1),
+                        ],
                         _SidebarNav(
                           index: index,
                           items: [
@@ -194,23 +210,40 @@ class CitroTabletSidebar extends StatelessWidget {
                           onTap: () =>
                               Navigator.of(context).pushNamed('/search'),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '我的 Citro',
-                          style: context.ui(
-                            size: 11,
-                            weight: FontWeight.w700,
-                            color: c.inkSoft,
-                            letterSpacing: .8,
+                        if (windows) ...[
+                          const SizedBox(height: AppSpacing.x1),
+                          _SidebarItem(
+                            label: '资源库',
+                            icon: AppIcons.library,
+                            active: index == 4,
+                            showHighlight: false,
+                            onTap: () => onChanged(4),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.x1),
-                        _SidebarItem(
-                          label: '我的',
-                          icon: AppIcons.user,
-                          active: false,
-                          onTap: () => openMePage(context),
-                        ),
+                          _SidebarItem(
+                            label: 'CiCi',
+                            icon: AppIcons.sparkle,
+                            active: false,
+                            onTap: () => showAiChat(context),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            '我的 Citro',
+                            style: context.ui(
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: c.inkSoft,
+                              letterSpacing: .8,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.x1),
+                          _SidebarItem(
+                            label: '我的',
+                            icon: AppIcons.user,
+                            active: false,
+                            onTap: () => openMePage(context),
+                          ),
+                        ],
                       ],
                     ),
                   ),
