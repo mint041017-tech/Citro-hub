@@ -670,12 +670,12 @@ class _EntryArrow extends StatelessWidget {
               top: -4,
               right: -4,
               child: Container(
-                constraints: const BoxConstraints(minWidth: 16),
+                // 圆形角标：宽度跟着字数走，保证正圆。
+                width: badge > 9 ? 22.0 : 16.0,
                 height: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   color: c.stamp,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                  shape: BoxShape.circle,
                   border: Border.all(color: c.surface, width: 2),
                 ),
                 child: Center(

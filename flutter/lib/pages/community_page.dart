@@ -941,20 +941,23 @@ class _CommunityPageState extends State<CommunityPage>
                       if (unread > 0) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
+                          // 圆形角标：直径随字数长，保证正圆。
+                          width: unread > 99
+                              ? 24.0
+                              : (unread > 9 ? 20.0 : 16.0),
+                          height: 16,
                           decoration: BoxDecoration(
                             color: c.ink,
-                            borderRadius: BorderRadius.circular(999),
+                            shape: BoxShape.circle,
                           ),
+                          alignment: Alignment.center,
                           child: Text(
-                            '$unread',
+                            unread > 99 ? '99+' : '$unread',
                             style: context.body(
                               size: CitroType.micro,
                               weight: CitroType.strong,
                               color: c.bg,
+                              height: 1,
                             ),
                           ),
                         ),

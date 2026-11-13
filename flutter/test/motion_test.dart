@@ -4,6 +4,7 @@ import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/motion.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/motion_widgets.dart';
+import 'package:citro/widgets/glass_tab_bar.dart';
 import 'package:citro/widgets/tab_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -138,5 +139,56 @@ void main() {
       CitroMotion.pageTouchReverse.inMilliseconds,
       lessThan(CitroMotion.pageTouch.inMilliseconds),
     );
+  });
+
+  testWidgets('玻璃 Tab 栏未读角标是正圆', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildCitroTheme(CitroColors.light),
+        home: Scaffold(
+          // GlassTabBar 内部用了 Positioned，得挂在 Stack 里。
+          body: Stack(
+            children: [
+              GlassTabBar(
+                tabs: const [
+                  GlassTab(label: '首页', badge: 5),
+                  GlassTab(label: '社区', badge: 12),
+                  GlassTab(label: '消息', badge: 999),
+                ],
+                index: 0,
+                onChanged: (_) {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    for (final n in const [5, 12, 999]) {
+      final label = n > 99 ? '99+' : '$n';
+      final text = find.text(label);
+      expect(text, findsOneWidget, reason: '角标文字 $label 应存在');
+      Container? box;
+      text.evaluate().first.visitAncestorElements((e) {
+        final w = e.widget;
+        if (w is Container && w.decoration is BoxDecoration) {
+          box = w;
+          return false;
+        }
+        return true;
+      });
+      expect(box, isNotNull, reason: '$label 应包在 Container 里');
+      final d = box!.decoration as BoxDecoration;
+      expect(d.shape, BoxShape.circle, reason: '$label 的角标应是正圆');
+      expect(
+        box!.constraints?.maxWidth,
+        box!.constraints?.maxHeight,
+        reason: '$label 的角标宽高应相等（正圆的前提）',
+      );
+    }
   });
 }

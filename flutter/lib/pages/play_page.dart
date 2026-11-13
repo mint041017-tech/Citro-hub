@@ -106,6 +106,14 @@ class _PlayPageState extends State<PlayPage> {
 
   void _applyRemote(Map<String, dynamic> j) {
     final list = _parseRemote(j['records']);
+    // 刚抽到的签可能还没出现在这次返回里（服务端写入可见性 / 页面打开时
+    // 就挂着的一次旧 GET 回来晚了），补回去，别让它从「大家的抽签」里消失。
+    if (records.isNotEmpty &&
+        !list.any(
+          (r) => r.text == records.first.text && r.ts == records.first.ts,
+        )) {
+      list.insert(0, records.first);
+    }
     final cd = int.tryParse('${j['cd'] ?? 0}') ?? 0;
     // 只许延长、不许缩短：页面打开时可能还挂着一次更早的 GET /api/play，
     // 它带回来的 cd 是旧快照（甚至 0），直接覆盖会把刚设好的冷却清掉，
@@ -233,13 +241,6 @@ class _PlayPageState extends State<PlayPage> {
     });
     if (remote != null) {
       _applyRemote(remote);
-      // 服务端这会儿返回的 records 可能还没带上刚抽的这条（写入可见性 /
-      // 缓存延迟），补进去，别让用户以为没抽上。
-      // 注意：这里的局部变量 remote 是服务端响应（Map），
-      // 字段 remote 才是「大家的抽签」列表，别被局部变量盖住。
-      if (!this.remote.any((r) => r.text == rec.text && r.ts == rec.ts)) {
-        setState(() => this.remote.insert(0, rec));
-      }
     } else {
       // 服务端没抽成（离线）：本地照常展示，稍后刷新会带出真实冷却。
       unawaited(_refreshRemote(silent: true));
