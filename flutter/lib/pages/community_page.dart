@@ -1637,7 +1637,6 @@ class _PostCardState extends State<_PostCard> {
                         Expanded(
                           child: Container(
                             height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: c.surface2,
                               borderRadius: BorderRadius.circular(
@@ -1653,9 +1652,18 @@ class _PostCardState extends State<_PostCard> {
                                   FocusScope.of(context).unfocus(),
                               textInputAction: TextInputAction.send,
                               style: context.body(size: CitroType.meta),
+                              // InputBorder.none + isDense 的默认 contentPadding 只有
+                              // 上下 4，输入框容器约 28 高；而 InputDecorator 总是把容器
+                              // 顶对齐（_RenderDecoration 里 offset = Offset(x, 0)），
+                              // 于是 40 高的外框里文字偏上 6px。这里把上下留白补到 10，
+                              // 让容器撑满外框，文字才真正居中。
                               decoration: InputDecoration(
                                 border: InputBorder.none,
                                 isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 hintText: replyTo == null
                                     ? '说点什么…'
                                     : '回复 ${replyTo!.nick}…',

@@ -313,6 +313,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           dim: 0.18,
                         ),
                       ),
+                    )
+                  else
+                    // 分栏时这一层是页面的「底」：负一屏在同一棵 Stack 最底层，
+                    // 这里不铺实时，顶栏的 SafeArea 留白与左栏卡片外圈那 16px
+                    // 会把它露出来（标题、关闭钮、bg2 底色都会渗上来）。
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ColoredBox(color: context.c.bg),
+                      ),
                     ),
                   // 顶栏固定 + 下方内容。
                   Positioned.fill(
@@ -320,7 +329,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         // Windows 左右分栏时顶栏自带底色：否则负一屏（在 Stack
                         // 最底层）的关闭钮会从透明顶栏后面露出来，压在日期胶囊上。
-                        _HomeTopBar(side: side, solid: windowsSplit),
+                        _HomeTopBar(
+                          side: side,
+                          solid: windowsSplit,
+                          empty: windowsSplit,
+                        ),
                         Expanded(
                           child: windowsSplit
                               ? _splitBody(
@@ -422,32 +435,47 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required bool sideNav,
     required HomeLayoutKey layoutKey,
   }) {
-    final leftWidth = (width * .36).clamp(320.0, 440.0);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: leftWidth,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              IgnorePointer(
-                child: CitroAmbientBackground(
-                  blurred: false,
-                  blurSigma: 0,
-                  darkScrim: true,
-                  dim: 0.18,
-                  cover: true,
+    // 背景图按 3:4 摆放、四边留一样宽的边距：
+    // 面板宽 = 0.75 × (正文高 − 2m) + 2m，图才不会被裁掉。
+    const bgInset = 16.0;
+    return LayoutBuilder(
+      builder: (context, cons) {
+        // 原来这里还套了一层 min(width * .5, …)：常见窗口宽度下 0.5 会先夹住，
+        // 左栏内框变成 0.72 左右，上下留白比左右大得多 —— 看上去就是「摆放不协调」。
+        // 现在只保证右栏卡片区不低于 320，其余全交给 3:4 反推。
+        final ideal = 0.75 * (cons.maxHeight - 2 * bgInset) + 2 * bgInset;
+        final leftWidth = math.min(
+          math.max(240.0, ideal),
+          math.max(240.0, width - AppSpacing.x2 - 300.0),
+        );
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: leftWidth,
+              child: Padding(
+                padding: const EdgeInsets.all(bgInset),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    IgnorePointer(
+                      child: CitroAmbientBackground(
+                        blurred: false,
+                        blurSigma: 0,
+                        darkScrim: true,
+                        dim: 0.18,
+                        ratio3x4: true,
+                      ),
+                    ),
+                    Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerDown: _onHeroPointerDown,
+                      child: _HomeHeader(side: side),
+                    ),
+                  ],
                 ),
               ),
-              Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: _onHeroPointerDown,
-                child: _HomeHeader(side: side),
-              ),
-            ],
-          ),
-        ),
+            ),
         const SizedBox(width: AppSpacing.x2),
         Expanded(
           child: ColoredBox(
@@ -469,7 +497,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
         ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -566,11 +596,30 @@ class _HomeTopBar extends StatelessWidget {
   /// 是否给顶栏铺一层底色（Windows 左右分栏时需要，见调用处注释）。
   final bool solid;
 
-  const _HomeTopBar({required this.side, this.solid = false});
+  /// Windows 左右分栏：账号和日期都不显示，顶栏只留一条背景。
+  final bool empty;
+
+  const _HomeTopBar({
+    required this.side,
+    this.solid = false,
+    this.empty = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    if (empty) {
+      // 只保留一条背景：左右分栏时顶栏不再放内容，但必须遮住
+      // Stack 最底层的负一屏（透明区域会把它露出来）。
+      return SafeArea(
+        bottom: false,
+        child: Container(
+          color: c.bg,
+          padding: const EdgeInsets.only(top: AppSpacing.x1),
+          child: const SizedBox(height: 42),
+        ),
+      );
+    }
     final app = context.app;
     final now = DateTime.now();
     final user = app.user;

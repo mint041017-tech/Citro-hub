@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
+import '../overlays/notes_modal.dart';
 import '../pages/root_shell.dart';
 import '../services/platform.dart' as platform;
 import '../widgets/desktop_shell.dart';
@@ -10,7 +11,6 @@ import '../utils/navigation.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
-import 'in_app_web.dart';
 import 'web_resource_actions.dart';
 
 class ResPage extends StatefulWidget {
@@ -23,16 +23,26 @@ class ResPage extends StatefulWidget {
 
 const _gamesMovedTools = {'玩法抽签', '瞬投', '屏幕分享', '视野live'};
 
+/// 顶部快捷工具：这三项在下方列表里不再重复出现（「便签」不在 kTools 里）。
+const _quickToolNames = {'屏幕分享', '玩法抽签', '视野live'};
+
+class _QuickTool {
+  final String name;
+  final String desc;
+  final String icon;
+  final Color tint;
+  final VoidCallback onTap;
+
+  const _QuickTool({
+    required this.name,
+    required this.desc,
+    required this.icon,
+    required this.tint,
+    required this.onTap,
+  });
+}
+
 class _ResPageState extends State<ResPage> {
-  final search = TextEditingController();
-  String query = '';
-
-  @override
-  void dispose() {
-    search.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -42,31 +52,18 @@ class _ResPageState extends State<ResPage> {
     final wide = (layout?.tabletNav ?? false) && contentWidth >= 940;
     final maxWidth = wide ? 1120.0 : 840.0;
     final tabBar = widget.embedded && !(layout?.tabletNav ?? false);
-    final q = query.trim().toLowerCase();
-    final mods = q.isEmpty
-        ? kMods
-        : kMods
-              .where(
-                (m) => '${m.name}${m.desc}${m.tag}'.toLowerCase().contains(q),
-              )
-              .toList();
-    final sourceTools = (platform.isAndroid || platform.isIOS)
-        ? kTools.where((t) => !_gamesMovedTools.contains(t.name)).toList()
-        : kTools;
-    final tools = q.isEmpty
-        ? sourceTools
-        : sourceTools
-              .where(
-                (t) =>
-                    '${t.name}${t.desc}${t.section}'.toLowerCase().contains(q),
-              )
-              .toList();
-    final drivers = q.isEmpty
-        ? [...kDriversWeb, ...kDriversClient]
-        : [
-            ...kDriversWeb,
-            ...kDriversClient,
-          ].where((d) => d.name.toLowerCase().contains(q)).toList();
+    final mods = kMods;
+    // 「屏幕分享」「玩法抽签」「视野live」已经提到顶部快捷工具里，
+    // 下面不再重复显示。
+    final tools = kTools
+        .where(
+          (t) =>
+              !_quickToolNames.contains(t.name) &&
+              (!(platform.isAndroid || platform.isIOS) ||
+                  !_gamesMovedTools.contains(t.name)),
+        )
+        .toList();
+    final drivers = [...kDriversWeb, ...kDriversClient];
     return Scaffold(
       body: CitroBackground(
         child: SafeArea(
@@ -138,95 +135,7 @@ class _ResPageState extends State<ResPage> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.x2),
-                    Container(
-                      height: 52,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: c.surface,
-                        borderRadius:
-                            BorderRadius.circular(CitroColors.radii.field),
-                        border: Border.all(color: c.line2),
-                      ),
-                      child: Row(
-                        children: [
-                          AppIcon(
-                            strokeSvg(AppIcons.search, width: 2),
-                            size: 20,
-                            color: c.inkSoft,
-                          ),
-                          const SizedBox(width: AppSpacing.x2),
-                          Expanded(
-                            child: TextField(
-                              controller: search,
-                              textAlign: TextAlign.left,
-                              onChanged: (v) => setState(() => query = v),
-                              onSubmitted: (v) async {
-                                if (v.trim().isEmpty) return;
-                                final hasLocal =
-                                    mods.isNotEmpty ||
-                                    tools.isNotEmpty ||
-                                    drivers.isNotEmpty;
-                                if (!hasLocal) {
-                                  await openCitroPage(
-                                    context,
-                                    'https://www.bing.com/search?q=${Uri.encodeQueryComponent(v)}',
-                                    title: '必应 · $v',
-                                  );
-                                }
-                              },
-                              style: context.body(
-                                size: CitroType.body,
-                                color: c.ink,
-                              ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                hintText: '搜索功能 / Mod / 工具，回车必应',
-                                hintStyle: context.body(
-                                  size: CitroType.meta,
-                                  color: c.inkSoft,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (query.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                search.clear();
-                                setState(() => query = '');
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: AppIcon(
-                                  strokeSvg(AppIcons.close, width: 2),
-                                  size: 16,
-                                  color: c.inkSoft,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (query.isNotEmpty &&
-                        mods.isEmpty &&
-                        tools.isEmpty &&
-                        drivers.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Column(
-                          children: [
-                            Text('没有找到本地资源', style: context.heading(size: 18)),
-                            const SizedBox(height: 5),
-                            Text(
-                              '按回车去必应搜索「${query.trim()}」',
-                              style: context.body(
-                                size: CitroType.caption,
-                                color: c.inkSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    _quickToolsRow(context, columns: wide ? 4 : 2),
                     if (mods.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x2),
                       CitroCard(
@@ -488,6 +397,128 @@ class _ResPageState extends State<ResPage> {
                     strokeSvg(AppIcons.arrowUpRight, width: 2),
                     size: 10,
                     color: c.accentInk,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 顶部一排快捷工具：四张卡用不同底色区分，点一下直接打开。
+  /// 「屏幕分享」「玩法抽签」「视野live」在下方列表里不再重复。
+  Widget _quickToolsRow(BuildContext context, {required int columns}) {
+    final c = context.c;
+    final byName = {for (final t in kTools) t.name: t};
+    void open(String name) {
+      final t = byName[name];
+      if (t != null) openCitroTool(context, t);
+    }
+
+    final items = <_QuickTool>[
+      _QuickTool(
+        name: '屏幕分享',
+        desc: byName['屏幕分享']?.desc ?? '网页屏幕共享与远程演示',
+        icon: byName['屏幕分享']?.icon ?? AppIcons.monitor,
+        tint: c.tintBlue,
+        onTap: () => open('屏幕分享'),
+      ),
+      _QuickTool(
+        name: '玩法抽签',
+        desc: byName['玩法抽签']?.desc ?? '无畏契约整活玩法抽签',
+        icon: byName['玩法抽签']?.icon ?? AppIcons.sparkle,
+        tint: c.tintYellow,
+        onTap: () => open('玩法抽签'),
+      ),
+      _QuickTool(
+        name: '视野live',
+        desc: byName['视野live']?.desc ?? '实时视野 · 在线直播',
+        icon: byName['视野live']?.icon ?? AppIcons.eye,
+        tint: c.tintGreen,
+        onTap: () => open('视野live'),
+      ),
+      _QuickTool(
+        name: '便签',
+        desc: '随手记点什么',
+        icon: AppIcons.note,
+        tint: c.tintPink,
+        onTap: () => showNotesModal(context),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < items.length; i += columns) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.x2),
+          Row(
+            children: [
+              for (var j = i; j < i + columns && j < items.length; j++) ...[
+                if (j > i) const SizedBox(width: AppSpacing.x2),
+                Expanded(child: _quickToolCard(context, items[j])),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _quickToolCard(BuildContext context, _QuickTool item) {
+    final c = context.c;
+    return Pressable(
+      onTap: item.onTap,
+      hoverLift: 0,
+      hoverShadow: false,
+      hoverColor: c.surface2,
+      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: item.tint,
+                borderRadius: BorderRadius.circular(CitroColors.radii.small),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(item.icon, width: 2),
+                  size: 19,
+                  color: c.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: CitroType.body,
+                      weight: CitroType.medium,
+                      color: c.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.desc,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(size: CitroType.small, color: c.inkSoft),
                   ),
                 ],
               ),

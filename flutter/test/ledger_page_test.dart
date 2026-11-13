@@ -127,11 +127,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('收支 · 预算 · 复盘'), findsOneWidget);
 
-    // 页头操作组要右对齐，同时保留呼吸间距，不能贴死窗口边缘。
-    final addRect = tester.getRect(
-      find.byKey(const ValueKey('ledger-header-add')),
-    );
-    expect(1200 - addRect.right, inInclusiveRange(8, 28));
+    // 页头的「记一笔」和同步标记已按需求去掉，切tab 走左侧栏。
+    expect(find.byKey(const ValueKey('ledger-header-add')), findsNothing);
 
     await tester.tap(find.text('记一笔').first);
     await tester.pumpAndSettle();

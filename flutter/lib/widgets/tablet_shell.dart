@@ -203,6 +203,15 @@ class CitroTabletSidebar extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (windows) ...[
+                          _SidebarItem(
+                            label: '资源库',
+                            icon: AppIcons.library,
+                            active: index == 4,
+                            showHighlight: false,
+                            onTap: () => onChanged(4),
+                          ),
+                        ],
                         _SidebarItem(
                           label: '全站搜索',
                           icon: AppIcons.search,
@@ -212,13 +221,6 @@ class CitroTabletSidebar extends StatelessWidget {
                         ),
                         if (windows) ...[
                           const SizedBox(height: AppSpacing.x1),
-                          _SidebarItem(
-                            label: '资源库',
-                            icon: AppIcons.library,
-                            active: index == 4,
-                            showHighlight: false,
-                            onTap: () => onChanged(4),
-                          ),
                           _SidebarItem(
                             label: 'CiCi',
                             icon: AppIcons.sparkle,

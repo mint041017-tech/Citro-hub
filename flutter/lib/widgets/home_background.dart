@@ -35,6 +35,7 @@ class CitroBlendImage extends StatefulWidget {
     this.networkUrl,
     this.asset,
     this.cover = false,
+    this.ratio3x4 = false,
   });
 
   /// 背景图下边缘相对屏幕顶部的距离（像素）。
@@ -53,6 +54,9 @@ class CitroBlendImage extends StatefulWidget {
   /// 首页左右分栏时左栏是个窄高的面板，scaleDown 会只占上半截、
   /// 下半截露底色；cover 才能铺满整个「卡片背景」面板。
   final bool cover;
+
+  /// 图片按 3:4 居中摆放：完整可见、不裁切，多余区域露底色。
+  final bool ratio3x4;
 
   /// 系统内存紧张时由 App 主动清空内存缓存；磁盘缓存不受影响。
   static void clearMemory() => _CitroBlendImageState.clearMemory();
@@ -304,51 +308,62 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
         // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
         // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
         final bytes = url != null ? _bytesCache[url] : null;
-        final fit = widget.cover ? BoxFit.cover : BoxFit.scaleDown;
-        final alignment = widget.cover ? Alignment.center : Alignment.topCenter;
+        // ratio3x4：图片完整可见（contain）并居中，其余区域露底色。
+        final fit = widget.cover
+            ? BoxFit.cover
+            : (widget.ratio3x4 ? BoxFit.contain : BoxFit.scaleDown);
+        final alignment = widget.cover || widget.ratio3x4
+            ? Alignment.center
+            : Alignment.topCenter;
         // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
         // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
+        Widget? placed;
+        if (asset != null) {
+          placed = Image.asset(
+            asset,
+            fit: fit,
+            alignment: alignment,
+            cacheWidth: 512,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+        } else if (url != null && bytes != null) {
+          placed = Image.memory(
+            bytes,
+            fit: fit,
+            alignment: alignment,
+            cacheWidth: 512,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+        } else if (url != null && info != null) {
+          placed = Image.network(
+            url,
+            fit: fit,
+            alignment: alignment,
+            cacheWidth: 512,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+        } else if (url != null) {
+          // 还在解码 / 下载：先露底色，避免 Image.network 重复下一次。
+          placed = const SizedBox.shrink();
+        } else {
+          placed = Image.asset(
+            info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
+            fit: fit,
+            alignment: alignment,
+            cacheWidth: 512,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+        }
+        if (widget.ratio3x4) {
+          placed = Center(
+            child: AspectRatio(aspectRatio: 3 / 4, child: placed),
+          );
+        }
         return ColoredBox(
           color: context.c.bg,
           child: Stack(
             fit: StackFit.expand,
-            children: [
-              if (asset != null)
-                Image.asset(
-                  asset,
-                  fit: fit,
-                  alignment: alignment,
-                  cacheWidth: 512,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else if (url != null && bytes != null)
-                Image.memory(
-                  bytes,
-                  fit: fit,
-                  alignment: alignment,
-                  cacheWidth: 512,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else if (url != null && info != null)
-                Image.network(
-                  url,
-                  fit: fit,
-                  alignment: alignment,
-                  cacheWidth: 512,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else if (url != null)
-                // 还在解码 / 下载：先露底色，避免 Image.network 重复下一次。
-                const SizedBox.shrink()
-              else
-                Image.asset(
-                  info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
-                  fit: fit,
-                  alignment: alignment,
-                  cacheWidth: 512,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-            ],
+            children: [placed],
           ),
         );
       },
@@ -444,6 +459,9 @@ class CitroAmbientBackground extends StatefulWidget {
   /// 首页左右分栏的左栏（窄高面板）需要它才不会下半截露底色。
   final bool cover;
 
+  /// 背景图按 3:4 居中摆放（完整可见，不裁切）。
+  final bool ratio3x4;
+
   const CitroAmbientBackground({
     super.key,
     this.blurred = false,
@@ -452,6 +470,7 @@ class CitroAmbientBackground extends StatefulWidget {
     this.darkScrim = false,
     this.dim = 0,
     this.cover = false,
+    this.ratio3x4 = false,
   });
 
   /// 浅色主题罩面：压白，深色文字读得清。
@@ -723,6 +742,7 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
       asset: source.$1,
       networkUrl: source.$2,
       cover: widget.cover,
+      ratio3x4: widget.ratio3x4,
     );
     // 首帧不包 AnimatedSwitcher：从时段背景硬切到选中的卡面是原本的行为，
     // 不让它多一段淡入；就绪之后的每次换图才交叉淡化。

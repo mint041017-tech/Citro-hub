@@ -4,8 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../widgets/desktop_shell.dart';
-
 import '../app_version.dart';
 import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
@@ -157,8 +155,7 @@ class MePage extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(
               side,
               AppSpacing.pageTop(width),
-              // 右上角关闭钮避开 Windows 悬浮窗控。
-              side + CitroDesktopShell.windowControlsInset,
+              side,
               embedded ? 100 : 32,
             ),
             child: Center(

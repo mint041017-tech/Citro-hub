@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../state/app_state.dart';
 import '../services/platform.dart' as platform;
-import '../widgets/desktop_shell.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -19,7 +17,6 @@ import 'ledger_models.dart';
 import 'ledger_rail.dart';
 import 'ledger_store.dart';
 import 'ledger_theme.dart';
-import 'ledger_widgets.dart';
 
 /// 记账模块一级页面：首页 / 记一笔。
 ///
@@ -185,12 +182,7 @@ class _LedgerPageState extends State<LedgerPage>
     };
     return Padding(
       padding: wide
-          ? EdgeInsets.fromLTRB(
-              16,
-              0,
-              16 + CitroDesktopShell.windowControlsInset,
-              6,
-            )
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 6)
           : const EdgeInsets.fromLTRB(10, 0, 12, 6),
       child: Row(
         children: [
@@ -226,54 +218,6 @@ class _LedgerPageState extends State<LedgerPage>
               size: CitroType.heading,
             ),
           ),
-          const SizedBox(width: 8),
-          const Spacer(),
-          const SizedBox(width: 8),
-          if (wide) ...[
-            LedgerSyncBadge(signedIn: AppState.instance.loggedIn),
-            const SizedBox(width: 12),
-          ],
-          if (wide && _tab != 1) ...[
-            Pressable(
-              key: const ValueKey('ledger-header-add'),
-              onTap: () => _switchTab(1),
-              scale: .94,
-              child: Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                  boxShadow: [
-                    BoxShadow(
-                      color: c.accent.withAlpha(40),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppIcon(
-                      strokeSvg(AppIcons.plus, width: 2.2),
-                      size: 16,
-                      color: c.onAccent,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '记一笔',
-                      style: context.lui(
-                        size: CitroType.label,
-                        weight: CitroType.strong,
-                        color: c.onAccent,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

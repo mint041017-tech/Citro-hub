@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/platform.dart' as platform;
-import '../widgets/desktop_shell.dart';
 import '../services/pomodoro.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
@@ -358,11 +357,7 @@ class _TodoPageState extends State<TodoPage>
     };
     return Padding(
       padding: wide
-          ? EdgeInsets.only(
-              bottom: 6,
-              // 宽屏顶栏右侧避开 Windows 悬浮窗控。
-              right: CitroDesktopShell.windowControlsInset,
-            )
+          ? const EdgeInsets.only(bottom: 6)
           : const EdgeInsets.fromLTRB(10, 0, 16, 6),
       child: Row(
         children: [
