@@ -50,7 +50,9 @@ void main() {
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 3);
-    expect(find.text('首页'), findsOneWidget);
+    // 资源库的「返回首页」按钮已按需求去掉，页头只剩标题。
+    expect(find.text('首页'), findsNothing);
+    expect(find.text('资源库'), findsOneWidget);
     expect(find.textContaining('Windows 桌面'), findsNothing);
     expect(tester.takeException(), isNull);
   });

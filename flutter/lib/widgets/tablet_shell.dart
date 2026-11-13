@@ -22,19 +22,20 @@ class CitroLayoutScope extends InheritedWidget {
   final bool tabletNav;
   final bool duo;
 
-  /// 是否 Windows 桌面壳（无边框窗口 + 右上悬浮窗控）。
+  /// 是否用「桌面分栏」排版（首页左栏背景 + 右栏卡片）。
   ///
-  /// 只由 RootShell 的 tablet 分支注入，用来做「仅 Windows」的排版分支。
+  /// 由 RootShell 的 tablet 分支注入：Windows 桌面壳，以及平板横屏
+  /// （iPad / Android 平板）都走这一套，两者排版保持一致。
   /// 不要用 `Platform.isWindows` 直接判定：在 Windows 主机上跑
   /// `flutter test` 时它也为真，会误伤 iPad / duo 的用例。
-  final bool windowsDesktop;
+  final bool splitHome;
 
   const CitroLayoutScope({
     super.key,
     required this.contentWidth,
     required this.tabletNav,
     this.duo = false,
-    this.windowsDesktop = false,
+    this.splitHome = false,
     required super.child,
   });
 
@@ -49,7 +50,7 @@ class CitroLayoutScope extends InheritedWidget {
       contentWidth != oldWidget.contentWidth ||
       tabletNav != oldWidget.tabletNav ||
       duo != oldWidget.duo ||
-      windowsDesktop != oldWidget.windowsDesktop;
+      splitHome != oldWidget.splitHome;
 }
 
 class CitroTabletSidebar extends StatelessWidget {

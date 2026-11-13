@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -227,9 +228,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     final sideNav = layout?.tabletNav ?? false;
     final side = math.max(12.0, (width - maxWidth) / 2);
-    // Windows 桌面壳：首页左右分栏（左栏卡片背景 / 右栏卡片区）。
-    // 手机 / iPad 都不带 windowsDesktop，走原来的上下结构。
-    final windowsSplit = (layout?.windowsDesktop ?? false) && wide;
+    // 桌面分栏：首页左栏放卡片背景，右栏放卡片区。
+    // Windows 桌面壳与平板横屏（iPad / Android 平板）都走这套，
+    // 手机与平板竖屏仍是原来的上下结构。
+    final split = (layout?.splitHome ?? false) && wide;
 
     // 顶栏（账号 + 日期）固定占位，卡片从它下缘开始滚，两者不重叠。
     final topBarReserved = MediaQuery.paddingOf(context).top + 56;
@@ -302,7 +304,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
                   // 首页英雄区是白字，强制深色罩面。
                   // Windows 左右分栏时背景只属于左栏，不在这里铺。
-                  if (!windowsSplit)
+                  if (!split)
                     Positioned.fill(
                       child: IgnorePointer(
                         child: CitroAmbientBackground(
@@ -331,16 +333,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         // 最底层）的关闭钮会从透明顶栏后面露出来，压在日期胶囊上。
                         _HomeTopBar(
                           side: side,
-                          solid: windowsSplit,
-                          empty: windowsSplit,
+                          solid: split,
+                          empty: split,
                         ),
                         Expanded(
-                          child: windowsSplit
+                          child: split
                               ? _splitBody(
                                   width: width,
                                   side: side,
                                   sideNav: sideNav,
-                                  layoutKey: layoutKey,
                                 )
                               : NotificationListener<ScrollNotification>(
                                   onNotification: _onScrollNotification,
@@ -395,13 +396,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required double side,
     required bool sideNav,
     required HomeLayoutKey layoutKey,
+    double topPad = 8,
   }) => _CardsPanel(
     radiusTop: CitroColors.radii.card,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(side, 8, side, sideNav ? 92 : 108),
+          padding: EdgeInsets.fromLTRB(side, topPad, side, sideNav ? 92 : 108),
           child: HomeBento(
             layoutKey: layoutKey,
             editing: false,
@@ -433,7 +435,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required double width,
     required double side,
     required bool sideNav,
-    required HomeLayoutKey layoutKey,
   }) {
     // 背景图按 3:4 摆放、四边留一样宽的边距：
     // 面板宽 = 0.75 × (正文高 − 2m) + 2m，图才不会被裁掉。
@@ -448,6 +449,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           math.max(240.0, ideal),
           math.max(240.0, width - AppSpacing.x2 - 300.0),
         );
+        // 栅格要按右栏的真实宽度选：整页 width 在分栏下有 970+，右栏只剩
+        // 450 上下，照整页取 12 栏每格只有 25px，卡片文字必然溢出。
+        final colWidth = cons.maxWidth - leftWidth - AppSpacing.x2;
+        // 选哪种栅格看「每格宽度」：行高是固定的 50，格子一宽卡片就被拉成
+        // 450×174 的扁片（全屏两列时），格子一窄文字又挤爆（100 出头）。
+        // 目标是每格 65 上下 —— 两种栅格里挑离它更近的那个。
+        const cellTarget = 65.0;
+        final compactCell =
+            (colWidth - (HomeForm.compact.columns - 1) * HomeForm.compact.gap) /
+            HomeForm.compact.columns;
+        final wideCell =
+            (colWidth - (HomeForm.wide.columns - 1) * HomeForm.wide.gap) /
+            HomeForm.wide.columns;
+        final useWide =
+            (wideCell - cellTarget).abs() < (compactCell - cellTarget).abs();
+        final colKey = homeLayoutKeyFor(
+          useWide ? HomeForm.wide : HomeForm.compact,
+          MediaQuery.sizeOf(context).width >
+              MediaQuery.sizeOf(context).height,
+        );
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -459,18 +480,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   fit: StackFit.expand,
                   children: [
                     IgnorePointer(
-                      child: CitroAmbientBackground(
-                        blurred: false,
-                        blurSigma: 0,
-                        darkScrim: true,
-                        dim: 0.18,
-                        ratio3x4: true,
+                      // 图按卡片同款圆角裁，四条边再渐隐进页面底色，
+                      // 不要硬边（用户要求「和卡片同款圆角 + 边缘虚化」）。
+                      child: _FeatheredEdges(
+                        radius: CitroColors.radii.card,
+                        sigma: 14,
+                        child: CitroAmbientBackground(
+                          blurred: false,
+                          blurSigma: 0,
+                          darkScrim: true,
+                          dim: 0.18,
+                          ratio3x4: true,
+                        ),
                       ),
                     ),
                     Listener(
                       behavior: HitTestBehavior.translucent,
                       onPointerDown: _onHeroPointerDown,
-                      child: _HomeHeader(side: side),
+                      // side 是整页的留白（全屏下能到 300），左栏里不能用，
+                      // 否则打招呼语被挤成三行。这里最多留一个 bgInset。
+                      child: _HomeHeader(side: math.min(side, bgInset)),
                     ),
                   ],
                 ),
@@ -489,9 +518,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
                 child: _cardsPanelWidget(
-                  side: side,
+                  // side 是整页居中用的留白（全屏 (width-1120)/2 能到 300），
+                  // 右栏不能跟着用，否则卡片被挤成 80px 宽、文字全溢出。
+                  side: math.min(side, 12.0),
                   sideNav: sideNav,
-                  layoutKey: layoutKey,
+                  layoutKey: colKey,
+                  // 左栏图片从 body 顶 + 16 开始，卡片顶边也要落在同一条线上。
+                  topPad: bgInset,
                 ),
               ),
             ),
@@ -590,6 +623,138 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 ///
 /// 上滑时卡片会盖住打招呼，但账号和日期始终留在顶部，不用跟着滚走。
 /// 背景由底层的固定背景层统一提供（铺满全屏），这里只画内容。
+/// 给首页左栏的背景图套上卡片同款圆角，并把四条边渐隐进页面底色。
+///
+/// 两层 [ShaderMask]（dstIn）分别羽化上下、左右：dstIn 只取 shader 的 alpha，
+/// 「中间白、边缘透明」的渐变就是一张羽化蒙版。没用 [BackdropFilter] ——
+/// Windows 上它会整块重绘，这里两个 shader 就够了。
+/// 给首页左栏的背景图套上卡片同款圆角，并把四条边做**高斯**虚化。
+///
+/// 做法是先离线画一张「圆角矩形 + MaskFilter 高斯模糊」的蒙版，
+/// 再用 [ShaderMask]（dstIn）拿它的 alpha 去乘图片：框内 alpha=1 保留，
+/// 沿圆角轮廓往外按高斯衰减到 0。这样边缘是真模糊，
+/// 而且过度的轮廓就是圆角矩形本身，不是矩形渐变那种硬边。
+///
+/// 没用 [BackdropFilter]：Windows 上它会在滚动 / 弹层动画期间整块重绘，
+/// 而这里蒙版只按尺寸生成一次，之后每帧只是一个 shader 采样。
+class _FeatheredEdges extends StatefulWidget {
+  final Widget child;
+  final double radius;
+
+  /// 边缘高斯模糊 sigma（逻辑像素）。
+  final double sigma;
+
+  const _FeatheredEdges({
+    required this.child,
+    required this.radius,
+    this.sigma = 12,
+  });
+
+  @override
+  State<_FeatheredEdges> createState() => _FeatheredEdgesState();
+}
+
+class _FeatheredEdgesState extends State<_FeatheredEdges> {
+  ui.Image? _mask;
+  Size _maskSize = Size.zero;
+  double _maskDpr = 1;
+  bool _busy = false;
+  bool _failed = false;
+
+  @override
+  void dispose() {
+    _mask?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return LayoutBuilder(builder: (context, cons) {
+      final size = cons.biggest;
+      final mask = _mask;
+      if (mask == null || _maskSize != size || _maskDpr != dpr) {
+        if (!_failed) _regen(size, dpr);
+        // 蒙版还没生成好：先只裁圆角，别闪一块直角出来。
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(widget.radius),
+          child: widget.child,
+        );
+      }
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(widget.radius),
+        child: ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (_) => ui.ImageShader(
+            mask,
+            TileMode.clamp,
+            TileMode.clamp,
+            // 蒙版按 devicePixelRatio 栅格化，这里再缩回逻辑尺寸。
+            Matrix4.diagonal3Values(1 / dpr, 1 / dpr, 1).storage,
+          ),
+          child: widget.child,
+        ),
+      );
+    });
+  }
+
+  void _regen(Size size, double dpr) {
+    if (_busy || _failed || size.isEmpty || !size.isFinite) return;
+    _busy = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _makeMask(size, dpr);
+    });
+  }
+
+  Future<void> _makeMask(Size size, double dpr) async {
+    final image = await _renderMask(size, dpr);
+    _busy = false;
+    if (!mounted) {
+      image?.dispose();
+      return;
+    }
+    if (image == null) {
+      // 生成不了（比如测试环境没有栅格器）就只裁圆角，别死循环重试。
+      setState(() => _failed = true);
+      return;
+    }
+    setState(() {
+      _mask?.dispose();
+      _mask = image;
+      _maskSize = size;
+      _maskDpr = dpr;
+    });
+  }
+
+  /// 画一张圆角矩形，边缘用 [ui.MaskFilter.blur] 模糊，作为羽化蒙版。
+  Future<ui.Image?> _renderMask(Size size, double dpr) async {
+    final w = (size.width * dpr).round();
+    final h = (size.height * dpr).round();
+    if (w <= 0 || h <= 0) return null;
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+          Radius.circular(widget.radius * dpr),
+        ),
+        Paint()
+          ..maskFilter = ui.MaskFilter.blur(
+            ui.BlurStyle.normal,
+            widget.sigma * dpr,
+          ),
+      );
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(w, h);
+      picture.dispose();
+      return image;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 class _HomeTopBar extends StatelessWidget {
   final double side;
 

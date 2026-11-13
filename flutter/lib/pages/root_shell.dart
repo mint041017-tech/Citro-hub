@@ -472,8 +472,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                           : constraints.maxWidth - _sidebarWidth,
                       tabletNav: true,
                       duo: duo,
-                      // Windows 桌面壳专属排版（首页左右分栏等）只在这里开。
-                      windowsDesktop: !kIsWeb && platform.isWindows,
+                      // 桌面分栏排版（首页左栏背景 + 右栏卡片）：Windows 桌面壳，
+                      // 以及平板横屏都开 —— iPad 横屏要和 Windows 一致。
+                      splitHome:
+                          !kIsWeb &&
+                          (platform.isWindows || size.width > size.height),
                       child: _pageStack(),
                     ),
                   ),

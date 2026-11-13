@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
 import '../overlays/notes_modal.dart';
-import '../pages/root_shell.dart';
 import '../services/platform.dart' as platform;
 import '../widgets/desktop_shell.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import '../utils/navigation.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
@@ -83,46 +81,6 @@ class _ResPageState extends State<ResPage> {
                   children: [
                     Row(
                       children: [
-                        Pressable(
-                          onTap: () {
-                            if (widget.embedded) {
-                              // 作为壳内 Tab：回到首页 Tab，别叠一层新壳。
-                              RootShellState.instance?.switchTo(0);
-                              return;
-                            }
-                            popOrHome(context);
-                          },
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: c.surface,
-                              borderRadius:
-                                  BorderRadius.circular(CitroColors.radii.chip),
-                              border: Border.all(color: c.line),
-                              boxShadow: CitroColors.shadows.card(c),
-                            ),
-                            child: Row(
-                              children: [
-                                AppIcon(
-                                  strokeSvg(AppIcons.arrowLeft, width: 2.2),
-                                  size: 16,
-                                  color: c.ink2,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  widget.embedded ? '首页' : '返回',
-                                  style: context.body(
-                                    size: CitroType.label,
-                                    weight: CitroType.medium,
-                                    color: c.ink,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.x2),
                         Text('资源库', style: context.heading(size: 28)),
                         const Spacer(),
                         Text(
