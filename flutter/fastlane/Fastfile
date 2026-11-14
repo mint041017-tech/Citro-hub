@@ -1,0 +1,128 @@
+require 'base64'
+require 'cfpropertylist'
+require 'fileutils'
+require 'json'
+require 'open3'
+require 'securerandom'
+require 'shellwords'
+require 'tmpdir'
+
+default_platform(:ios)
+
+def connect_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+    key_content: ENV.fetch('ASC_PRIVATE_KEY_BASE64'), is_key_content_base64: true,
+    in_house: false
+  )
+end
+
+platform :ios do
+  desc 'Sign and validate one universal iPhone/iPad build'
+  lane :archive_release do
+    Dir.chdir(File.expand_path('..', __dir__)) do
+      team = ENV.fetch('APPLE_TEAM_ID')
+      version, base_build = File.read('pubspec.yaml').match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/).captures
+      api_key = connect_api_key
+      build = latest_testflight_build_number(
+        api_key: api_key, app_identifier: 'com.chimu.crew', version: version,
+        initial_build_number: base_build.to_i
+      ) + 1
+      targets = {
+        'com.chimu.crew' => 'Runner',
+        'com.chimu.crew.TimerWidget' => 'CitroTimerWidget',
+        'com.chimu.crew.ShareExtension' => 'ShareExtension'
+      }
+      temporary = Dir.mktmpdir('citro-signing-', ENV.fetch('RUNNER_TEMP'))
+      keychain = File.join(temporary, 'signing.keychain-db')
+      password = SecureRandom.hex(32)
+      original_keychains = Shellwords.split(Open3.capture2('security', 'list-keychains', '-d', 'user').first)
+      installed_profiles = []
+      begin
+        File.umask(0o077)
+        certificate = File.join(temporary, 'distribution.p12')
+        File.binwrite(certificate, Base64.strict_decode64(ENV.fetch('IOS_DISTRIBUTION_P12_BASE64')))
+        sh('security', 'create-keychain', '-p', password, keychain, log: false)
+        sh('security', 'set-keychain-settings', '-lut', '7200', keychain, log: false)
+        sh('security', 'unlock-keychain', '-p', password, keychain, log: false)
+        sh('security', 'list-keychains', '-d', 'user', '-s', *original_keychains, keychain, log: false)
+        sh('security', 'import', certificate, '-P', ENV.fetch('IOS_DISTRIBUTION_P12_PASSWORD'),
+           '-k', keychain, '-T', '/usr/bin/codesign', '-T', '/usr/bin/security', log: false)
+        sh('security', 'set-key-partition-list', '-S', 'apple-tool:,apple:,codesign:',
+           '-s', '-k', password, keychain, log: false)
+
+        archive = File.join(temporary, 'profiles.zip')
+        profiles_dir = File.join(temporary, 'profiles')
+        File.binwrite(archive, Base64.strict_decode64(ENV.fetch('IOS_PROVISIONING_PROFILES_BASE64')))
+        sh('unzip', '-j', archive, '*.mobileprovision', '-d', profiles_dir, log: false)
+        profiles = {}
+        Dir.glob(File.join(profiles_dir, '*.mobileprovision')).each do |path|
+          xml, status = Open3.capture2('security', 'cms', '-D', '-i', path)
+          UI.user_error!('Cannot decode provisioning profile') unless status.success?
+          profile = CFPropertyList.native_types(CFPropertyList::List.new(data: xml).value)
+          entitlements = profile.fetch('Entitlements')
+          bundle = entitlements.fetch('application-identifier').delete_prefix("#{team}.")
+          UI.user_error!("Unexpected provisioning profile: #{bundle}") unless targets.key?(bundle)
+          UI.user_error!("Invalid App Store profile: #{bundle}") unless
+            profile.fetch('TeamIdentifier').include?(team) && profile.fetch('ExpirationDate') > Time.now &&
+            !profile.key?('ProvisionedDevices') && !profile['ProvisionsAllDevices'] && !entitlements['get-task-allow']
+          UI.user_error!("Duplicate provisioning profile: #{bundle}") if profiles.key?(bundle)
+          profiles[bundle] = profile
+          ['Library/MobileDevice/Provisioning Profiles', 'Library/Developer/Xcode/UserData/Provisioning Profiles'].each do |directory|
+            destination = File.join(Dir.home, directory, "#{profile.fetch('UUID')}.mobileprovision")
+            FileUtils.mkdir_p(File.dirname(destination))
+            FileUtils.cp(path, destination)
+            installed_profiles << destination
+          end
+        end
+        UI.user_error!('Profiles must include Runner, TimerWidget and ShareExtension') unless profiles.keys.sort == targets.keys.sort
+
+        sh('flutter', 'build', 'ios', '--config-only', '--release', '--no-codesign',
+           "--build-name=#{version}", "--build-number=#{build}", "--dart-define=APP_VERSION=#{version}")
+        Dir.chdir('ios') { sh('bundle', 'exec', 'pod', 'install', '--deployment') }
+        targets.each do |bundle, target|
+          update_code_signing_settings(
+            path: 'ios/Runner.xcodeproj', use_automatic_signing: false, team_id: team,
+            code_sign_identity: 'Apple Distribution', profile_uuid: profiles.fetch(bundle).fetch('UUID'),
+            targets: [target], build_configurations: ['Release']
+          )
+        end
+        ipa = build_app(
+          workspace: 'ios/Runner.xcworkspace', scheme: 'Runner', configuration: 'Release',
+          output_directory: 'build/ci', output_name: 'Citro.ipa',
+          archive_path: 'build/ci/Citro.xcarchive',
+          export_method: 'app-store', skip_profile_detection: true,
+          export_options: {
+            signingStyle: 'manual', teamID: team,
+            signingCertificate: 'Apple Distribution', manageAppVersionAndBuildNumber: false,
+            provisioningProfiles: profiles.transform_values { |profile| profile.fetch('UUID') }
+          }
+        )
+        sh('python3', 'tool/verify_ios_release.py', ipa, version, build.to_s)
+      ensure
+        installed_profiles.each { |path| FileUtils.rm_f(path) }
+        sh('security', 'list-keychains', '-d', 'user', '-s', *original_keychains, log: false)
+        sh('security', 'delete-keychain', keychain, log: false) if File.exist?(keychain)
+        FileUtils.remove_entry(temporary) if File.directory?(temporary)
+      end
+    end
+  end
+
+  desc 'Upload the validated IPA without waiting for Apple processing'
+  lane :upload_release do
+    Dir.chdir(File.expand_path('..', __dir__)) do
+      receipt_path = 'build/ci/receipt.json'
+      receipt = JSON.parse(File.read(receipt_path))
+      upload_to_testflight(
+        api_key: connect_api_key, ipa: 'build/ci/Citro.ipa', app_identifier: 'com.chimu.crew',
+        skip_waiting_for_build_processing: true, distribute_external: false
+      )
+      receipt['status'] = 'uploaded'
+      receipt['commit'] = ENV.fetch('SOURCE_SHA')
+      File.write(receipt_path, JSON.pretty_generate(receipt))
+      File.open(ENV.fetch('GITHUB_STEP_SUMMARY'), 'a') do |summary|
+        summary.puts("Uploaded Citro #{receipt['version']} (#{receipt['build']}) for iPhone and iPad. Apple processing and tester availability are separate.")
+      end
+    end
+  end
+end
