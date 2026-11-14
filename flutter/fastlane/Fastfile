@@ -20,7 +20,8 @@ end
 platform :ios do
   desc 'Sign and validate one universal iPhone/iPad build'
   lane :archive_release do
-    Dir.chdir(File.expand_path('..', __dir__)) do
+    project_root = File.expand_path('..', __dir__)
+    Dir.chdir(project_root) do
       team = ENV.fetch('APPLE_TEAM_ID')
       version, base_build = File.read('pubspec.yaml').match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/).captures
       api_key = connect_api_key
@@ -82,15 +83,15 @@ platform :ios do
         Dir.chdir('ios') { sh('bundle', 'exec', 'pod', 'install', '--deployment') }
         targets.each do |bundle, target|
           update_code_signing_settings(
-            path: 'ios/Runner.xcodeproj', use_automatic_signing: false, team_id: team,
+            path: File.join(project_root, 'ios/Runner.xcodeproj'), use_automatic_signing: false, team_id: team,
             code_sign_identity: 'Apple Distribution', profile_uuid: profiles.fetch(bundle).fetch('UUID'),
             targets: [target], build_configurations: ['Release']
           )
         end
         ipa = build_app(
-          workspace: 'ios/Runner.xcworkspace', scheme: 'Runner', configuration: 'Release',
-          output_directory: 'build/ci', output_name: 'Citro.ipa',
-          archive_path: 'build/ci/Citro.xcarchive',
+          workspace: File.join(project_root, 'ios/Runner.xcworkspace'), scheme: 'Runner', configuration: 'Release',
+          output_directory: File.join(project_root, 'build/ci'), output_name: 'Citro.ipa',
+          archive_path: File.join(project_root, 'build/ci/Citro.xcarchive'),
           export_method: 'app-store', skip_profile_detection: true,
           export_options: {
             signingStyle: 'manual', teamID: team,
@@ -98,7 +99,7 @@ platform :ios do
             provisioningProfiles: profiles.transform_values { |profile| profile.fetch('UUID') }
           }
         )
-        sh('python3', 'tool/verify_ios_release.py', ipa, version, build.to_s)
+        sh('python3', File.join(project_root, 'tool/verify_ios_release.py'), ipa, version, build.to_s)
       ensure
         installed_profiles.each { |path| FileUtils.rm_f(path) }
         sh('security', 'list-keychains', '-d', 'user', '-s', *original_keychains, log: false)
@@ -110,11 +111,12 @@ platform :ios do
 
   desc 'Upload the validated IPA without waiting for Apple processing'
   lane :upload_release do
-    Dir.chdir(File.expand_path('..', __dir__)) do
-      receipt_path = 'build/ci/receipt.json'
+    project_root = File.expand_path('..', __dir__)
+    Dir.chdir(project_root) do
+      receipt_path = File.join(project_root, 'build/ci/receipt.json')
       receipt = JSON.parse(File.read(receipt_path))
       upload_to_testflight(
-        api_key: connect_api_key, ipa: 'build/ci/Citro.ipa', app_identifier: 'com.chimu.crew',
+        api_key: connect_api_key, ipa: File.join(project_root, 'build/ci/Citro.ipa'), app_identifier: 'com.chimu.crew',
         skip_waiting_for_build_processing: true, distribute_external: false
       )
       receipt['status'] = 'uploaded'
