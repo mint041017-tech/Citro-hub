@@ -46,7 +46,7 @@ App Store Connect API Key 需具备访问此 App、查询 build 和上传 build 
 - `com.chimu.crew.TimerWidget`。
 - `com.chimu.crew.ShareExtension`：`group.com.chimu.crew`。
 
-描述文件必须属于 Team `3F78UC4868`，未过期，并包含 `.p12` 对应的分发证书。从已验证的 App Store 分发包提取的三份 `embedded.mobileprovision` 也可使用，但压缩前需改成不同文件名，防止覆盖。证书或描述文件到期后需替换相应 Secrets。
+描述文件必须属于 Team `3F78UC4868`，未过期，并包含 `.p12` 对应的分发证书。必须手动创建 App Store Connect 分发描述文件（或通过 Apple API 创建），不能复用 Xcode 自动管理的 `iOS Team Store Provisioning Profile`；Xcode 不允许将自动管理的描述文件用于此处的手动签名。证书或描述文件到期后需替换相应 Secrets。
 
 签名资料只写入临时 keychain / 临时目录，结束时清理；不会成为构建产物。不要把证书、私钥、导出密码提交到 Git。
 
