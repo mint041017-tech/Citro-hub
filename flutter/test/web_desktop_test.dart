@@ -41,7 +41,7 @@ void main() {
 
       expect(find.text('玩法抽签'), findsOneWidget);
       expect(find.text('瞬投'), findsOneWidget);
-      expect(find.text('屏幕分享'), findsOneWidget);
+      expect(find.text('一起看'), findsOneWidget);
       expect(find.text('视野live'), findsOneWidget);
       expect(find.text('下载站'), findsOneWidget);
       expect(find.text('官方'), findsOneWidget);

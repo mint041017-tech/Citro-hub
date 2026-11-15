@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "2.1.0",
-    "build_number": "2100",
-    "file": "Citro-downloads-2.1.0.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-2.1.0.zip",
-    "size": 1088719,
-    "sha256": "d89e8f8ffd2220bd78c1a9616b2197d6d098a9b03f2922edcb12b2f77c2ee6bd",
-    "published_at": "2026-11-09T09:56:20Z",
-    "notes": "Citro downloads 静态站 2.1.0：Windows / Android / iOS 入口更新到 2.1.0，补充新版更新日志。"
+    "version": "3.1.67",
+    "build_number": "3167",
+    "file": "Citro-downloads-3.1.67.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.1.67.zip",
+    "size": 1088635,
+    "sha256": "a4ea11a9d5184cdbadb331ebcca81ccff5d31ae21140baa35837019110d39b05",
+    "published_at": "2026-11-16T00:00:00Z",
+    "notes": "Citro downloads 静态站 3.1.67:Windows / Android 入口更新到 3.1.67,补充声网主链路、全屏聊天按钮与全屏退出修复更新日志。"
 }

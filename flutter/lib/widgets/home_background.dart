@@ -529,8 +529,22 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
   /// 没有卡面时双击强制的时段图；null 表示跟随时间自动选。
   static String? _timeAsset;
 
+  /// 当前时段图是否是用户双击主动选的。
+  ///
+  /// 刚登录时收藏还没同步回来，背景会先用随机时段图兜底；卡片到达后
+  /// 应该自动换成卡面，但不能覆盖用户自己双击选过的图。
+  static bool _userPickedTime = false;
+
+  /// 上次应用的收藏卡面签名，用来判断卡片集合是否真的变了。
+  static String? _ownedSignature;
+
   /// 列表是否已就绪：没就绪时双击不响应，避免切到半加载的列表。
   static bool _listReady = false;
+
+  /// AppState 通知可能很频繁（聊天、设置都会 notify）；卡片同步是异步的，
+  /// 用这两个标志合并重复的检查，避免并发重入。
+  static bool _syncingOwned = false;
+  static bool _ownedDirty = false;
 
   /// 背景切换版本号：自增一次，所有 [CitroAmbientBackground] 一起换图。
   static final ValueNotifier<int> _revision = ValueNotifier(0);
@@ -545,13 +559,21 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
   void initState() {
     super.initState();
     _revision.addListener(_onRevision);
+    // 收藏卡面是登录后才异步同步的：不监听 AppState 的话，首帧用的
+    // 兜底时段图会一直留在首页，必须退出重进才会重新 _applyOwned。
+    AppState.instance.addListener(_onAppState);
     unawaited(_pick());
   }
 
   @override
   void dispose() {
+    AppState.instance.removeListener(_onAppState);
     _revision.removeListener(_onRevision);
     super.dispose();
+  }
+
+  void _onAppState() {
+    unawaited(_syncOwned());
   }
 
   /// 双击首页背景：在背景图列表里循环切换。
@@ -563,10 +585,12 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     if (_faces.isEmpty) {
       _timeAsset = _nextTimeAsset();
       _cachedFace = null;
+      _userPickedTime = true;
     } else {
       _index = (_index + 1) % _faces.length;
       _cachedFace = _faces[_index];
       _timeAsset = null;
+      _userPickedTime = false;
     }
     _revision.value++;
   }
@@ -618,26 +642,81 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     _applyOwned();
   }
 
-  static void _applyOwned() {
-    final owned = AppState.instance.ownedCards
-        .map((id) => CardCatalog.byId(id))
-        .whereType<CardFace>()
-        .toList();
-    _faces = owned;
-    _listReady = true;
-    // 只在没选过时随机一次；之后换图由 cycle() 驱动。
-    if (_cachedFace == null) {
-      final i = owned.isEmpty ? -1 : math.Random().nextInt(owned.length);
-      _index = i;
-      _cachedFace = i < 0 ? null : owned[i];
+  /// 没有卡面时随机抽一张背景图。
+  ///
+  /// 以前是按时段固定选一张，用户一张卡都没有时每天同一时段看到的
+  /// 永远是同一张；这里改成进程内随机一次、之后固定，既保证预载和
+  /// 首帧是同一张，又让不同的启动有变化。
+  static String _randomTimeAsset() {
+    final assets = CitroTimeBackground.assets;
+    return assets[math.Random().nextInt(assets.length)];
+  }
+
+  static List<CardFace> _ownedFaces() => AppState.instance.ownedCards
+      .map((id) => CardCatalog.byId(id))
+      .whereType<CardFace>()
+      .toList();
+
+  static String _signatureOf(List<CardFace> faces) {
+    final ids = faces.map((f) => f.id).toList()..sort();
+    return ids.join('|');
+  }
+
+  /// AppState 变化后重新核对收藏卡面。签名没变就什么都不做，
+  /// 避免每条聊天 / 设置通知都让所有背景重建。
+  static Future<void> _syncOwned() async {
+    if (_syncingOwned) {
+      _ownedDirty = true;
+      return;
     }
+    _syncingOwned = true;
+    try {
+      do {
+        _ownedDirty = false;
+        await CardCatalog.ensureLoaded();
+        final owned = _ownedFaces();
+        final signature = _signatureOf(owned);
+        if (signature == _ownedSignature) continue;
+        _applyOwned(owned);
+        _revision.value++;
+      } while (_ownedDirty);
+    } finally {
+      _syncingOwned = false;
+    }
+  }
+
+  static void _applyOwned([List<CardFace>? ownedFaces]) {
+    final owned = ownedFaces ?? _ownedFaces();
+    _faces = owned;
+    _ownedSignature = _signatureOf(owned);
+    _listReady = true;
     if (owned.isEmpty) {
-      // 没有卡面时显示时段背景图；固定下来，预载和首帧才是同一张。
+      // 没有卡面时显示随机背景图；固定下来，预载和首帧才是同一张。
       _cachedFace = null;
       _index = -1;
-      _timeAsset ??= CitroTimeBackground.assetFor(DateTime.now());
+      _userPickedTime = false;
+      _timeAsset ??= _randomTimeAsset();
+      return;
+    }
+    if (_userPickedTime && _timeAsset != null) {
+      // 用户主动双击选的时段图优先；卡片列表照常更新，下次切换用得上。
+      _cachedFace = null;
+      _index = -1;
+      return;
+    }
+    _timeAsset = null;
+    // 卡面集合可能变了（新抽到、被回收）：原选中的卡还在就保持，
+    // 不在列表里就重新随机，避免背景停在已经不拥有的卡面上。
+    final kept = _cachedFace == null
+        ? -1
+        : owned.indexWhere((f) => f.id == _cachedFace!.id);
+    if (kept >= 0) {
+      _index = kept;
+      _cachedFace = owned[kept];
     } else {
-      _timeAsset = null;
+      final i = math.Random().nextInt(owned.length);
+      _index = i;
+      _cachedFace = owned[i];
     }
   }
 
@@ -710,11 +789,41 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     if (!mounted) return;
     // 只是让 build 重跑一次去读新的 [_source]；此刻 _ready 已经是 true。
     setState(() {});
+    // 首次登录场景下当前图是刚换上的卡面，必须预取当前这张，
+    // 否则它要等自己解码完才出现，看起来像「背景没加载」。
+    unawaited(_prefetchCurrent());
     unawaited(_prefetchNext());
+  }
+
+  Future<void> _prefetchCurrent() async {
+    final source = _source;
+    final asset = source.$1;
+    final url = source.$2;
+    if (asset == null && url == null) return;
+    await _CitroBlendImageState.ensureReady(asset ?? url!);
+    if (!mounted) return;
+    unawaited(
+      precacheImage(
+        _providerFor(asset, url),
+        context,
+        onError: (_, _) {},
+      ),
+    );
   }
 
   /// 预取下一张背景：图片进 [ImageCache]、尺寸进解码缓存，
   /// 切换时才不闪白、卡片区起点也不用等新图解码。
+  /// 按 sigma 档位缓存的模糊滤镜。首页滚动驱动的模糊是连续值，这里
+  /// 按 2 一档量化（8 档覆盖全程），同一档始终返回同一个 ImageFilter
+  /// 实例 —— 光栅缓存靠实例同一性命中，逐帧 new 会让全屏模糊每帧
+  /// 重算。sigma 相邻差 2 在视觉上不可辨（人眼对大面积模糊的梯度
+  /// 很不敏感），换来的是滚动时模糊层重绘次数减半。
+  static final Map<int, ui.ImageFilter> _blurCache = {};
+  static ui.ImageFilter _blurFilter(double sigma) {
+    final q = ((sigma / 2).round() * 2).clamp(2, 32);
+    return _blurCache[q] ??= ui.ImageFilter.blur(sigmaX: q.toDouble(), sigmaY: q.toDouble());
+  }
+
   Future<void> _prefetchNext() async {
     final source = _nextSource;
     final asset = source.$1;
@@ -755,12 +864,14 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
         child: blend,
       );
     }
-    if (widget.blurred) {
+    if (widget.blurred && widget.blurSigma > 1.0) {
       image = ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(
-          sigmaX: widget.blurSigma,
-          sigmaY: widget.blurSigma,
-        ),
+        // 滤镜实例按 sigma 量化后缓存复用：ImageFilter.blur 每次 new
+        // 都是不相等的新实例，RasterCache 按「同一 filter 实例 + 同一
+        // 内容」命中，连续变化的 sigma（旧实现 cover×16 连续走）永远
+        // 命不中，滚动全程都在做全屏重模糊。量化成 1 步长的档位后，
+        // 同档内是同一个实例，模糊层能被光栅缓存整层复用。
+        imageFilter: _blurFilter(widget.blurSigma),
         child: image,
       );
     }

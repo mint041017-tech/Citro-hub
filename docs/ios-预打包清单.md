@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`2.1.0+2100` · 更新日期：2026-11-09
+> 当前版本：`3.1.67+3167` · 更新日期：2026-11-16
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `2.1.0+2100` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `3.1.67+3167` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 2.1.0 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 2100 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.1.67 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3167 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=2.1.0`、`FLUTTER_BUILD_NUMBER=2100`。
+`FLUTTER_BUILD_NAME=3.1.67`、`FLUTTER_BUILD_NUMBER=3167`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -149,3 +149,4 @@ curl -X PUT -T "IPA/Citro-v2.1.0-unsigned.ipa" \
 | 2.0.15 | 我的页移除「编辑资料」快捷卡片；主题胶囊缩短；Windows 左下角头像改用 `AppImage` 修复显示。 |
 | 2.0.16–2.0.40 | 新增记账 / 待办 / 日历详情 / 倒数日与纪念日 / 首页卡片编排与迷你卡；评论时间右上角；CiCi 自定义性格；后台轮询门控与低内存清理；CORS、限流、WebView 外链与备份安全加固。 |
 | 2.1.0 | 版本号与 iOS 构建配置同步到 `2.1.0+2100`；日历/待办/记账卡与评论时间定稿；性能与安全修复合并；四端重新打包，IPA 待 macOS 生成。 |
+| 3.1.67 | 版本号与 iOS 构建配置同步到 `3.1.67+3167`；「一起看」声网主链路 + CF 兜底架构、网页观看端链路角标与全屏聊天按钮、App 全屏退出画面压条修复、抽签记录与圆形角标优化；IPA 待 macOS 生成。 |

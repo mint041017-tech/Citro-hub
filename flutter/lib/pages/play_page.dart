@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
@@ -33,6 +32,14 @@ class _PlayRecord {
   const _PlayRecord(this.text, this.ts, {this.name = '', this.you = false});
 }
 
+/// 一次 POST /api/play 的结果：正常返回、冷却、错误三选一。
+class _DrawOutcome {
+  final Map<String, dynamic>? remote;
+  final int coolingMs;
+  final String? error;
+  const _DrawOutcome({this.remote, this.coolingMs = 0, this.error});
+}
+
 class _PlayPageState extends State<PlayPage> {
   final math.Random rnd = math.Random();
   final stageKey = GlobalKey();
@@ -41,18 +48,38 @@ class _PlayPageState extends State<PlayPage> {
   bool rolling = false;
   bool _cancelRoll = false;
   int cooldownUntil = 0;
-  List<_PlayRecord> records = [];
+
+  /// 最近一次由云端 POST 确认的本人记录。
+  ///
+  /// 页面打开时可能还挂着一次更早的 GET，它返回的列表可能还没包含刚抽到
+  /// 的签；用这条记录在短时间内补位，避免「抽了没计入」。
+  _PlayRecord? _lastConfirmed;
   List<_PlayRecord> remote = [];
   bool remoteLoading = true;
   bool remoteBusy = false;
   String? remoteError;
   Timer? _cdTimer;
+  Timer? _pollTimer;
+
+  /// 云端列表的版本号：POST 返回的全站快照比在途的旧 GET 新。
+  /// GET 出发时记下版本，回来发现变过就丢弃，避免旧快照把刚抽到的签
+  /// 从「大家的抽签」里覆盖掉。
+  int _remoteVersion = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
     _refreshRemote();
+    // 别人的抽签要能看到：页面停留期间每 10 秒静默拉一次全站列表。
+    // 服务端 GET 限流 60 次/分钟，10 秒一次远低于阈值。
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted || rolling || remoteBusy) return;
+      // 切到别的 Tab 后页面仍挂在 IndexedStack 里，但 TickerMode 会被
+      // RootShell 关掉：不可见时不再发请求，省流量也省服务端配额。
+      if (!TickerMode.getValuesNotifier(context).value.enabled) return;
+      unawaited(_refreshRemote(silent: true));
+    });
     _cdTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       // 归零的那一秒也要刷一次，否则按钮会永远停在「0:01」。
       if (!mounted) return;
@@ -71,21 +98,12 @@ class _PlayPageState extends State<PlayPage> {
   @override
   void dispose() {
     _cdTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
   void _load() {
     cooldownUntil = Prefs.getInt(PrefKeys.playCooldown);
-    final list = Prefs.getStringList(PrefKeys.playRecords);
-    records = [];
-    for (final raw in list.reversed) {
-      try {
-        final j = jsonDecode(raw);
-        records.add(
-          _PlayRecord('${j['t']}', int.tryParse('${j['ts']}') ?? 0, you: true),
-        );
-      } catch (_) {}
-    }
     if (mounted) setState(() {});
   }
 
@@ -104,15 +122,24 @@ class _PlayPageState extends State<PlayPage> {
         .toList();
   }
 
-  void _applyRemote(Map<String, dynamic> j) {
+  /// 两分钟内刚由云端确认的签：用于抵挡晚到的旧 GET 快照。
+  _PlayRecord? _recentConfirmed() {
+    final rec = _lastConfirmed;
+    if (rec == null) return null;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return now - rec.ts < 120000 ? rec : null;
+  }
+
+  void _applyRemote(Map<String, dynamic> j, {_PlayRecord? pending}) {
     final list = _parseRemote(j['records']);
-    // 刚抽到的签可能还没出现在这次返回里（服务端写入可见性 / 页面打开时
-    // 就挂着的一次旧 GET 回来晚了），补回去，别让它从「大家的抽签」里消失。
-    if (records.isNotEmpty &&
-        !list.any(
-          (r) => r.text == records.first.text && r.ts == records.first.ts,
-        )) {
-      list.insert(0, records.first);
+    // 列表里连不上那张刚抽到的签时（服务端写入与这次返回之间有极短的
+    // 时间差），只补这一条刚由云端确认的签；不会再把本地兜底生成的
+    // 记录混进「大家的抽签」。
+    final carry = pending ?? _recentConfirmed();
+    if (carry != null) {
+      if (!list.any((r) => r.text == carry.text && r.ts == carry.ts)) {
+        list.insert(0, carry);
+      }
     }
     final cd = int.tryParse('${j['cd'] ?? 0}') ?? 0;
     // 只许延长、不许缩短：页面打开时可能还挂着一次更早的 GET /api/play，
@@ -135,6 +162,7 @@ class _PlayPageState extends State<PlayPage> {
   Future<void> _refreshRemote({bool silent = false}) async {
     if (remoteBusy) return;
     remoteBusy = true;
+    final version = _remoteVersion;
     if (!silent && mounted) {
       setState(() {
         remoteLoading = true;
@@ -144,6 +172,11 @@ class _PlayPageState extends State<PlayPage> {
     try {
       final j = await Api.playRecords(deviceId: AppState.instance.gid);
       if (!mounted) return;
+      // 这段时间里 POST 已经返回更新的全站快照：旧 GET 丢弃。
+      if (version != _remoteVersion) {
+        if (mounted && !silent) setState(() => remoteLoading = false);
+        return;
+      }
       _applyRemote(j);
     } catch (e) {
       if (!mounted) return;
@@ -159,115 +192,122 @@ class _PlayPageState extends State<PlayPage> {
   int get remaining =>
       math.max(0, cooldownUntil - DateTime.now().millisecondsSinceEpoch);
 
-  Future<void> _draw() async {
-    if (rolling) {
-      _cancelRoll = true;
-      return;
-    }
-    if (remaining > 0) return;
-    _cancelRoll = false;
-    setState(() => rolling = true);
-    final seq = List.generate(16, (_) => kPuns[rnd.nextInt(kPuns.length)]);
-    for (var i = 0; i < seq.length; i++) {
-      if (!mounted) return;
-      if (_cancelRoll) {
-        setState(() => rolling = false);
-        return;
-      }
-      setState(() => stageText = seq[i]);
-      await Future.delayed(Duration(milliseconds: 55 + i * 6));
-    }
-    if (!mounted) return;
-    final state = AppState.instance;
-    Map<String, dynamic>? remote;
-    var coolingMs = 0;
-    String? drawError;
+  /// 把这一次抽签立刻发给服务端，结果（或错误）包装成 [_DrawOutcome]。
+  ///
+  /// 所有异常都在这里吃掉：调用方在揭开动画之后统一 await，不需要
+  /// 再区分「POST 失败」和「页面已退出」。
+  Future<_DrawOutcome> _postDraw(AppState state) async {
     try {
-      remote = await Api.playDraw(
+      final remote = await Api.playDraw(
         deviceId: state.gid,
         name: state.loggedIn ? null : state.guestName,
       );
+      return _DrawOutcome(remote: remote);
     } on ApiException catch (e) {
       if (e.code == 429) {
         // 429 有两种：冷却（body 带 cd / records）和限流（只有 err）。
         // 只有真冷却才进冷却分支，限流按普通错误提示，别把按钮锁住。
         final cd = int.tryParse('${e.body?['cd'] ?? 0}') ?? 0;
         if (cd > 0 || e.body?['records'] != null) {
-          coolingMs = cd;
-        } else {
-          drawError = e.message.isEmpty ? '操作太频繁，稍后再试' : e.message;
+          return _DrawOutcome(coolingMs: cd);
         }
-      } else {
-        drawError = e.message;
+        return _DrawOutcome(
+          error: e.message.isEmpty ? '操作太频繁，稍后再试' : e.message,
+        );
       }
+      return _DrawOutcome(error: e.message);
     } catch (e) {
-      drawError = '$e';
+      return _DrawOutcome(error: '$e');
     }
-    // 先记住页面还在不在：就算用户在这几毫秒里退掉了页面，
-    // 抽到的签也要落盘，否则服务端记了、本机记录里没有，
-    // 用户会以为「抽了没计入」。
-    final alive = mounted;
-    if (coolingMs > 0) {
+  }
+
+  Future<void> _draw() async {
+    if (rolling) {
+      // 再点一次只是提前结束揭晓动画；POST 已经在路上，抽签不会丢。
+      _cancelRoll = true;
+      return;
+    }
+    if (remaining > 0) return;
+    _cancelRoll = false;
+    setState(() {
+      rolling = true;
+      stageText = '正在抽取…';
+    });
+    final state = AppState.instance;
+    // 关键顺序：先上传、再播动画。以前是动画跑完 1.6 秒才 POST，
+    // 中途退出 / 切后台 / 动画取消都会让这次抽签根本没发出去，
+    // 服务端没记录，界面自然「不计入」。现在点击那一刻就已落库，
+    // 动画只负责揭晓服务端给出的签。
+    final pending = _postDraw(state);
+    var settled = false;
+    unawaited(pending.whenComplete(() => settled = true));
+
+    final seq = List.generate(16, (_) => kPuns[rnd.nextInt(kPuns.length)]);
+    for (var i = 0; i < seq.length; i++) {
+      if (!mounted || _cancelRoll) break;
+      setState(() => stageText = seq[i]);
+      await Future<void>.delayed(Duration(milliseconds: 55 + i * 6));
+    }
+    if (!mounted) return;
+    if (!settled) {
+      // 动画放完了结果还没回来，或者用户按了停止：别把最后一帧的
+      // 随机签当成抽到的签，明确显示正在写入服务端。
+      setState(() => stageText = '正在记录这次抽签…');
+    }
+
+    final out = await pending;
+    if (!mounted) return; // 服务端已经记下了，页面不在也不影响记录
+    if (out.coolingMs > 0) {
       // 服务端这次没发签：本地不落账，否则和全站列表对不上。
-      cooldownUntil =
-          DateTime.now().millisecondsSinceEpoch + coolingMs;
+      cooldownUntil = DateTime.now().millisecondsSinceEpoch + out.coolingMs;
       await Prefs.setInt(PrefKeys.playCooldown, cooldownUntil);
-      if (!alive) return;
+      if (!mounted) return;
       setState(() {
         rolling = false;
-        stageText = '服务器还在冷却，剩余 ${_fmtCd(coolingMs)}';
+        stageText = '服务器还在冷却，剩余 ${_fmtCd(out.coolingMs)}';
       });
       await _refreshRemote(silent: true);
       if (mounted) AppToast.show(context, '服务器还在冷却，稍后再抽');
       return;
     }
-    final pick = remote != null && '${remote['t'] ?? ''}'.trim().isNotEmpty
-        ? '${remote['t']}'
-        : kPuns[rnd.nextInt(kPuns.length)];
-    final ts =
-        int.tryParse('${remote?['ts']}') ??
-        DateTime.now().millisecondsSinceEpoch;
-    final rec = _PlayRecord(pick, ts, you: true);
-    records.insert(0, rec);
-    // 本地不再自己加 10 分钟冷却：冷却完全由服务端下发（cd），
-    // 客户端跟着显示即可。写死 10 分钟会和服务端的实际限制打架。
-    await _saveRecord(rec);
-    if (!alive) return;
-    setState(() {
-      lastPun = pick;
-      stageText = pick;
-      rolling = false;
-      remoteError = drawError;
-    });
-    if (remote != null) {
-      _applyRemote(remote);
-    } else {
-      // 服务端没抽成（离线）：本地照常展示，稍后刷新会带出真实冷却。
+    // 强制云端抽签：服务端没有返回签面就当作失败，不再用本地签池兜底。
+    // 本地兜底会让签面出现一条「大家的抽签」里没有的签，对不上，
+    // 正是「抽了没计入」的来源。
+    final text = '${out.remote?['t'] ?? ''}'.trim();
+    if (text.isEmpty) {
+      final msg = (out.error == null || out.error!.isEmpty)
+          ? '云端抽签失败，请稍后重试'
+          : out.error!;
+      setState(() {
+        rolling = false;
+        stageText = '抽签失败，请联网后重试';
+        remoteError = msg;
+      });
+      AppToast.show(context, msg);
       unawaited(_refreshRemote(silent: true));
-      if (drawError != null && mounted) {
-        AppToast.show(context, '网络开小差，已按本机记录抽签');
-      }
+      return;
     }
-  }
-
-  /// 落盘一条抽取记录（最多留 30 条）。
-  Future<void> _saveRecord(_PlayRecord rec) async {
-    final list = Prefs.getStringList(PrefKeys.playRecords)
-      ..add(jsonEncode({'t': rec.text, 'ts': rec.ts}));
-    await Prefs.setStringList(
-      PrefKeys.playRecords,
-      list.length > 30 ? list.sublist(list.length - 30) : list,
-    );
-  }
-
-  void _clear() {
-    Prefs.setStringList(PrefKeys.playRecords, []);
+    final ts =
+        int.tryParse('${out.remote!['ts']}') ??
+        DateTime.now().millisecondsSinceEpoch;
+    final rec = _PlayRecord(text, ts, name: state.displayName, you: true);
+    _lastConfirmed = rec;
+    _remoteVersion++;
     setState(() {
-      records = [];
-      stageText = '点击「开始抽取」，命运交给橘子';
-      lastPun = null;
+      lastPun = text;
+      stageText = text;
+      rolling = false;
+      remoteError = null;
     });
-    if (mounted) AppToast.show(context, '本机抽签记录已清空');
+    // POST 已返回最新全站列表：用同一份数据刷新「大家的抽签」，
+    // 保证刚抽到的签马上出现。
+    _applyRemote(out.remote!, pending: rec);
+  }
+
+  /// 刷新云端记录：「大家的抽签」只认云端，本地不再留存。
+  void _refresh() {
+    unawaited(_refreshRemote());
+    if (mounted) AppToast.show(context, '正在刷新云端抽签记录');
   }
 
   Future<void> _shareShot() async {
@@ -383,7 +423,7 @@ class _PlayPageState extends State<PlayPage> {
                               _shareShot,
                             ),
                             const SizedBox(width: AppSpacing.x1),
-                            _ghostButton(c, '清空', AppIcons.refresh, _clear),
+                            _ghostButton(c, '刷新', AppIcons.refresh, _refresh),
                           ],
                         ),
                         if (left > 0) ...[
@@ -397,76 +437,6 @@ class _PlayPageState extends State<PlayPage> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: AppSpacing.x3),
-                        CitroCard(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '抽取记录',
-                                    style: context.heading(size: 16),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '${records.length} 条',
-                                    style: context.body(
-                                      size: CitroType.small,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.x1),
-                              if (records.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: AppSpacing.x3,
-                                  ),
-                                  child: Text(
-                                    '还没有记录，抽一签试试',
-                                    textAlign: TextAlign.center,
-                                    style: context.body(
-                                      size: CitroType.caption,
-                                      color: c.inkSoft,
-                                    ),
-                                  ),
-                                )
-                              else
-                                ...records
-                                    .take(30)
-                                    .map(
-                                      (r) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 6,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                r.text,
-                                                style: context.body(
-                                                  size: CitroType.meta,
-                                                  color: c.ink2,
-                                                ),
-                                              ),
-                                            ),
-                                            Text(
-                                              _time(r.ts),
-                                              style: context.hand(
-                                                size: CitroType.micro,
-                                                color: c.inkSoft,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                            ],
-                          ),
-                        ),
                         const SizedBox(height: AppSpacing.x2),
                         _communityPanel(c),
                         const SizedBox(height: AppSpacing.x2),
@@ -532,11 +502,7 @@ class _PlayPageState extends State<PlayPage> {
         ),
         child: Row(
           children: [
-            AppIcon(
-              strokeSvg(icon, width: 2),
-              size: 15,
-              color: c.accentInk,
-            ),
+            AppIcon(strokeSvg(icon, width: 2), size: 15, color: c.accentInk),
             const SizedBox(width: 6),
             Text(
               label,
@@ -592,10 +558,7 @@ class _PlayPageState extends State<PlayPage> {
               child: Text(
                 '正在同步全站记录…',
                 textAlign: TextAlign.center,
-                style: context.body(
-                  size: CitroType.caption,
-                  color: c.inkSoft,
-                ),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             )
           else if (remoteError != null && remote.isEmpty)
@@ -612,7 +575,7 @@ class _PlayPageState extends State<PlayPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '抽签仍可继续，联网后会自动同步',
+                    '暂时连不上云端，稍后再试',
                     style: context.body(
                       size: CitroType.micro,
                       color: c.inkSoft,
@@ -627,10 +590,7 @@ class _PlayPageState extends State<PlayPage> {
               child: Text(
                 '还没有人抽，做第一个',
                 textAlign: TextAlign.center,
-                style: context.body(
-                  size: CitroType.caption,
-                  color: c.inkSoft,
-                ),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             )
           else

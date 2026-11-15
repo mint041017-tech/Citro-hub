@@ -1,0 +1,2470 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#221C19">
+<title>Citro · 一起看</title>
+<link rel="icon" href="/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!--
+   Citro · 一起看 —— 网页观看端。
+
+   这是「没有安装 App 的观众」的入口：拿房间码就能看，不需要登录。
+   媒体走 Cloudflare Realtime SFU（WebRTC），信令走同源 Worker 的 REST + WebSocket。
+
+   这个页面不发起画面共享，也不采集麦克风：浏览器的 getDisplayMedia 还要
+   画质档位、小窗、前台服务，统一交给 Flutter 原生页面。网页端只做三件事：
+   看画面、听声音（主持人的系统声与老版本 App 的麦声照常接收播放）、
+   文字聊天 —— 纯订阅，不往 SFU 发布任何轨。
+
+   视觉是「暖黑剧场」：暖黑底 + 奶油字 + logo 橙 + 青瓷/薄荷在线态。
+   颜色值抄自 flutter/lib/theme/tokens.dart 的 darkColors，改色时两边一起改。
+   无构建步骤：wrangler 直接把这个目录当 ASSETS 发出去。
+-->
+<style>
+  :root {
+    /* 暖黑剧场：与 App darkColors 对齐，强调色取 logo 的橙。 */
+    --bg: #221C19;
+    --bg-2: #17120F;
+    --surface: #2C2521;
+    --surface-2: #3A302B;
+    --ink: #FFF6EA;
+    --ink-2: #D9C9BC;
+    --ink-soft: #BFAFA2;
+    --line: rgba(255, 246, 234, .10);
+    --line-2: rgba(255, 246, 234, .20);
+    --orange: #E8703A;
+    --orange-2: #F28B57;
+    --on-orange: #2A1508;
+    --orange-soft: rgba(232, 112, 58, .14);
+    --mint: #8FD3C7;
+    --danger: #E08A7A;
+    --danger-ink: #F0A494;
+    --danger-soft: rgba(224, 138, 122, .14);
+    --radius-card: 24px;
+    --radius-inner: 16px;
+    --shadow-card: 0 30px 70px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 246, 234, .06);
+  }
+  * { box-sizing: border-box; }
+  /* [hidden] 必须能压住后面所有 display 规则。作者样式的优先级高于 UA 样式表，
+     所以 #room{display:flex} 和 .overlay{display:grid} 会盖掉 [hidden]，
+     让这两个元素永远显示 —— 落地页会被「一起看结束」遮罩直接糊住。 */
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  /* 侧栏停在 transform 外面，某些浏览器会把它算进横向滚动宽度。 */
+  body { overflow-x: hidden; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 620px at 82% -12%, rgba(232, 112, 58, .13) 0%, rgba(232, 112, 58, 0) 60%),
+      radial-gradient(900px 560px at -10% 108%, rgba(143, 211, 199, .06) 0%, rgba(143, 211, 199, 0) 58%),
+      var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  input { font: inherit; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: rgba(232, 112, 58, .32); color: var(--ink); }
+  svg { display: block; }
+
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .02em; }
+  .brand img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .35)); }
+  .brand .name { font-size: 18px; }
+
+  /* ── 落地页 ─────────────────────────────── */
+  #landing { min-height: 100%; display: flex; flex-direction: column; }
+  .wrap {
+    width: min(1040px, 100%); margin: 0 auto; padding: 22px 20px 34px;
+    display: flex; flex-direction: column; flex: 1;
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; }
+  .nav .tag {
+    font-size: 12.5px; color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+  }
+  .hero { position: relative; text-align: center; padding: 68px 0 28px; }
+  /* 舞台聚光：只在 logo 背后亮一团，别把整页照亮。 */
+  .hero::before {
+    content: ''; position: absolute; left: 50%; top: 18px; width: 340px; height: 260px;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(232, 112, 58, .20), rgba(232, 112, 58, 0) 72%);
+    filter: blur(8px); pointer-events: none;
+  }
+  .hero-logo {
+    position: relative; width: 96px; height: 96px; object-fit: contain;
+    filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .45));
+  }
+  .hero h1 {
+    position: relative; margin: 8px 0 8px;
+    font-size: 40px; line-height: 1.15; letter-spacing: .08em; color: var(--ink);
+  }
+  .hero p { position: relative; margin: 0; color: var(--ink-2); font-size: 15px; }
+
+  .card {
+    width: min(440px, 100%); margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+  }
+  .field { margin-bottom: 14px; text-align: left; }
+  .field label { display: block; margin-bottom: 7px; font-size: 13px; color: var(--ink-2); }
+  .field input {
+    width: 100%; padding: 13px 15px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    outline: none; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .field input::placeholder { color: var(--ink-soft); opacity: 1; }
+  .field input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232, 112, 58, .20);
+    background: #342B27;
+  }
+  #codeInput {
+    letter-spacing: .32em; font-size: 20px; font-weight: 600;
+    font-variant-numeric: tabular-nums; text-align: center;
+    padding-left: calc(15px + .32em);
+  }
+
+  .btn {
+    width: 100%; height: 50px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--orange-2), var(--orange));
+    color: var(--on-orange); font-weight: 700; font-size: 15px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 14px 30px rgba(0, 0, 0, .35);
+    transition: transform .15s, filter .15s, opacity .15s;
+  }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+  .btn:active { transform: scale(.995); }
+  .btn:disabled { opacity: .55; cursor: default; transform: none; filter: none; }
+  .btn.ghost {
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line-2); box-shadow: none;
+  }
+  .btn.small { width: auto; height: 38px; padding: 0 16px; font-size: 13px; }
+  .note { margin: 16px 0 0; font-size: 12.5px; line-height: 1.75; color: var(--ink-soft); text-align: center; }
+  .err {
+    margin: 12px 0 0; padding: 10px 13px; border-radius: 14px;
+    background: var(--danger-soft); border: 1px solid rgba(224, 138, 122, .26);
+    color: var(--danger-ink); font-size: 13px; text-align: left;
+  }
+  .err:empty { display: none; }
+
+  .chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+    background: rgba(44, 37, 33, .5);
+  }
+  .chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--orange); opacity: .8; }
+  .foot { margin-top: auto; padding-top: 36px; text-align: center; font-size: 12px; color: var(--ink-soft); }
+
+  /* ── 房间页 ─────────────────────────────── */
+  #room { height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
+  header.bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(34, 28, 25, .92);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  header.bar .brand { flex-shrink: 0; }
+  header.bar .brand img { width: 30px; height: 30px; }
+  header.bar .brand .name { font-size: 16px; }
+  .bar .rule { width: 1px; height: 18px; background: var(--line-2); flex-shrink: 0; }
+  .bar .title {
+    font-weight: 500; font-size: 13px; color: var(--ink-2);
+    flex: 0 1 220px; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bar .code, .pill {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .pill b { color: var(--ink); font-weight: 600; }
+  .pill.live::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mint); box-shadow: 0 0 0 3px rgba(143, 211, 199, .16);
+  }
+  .bar .spacer { flex: 1; }
+
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 36px; padding: 0 13px; flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    color: var(--ink-2); font-size: 13px; font-weight: 500;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .icon-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-btn:hover { border-color: var(--line-2); color: var(--ink); }
+  .icon-btn.sound {
+    background: linear-gradient(180deg, var(--orange-2), var(--orange));
+    border-color: transparent; color: var(--on-orange); font-weight: 700;
+  }
+  .icon-btn.sound:hover { filter: brightness(1.04); }
+
+  main.stage {
+    position: relative; flex: 1; min-height: 0;
+    background:
+      radial-gradient(900px 420px at 50% 0%, rgba(232, 112, 58, .05), transparent 70%),
+      var(--bg-2);
+    overflow: hidden;
+  }
+  .grid { position: absolute; inset: 14px; display: grid; gap: 12px; }
+  .grid.multi { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+  /* 聊天弹幕：从右向左飘过舞台，不吃指针事件，也不遮控制条。 */
+  .danmaku-layer {
+    position: absolute; inset: 0; overflow: hidden;
+    pointer-events: none; z-index: 4;
+  }
+  .danmaku {
+    position: absolute; left: 100%; top: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    max-width: min(72vw, 620px);
+    /* 纯白文字 + 黑影，去掉气泡底 —— 参照主流弹幕站的轻量观感。 */
+    color: #fff; font-size: 13.5px; font-weight: 600; white-space: nowrap;
+    text-shadow: 0 0 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.6);
+    animation-name: danmaku-run;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    will-change: transform;
+  }
+  .danmaku .nm { flex-shrink: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .danmaku .nm::after { content: "："; }
+  .danmaku .tx { overflow: hidden; text-overflow: ellipsis; }
+  @keyframes danmaku-run {
+    from { transform: translateX(0); }
+    to { transform: translateX(var(--travel, -1400px)); }
+  }
+
+  .slot {
+    position: relative;
+    background: #100D0B;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    overflow: hidden;
+    display: grid; place-items: center;
+    min-height: 160px;
+    box-shadow: inset 0 1px 0 rgba(255, 246, 234, .05);
+  }
+  .slot video { width: 100%; height: 100%; object-fit: contain; }
+  /* 声网播放器塞进 agoraBox 的 <video>:SDK 默认 cover 会裁 16:9 横画面,
+     与 CF 链路的 contain 保持一致,两条链路切换时比例不变。 */
+  .slot .agora_video_player { width: 100% !important; height: 100% !important; object-fit: contain !important; }
+  .slot .tag {
+    position: absolute; left: 14px; top: 14px;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(23, 18, 15, .78);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 12px; backdrop-filter: blur(8px);
+  }
+  .slot .tag::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mint); display: inline-block;
+  }
+  /* 每块画面自己的全屏入口。移动端进入全屏后再锁横屏；桌面端保持原方向。 */
+  .slot .fs-btn {
+    position: absolute; right: 12px; bottom: 12px;
+    width: 40px; height: 40px; display: grid; place-items: center;
+    border-radius: 12px;
+    background: rgba(23, 18, 15, .78);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    backdrop-filter: blur(8px);
+    transition: background .15s, color .15s;
+    /* 高于声网覆盖层（agoraBox z-index:1）——被盖住按钮就点不到 */
+    z-index: 3;
+  }
+  .slot .fs-btn:hover { background: var(--surface-2); color: var(--orange-2); }
+  .slot .fs-btn svg {
+    width: 19px; height: 19px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  /* 全屏专用聊天入口:只在全屏态出现,挨着全屏按钮。 */
+  .slot .fs-chat-btn {
+    position: absolute; right: 60px; bottom: 12px;
+    width: 40px; height: 40px; display: grid; place-items: center;
+    border-radius: 12px;
+    background: rgba(23, 18, 15, .78);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    backdrop-filter: blur(8px);
+    z-index: 3;
+  }
+  .slot .fs-chat-btn svg {
+    width: 19px; height: 19px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .slot:fullscreen .fs-chat-btn { right: 66px; bottom: 18px; }
+  .slot:not(:fullscreen) .fs-chat-btn { display: none; }
+  .slot:fullscreen {
+    width: 100vw; height: 100vh;
+    border: 0; border-radius: 0; background: #000;
+    box-shadow: none;
+  }
+  .slot:fullscreen video { width: 100vw; height: 100vh; }
+  .slot:fullscreen .tag { top: 18px; left: 18px; }
+  .slot:fullscreen .fs-btn { right: 18px; bottom: 18px; }
+  /* 全屏时声网播放器一起铺满（否则全屏的是隐藏的 CF video,Agora 画面不动） */
+  .slot:fullscreen .agora-video-host { position: absolute; inset: 0; }
+  .slot:fullscreen .agora_video_player { width: 100vw !important; height: 100vh !important; }
+
+  #waitingSlot {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    text-align: center; padding: 28px;
+    pointer-events: none;
+  }
+  #waitingSlot .inner {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: rgba(44, 37, 33, .62);
+    border: 1px dashed var(--line-2);
+    border-radius: 24px;
+    padding: 30px 38px;
+    backdrop-filter: blur(6px);
+  }
+  #waitingSlot .wait-logo { width: 66px; height: 66px; object-fit: contain; opacity: .92; margin-bottom: 4px; }
+  #waitingSlot .big { font-size: 17px; font-weight: 600; color: var(--ink); }
+  #waitingSlot .hint { font-size: 13px; color: var(--ink-soft); }
+
+  /* 点击播放兜底：浏览器拒绝自动播放时出现 */
+  .play-overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    background: rgba(23, 18, 15, .72);
+    color: var(--orange-2);
+    font-size: 15px; font-weight: 600;
+    text-align: center;
+    border-radius: inherit;
+    backdrop-filter: blur(4px);
+  }
+
+  /* 首帧加载动画：video 建立到第一帧渲染之间盖在 slot 上，
+     loadeddata/playing 后淡出移除。 */
+  .slot-loading {
+    position: absolute; inset: 0; z-index: 3;
+    display: grid; place-items: center;
+    background: rgba(23, 18, 15, .55);
+    border-radius: inherit;
+    backdrop-filter: blur(2px);
+    transition: opacity .45s ease;
+  }
+  .slot-loading.gone { opacity: 0; pointer-events: none; }
+  .slot-loading .dots { display: flex; gap: 9px; }
+  .slot-loading .dots i {
+    width: 9px; height: 9px; border-radius: 999px;
+    background: var(--orange-2);
+    animation: slot-dot 1.15s ease-in-out infinite;
+  }
+  .slot-loading .dots i:nth-child(2) { animation-delay: .18s; }
+  .slot-loading .dots i:nth-child(3) { animation-delay: .36s; }
+  .slot-loading .txt {
+    margin-top: 10px; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .slot-loading .col { display: flex; flex-direction: column; align-items: center; }
+  @keyframes slot-dot {
+    0%, 100% { transform: translateY(0); opacity: .45; }
+    40% { transform: translateY(-7px); opacity: 1; }
+  }
+
+  /* 聊天 / 成员抽屉的空白遮罩：点画面、页头或控制条都能收起。 */
+  #panelScrim {
+    position: fixed; inset: 0; z-index: 15;
+    background: rgba(23, 18, 15, .46);
+    backdrop-filter: blur(2px);
+  }
+
+  /* 观看音量。 */
+  #volPanel {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+    width: min(330px, 92vw); z-index: 26;
+    padding: 14px 16px 10px;
+    background: rgba(44, 37, 33, .98);
+    border: 1px solid var(--line-2);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(14px);
+  }
+  #volPanel .vol-title { margin-bottom: 6px; font-size: 12.5px; color: var(--ink-soft); }
+  #volPanel .vol-row {
+    display: grid; grid-template-columns: 58px 1fr auto;
+    align-items: center; gap: 10px; padding: 7px 0;
+  }
+  #volPanel .vol-row > span { font-size: 12.5px; color: var(--ink-2); }
+  #volPanel input[type=range] { width: 100%; accent-color: var(--orange); }
+  #volPanel .vol-mute {
+    padding: 4px 9px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    color: var(--ink-2); font-size: 12px; white-space: nowrap;
+  }
+  #volPanel .vol-mute.muted {
+    color: var(--danger-ink); border-color: rgba(224, 138, 122, .30);
+  }
+
+  /* ── 侧栏：聊天 / 成员 ───────────────────── */
+  aside.chat, aside.members {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: min(360px, 92vw);
+    background: var(--surface); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    transform: translateX(103%);
+    transition: transform .24s cubic-bezier(.2, .8, .2, 1);
+    z-index: 20;
+    box-shadow: -30px 0 60px rgba(0, 0, 0, .45);
+  }
+  aside.members { width: min(320px, 92vw); }
+  aside.open { transform: none; }
+  aside header {
+    padding: 15px 18px; border-bottom: 1px solid var(--line);
+    font-weight: 600; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  aside .close {
+    border: 0; background: transparent; color: var(--ink-soft);
+    font-size: 12.5px; padding: 5px 8px; border-radius: 999px;
+  }
+  aside .close:hover { color: var(--ink); background: var(--surface-2); }
+
+  .msgs { flex: 1; overflow-y: auto; padding: 16px 18px; }
+  .msg { margin-bottom: 12px; }
+  .msg .who { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .msg .txt {
+    display: inline-block; max-width: 100%;
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 16px; border-top-left-radius: 6px;
+    padding: 9px 12px; font-size: 14px; color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .msg.mine { text-align: right; }
+  .msg.mine .who { text-align: right; }
+  .msg.mine .txt {
+    background: var(--orange-soft); border-color: rgba(232, 112, 58, .28);
+    border-radius: 16px; border-top-right-radius: 6px;
+    color: var(--ink); text-align: left;
+  }
+  .chat form {
+    display: flex; gap: 8px; padding: 12px 14px;
+    border-top: 1px solid var(--line); flex-shrink: 0;
+  }
+  /* 发送按钮不许被输入框挤窄：挤到 40px 宽时「发送」会竖着折成两行。 */
+  .chat form .btn { flex-shrink: 0; white-space: nowrap; box-shadow: none; }
+  .chat input {
+    flex: 1; padding: 10px 14px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 14px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .chat input::placeholder { color: var(--ink-soft); opacity: 1; }
+  .chat input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232, 112, 58, .18); }
+
+  #memberList { flex: 1; overflow-y: auto; padding: 10px 12px; }
+  .member { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; }
+  .member:hover { background: var(--surface-2); }
+  .member .av {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .member .meta { flex: 1; min-width: 0; }
+  .member .nm {
+    font-size: 13.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .member .sub { font-size: 11.5px; color: var(--ink-soft); }
+  .member .badges { display: flex; gap: 4px; flex-shrink: 0; }
+  .member .badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 999px;
+    color: var(--orange-2); background: var(--orange-soft);
+    border: 1px solid rgba(232, 112, 58, .22);
+  }
+  .member .badge.host { color: var(--mint); background: rgba(143, 211, 199, .10); border-color: rgba(143, 211, 199, .20); }
+  #memberList .empty { padding: 28px 12px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+
+  /* ── 底部悬浮控制条 ─────────────────────── */
+  footer.dockbar {
+    flex-shrink: 0;
+    display: flex; justify-content: center;
+    padding: 8px 16px 14px;
+    background: linear-gradient(180deg, rgba(34, 28, 25, 0), rgba(34, 28, 25, .92) 55%);
+  }
+  .dock {
+    display: flex; align-items: center; gap: 4px;
+    padding: 7px;
+    max-width: 100%; overflow-x: auto;
+    background: rgba(44, 37, 33, .94);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(14px);
+  }
+  .dock button {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 42px; padding: 0 15px; flex-shrink: 0;
+    border-radius: 999px;
+    color: var(--ink-2); font-size: 13.5px; white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  .dock button svg {
+    width: 18px; height: 18px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .dock button:hover { background: var(--surface-2); color: var(--ink); }
+  .dock button.active { background: var(--orange-soft); color: var(--orange-2); }
+  .dock button.danger { color: var(--danger-ink); }
+  .dock button.danger:hover { background: var(--danger-soft); }
+  .dock .divider { width: 1px; height: 24px; background: var(--line); flex-shrink: 0; margin: 0 3px; }
+
+  /* ── 一起看结束遮罩 ─────────────────────── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 30;
+    background: rgba(23, 18, 15, .92);
+    backdrop-filter: blur(8px);
+    display: grid; place-items: center; text-align: center; padding: 24px;
+  }
+  .overlay .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 28px; padding: 30px;
+    width: min(380px, 100%);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, .55);
+  }
+  .overlay .panel img { width: 56px; height: 56px; object-fit: contain; margin-bottom: 12px; }
+  .overlay h2 { margin: 0 0 8px; font-size: 22px; color: var(--ink); }
+  .overlay p { margin: 0 0 22px; color: var(--ink-2); font-size: 14px; }
+
+  #toast {
+    /* 停靠条在底部约 62px 高，提示得浮在它上面，别盖住按钮。 */
+    position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 8px);
+    max-width: min(92vw, 520px); text-align: center;
+    padding: 11px 20px; border-radius: 999px;
+    background: var(--ink); color: var(--bg);
+    font-size: 14px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s; z-index: 40;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, .5);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 760px) {
+    .hero { padding: 44px 0 20px; }
+    .hero-logo { width: 82px; height: 82px; }
+    .hero h1 { font-size: 32px; }
+    .hero p { font-size: 14px; }
+    header.bar { padding: 8px 12px; gap: 8px; }
+    .bar .title, .pill.hide-sm { display: none; }
+    .bar .brand .name { display: none; }
+    .icon-btn .label { display: none; }
+    .icon-btn { padding: 0 10px; }
+    .grid { inset: 10px; gap: 10px; }
+    footer.dockbar { padding: 6px 10px 10px; }
+    .dock { width: 100%; justify-content: space-between; }
+    .dock button { padding: 0 11px; font-size: 13px; }
+    #landing .wrap { padding: 18px 16px 28px; }
+    .card { padding: 20px; border-radius: 24px; }
+  }
+  @media (max-width: 430px) {
+    .dock button .label { display: none; }
+    .dock button { padding: 0 13px; }
+    .nav .tag { display: none; }
+  }
+</style>
+<!-- 声网 Web SDK（4.x）。中国大陆可直连；加载失败时页面自动留在
+     Cloudflare 链路，不阻塞观看。defer 保证主脚本之后才执行，主脚本
+     里用 typeof AgoraRTC 探测。 -->
+<script src="/agora/AgoraRTC_N-4.24.9.min.js" defer></script>
+<!-- 紧随其后关掉声网遥测/日志上报（statscollector-*.agora.io /
+     *.statscollector.sd-rtn.com 的 events/messages）。这些请求对功能
+     零贡献，还常被广告拦截扩展打成满屏 ERR_BLOCKED_BY_CLIENT 红字，
+     淹掉真正有用的报错。必须在任何 createClient 之前执行。 -->
+<script>
+  // SDK 是 defer、本脚本是普通同步脚本？defer 脚本在 DOMContentLoaded 前、
+  // 解析完才执行；同步内联脚本在解析时立即执行——先于 defer。此时
+  // AgoraRTC 还不存在。所以两条腿都走：立即试一次 + load 兜底一次。
+  function _citroAgoraQuiet() {
+    if (window.AgoraRTC && typeof window.AgoraRTC.disableLogUpload === 'function') {
+      window.AgoraRTC.disableLogUpload();
+      window.AgoraRTC.setParameter('ENABLE_EVENT_REPORT', false);
+      return true;
+    }
+    return false;
+  }
+  if (!_citroAgoraQuiet()) {
+    window.addEventListener('DOMContentLoaded', _citroAgoraQuiet);
+    window.addEventListener('load', _citroAgoraQuiet);
+  }
+</script>
+</head>
+<body>
+
+<!-- ── 落地页 ─────────────────────────────────────────── -->
+<div id="landing">
+  <div class="wrap">
+    <header class="nav">
+      <a class="brand" href="/" aria-label="Citro 一起看">
+        <img src="/citro-logo.webp" alt="Citro">
+        <span class="name">一起看</span>
+      </a>
+      <span class="tag">网页观看端</span>
+    </header>
+
+    <div class="hero">
+      <img class="hero-logo" src="/citro-logo.webp" alt="Citro logo">
+      <h1>一起看</h1>
+      <p>把屏幕放进房间，和朋友一起看</p>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="codeInput">房间码</label>
+        <input id="codeInput" inputmode="numeric" autocomplete="off"
+               maxlength="6" placeholder="123456">
+      </div>
+      <div class="field">
+        <label for="nameInput">你的昵称（可选）</label>
+        <input id="nameInput" maxlength="24" placeholder="观众">
+      </div>
+      <button class="btn" id="joinBtn">加入一起看</button>
+      <div class="err" id="joinErr"></div>
+      <p class="note">
+        网页端可以直接看画面、听声音、文字聊天。<br>
+        要发起一起看，请在 Citro App 内打开「一起看」。
+      </p>
+    </div>
+
+    <div class="chips">
+      <span class="chip">看画面</span>
+      <span class="chip">听声音</span>
+      <span class="chip">文字聊天</span>
+    </div>
+    <div class="foot">Citro · 一起看 网页版</div>
+  </div>
+</div>
+
+<!-- ── 房间页 ─────────────────────────────────────────── -->
+<div id="room" hidden>
+  <header class="bar">
+    <a class="brand" href="/" aria-label="Citro 一起看">
+      <img src="/citro-logo.webp" alt="Citro">
+      <span class="name">一起看</span>
+    </a>
+    <span class="rule"></span>
+    <span class="title" id="roomTitle">一起看</span>
+    <span class="code" id="roomCode">房间码 —</span>
+    <span class="spacer"></span>
+    <span class="pill hide-sm" id="qualityPill">—</span>
+    <span class="pill" id="linkBadge" hidden>链路</span>
+    <span class="pill live" id="viewerPill"><b id="viewerCount">0</b> 人在线</span>
+    <button class="icon-btn" id="copyBtn" title="复制邀请链接">
+      <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      <span class="label">复制邀请</span>
+    </button>
+    <button class="icon-btn sound" id="soundHint" hidden title="浏览器拦截了声音，点这里播放">
+      <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <span>开启声音</span>
+    </button>
+  </header>
+
+  <main class="stage">
+    <div class="grid" id="grid"></div>
+    <div class="danmaku-layer" id="danmakuLayer" aria-hidden="true"></div>
+    <div id="waitingSlot">
+      <div class="inner">
+        <img class="wait-logo" src="/citro-logo.webp" alt="">
+        <div class="big">还没有人开始一起看</div>
+        <div class="hint">主持人点「开始一起看」后，画面会出现在这里</div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="dockbar">
+    <div class="dock">
+      <button id="volumeBtn" title="调节观看音量">
+        <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <span class="label">音量</span>
+      </button>
+      <button id="chatBtn" title="文字聊天">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="label">聊天</span>
+      </button>
+      <button id="membersBtn" title="在线成员">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="label">成员</span>
+      </button>
+      <span class="divider"></span>
+      <button class="danger" id="leaveBtn" title="离开一起看">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span class="label">离开</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 观看音量 -->
+  <div id="volPanel" hidden>
+    <div class="vol-title">音量</div>
+    <div class="vol-row">
+      <span>观看</span>
+      <input id="outVol" type="range" min="0" max="1" step="0.05" value="1" aria-label="观看音量">
+      <button class="vol-mute" id="muteBtn" type="button">静音</button>
+    </div>
+  </div>
+
+  <!-- 点空白处收起聊天 / 成员抽屉 -->
+  <div id="panelScrim" hidden></div>
+
+  <!-- 聊天侧栏 -->
+  <aside class="chat" id="chatPanel">
+    <header>聊天 <button class="close" id="chatClose" type="button">收起</button></header>
+    <div class="msgs" id="msgs"></div>
+    <form id="chatForm">
+      <input id="chatInput" maxlength="500" placeholder="说点什么…" autocomplete="off">
+      <button class="btn small" type="submit">发送</button>
+    </form>
+  </aside>
+
+  <!-- 成员侧栏 -->
+  <aside class="members" id="membersPanel">
+    <header>在线成员 <button class="close" id="membersClose" type="button">收起</button></header>
+    <div id="memberList"></div>
+  </aside>
+
+  <!-- 一起看结束 -->
+  <div class="overlay" id="endedOverlay" hidden>
+    <div class="panel">
+      <img src="/citro-logo.webp" alt="">
+      <h2 id="endedTitle">一起看结束了</h2>
+      <p id="endedReason">主持人已结束一起看</p>
+      <button class="btn" id="endedBack">返回首页</button>
+    </div>
+  </div>
+</div>
+
+<!-- 只发声音的发布者（老版本 App 的麦声）：没有画面格子，音频挂这里播 -->
+<div id="audios" hidden></div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var landing = $('landing');
+  var roomEl = $('room');
+  var codeInput = $('codeInput');
+  var nameInput = $('nameInput');
+  var joinBtn = $('joinBtn');
+  var joinErr = $('joinErr');
+
+  // 接口与页面同源：workers.dev 和自定义域名都能直接用。
+  var API_BASE = '';
+
+  // ──────────────────────────────────────────────────────────
+  // 工具
+  // ──────────────────────────────────────────────────────────
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  function copy(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast(okMsg || '已复制'); },
+        function () { fallbackCopy(text, okMsg); }
+      );
+    } else {
+      fallbackCopy(text, okMsg);
+    }
+  }
+
+  function fallbackCopy(text, okMsg) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast(okMsg || '已复制'); }
+    catch (e) { toast('复制失败，请手动复制'); }
+    document.body.removeChild(ta);
+  }
+
+  function showError(box, err) {
+    // 传 null / undefined 表示「清空」。原来的 `String(err || '出错了')` 会把
+    // 清空写成「出错了」，导致每次点加入之前都先误报一次。
+    if (err == null) { box.textContent = ''; return; }
+    box.textContent = err instanceof Error ? err.message : String(err);
+  }
+
+  /**
+   * 统一的 REST 调用。
+   *
+   * 房间凭证放在 query 上而不是 Authorization 头：Worker 的 requireToken
+   * 同时认这两种，但 query 形式在 WebSocket 握手和跳转链路里更省事，
+   * 也避免把 token 写进任何持久化存储。
+   */
+  function api(path, opts) {
+    opts = opts || {};
+    var url = API_BASE + path;
+    if (opts.token) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(opts.token);
+    var init = { method: opts.method || 'GET' };
+    if (opts.body) {
+      init.headers = { 'Content-Type': 'application/json' };
+      init.body = JSON.stringify(opts.body);
+    }
+    return fetch(url, init).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) throw new Error(data.err || '请求失败（' + res.status + '）');
+        return data;
+      });
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 观众端
+  // ──────────────────────────────────────────────────────────
+
+  function Viewer() {
+    this.code = '';
+    this.token = '';
+    this.iceServers = [];
+    this.pc = null;
+    this.ws = null;
+    this.closed = false;
+    this.sessionId = null;
+
+    // 当前发布者：uid -> { uid, name, sessionId, stream, slot, video, audioEl }
+    //
+    // 只发声音的人也在里面：没有 slot（画面格子），stream 里只有音轨，
+    // 挂到一个隐藏的 <audio> 上播。
+    this.pubs = new Map();
+    // mid -> { sessionId, trackName }，用来把 ontrack 对回到发布者
+    this.midMap = new Map();
+    // mid 匹配不到时的兜底队列（Safari 不给 transceiver.mid）
+    this.pending = [];
+    // 已经订阅过的 (sessionId, trackName)。track_added 和 hello 快照可能
+    // 指向同一路，不排重会重复建 m-line，SDP 一路膨胀。
+    this._subbed = new Set();
+    // uid -> 昵称。track_added 事件不带名字，发布者条目要能补上标题。
+    this._names = {};
+    // 成员面板：uid -> { uid, name, role, online, screen, mic }
+    this.members = new Map();
+    // 弹幕泳道游标。轮流分配到不同行，避免新消息叠在一起。
+    this._danmakuLane = 0;
+
+    // 串行化所有 SDP 交换：同一个 session 的 mutation 并发会吃 HTTP 406。
+    this._queue = Promise.resolve();
+
+    this._wsRetry = 0;
+
+    // ── 声网 Agora（媒体主链路） ──
+    // Worker 配了证书时，观众用房间 token 换 Agora RTC token，以数字 uid
+    // 进同一个频道看主持人推的屏幕流；延迟由 SD-RTN 国内节点兜住。
+    // Cloudflare SFU 仍是完整兜底：Agora 不可用（/agora/token 回
+    // enabled:false）或引擎连接失败时，画面继续走原来的 SFU 订阅。
+    this.agora = { engine: null, uid: null, hostUid: null, enabled: false, connected: false, volume: 1 };
+
+    // 观看音量（作用于远端画面 / 声音元素）。
+    this.volume = 1;
+    this.muted = false;
+  }
+
+  /** 把观看音量套到这位发布者的 video / audio 元素上。 */
+  Viewer.prototype._applyVolumeTo = function (p) {
+    var v = this.volume;
+    var muted = this.muted || v === 0;
+    [p.video, p.audioEl].forEach(function (el) {
+      if (!el) return;
+      try { el.volume = v; } catch (e) {}
+      el.muted = muted;
+    });
+  };
+
+  Viewer.prototype._applyVolume = function () {
+    var self = this;
+    this.pubs.forEach(function (p) { self._applyVolumeTo(p); });
+  };
+
+  /** 观看音量（0–1）。iOS 会接管硬件音量，但静音开关仍然有效。 */
+  Viewer.prototype.setOutputVolume = function (v) {
+    this.volume = Math.max(0, Math.min(1, Number(v) || 0));
+    if (this.volume > 0) this.muted = false;
+    this._applyVolume();
+    this._applyAgoraVolume();
+    syncVolumeUi(this);
+  };
+
+  Viewer.prototype.toggleMute = function () {
+    this.muted = !this.muted;
+    this._applyVolume();
+    this._applyAgoraVolume();
+    syncVolumeUi(this);
+  };
+
+  Viewer.prototype._enqueue = function (fn) {
+    var run = this._queue.then(fn, fn);
+    this._queue = run.catch(function () {});
+    return run;
+  };
+
+  // ────────────────────── 加入 ──────────────────────
+
+  Viewer.prototype.join = function (code, name) {
+    var self = this;
+    this.code = code;
+    return api('/api/rooms/' + encodeURIComponent(code) + '/join?code=' + encodeURIComponent(code), {
+      method: 'POST',
+      body: { name: name || '' },
+    }).then(function (data) {
+      self.token = data.roomToken;
+      self.iceServers = data.iceServers || [];
+      return data;
+    });
+  };
+
+  Viewer.prototype.connectWs = function () {
+    var self = this;
+    if (this.closed) return;
+
+    var url = API_BASE + '/api/rooms/' + encodeURIComponent(this.code) + '/ws?token=' + encodeURIComponent(this.token);
+    url = url.replace(/^http/, 'ws');
+    var ws = new WebSocket(url);
+    this.ws = ws;
+
+    ws.onmessage = function (e) {
+      var ev;
+      try { ev = JSON.parse(e.data); } catch (err) { return; }
+      self._onEvent(ev);
+    };
+
+    ws.onclose = function (e) {
+      if (self.closed) return;
+      // 被踢 / 房间结束不用再重连，事件里已经处理了。
+      if (e.code === 4000 || e.code === 4001) return;
+      var delay = Math.min(8000, 500 * Math.pow(2, self._wsRetry++));
+      setTimeout(function () { self.connectWs(); }, delay);
+    };
+
+    ws.onerror = function () { /* onclose 会跟上 */ };
+  };
+
+  Viewer.prototype._send = function (obj) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(obj));
+    }
+  };
+
+  // ────────────────────── 事件 ──────────────────────
+
+  Viewer.prototype._onEvent = function (ev) {
+    switch (ev.type) {
+      case 'hello':
+        this._wsRetry = 0;
+        // hello 里只有 self 带 uid，聊天消息靠它判断「是不是我发的」。
+        if (ev.self && ev.self.uid) this._selfUid = ev.self.uid;
+        this._setMembers(ev.members || []);
+        this._syncMembers(ev.members || []);
+        this._setRoom(ev.room || {});
+        this._setChatHistory(ev.chatHistory || []);
+        break;
+      case 'member_joined':
+        if (ev.member && ev.member.uid) this._names[ev.member.uid] = ev.member.name;
+        this._upsertMember(ev.member);
+        this._renderMembers();
+        this._bumpViewers();
+        break;
+      case 'member_left':
+        this.members.delete(ev.uid);
+        this._renderMembers();
+        this._bumpViewers();
+        break;
+      case 'viewer_count':
+        $('viewerCount').textContent = ev.count;
+        break;
+      case 'publisher_joined':
+        this._onPublisherJoined(ev);
+        break;
+      case 'publisher_left':
+        this._dropPublisher(ev.uid, ev.sessionId);
+        break;
+      case 'track_added':
+        this._onTrackAdded(ev);
+        break;
+      case 'track_removed':
+        this._onTrackRemoved(ev);
+        break;
+      case 'chat':
+        this._appendMsg(ev.message);
+        break;
+      case 'quality_changed':
+        this._setQuality(ev.quality);
+        break;
+      case 'room_ended':
+        this._end(ev.reason || '主持人已结束一起看');
+        break;
+      case 'error':
+        // use_rest 是「该走 REST」的提示，网页端本来就不发这类事件。
+        if (ev.code !== 'use_rest') console.warn('房间事件错误：', ev.message);
+        break;
+      case 'p2p_request':
+      case 'p2p_offer':
+      case 'p2p_answer':
+      case 'p2p_ice':
+      case 'p2p_bye':
+        // P2P 直连已下线（媒体改走声网 + CF 兜底）；老页面收到就忽略。
+        break;
+      case 'pong':
+        break;
+    }
+  };
+
+  // ────────────────────── 声网 Agora（观众侧） ──────────────────────
+
+  /** 与 Worker numericUid 完全一致的 FNV-1a（32 位）数字 uid。 */
+  function numericUid(uid) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < uid.length; i++) {
+      h ^= uid.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    var u = h >>> 0;
+    return (u % 0x7fffffff) || 1;
+  }
+
+  /**
+   * 这位发布者的画面是否已经（或即将）由 Agora 供流。true 时跳过 SFU
+   * 订阅，避免同一画面两条链路一起拉。主持人 = `_agoraHostRoomUid`。
+   */
+  Viewer.prototype._agoraCovers = function (uid) {
+    return this.agora.enabled && uid === this._agoraHostRoomUid;
+  };
+
+  /**
+   * 尝试走声网看主持人画面。失败（没配证书 / SDK 加载失败 / 连接失败）
+   * 时安静留在 Cloudflare 链路上 —— 两条链路共用同一套 video 元素，
+   * 切换对用户不可见。
+   */
+  Viewer.prototype._tryAgora = function (hostUid) {
+    var self = this;
+    if (this.agora.enabled || !hostUid) return;
+    if (typeof AgoraRTC === 'undefined') return; // CDN 没加载成功
+    // 只认房主：multi_party 里别的成员发 screen 也会走到这里，但 App 端
+    // 非房主从不往 Agora 发流——把他当主持人会门控掉他的 CF 流，黑屏。
+    if (this._roomHostUid && hostUid !== this._roomHostUid) return;
+    // 记住房间成员列表里的发布者 uid，_agoraCovers / 渲染都按它对齐。
+    this._agoraHostRoomUid = hostUid;
+    // enabled 不在这里置：token 还没到、join 还没成功，此时若 CF 订阅
+    // 被门控跳过、Agora 又失败，观众就两头落空。token 请求期间 CF 照常
+    // 订阅（最坏双收几秒，音频有 trackId 去重 + Agora 接管后 SFU 轨
+    // 由 _agoraShowVideo 隐藏），join 成功才声明覆盖。
+    if (this._agoraTried) return;
+    this._agoraTried = true;
+
+    api('/api/agora/token', {
+      token: this.token,
+      method: 'POST',
+      // 注意必须传对象：api() 内部会 JSON.stringify——上一版在这里手动
+      // stringify 过一次，线上 body 变成 JSON 字符串字面量，Worker 解析
+      // 出来的 channel 恒为 undefined，静默回退 6 位房号频道（错频道）。
+      body: {
+        // 与 App 端对齐：Agora 频道名 = 完整 roomId。传 6 位房号会进错
+        // 频道（主持人用 App 在 roomId 频道发流，观众收不到任何东西）。
+        channel: this._roomId || this.code,
+      },
+    }).then(function (d) {
+      if (!d || d.enabled !== true) return; // 没配证书：留在 CF
+      self._agoraJoin(d, hostUid);
+    }).catch(function () {
+      console.warn('[agora] token 获取失败，留在 CF 链路');
+    });
+  };
+
+  Viewer.prototype._agoraJoin = function (creds, hostUid) {
+    var self = this;
+    var nuid = numericUid(this._selfUid || 'guest');
+    this.agora.uid = nuid;
+    this.agora.hostUid = numericUid(hostUid);
+    this.agora.everConnected = false;
+    this._agoraSawHostStream = false;
+    this._agoraBadge('声网连接中');
+
+    var client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+    this.agora.engine = client;
+
+    client.on('connection-state-change', function (state, reason) {
+      self.agora.connected = state === 'CONNECTED';
+      console.info('[agora] state:', state, reason || '');
+      self._agoraBadge(state === 'CONNECTED' ? '声网已连' : (state === 'CONNECTING' || state === 'RECONNECTING') ? '声网连接中' : '声网断开');
+      // 链路死亡看护：join 成功后如果掉到 DISCONNECTED/FAILED 且 10s 内
+      // 没恢复，自动拆 Agora 回 CF——观众不永久黑屏。
+      if (state === 'DISCONNECTED' || state === 'FAILED') {
+        if (!self.agora.everConnected) return; // 还没连上过，join 的 catch 兜
+        if (self._agoraDeathTimer) clearTimeout(self._agoraDeathTimer);
+        self._agoraDeathTimer = setTimeout(function () {
+          if (!self.agora.enabled) return;
+          console.warn('[agora] 断线 10s 未恢复，回退 CF');
+          self._agoraTeardown();
+        }, 10000);
+      } else if (self._agoraDeathTimer) {
+        clearTimeout(self._agoraDeathTimer);
+        self._agoraDeathTimer = null;
+      }
+      if (state === 'CONNECTED') self.agora.everConnected = true;
+    });
+    // 浏览器 autoplay 策略拦下 Agora 的声音时（AudioContext 挂起），SDK
+    // 会发这个事件。此时 CF 的声音没被压（_agoraShowAudio 实测后才压），
+    // 观众至少有系统声；亮出「开启声音」按钮，点击后把两条链路都救活。
+    client.on('autoplay-failed', function () {
+      console.warn('[agora] autoplay 被浏览器拦截');
+      var hint = document.getElementById('soundHint');
+      if (hint) hint.hidden = false;
+    });
+    client.on('user-published', function (user, mediaType) {
+      console.info('[agora] user-published uid=', user.uid, 'mediaType=', mediaType);
+      // 只认主持人的流；别人进频道不渲染。
+      if (user.uid !== self.agora.hostUid) return;
+      // 主持人有流了：解除 12s 流超时看护。
+      self._agoraSawHostStream = true;
+      var sub = function (attempt) {
+        // 4.x 的 subscribe 直接把轨道作为返回值给出 —— 同一 uid 发两路音轨
+        // 时 user.audioTrack 只会指向最后一路，靠返回值才拿得到每一路本体。
+        return client.subscribe(user, mediaType).then(function (track) {
+          if (mediaType === 'video') {
+            self._agoraShowVideo(user);
+          } else if (mediaType === 'audio') {
+            self._agoraShowAudio(user, track);
+          }
+        }).catch(function (err) {
+          console.warn('[agora] subscribe 失败，1.5s 后重试：', err && err.message || err);
+          // 重复订阅竞态 / 事件丢失都可能走到这里。被拒的订阅不会在 user
+          // 对象上留下轨道，必须真正重发订阅；封顶 8 次（≈12s），主持人
+          // 闭麦 / 下播后的无效重试自然停掉。
+          if (attempt >= 8) return;
+          setTimeout(function () {
+            if (self.agora.enabled && self.agora.engine) {
+              sub(attempt + 1);
+            }
+          }, 1500);
+        });
+      };
+      sub(0);
+    });
+    client.on('user-unpublished', function (user, mediaType) {
+      if (user.uid !== self.agora.hostUid) return;
+      // 麦克风单独停发（闭麦）时只摘音频，别把画面一起藏了。
+      if (mediaType === 'audio') return;
+      self._agoraHideVideo();
+    });
+    client.on('user-left', function (user) {
+      if (user.uid !== self.agora.hostUid) return;
+      self._agoraHideVideo();
+    });
+    // 定时清扫：兜住「事件丢失 / 订阅竞态」下漏播的音频轨。开着 Agora
+    // 链路时每 3 秒扫一次主持人 remoteUsers 里的全部音轨（幂等）。
+    self._agoraSweepTimer = setInterval(function () {
+      if (!self.agora.enabled || !self.agora.engine) return;
+      var host = null;
+      try {
+        self.agora.engine.remoteUsers.forEach(function (u) {
+          if (u.uid !== self.agora.hostUid) return;
+          host = u;
+        });
+      } catch (e) { return; }
+      if (host) self._agoraShowAudio(host);
+    }, 3000);
+
+    client.setClientRole('audience').then(function () {
+      return client.join(creds.appId, creds.channel, creds.token, creds.uid);
+    }).then(function () {
+      console.info('[agora] joined as audience, uid=', creds.uid);
+      // join 成功才声明 Agora 覆盖主持人（_agoraCovers 生效），此前 CF
+      // 订阅不受影响。这是「先确保有画面，再升级链路」的顺序。
+      self.agora.enabled = true;
+      self.agora.everConnected = true;
+      self._applyAgoraVolume();
+      // 流超时看护：频道名/uid 配错、主持人没推流等情况下，join 成功但
+      // 永远等不到 user-published——而 CF 轨被门控压着，观众黑屏。12s
+      // 内没见过主持人的任何流就自动拆 Agora 回 CF。
+      if (self._agoraStreamTimer) clearTimeout(self._agoraStreamTimer);
+      self._agoraStreamTimer = setTimeout(function () {
+        if (!self.agora.enabled) return;
+        if (self._agoraSawHostStream) return;
+        console.warn('[agora] 12s 未收到主持人流（频道名/uid 配错或未推流），回退 CF');
+        self._agoraTeardown();
+      }, 12000);
+    }).catch(function (err) {
+      console.warn('[agora] join 失败，留在 CF 链路：', err);
+      self._agoraTeardown();
+    });
+  };
+
+  /** 把主持人的 Agora 视频流挂到 SFU 共用的 video 元素上（先摘 SFU 轨）。 */
+  Viewer.prototype._agoraShowVideo = function (user) {
+    var self = this;
+    // 与 user-unpublished 竞态时 videoTrack 可能已被摘掉——不判会抛
+    // TypeError 进 subscribe 重试链，刷出 8 条误导性 warn。
+    if (!user.videoTrack) return;
+    var p = null;
+    this.pubs.forEach(function (pub, uid) {
+      if (uid === self._agoraHostRoomUid && pub.video) p = pub;
+    });
+    if (!p) {
+      // SFU 侧还没建卡片（Agora 更快），给主持人先建一个占位卡片。
+      this._addPublisher(this._agoraHostRoomUid, this._names[this._agoraHostRoomUid] || '放映者', '', []);
+      var created = this.pubs.get(this._agoraHostRoomUid);
+      if (created && created.video) p = created;
+    }
+    if (!p) return;
+    // Agora 视频走自己的 player 容器：把 SDK 的 player 塞进卡片，
+    // SFU 的 video 元素隐藏（不是删掉，CF 兜底要接回来）。
+    if (p.video) p.video.style.display = 'none';
+    if (!p.agoraBox) {
+      p.agoraBox = document.createElement('div');
+      p.agoraBox.style.cssText = 'position:absolute;inset:0;z-index:1;';
+      // 标记类名:全屏 CSS 要把声网播放器一起铺满,得认得出这个容器。
+      p.agoraBox.className = 'agora-video-host';
+      var stage = p.video && p.video.parentElement;
+      if (stage) stage.appendChild(p.agoraBox);
+    }
+    // Agora 链路的首帧加载动画：盖在 agoraBox 上，首帧事件后拆。
+    // 与 SFU 链路的 .slot-loading 同一套样式与行为。
+    if (p.slot && !p._agoraLoading) {
+      var ld = document.createElement('div');
+      ld.className = 'slot-loading';
+      ld.innerHTML =
+        '<div class="col"><div class="dots"><i></i><i></i><i></i></div>' +
+        '<div class="txt">正在加载画面…</div></div>';
+      var clearLd = function () {
+        if (!ld.isConnected) return;
+        ld.classList.add('gone');
+        setTimeout(function () { ld.remove(); }, 480);
+      };
+      user.videoTrack.on('first-frame-decoded', clearLd);
+      user.videoTrack.on('first-frame-decoded', function () {
+        self._agoraBadge('声网供流');
+      });
+      p.slot.addEventListener('transitionend', function once(e) {
+        if (e.propertyName !== 'opacity' || ld.isConnected) return;
+        p.slot.removeEventListener('transitionend', once);
+      });
+      setTimeout(clearLd, 5000);
+      p.slot.appendChild(ld);
+      p._agoraLoading = ld;
+    }
+    try {
+      // fit: 'contain' 与 CF 链路的 .slot video 保持一致——SDK 播放器
+      // 默认 cover,竖屏手机上会把 16:9 横画面放大裁边,比例「不对」。
+      user.videoTrack.play(p.agoraBox, { fit: 'contain', mirror: false });
+    } catch (e) {
+      console.warn('[agora] play 失败：', e);
+    }
+    // SDK 首帧事件可能在我们监听之前就发过了：起一帧后再查一次
+    // videoTrack 的播放状态，已出画面就直接拆动画。
+    // 注意：不能用 isPlaying()——4.24.9 的 RemoteVideoTrack 根本没有这个
+    // 方法（上一版调它直接 TypeError，回退定时器误判，把正常出画的 Agora
+    // 视频拆掉，观众「闪一下就没」）。改用 video 元素的 readyState 实测：
+    // agoraBox 里 SDK 建的 <video> 到 HAVE_CURRENT_DATA 以上即算出画。
+    setTimeout(function () {
+      if (p._agoraLoading) {
+        var v = p.agoraBox && p.agoraBox.querySelector('video');
+        var st = v ? v.readyState : 0;
+        if (st >= 2 || (user.videoTrack && user.videoTrack.isPlaying && user.videoTrack.isPlaying())) clearLd();
+      }
+    }, 400);
+    // 渲染看护：agoraBox 里的 <video> 8s 后仍无数据（移动端 autoplay 卡死
+    // 的兜底），把 CF 画面放回来。CF 轨在新门控下一直在 stream 里，恢复
+    // 就是把元素显示出来 + play，不涉及补订。
+    setTimeout(function () {
+      if (!self.agora.enabled) return;
+      var v = p.agoraBox && p.agoraBox.querySelector('video');
+      if (v && v.readyState >= 2 && !v.paused) return; // Agora 在好好出画
+      console.warn('[agora] 视频 8s 未渲染（readyState=' + (v ? v.readyState : 'no-el') + '），恢复 CF 画面');
+      if (p.agoraBox) {
+        try { user.videoTrack.stop(); } catch (e3) {}
+        p.agoraBox.remove();
+        p.agoraBox = null;
+      }
+      self._agoraHideVideo(); // 显示 CF video + play + 拆 loading
+    }, 8000);
+  };
+
+  Viewer.prototype._agoraHideVideo = function () {
+    var self = this;
+    this.pubs.forEach(function (p, uid) {
+      if (uid !== self._agoraHostRoomUid) return;
+      if (p.agoraBox) {
+        p.agoraBox.innerHTML = '';
+      }
+      if (p._agoraLoading) {
+        p._agoraLoading.remove();
+        p._agoraLoading = null;
+      }
+      if (p.video) {
+        p.video.style.display = '';
+        // stream 里的 CF 视频轨一直在（新门控只压不丢）；display 恢复后
+        // 元素若被浏览器暂停过，补一次 play。失败亮「开启声音」。
+        var pr = p.video.play && p.video.play();
+        if (pr && pr.catch) {
+          pr.catch(function () { $('soundHint').hidden = false; });
+        }
+      }
+    });
+  };
+
+  /**
+   * Agora 音频（SDK 自己播，不走 audio 元素），音量用 setVolume。
+   * [track] 是 subscribe 的返回值 —— 4.x 里同一 uid 发两路音轨（系统声 +
+   * 麦），user.audioTrack 只指向最后一路，事件各触发一次、各带自己的
+   * 轨道，靠 trackId 去重保证两路都播、不重复播。
+   */
+  Viewer.prototype._agoraShowAudio = function (user, track) {
+    var self = this;
+    if (!this._agoraPlayedAudioIds) this._agoraPlayedAudioIds = {};
+    if (!this._agoraAudioTracks) this._agoraAudioTracks = [];
+    var tracks = track ? [track] : (user.audioTrack ? [user.audioTrack] : []);
+    tracks.forEach(function (t) {
+      if (!t) return;
+      var id = t.getTrackId ? t.getTrackId() : t.getId ? t.getId() : null;
+      if (id !== null && id !== undefined && self._agoraPlayedAudioIds[id]) return;
+      if (id !== null && id !== undefined) self._agoraPlayedAudioIds[id] = true;
+      // 留住引用：4.x 单槽模型下 user.audioTrack 会被第二路覆盖，
+      // 之后调音量只能摸到最后一路 —— 全部音轨都从这里统一调。
+      self._agoraAudioTracks.push(t);
+      try {
+        t.play();
+        t.setVolume(Math.round(self.agora.volume * 100));
+        console.info('[agora] audio track play() 已调 id=', id);
+      } catch (e) {
+        console.warn('[agora] audio track play 失败：', e);
+        return;
+      }
+      // play() 不抛 ≠ 出声：浏览器 autoplay 策略下 AudioContext 可能是
+      // 挂起的（尤其手机 Safari/Chrome）。500ms 后用 getVolumeLevel 实测
+      // ——确实有信号才压 CF 轨；没信号就保留 CF 声并亮「开启声音」按钮，
+      // 让用户一次点击同时救活两条链路。
+      setTimeout(function () {
+        if (!self.agora.enabled || !self.agora.engine) return;
+        var level = 0;
+        try { level = t.getVolumeLevel ? t.getVolumeLevel() : 1; } catch (e2) { level = 1; }
+        if (level > 0.001 || self.muted) {
+          // 实测有声（或用户本来就静音）：安全压 CF，防叠音。
+          self._suppressHostSfuAudio();
+          console.info('[agora] audio 实测有信号 level=', level, '→ 压 CF 轨');
+        } else {
+          // Agora 被自动播放策略挂起：不压 CF，声音继续走兜底链路。
+          console.warn('[agora] audio 实测无信号（autoplay 挂起？），保留 CF 声');
+          var hint = document.getElementById('soundHint');
+          if (hint) hint.hidden = false;
+        }
+      }, 500);
+    });
+  };
+
+  /** 观看音量同步到 Agora 侧（audio track 音量 0–100）。 */
+  Viewer.prototype._applyAgoraVolume = function () {
+    var v = Math.round((this.muted ? 0 : this.volume) * (this.agora.volume || 1) * 100);
+    var self = this;
+    if (this._agoraAudioTracks) {
+      this._agoraAudioTracks.forEach(function (t) {
+        try { t.setVolume(Math.max(0, Math.min(100, v))); } catch (e) {}
+      });
+    }
+  };
+
+  /**
+   * Agora 已实际供流后，把主持人 CF 链路上的 system 轨静音（不删——
+   * Agora 万一断了还能立刻恢复）。_agoraCovers 门控只管「之后到达」的轨，
+   * 窗口期已挂进 stream 的轨要在这里逐个按住。
+   */
+  Viewer.prototype._suppressHostSfuAudio = function () {
+    var self = this;
+    this.pubs.forEach(function (p, uid) {
+      if (uid !== self._agoraHostRoomUid) return;
+      Object.keys(p.audioByName || {}).forEach(function (name) {
+        if (name !== 'system' && name !== 'mic') return;
+        try { p.audioByName[name].enabled = false; } catch (e) {}
+      });
+    });
+  };
+
+  /** Agora 链路撤掉：把静音过的 CF 轨恢复（enabled=true），音量接回去。 */
+  Viewer.prototype._restoreHostSfuAudio = function () {
+    var self = this;
+    this.pubs.forEach(function (p, uid) {
+      if (uid !== self._agoraHostRoomUid) return;
+      Object.keys(p.audioByName || {}).forEach(function (name) {
+        if (name !== 'system' && name !== 'mic') return;
+        try { p.audioByName[name].enabled = true; } catch (e) {}
+      });
+      if (p.audioEl) this._applyVolumeTo(p);
+    }, this);
+  };
+
+  /** 右上角链路状态角标：声网/CF 哪条在供画面，一眼可见。 */
+  Viewer.prototype._agoraBadge = function (text) {
+    var b = document.getElementById('linkBadge');
+    if (!b) return;
+    b.textContent = text;
+    b.hidden = false;
+  };
+
+  Viewer.prototype._agoraTeardown = function () {
+    var client = this.agora.engine;
+    if (client) {
+      try { client.leave(); } catch (e) {}
+    }
+    this.agora.engine = null;
+    this.agora.enabled = false;
+    this.agora.connected = false;
+    if (this._agoraSweepTimer) {
+      clearInterval(this._agoraSweepTimer);
+      this._agoraSweepTimer = null;
+    }
+    if (this._agoraDeathTimer) {
+      clearTimeout(this._agoraDeathTimer);
+      this._agoraDeathTimer = null;
+    }
+    if (this._agoraStreamTimer) {
+      clearTimeout(this._agoraStreamTimer);
+      this._agoraStreamTimer = null;
+    }
+    this._agoraSawHostStream = false;
+    this._agoraBadge('CF 兜底');
+    this._agoraPlayedAudioIds = {};
+    this._agoraAudioTracks = [];
+    // 先恢复被压住的 CF 轨（在 enabled 复位之后调，_agoraCovers 已 false），
+    // 再补订缺失的轨——顺序反了恢复会被门控重新压掉。
+    this._restoreHostSfuAudio();
+    this._agoraHideVideo();
+    // Agora 失败回退 CF：把之前被 _agoraCovers 跳过/抑制的主持人 SFU 订阅
+    // 补回来（画面+声音全靠它），不然观众两头落空、永久黑屏。两个前提：
+    // ①清掉主持人 session 的 _subbed 去重键——补订才能真发出去；
+    // ②被 1787 抑制的轨（audio.enabled=false / 未入 stream）会在补订后
+    // 由 ontrack 以 _agoraCovers=false 重新走正常挂载路径。
+    var snap = this._hostSfuSnapshot;
+    if (snap && snap.sessionId && this._agoraHostRoomUid) {
+      var names = (snap.tracks || [])
+        .filter(function (t) { return t && t.name; })
+        .map(function (t) { return t.name; });
+      if (names.length) {
+        var self2 = this;
+        names.forEach(function (n) {
+          self2._subbed.delete(snap.sessionId + '|' + n);
+        });
+        console.info('[agora] 回退 CF：补订主持人 SFU 轨', names);
+        this._subscribeMany(snap.sessionId, names);
+      }
+    }
+    this._hostSfuSnapshot = null;
+  };
+
+  Viewer.prototype._bumpViewers = function () {
+    var self = this;
+    api('/api/rooms/' + encodeURIComponent(this.code), { token: this.token })
+      .then(function (d) {
+        $('viewerCount').textContent = (d.room && d.room.viewerCount) || 0;
+      })
+      .catch(function () {});
+  };
+
+  /** 用 hello 的完整成员快照重建面板。 */
+  Viewer.prototype._setMembers = function (list) {
+    this.members.clear();
+    var self = this;
+    (list || []).forEach(function (m) { self._upsertMember(m); });
+    this._renderMembers();
+  };
+
+  Viewer.prototype._upsertMember = function (m) {
+    if (!m || !m.uid) return;
+    var prev = this.members.get(m.uid) || {};
+    var hasTracks = Object.prototype.toString.call(m.tracks) === '[object Array]';
+    var tracks = hasTracks ? m.tracks : [];
+    function has(name) {
+      return tracks.some(function (t) { return t && t.name === name; });
+    }
+    this.members.set(m.uid, {
+      uid: m.uid,
+      name: m.name || prev.name || '观众',
+      role: m.role || prev.role || 'viewer',
+      online: m.online !== false,
+      screen: hasTracks ? has('screen') : !!prev.screen,
+      mic: hasTracks ? has('mic') : !!prev.mic,
+    });
+  };
+
+  /**
+   * 某人的某一路开了 / 关了。发布事件里只有 track 名，没有完整成员，
+   * 所以单独记；成员行里的「放映中 / 开着麦」徽标就是靠它亮起来的。
+   */
+  Viewer.prototype._memberTrack = function (uid, name, trackName, on) {
+    if (!uid) return;
+    var m = this.members.get(uid);
+    if (!m) {
+      if (!on) return;
+      m = {
+        uid: uid,
+        name: name || this._names[uid] || '观众',
+        role: 'viewer',
+        online: true,
+        screen: false,
+        mic: false,
+      };
+      this.members.set(uid, m);
+    }
+    if (name && (!m.name || m.name === '观众')) m.name = name;
+    if (trackName === 'screen') m.screen = on;
+    if (trackName === 'mic') m.mic = on;
+    this._renderMembers();
+  };
+
+  Viewer.prototype._renderMembers = function () {
+    var list = $('memberList');
+    if (!list) return;
+    var selfUid = this._selfUid;
+    var rows = Array.from(this.members.values())
+      .filter(function (m) { return m.online; })
+      .sort(function (a, b) {
+        var ah = a.role === 'host' ? 0 : 1;
+        var bh = b.role === 'host' ? 0 : 1;
+        if (ah !== bh) return ah - bh;
+        return String(a.name).localeCompare(String(b.name), 'zh-Hans-CN');
+      });
+    if (!rows.length) {
+      list.innerHTML = '<div class="empty">还没有人进来</div>';
+      return;
+    }
+    list.innerHTML = '';
+    rows.forEach(function (m) {
+      var row = document.createElement('div');
+      row.className = 'member';
+      row.innerHTML =
+        '<div class="av"></div>' +
+        '<div class="meta"><div class="nm"></div><div class="sub"></div></div>' +
+        '<div class="badges"></div>';
+      var name = String(m.name || '观众');
+      row.querySelector('.av').textContent = name.trim().charAt(0) || '观';
+      row.querySelector('.nm').textContent =
+        name + (m.uid === selfUid ? '（我）' : '');
+      row.querySelector('.sub').textContent =
+        m.screen ? '正在一起看' : (m.mic ? '开着麦' : '在线');
+      var badges = row.querySelector('.badges');
+      if (m.role === 'host') {
+        badges.innerHTML += '<span class="badge host">主持人</span>';
+      }
+      if (m.screen) badges.innerHTML += '<span class="badge">放映中</span>';
+      list.appendChild(row);
+    });
+  };
+
+  // 重连或首次 hello 时，把当前所有发布者补齐。
+  Viewer.prototype._syncMembers = function (members) {
+    var self = this;
+    var seen = new Set();
+    members.forEach(function (m) {
+      if (m.uid && m.name) self._names[m.uid] = m.name;
+      if (m.uid === self._selfUid) return; // 订阅自己会被服务端拒绝
+      if (!m.tracks || m.tracks.length === 0) return;
+      if (!m.sfuSessionId) return;
+      // 记住主持人的 SFU 快照：Agora 链路失败回退 CF 时补订要用。
+      // 注意回调里必须用 self（forEach 的 this 不是 Viewer）。
+      if (m.role === 'host') {
+        self._hostSfuSnapshot = { sessionId: m.sfuSessionId, tracks: m.tracks };
+      }
+      seen.add(m.uid);
+      if (!self.pubs.has(m.uid)) {
+        self._addPublisher(m.uid, m.name, m.sfuSessionId, m.tracks);
+      }
+      // 主持人走声网时 SFU 一路都不订（screen/system/mic 全部由 Agora
+      // user-published 自动送达；mic 已归声网，SFU 上没有真实流，订它
+      // 会撞逐轨错误——虽然 Worker 现在会剔除幽灵轨，但双收也会让
+      // 同一句说话响两次）。声网失败/未启用时仍走 SFU 全量（CF 兜底）。
+      if (self._agoraCovers(m.uid)) {
+        if (m.tracks.some(function (t) { return t.name === 'screen'; })) {
+          self._tryAgora(m.uid);
+        }
+      } else {
+        self._subscribeMany(m.sfuSessionId, m.tracks.map(function (t) {
+          return t.name;
+        }));
+        if (m.tracks.some(function (t) { return t.name === 'screen'; })) {
+          self._tryAgora(m.uid);
+        }
+      }
+    });
+    // 清掉已经不在列表里的
+    Array.from(this.pubs.keys()).forEach(function (uid) {
+      if (!seen.has(uid)) self._dropPublisher(uid);
+    });
+  };
+
+  Viewer.prototype._onPublisherJoined = function (ev) {
+    var self = this;
+    (ev.tracks || []).forEach(function (t) {
+      self._memberTrack(ev.uid, ev.name, t.name, true);
+    });
+    // 自己开麦 / 共享时 DO 也会把事件广播回自己，订阅自己被拒（400）。
+    if (ev.uid === this._selfUid) return;
+    this._addPublisher(ev.uid, ev.name, ev.sessionId, ev.tracks || []);
+    // 主持人后开播的路径也记快照（hello 快照只覆盖进房时已在共享的情况）。
+    if (ev.uid === this._agoraHostRoomUid) {
+      this._hostSfuSnapshot = { sessionId: ev.sessionId, tracks: ev.tracks || [] };
+    }
+    // 主持人的 screen/system 走 Agora 时不订 SFU，mic 照订（见 _syncMembers）。
+    var sfuNames = this._agoraCovers(ev.uid)
+      ? (ev.tracks || []).filter(function (t) {
+          return t.name !== 'screen' && t.name !== 'system';
+        }).map(function (t) { return t.name; })
+      : (ev.tracks || []).map(function (t) { return t.name; });
+    if (sfuNames.length) {
+      this._subscribeMany(ev.sessionId, sfuNames);
+    }
+    if ((ev.tracks || []).some(function (t) { return t.name === 'screen'; })) {
+      this._tryAgora(ev.uid);
+    }
+  };
+
+  Viewer.prototype._onTrackAdded = function (ev) {
+    if (!ev.track) return;
+    this._memberTrack(ev.uid, this._names[ev.uid], ev.track.name, true);
+    if (ev.uid === this._selfUid) return;
+    // 正常情况下先有 publisher_joined。没有的话（对方复用订阅 session
+    // 直接开麦，DO 侧不会发 publisher_joined）在这里补一条，否则
+    // ontrack 找不到归属，声音直接丢。
+    if (!this._pubForSession(ev.sessionId) && !this.pubs.has(ev.uid)) {
+      this._addPublisher(ev.uid, this._names[ev.uid] || '放映者', ev.sessionId, [ev.track]);
+    }
+    var p = this._pubForSession(ev.sessionId);
+    if (p && ev.track.name === 'screen') this._ensureSlot(p);
+    this._subscribeMany(ev.sessionId, [ev.track.name]);
+  };
+
+  Viewer.prototype._addPublisher = function (uid, name, sessionId, tracks) {
+    if (this.pubs.has(uid)) return;
+    var p = {
+      uid: uid,
+      name: name,
+      sessionId: sessionId,
+      stream: new MediaStream(),
+      slot: null,
+      video: null,
+      audioEl: null,
+      // trackName -> MediaStreamTrack。撤 mic 时不能一把删掉所有音轨：
+      // 共享者可能还挂着一路 `system`（画面自带的声音）。
+      audioByName: {},
+      // SFU 轨按名字记账（Agora 接管画面时 SFU 的 video 元素要能接回来）。
+      sfuTracks: {},
+      // Agora 的 video player 容器（走 Agora 链路时显示它、藏 SFU video）。
+      agoraBox: null,
+    };
+    this.pubs.set(uid, p);
+    var hasScreen = (tracks || []).some(function (t) {
+      return t.name === 'screen' || t.kind === 'video';
+    });
+    if (hasScreen) this._ensureSlot(p);
+    else this._ensureAudioEl(p);
+  };
+
+  /** 建画面格子。一个发布者只有一个，重复调用直接返回。 */
+  Viewer.prototype._ensureSlot = function (p) {
+    if (p.slot) return;
+    var self = this;
+    var slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.innerHTML =
+      '<video autoplay playsinline></video>' +
+      '<span class="tag"></span>' +
+      '<button class="fs-btn" type="button" title="全屏观看" aria-label="全屏观看">' +
+      '<svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></svg>' +
+      '</button>' +
+      '<button class="fs-chat-btn" type="button" title="聊天" aria-label="聊天" hidden>' +
+      '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      '</button>';
+    slot.querySelector('.tag').textContent = p.name || '放映者';
+
+    var video = slot.querySelector('video');
+    var fsBtn = slot.querySelector('.fs-btn');
+    video.srcObject = p.stream;
+    this._applyVolumeTo(p);
+
+    // 首帧加载动画：从 slot 建立盖到第一帧真正渲染出来。流里还没有
+    // 视频轨、或 WebRTC 首包未到时，观众看到的是三颗呼吸圆点而不是
+    // 一块黑屏。loadeddata（首帧解码完成）或 playing 后淡出移除；
+    // 5 秒兜底强拆，防止个别浏览器不发事件把动画卡死在画面上。
+    var loading = document.createElement('div');
+    loading.className = 'slot-loading';
+    loading.innerHTML =
+      '<div class="col"><div class="dots"><i></i><i></i><i></i></div>' +
+      '<div class="txt">正在加载画面…</div></div>';
+    var clearLoading = function () {
+      if (!loading.isConnected) return;
+      loading.classList.add('gone');
+      setTimeout(function () { loading.remove(); }, 480);
+    };
+    video.addEventListener('loadeddata', clearLoading);
+    video.addEventListener('playing', clearLoading);
+    setTimeout(clearLoading, 5000);
+    slot.appendChild(loading);
+
+    // 画面里可能带麦克风：video 元素自己就能出声。
+    // 浏览器可能拒绝自动播放（尤其是带声音时），给一个点击兜底。
+    video.play().catch(function () {
+      var ov = document.createElement('div');
+      ov.className = 'play-overlay';
+      ov.textContent = '点击播放';
+      ov.onclick = function () {
+        var pr = video.play();
+        if (pr && pr.then) {
+          pr.then(function () { ov.remove(); }).catch(function () {});
+        }
+      };
+      slot.appendChild(ov);
+    });
+
+    fsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (document.fullscreenElement === slot) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
+        return;
+      }
+      openSlotFullscreen(slot, video);
+    });
+    // 全屏聊天入口:掀开/收起聊天抽屉(抽屉在全屏时被搬进 slot,见上)。
+    var fsChatBtn = slot.querySelector('.fs-chat-btn');
+    fsChatBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setPanel($('chatPanel').classList.contains('open') ? null : 'chat');
+    });
+    // 全屏时浏览器会把 slot 之外的 DOM 全部裁掉——聊天抽屉（fixed,
+    // z-index 20）平时在 body 下,全屏就消失。进全屏把它搬进 slot、退全屏
+    // 搬回去:抽屉本来就是 fixed 定位,在 slot 里照样正常显示,消息/发送
+    // 逻辑一行不用改。
+    document.addEventListener('fullscreenchange', function () {
+      var chat = $('chatPanel');
+      if (!chat) return;
+      if (document.fullscreenElement === slot && chat.parentElement !== slot) {
+        slot.appendChild(chat);
+      } else if (document.fullscreenElement !== slot && chat.parentElement !== document.body) {
+        document.body.appendChild(chat);
+      }
+    });
+    // 触屏上双击画面也能全屏；按钮本身始终可见。
+    slot.addEventListener('dblclick', function () { openSlotFullscreen(slot, video); });
+
+    // 有了画面就用 video 出声，避免同一路音轨播两遍。
+    if (p.audioEl) {
+      p.audioEl.pause();
+      p.audioEl.remove();
+      p.audioEl = null;
+    }
+
+    p.slot = slot;
+    p.video = video;
+    this._applyVolumeTo(p);
+    $('grid').appendChild(slot);
+    this._layout();
+    this._syncWaiting();
+    syncVolumeUi(self);
+  };
+
+  /** 只开麦的发布者：挂一个隐藏 <audio> 播声音。 */
+  Viewer.prototype._ensureAudioEl = function (p) {
+    if (p.audioEl || p.slot) return;
+    var audio = document.createElement('audio');
+    audio.autoplay = true;
+    audio.playsInline = true;
+    audio.srcObject = p.stream;
+    $('audios').appendChild(audio);
+    p.audioEl = audio;
+    this._applyVolumeTo(p);
+    // 只有已经收到音轨才 play：空 MediaStream 上调用会被拒（NotSupportedError），
+    // 白白把「开启声音」按钮提前亮出来。
+    if (p.stream.getAudioTracks().length > 0) this._playAudio(p);
+    syncVolumeUi(this);
+  };
+
+  Viewer.prototype._playAudio = function (p) {
+    if (!p.audioEl) return;
+    p.audioEl.play().catch(function () {
+      // 多是有声音的自动播放被拦。给个明确的入口，别让观众以为没声音。
+      $('soundHint').hidden = false;
+    });
+  };
+
+  Viewer.prototype._dropPublisher = function (uid, sessionId) {
+    var p = this.pubs.get(uid);
+    if (!p) return;
+    var sid = sessionId || p.sessionId;
+    // 走 Agora 的发布者撤了：藏回 SFU 的 video 元素，链路不动。
+    if (p.agoraBox) {
+      p.agoraBox.remove();
+      p.agoraBox = null;
+    }
+    if (p.video) p.video.style.display = '';
+    if (p.slot) p.slot.remove();
+    if (p.audioEl) { p.audioEl.pause(); p.audioEl.remove(); }
+    p.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+    this.pubs.delete(uid);
+    // 清订阅去重表和 mid 映射，重进同一间房时不会误判「已订阅」。
+    var self = this;
+    Array.from(this._subbed).forEach(function (key) {
+      if (key.indexOf(sid + '|') === 0) self._subbed.delete(key);
+    });
+    this.midMap.forEach(function (info, mid) {
+      if (info.sessionId === sid) self.midMap.delete(mid);
+    });
+    this.pending = this.pending.filter(function (x) { return x.sessionId !== sid; });
+    this._layout();
+    this._syncWaiting();
+  };
+
+  Viewer.prototype._layout = function () {
+    var grid = $('grid');
+    var n = grid.querySelectorAll('.slot').length;
+    grid.classList.toggle('multi', n > 1);
+  };
+
+  Viewer.prototype._syncWaiting = function () {
+    var hasSlot = $('grid').querySelectorAll('.slot').length > 0;
+    $('waitingSlot').style.display = hasSlot ? 'none' : '';
+  };
+
+  /**
+   * 撤掉一路 track。
+   *
+   * publish_state / unpublish 都会走到这里。画面撤了但对方还在开麦时，
+   * 不能把整个发布者删掉：换成隐藏 audio 继续播。
+   */
+  Viewer.prototype._onTrackRemoved = function (ev) {
+    this._memberTrack(ev.uid, null, ev.trackName, false);
+    var p = (ev.uid && this.pubs.get(ev.uid)) || this._pubForSession(ev.sessionId);
+    if (!p) return;
+    this._subbed.delete(p.sessionId + '|' + ev.trackName);
+
+    if (ev.trackName === 'screen') {
+      p.stream.getVideoTracks().forEach(function (t) {
+        try { p.stream.removeTrack(t); } catch (e) {}
+        try { t.stop(); } catch (e) {}
+      });
+      if (p.slot) {
+        p.slot.remove();
+        p.slot = null;
+        p.video = null;
+      }
+      if (p.stream.getAudioTracks().length > 0) this._ensureAudioEl(p);
+      else this._dropPublisher(p.uid);
+      this._layout();
+      this._syncWaiting();
+      return;
+    }
+
+    if (ev.trackName === 'mic' || ev.trackName === 'system') {
+      var gone = p.audioByName && p.audioByName[ev.trackName];
+      if (gone) {
+        try { p.stream.removeTrack(gone); } catch (e) {}
+        try { gone.stop(); } catch (e) {}
+        delete p.audioByName[ev.trackName];
+      }
+      if (p.stream.getVideoTracks().length === 0 &&
+          p.stream.getAudioTracks().length === 0) {
+        this._dropPublisher(p.uid);
+      }
+    }
+  };
+
+  // ────────────────────── 订阅 ──────────────────────
+
+  Viewer.prototype._ensurePc = function () {
+    if (this.pc) return this.pc;
+    this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+    var self = this;
+    this.pc.ontrack = function (e) { self._onTrack(e); };
+    return this.pc;
+  };
+
+  Viewer.prototype._subscribe = function (publisherSessionId, trackName) {
+    return this._subscribeMany(publisherSessionId, [trackName]);
+  };
+
+  // 一次请求把某个发布者的多路 track 一起订上：SFU 只回一个 offer，
+  // 客户端只做一次 renegotiation。以前每路单独协商，`system` 音频
+  // 是对已经跑着的 `screen` 做二次协商，那一步失败/卡住时画面还在、
+  // 声音就断续甚至消失（Cloudflare 对同一 session 的并发 mutation
+  // 还会回 406）。
+  Viewer.prototype._subscribeMany = function (publisherSessionId, trackNames) {
+    var self = this;
+    if (!publisherSessionId || !trackNames || !trackNames.length) {
+      return Promise.resolve();
+    }
+    var names = [];
+    var keys = [];
+    trackNames.forEach(function (name) {
+      if (!name) return;
+      var key = publisherSessionId + '|' + name;
+      if (self._subbed.has(key)) return;
+      self._subbed.add(key);
+      keys.push(key);
+      names.push(name);
+    });
+    if (!names.length) return Promise.resolve();
+
+    return this._enqueue(function () {
+      return api('/api/rooms/' + encodeURIComponent(self.code) + '/subscribe', {
+        method: 'POST',
+        token: self.token,
+        body: { publisherSessionId: publisherSessionId, trackNames: names },
+      }).then(function (sub) {
+        self.sessionId = sub.sessionId;
+        // 先把 mid / pending 记上，再 setRemoteDescription ——
+        // ontrack 在 SRD 里就可能触发，登记晚了会「收到 track 但没有对应订阅」。
+        var assigned = sub.tracks || [];
+        if (!assigned.length && sub.mid) {
+          assigned = [{ trackName: names[0], mid: sub.mid }];
+        }
+        assigned.forEach(function (t) {
+          if (t && t.mid) {
+            self.midMap.set(t.mid, { sessionId: publisherSessionId, trackName: t.trackName });
+          }
+        });
+        // Safari 没有 transceiver.mid，只能按订阅顺序配对；这里保持
+        // 与 trackNames 相同的顺序。
+        names.forEach(function (name) {
+          self.pending.push({ sessionId: publisherSessionId, trackName: name });
+        });
+
+        var pc = self._ensurePc();
+        return pc.setRemoteDescription({
+          type: sub.sessionDescription.type,
+          sdp: sub.sessionDescription.sdp,
+        }).then(function () {
+          return pc.createAnswer();
+        }).then(function (answer) {
+          return pc.setLocalDescription(answer).then(function () {
+            return self._waitIce();
+          }).then(function () {
+            return api('/api/rooms/' + encodeURIComponent(self.code) + '/answer', {
+              method: 'POST',
+              token: self.token,
+              body: { sessionId: sub.sessionId, sdp: pc.localDescription.sdp },
+            });
+          });
+        });
+      });
+    }).catch(function (e) {
+      keys.forEach(function (key) { self._subbed.delete(key); });
+      console.warn('订阅失败：', e.message);
+      toast('订阅失败：' + e.message);
+    });
+  };
+
+  /** 等候选收齐。[target] 缺省等订阅 PC；发布 PC 传自己的引用。 */
+  Viewer.prototype._waitIce = function (target) {
+    var pc = target || this.pc;
+    if (!pc) return Promise.resolve();
+    if (pc.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (!done) { done = true; resolve(); }
+      }, 3000);
+      pc.addEventListener('icegatheringstatechange', function () {
+        if (done) return;
+        if (pc.iceGatheringState === 'complete') {
+          done = true;
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+    });
+  };
+
+  Viewer.prototype._onTrack = function (e) {
+    var mid = e.transceiver && e.transceiver.mid;
+    var info = mid != null ? this.midMap.get(mid) : null;
+    if (!info) {
+      // Safari 的 TrackEvent 没有 transceiver，只能按订阅顺序猜。
+      info = this.pending.shift();
+    }
+    if (!info) {
+      console.warn('收到 track 但没有对应订阅：', e.track.kind);
+      return;
+    }
+    if (mid != null) {
+      // mid 命中的那一条要从兜底队列里摘掉：留着的话，下一次真的
+      // 需要兜底时（Safari）会按错误的旧条目配对。
+      var idx = this.pending.findIndex(function (x) {
+        return x.sessionId === info.sessionId && x.trackName === info.trackName;
+      });
+      if (idx >= 0) this.pending.splice(idx, 1);
+    }
+    var p = this._pubForSession(info.sessionId);
+    if (!p) return;
+
+    // 同名 track 只保留一路。Cloudflare 对重复订阅会分配新的远端
+    // track；旧轨不拿掉的话，两路 system 会同时进同一个 MediaStream，
+    // 各自有独立的抖动缓冲，听感就是断断续续/重影。
+    if (e.track.kind === 'video') {
+      p.stream.getVideoTracks().forEach(function (old) {
+        if (old.id === e.track.id) return;
+        try { p.stream.removeTrack(old); } catch (err) {}
+        try { old.stop(); } catch (err) {}
+      });
+    } else {
+      if (!p.audioByName) p.audioByName = {};
+      var previous = p.audioByName[info.trackName];
+      if (previous && previous.id !== e.track.id) {
+        try { p.stream.removeTrack(previous); } catch (err) {}
+        try { previous.stop(); } catch (err) {}
+      }
+      p.audioByName[info.trackName] = e.track;
+    }
+    // SFU 轨记账（Agora 接管/回落时按名字对齐）。
+    if (!p.sfuTracks) p.sfuTracks = {};
+    p.sfuTracks[info.trackName] = e.track;
+
+    // 主持人的 screen/system 轨照常收下、入 stream、建元素。压不压由
+    // 「Agora 是否真有这一路」决定，而不是「Agora 是否连上」：
+    // - 视频：_agoraShowVideo 播出首帧后把 CF video 元素藏掉（display:none,
+    //   不删）——流一直在，回退显示元素即可。
+    // - 音频：只在 _agoraShowAudio 实测 Agora 音轨真出声（getVolumeLevel>0）
+    //   后才 _suppressHostSfuAudio 压 CF 声。App 端可能只发了画面没发声
+    //   （publishScreenCaptureAudio 失效/被关），此时 CF system 是唯一的
+    //   声音来源，绝不能在门控处盲压。
+    var agoraCovered = this._agoraCovers(p.uid) &&
+      (info.trackName === 'screen' || info.trackName === 'system');
+
+    try { p.stream.addTrack(e.track); } catch (err) { /* track 可能已结束 */ }
+    // 画面先到（或音频后补）时，把承载它的元素补出来。covered 时元素
+    // 照样建——Agora video box 盖在上面、CF 音轨 enabled 还没动，回退
+    // 时显示元素/放开 enabled 即可，不需要补订。
+    if (e.track.kind === 'video') {
+      this._ensureSlot(p);
+    } else if (e.track.kind === 'audio') {
+      this._ensureAudioEl(p);
+      this._applyVolumeTo(p);
+      if (agoraCovered && this._agoraAudioTracks && this._agoraAudioTracks.length) {
+        // Agora 音轨已在播（实测过）：这路 CF 声直接按住，防叠音。
+        try { e.track.enabled = false; } catch (err) {}
+        return; // 不进入 play 分支
+      }
+      if (!p.slot) {
+        this._playAudio(p);
+      } else if (p.video) {
+        // 画面先到、系统声音晚到时，video 可能已经被浏览器按「无声」启动。
+        // 再 play 一次，让新到的音轨真正出声；失败就亮起「开启声音」。
+        var pr = p.video.play();
+        if (pr && pr.catch) {
+          pr.catch(function () { $('soundHint').hidden = false; });
+        }
+      }
+    }
+  };
+
+  Viewer.prototype._pubForSession = function (sessionId) {
+    var found = null;
+    this.pubs.forEach(function (p) { if (p.sessionId === sessionId) found = p; });
+    return found;
+  };
+
+  // ────────────────────── 房间信息 ──────────────────────
+
+  Viewer.prototype._setRoom = function (room) {
+    if (room.title) {
+      $('roomTitle').textContent = room.title;
+      document.title = room.title + ' · 一起看';
+    }
+    if (room.roomId) {
+      // 完整 roomId（如 123456-9f3a2b）：Agora 频道名必须与 App 端一致
+      //（App 请求 token 传 channel=roomId），不然两边进不同频道，
+      // 观众永远收不到主持人的流。
+      this._roomId = room.roomId;
+    }
+    if (room.hostUid) {
+      // 房主身份：_tryAgora 只认房主的 screen，别人开共享不动 Agora。
+      this._roomHostUid = room.hostUid;
+    }
+    if (room.roomCode) {
+      $('roomCode').textContent = '房间码 ' + room.roomCode;
+      history.replaceState(null, '', '/?room=' + encodeURIComponent(room.roomCode));
+    }
+    if (room.viewerCount != null) $('viewerCount').textContent = room.viewerCount;
+    if (room.quality) this._setQuality(room.quality);
+    if (room.status === 'ended') this._end('房间已结束');
+  };
+
+  Viewer.prototype._setQuality = function (q) {
+    if (!q) return;
+    $('qualityPill').textContent = q.width + '×' + q.height + ' · ' + q.frameRate + 'fps';
+  };
+
+  // ────────────────────── 聊天 ──────────────────────
+
+  Viewer.prototype._setChatHistory = function (list) {
+    $('msgs').innerHTML = '';
+    var self = this;
+    list.forEach(function (m) { self._appendMsg(m, true); });
+  };
+
+  Viewer.prototype._appendMsg = function (m, silent) {
+    if (!m) return;
+    var mine = m.uid && m.uid === (this._selfUid || null);
+    var div = document.createElement('div');
+    div.className = 'msg' + (mine ? ' mine' : '');
+    div.innerHTML =
+      '<div class="who">' + escapeHtml(m.name || '观众') + '</div>' +
+      '<div class="txt"></div>';
+    div.querySelector('.txt').textContent = m.text || '';
+    $('msgs').appendChild(div);
+    $('msgs').scrollTop = $('msgs').scrollHeight;
+    // 新消息走舞台弹幕，不再自动掀开聊天侧栏 —— 否则每来一句话，
+    // 侧栏就把画面盖住一次。想看完整记录仍然可以自己点「聊天」。
+    if (!silent) this._danmaku(m);
+  };
+
+  /**
+   * 把一条聊天消息当成弹幕从右向左飘过舞台。
+   * 只负责新消息；进房时的历史记录由 _setChatHistory 静默灌入。
+   */
+  Viewer.prototype._danmaku = function (m) {
+    var layer = $('danmakuLayer');
+    if (!layer || !m) return;
+    var text = (m.text || '').slice(0, 180);
+    if (!text) return;
+
+    var el = document.createElement('div');
+    el.className = 'danmaku';
+    var nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.textContent = m.name || '观众';
+    var tx = document.createElement('span');
+    tx.className = 'tx';
+    tx.textContent = text;
+    el.appendChild(nm);
+    el.appendChild(tx);
+
+    var lanes = Math.max(3, Math.min(7, Math.floor(layer.clientHeight / 42)));
+    var lane = this._danmakuLane++ % lanes;
+    el.style.top = (14 + lane * 40) + 'px';
+    el.style.animationDuration = (14 + Math.min(3, text.length / 60)) + 's';
+    layer.appendChild(el);
+
+    // 起终点按实际宽度算，舞台不是整屏宽时也不会只飘一半。
+    var travel = layer.clientWidth + el.offsetWidth + 32;
+    el.style.setProperty('--travel', '-' + travel + 'px');
+
+    // 极端刷屏时最多留 24 条，避免 DOM 无限长。
+    while (layer.childElementCount > 24) {
+      layer.removeChild(layer.firstElementChild);
+    }
+    el.addEventListener('animationend', function () { el.remove(); });
+  };
+
+  Viewer.prototype.sendChat = function (text) {
+    text = (text || '').trim();
+    if (!text) return;
+    this._send({ type: 'chat', text: text.slice(0, 500) });
+  };
+
+  // ────────────────────── 收尾 ──────────────────────
+
+  Viewer.prototype._end = function (reason) {
+    if (this.ended) return;
+    this.ended = true;
+    this.closed = true;
+    $('endedReason').textContent = reason;
+    $('endedOverlay').hidden = false;
+    this._teardown();
+  };
+
+  Viewer.prototype.leave = function () {
+    var self = this;
+    this.closed = true;
+    // 先通知服务端拆 session，再本地清理；失败也要走，不能卡在退出上。
+    return api('/api/rooms/' + encodeURIComponent(this.code) + '/leave', {
+      method: 'POST',
+      token: this.token,
+      body: {},
+    }).catch(function () {}).then(function () { self._teardown(); });
+  };
+
+  Viewer.prototype._teardown = function () {
+    this.pubs.forEach(function (p) {
+      if (p.audioEl) { p.audioEl.pause(); p.audioEl.remove(); }
+      p.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+    });
+    this.pubs.clear();
+    if (this.pc) { try { this.pc.close(); } catch (e) {} this.pc = null; }
+    this._agoraTeardown();
+    if (this.ws) { try { this.ws.close(); } catch (e) {} this.ws = null; }
+    this.midMap.clear();
+    this.pending = [];
+    this._subbed.clear();
+  };
+
+  // ──────────────────────────────────────────────────────────
+  // 页面流程
+  // ──────────────────────────────────────────────────────────
+
+  var viewer = null;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /** 手机进入全屏后锁横屏；桌面或浏览器不支持时静默跳过。 */
+  function lockLandscape() {
+    try {
+      var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (!coarse || !window.screen || !screen.orientation || !screen.orientation.lock) return;
+      var p = screen.orientation.lock('landscape');
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+
+  function unlockOrientation() {
+    try {
+      if (window.screen && screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch (e) {}
+  }
+
+  /** 优先全屏整个画面格子；iPhone Safari 退回原生 video 全屏。 */
+  function openSlotFullscreen(slot, video) {
+    try {
+      if (slot.requestFullscreen) {
+        var p = slot.requestFullscreen();
+        if (p && p.then) {
+          p.then(lockLandscape).catch(function () { toast('全屏失败，请重试'); });
+        } else {
+          lockLandscape();
+        }
+        return;
+      }
+      // iPhone Safari：没有元素级全屏，只能交给原生 video 全屏。
+      if (video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
+      if (video.webkitRequestFullscreen) { video.webkitRequestFullscreen(); lockLandscape(); return; }
+    } catch (e) {
+      console.warn('全屏失败：', e);
+    }
+    toast('当前浏览器不支持全屏');
+  }
+
+  /** 聊天 / 成员抽屉统一开关；打开抽屉时收起音量面板。 */
+  function setPanel(name) {
+    var chat = $('chatPanel');
+    var members = $('membersPanel');
+    var scrim = $('panelScrim');
+    var openChat = name === 'chat';
+    var openMembers = name === 'members';
+    chat.classList.toggle('open', openChat);
+    members.classList.toggle('open', openMembers);
+    scrim.hidden = !(openChat || openMembers);
+    if (openChat || openMembers) $('volPanel').hidden = true;
+  }
+
+  /** 把观看音量状态同步到面板。 */
+  function syncVolumeUi(v) {
+    var out = $('outVol');
+    var mute = $('muteBtn');
+    if (!out || !mute) return;
+    out.value = String(v.volume);
+    var silent = v.muted || v.volume === 0;
+    mute.textContent = silent ? '取消静音' : '静音';
+    mute.classList.toggle('muted', silent);
+  }
+
+  function showRoom() {
+    landing.hidden = true;
+    roomEl.hidden = false;
+    // 新的一间房不能背着上一间留下的「房间已结束」遮罩。
+    $('endedOverlay').hidden = true;
+  }
+
+  function backHome() {
+    landing.hidden = false;
+    roomEl.hidden = true;
+    // 回首页时把上一间房的状态清干净，否则：
+    //   1) 加入按钮还是 disabled，用户点不动；
+    //   2) endedOverlay 还开着，下一间房一进来就被它糊住。
+    joinBtn.disabled = false;
+    showError(joinErr, null);
+    $('endedOverlay').hidden = true;
+    $('endedReason').textContent = '主持人已结束一起看';
+    $('soundHint').hidden = true;
+    setPanel(null);
+    $('volPanel').hidden = true;
+    $('danmakuLayer').innerHTML = '';
+    document.title = 'Citro · 一起看';
+    history.replaceState(null, '', '/');
+  }
+
+  function doJoin() {
+    var code = codeInput.value.trim();
+    if (!/^\d{6}$/.test(code)) {
+      showError(joinErr, new Error('请输入 6 位数字房间码'));
+      return;
+    }
+    joinBtn.disabled = true;
+    showError(joinErr, null);
+
+    var name = nameInput.value.trim() || '观众';
+    try { localStorage.setItem('citro_share_name', name); } catch (e) {}
+
+    viewer = new Viewer();
+    viewer.join(code, name).then(function (data) {
+      showRoom();
+      viewer._setRoom(data.room);
+      viewer._setMembers(data.members || []);
+      viewer._setChatHistory(data.chatHistory || []);
+      viewer.connectWs();
+      // 已经有人在共享的话，立刻订阅，不用等 publisher_joined。
+      viewer._syncMembers(data.members || []);
+      syncVolumeUi(viewer);
+    }).catch(function (e) {
+      showError(joinErr, e);
+      joinBtn.disabled = false;
+      viewer = null;
+    });
+  }
+
+  // 事件绑定
+  joinBtn.addEventListener('click', doJoin);
+  codeInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doJoin();
+  });
+  // 只允许数字，且最多 6 位
+  codeInput.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+  });
+
+  $('chatBtn').addEventListener('click', function () {
+    setPanel($('chatPanel').classList.contains('open') ? null : 'chat');
+  });
+  $('membersBtn').addEventListener('click', function () {
+    setPanel($('membersPanel').classList.contains('open') ? null : 'members');
+  });
+  $('membersClose').addEventListener('click', function () {
+    setPanel(null);
+  });
+  $('chatClose').addEventListener('click', function () {
+    setPanel(null);
+  });
+  $('panelScrim').addEventListener('click', function () {
+    setPanel(null);
+  });
+  // 音量面板：点按钮开合，点面板外收起。观看音量作用于远端画面与声音。
+  $('volumeBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var panel = $('volPanel');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden && viewer) syncVolumeUi(viewer);
+  });
+  $('volPanel').addEventListener('click', function (e) { e.stopPropagation(); });
+  $('outVol').addEventListener('input', function () {
+    if (viewer) viewer.setOutputVolume(this.value);
+  });
+  $('muteBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (viewer) viewer.toggleMute();
+  });
+  document.addEventListener('click', function (e) {
+    var panel = $('volPanel');
+    if (!panel || panel.hidden) return;
+    if (panel.contains(e.target) || (e.target.closest && e.target.closest('#volumeBtn'))) return;
+    panel.hidden = true;
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    setPanel(null);
+    $('volPanel').hidden = true;
+  });
+  document.addEventListener('fullscreenchange', function () {
+    if (document.fullscreenElement) lockLandscape();
+    else unlockOrientation();
+  });
+  document.addEventListener('webkitfullscreenchange', function () {
+    if (document.webkitFullscreenElement) lockLandscape();
+    else unlockOrientation();
+  });
+  $('chatForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = $('chatInput');
+    if (viewer) viewer.sendChat(input.value);
+    input.value = '';
+  });
+  $('copyBtn').addEventListener('click', function () {
+    var code = (viewer && viewer.code) || codeInput.value.trim();
+    if (!code) return;
+    copy(location.origin + '/?room=' + encodeURIComponent(code), '邀请链接已复制');
+  });
+  $('leaveBtn').addEventListener('click', function () {
+    if (!viewer) { backHome(); return; }
+    viewer.leave().then(backHome);
+  });
+  $('endedBack').addEventListener('click', backHome);
+
+  // 自动播放被拦时的统一入口：把所有挂着的媒体元素再 play 一遍。
+  $('soundHint').addEventListener('click', function () {
+    var hint = this;
+    hint.hidden = true;
+    if (!viewer) return;
+    // Agora 侧：AudioContext 挂起时重新 play 全部音轨（用户手势解锁）。
+    if (viewer.agora && viewer.agora.enabled && viewer._agoraAudioTracks) {
+      viewer._agoraAudioTracks.forEach(function (t) {
+        try { t.play(); } catch (e) {}
+      });
+    }
+    viewer.pubs.forEach(function (p) {
+      var el = p.audioEl || p.video;
+      if (!el || !el.play) return;
+      var pr = el.play();
+      if (pr && pr.catch) pr.catch(function () { hint.hidden = false; });
+    });
+  });
+
+  window.addEventListener('beforeunload', function () {
+    if (viewer) viewer.leave();
+  });
+
+  // 预填：?room=123456 或本地昵称
+  (function init() {
+    var params = new URLSearchParams(location.search);
+    var room = params.get('room');
+    if (room && /^\d{6}$/.test(room)) {
+      codeInput.value = room;
+    }
+    try {
+      var name = localStorage.getItem('citro_share_name');
+      if (name) nameInput.value = name;
+    } catch (e) {}
+  })();
+})();
+</script>
+</body>
+</html>

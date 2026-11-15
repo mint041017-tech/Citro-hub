@@ -19,10 +19,10 @@ class ResPage extends StatefulWidget {
   State<ResPage> createState() => _ResPageState();
 }
 
-const _gamesMovedTools = {'玩法抽签', '瞬投', '屏幕分享', '视野live'};
+const _gamesMovedTools = {'玩法抽签', '瞬投', '一起看', '视野live'};
 
 /// 顶部快捷工具：这三项在下方列表里不再重复出现（「便签」不在 kTools 里）。
-const _quickToolNames = {'屏幕分享', '玩法抽签', '视野live'};
+const _quickToolNames = {'一起看', '玩法抽签', '视野live'};
 
 class _QuickTool {
   final String name;
@@ -51,7 +51,7 @@ class _ResPageState extends State<ResPage> {
     final maxWidth = wide ? 1120.0 : 840.0;
     final tabBar = widget.embedded && !(layout?.tabletNav ?? false);
     final mods = kMods;
-    // 「屏幕分享」「玩法抽签」「视野live」已经提到顶部快捷工具里，
+    // 「一起看」「玩法抽签」「视野live」已经提到顶部快捷工具里，
     // 下面不再重复显示。
     final tools = kTools
         .where(
@@ -368,7 +368,7 @@ class _ResPageState extends State<ResPage> {
   }
 
   /// 顶部一排快捷工具：四张卡用不同底色区分，点一下直接打开。
-  /// 「屏幕分享」「玩法抽签」「视野live」在下方列表里不再重复。
+  /// 「一起看」「玩法抽签」「视野live」在下方列表里不再重复。
   Widget _quickToolsRow(BuildContext context, {required int columns}) {
     final c = context.c;
     final byName = {for (final t in kTools) t.name: t};
@@ -379,11 +379,11 @@ class _ResPageState extends State<ResPage> {
 
     final items = <_QuickTool>[
       _QuickTool(
-        name: '屏幕分享',
-        desc: byName['屏幕分享']?.desc ?? '网页屏幕共享与远程演示',
-        icon: byName['屏幕分享']?.icon ?? AppIcons.monitor,
+        name: '一起看',
+        desc: byName['一起看']?.desc ?? '把屏幕放进房间，和朋友一起看',
+        icon: byName['一起看']?.icon ?? AppIcons.monitor,
         tint: c.tintBlue,
-        onTap: () => open('屏幕分享'),
+        onTap: () => open('一起看'),
       ),
       _QuickTool(
         name: '玩法抽签',

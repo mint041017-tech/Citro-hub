@@ -282,13 +282,15 @@ class _InAppWebPageState extends State<InAppWebPage> {
                               final ownSite =
                                   host == 'chimu-claw.xyz' ||
                                   host.endsWith('.chimu-claw.xyz') ||
+                                  // 屏幕分享（Cloudflare Worker 自定义域）
+                                  host == 'mint1017.cn' ||
+                                  host.endsWith('.mint1017.cn') ||
                                   host == 'localhost' ||
                                   host == '127.0.0.1' ||
                                   // 合作工具站：这些页面自身会再跳外链，
                                   // 交给系统浏览器会让内嵌页变成死胡同。
                                   host == 'shuntou.top' ||
                                   host.endsWith('.shuntou.top') ||
-                                  host == 'demo.piik.tv' ||
                                   host == 'shijiao.xingpaste.com' ||
                                   host == 'mslab.gg' ||
                                   host.endsWith('.mslab.gg');

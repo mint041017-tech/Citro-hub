@@ -188,13 +188,13 @@ class WebGameToolsRow extends StatelessWidget {
             openCitroPage(context, 'https://shuntou.top/', title: '瞬投'),
       ),
       _WebGameTool(
-        title: '屏幕分享',
-        desc: '网页共享演示',
+        title: '一起看',
+        desc: '把屏幕放进房间 · 可语音文字',
         icon: AppIcons.monitor,
         background: c.tintBlue,
         foreground: c.accentInk,
         onTap: () =>
-            openCitroPage(context, 'https://demo.piik.tv/', title: '屏幕分享'),
+            openCitroPage(context, 'https://share.mint1017.cn/', title: '一起看'),
       ),
       _WebGameTool(
         title: '视野live',

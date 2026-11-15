@@ -21,6 +21,11 @@ node_modules/
 .env.*
 config.json
 trash/config.local.json
+# wrangler 本地开发变量（screen-share 的房间签名密钥），生产走 wrangler secret
+screen-share/.dev.vars
+.dev.vars
+# Cloudflare API Token 临时落盘位置（建 zone / 改 DNS 时用，用完即删）
+screen-share/.cf-token
 
 # ---------- 运行时用户数据（隐私，绝不入库） ----------
 # 账号 / 会话 / 帖子 / 头像 / 语音 / 配方图等真实用户数据
@@ -70,6 +75,7 @@ APK/Citro-v1.9.0-release.apk
 APK/Citro-v1.9.1-release.apk
 APK/Citro-v1.9.*.apk
 APK/Citro-v2.*.apk
+APK/Citro-v3.*.apk
 
 # ---------- Windows 桌面端产物（上传 OBS，不入库） ----------
 WIN/
@@ -159,3 +165,27 @@ now.png
 shot1.png
 devtools/shot-cook.png
 material/cici头像.jpg
+
+# ---------- screen-share 临时诊断产物（不入库） ----------
+screen-share/.wrangler/
+screen-share/._*
+screen-share/_*.json
+screen-share/_*.py
+screen-share/_*.txt
+screen-share/diag_*.json
+screen-share/diag_rt/
+screen-share/tmp_*.js
+screen-share/tmp_*.txt
+wrangler/
+.wrangler/
+
+# ---------- QA/证据临时目录（不入库） ----------
+docs/_probe/
+docs/_refute/
+docs/_verify/
+docs/evidence_tmp/
+tmp_dns/
+_refute_*
+
+# ---------- 3.1.79 起不再重复入库的辅助脚本 ----------
+web/make_web_zip_template.py.txt

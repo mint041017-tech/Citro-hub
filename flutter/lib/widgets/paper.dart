@@ -415,6 +415,7 @@ class CitroTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextStyle? style;
   final Color? fillColor;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CitroTextField({
     super.key,
@@ -432,6 +433,7 @@ class CitroTextField extends StatelessWidget {
     this.keyboardType,
     this.style,
     this.fillColor,
+    this.inputFormatters,
   });
 
   @override
@@ -452,6 +454,7 @@ class CitroTextField extends StatelessWidget {
       textInputAction: textInputAction,
       focusNode: focusNode,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: style ?? context.body(size: CitroType.body, color: c.ink),
       decoration: InputDecoration(
         hintText: hint,
@@ -727,8 +730,15 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // AppIcons.* 常量是裸 SVG 片段（多个 <path> 并列），不是完整文档。
+    // 直接交给 SvgPicture.string 会因缺 <svg> 根节点解析失败、渲染成空白；
+    // 全站多数调用点用 strokeSvg(...) 包好了，但漏包一处就静默丢一个图标
+    // （屏幕共享整页、登录方式切换、勾选标记都踩过）。这里统一兜底：
+    // 不是完整文档就按描边图标包一层，调用方不必记着 strokeSvg。
+    final trimmed = svg.trimLeft();
+    final source = trimmed.startsWith('<svg') ? svg : strokeSvg(trimmed);
     return SvgPicture.string(
-      svg,
+      source,
       width: size,
       height: size,
       colorFilter: ColorFilter.mode(color ?? context.c.ink2, BlendMode.srcIn),
@@ -805,6 +815,10 @@ class AppIcons {
   static const play = '<polygon points="5 3 19 12 5 21 5 3"/>';
   static const wave =
       '<path d="M3 12h2M19 12h2"/><path d="M7 8v8M11 5v14M15 8v8"/>';
+
+  /// 扬声器 + 两道声波：系统 / 共享内容的音量。
+  static const volume =
+      '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 6a9 9 0 0 1 0 12"/>';
   static const trash =
       '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
   static const image =
@@ -813,6 +827,11 @@ class AppIcons {
       '<path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>';
   static const mic =
       '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/>';
+
+  /// 麦克风关闭。不能拿 [close] 顶替：共享按钮旁边出现一个「×」会被读成
+  /// 「退出房间」，和顶栏返回键重复（用户反馈过的重复退出）。
+  static const micOff =
+      '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="4" y1="4" x2="20" y2="20"/>';
   static const heart =
       '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z"/>';
   static const heartFilled =
@@ -833,6 +852,8 @@ class AppIcons {
       '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>';
   static const fork =
       '<path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>';
+  static const settings =
+      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>';
   static const menu =
       '<path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h9"/>';
   static const inbox =

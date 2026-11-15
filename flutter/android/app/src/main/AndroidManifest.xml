@@ -6,6 +6,15 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- 屏幕共享：Android 14+ 要求先起 mediaProjection 前台服务再开始采集，
+         否则 createVirtualDisplay 抛 SecurityException。 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <!-- 一起看弹幕悬浮窗：观众聊天要滚动在主持人屏幕画面上（应用最小化后
+         仍在），只有系统悬浮窗能进 MediaProjection 的采集画面。
+         TYPE_APPLICATION_OVERLAY 是特殊权限，需用户在设置里授予。 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -40,6 +49,7 @@
             android:exported="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density|fontScale|locale|layoutDirection"
             android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
             android:taskAffinity=""
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/LaunchTheme">
@@ -59,8 +69,14 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
-        <!-- 兼容性优先：部分老 GPU / 驱动在 Impeller 下会直接黑屏或崩溃，
-             本版统一使用 Skia 渲染（widget 测试也是在 Skia 下核对的）。 -->
+        <!-- 屏幕共享前台服务：Android 14+ 的 mediaProjection 类型是硬性要求。 -->
+        <service
+            android:name=".ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- 渲染引擎固定用 Impeller（见下方 EnableImpeller），
+             不要再退回 Skia：用户明确要求 Android 端以 Impeller 为准。 -->
         <!-- flutter_local_notifications：排程计时/提醒的 AlarmManager 接收器。
              插件自身 manifest 不声明这两个 receiver，必须由 App 声明，
              否则闹钟会触发但无人接收，计时到点完全没有通知。 -->
@@ -89,7 +105,7 @@
         </provider>
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
+            android:value="true" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

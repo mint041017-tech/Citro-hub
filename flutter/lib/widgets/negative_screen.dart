@@ -103,9 +103,9 @@ class NegativeScreen extends StatelessWidget {
     );
   }
 
-  /// 固定的 5 项：灵敏度 / 玩法抽签 / 视野live / 便签 / 屏幕分享。
+  /// 固定的 5 项：灵敏度 / 玩法抽签 / 视野live / 便签 / 一起看。
   ///
-  /// 前四项两两一排，最后一项「屏幕分享」单独占一整行长卡（用户指定）。
+  /// 前四项两两一排，最后一项「一起看」单独占一整行长卡（用户指定）。
   List<_QuickItem?> _buildItems(BuildContext context) {
     final byName = {for (final t in kTools) t.name: t};
     return [
@@ -118,7 +118,7 @@ class NegativeScreen extends StatelessWidget {
         icon: AppIcons.note,
         onTap: () => showNotesModal(context),
       ),
-      _item(context, byName['屏幕分享'], AppIcons.monitor),
+      _item(context, byName['一起看'], AppIcons.monitor),
     ];
   }
 
@@ -156,7 +156,7 @@ class _QuickGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final tiles = items.whereType<_QuickItem>().toList();
     if (tiles.isEmpty) return const SizedBox.shrink();
-    // 前四项两两一排；最后一项（屏幕分享）单独占一整行长卡。
+    // 前四项两两一排；最后一项（一起看）单独占一整行长卡。
     final head = tiles.length > 1 ? tiles.sublist(0, tiles.length - 1) : tiles;
     final wide = tiles.length > 1 ? tiles.last : null;
     return Column(
@@ -191,14 +191,19 @@ class _QuickTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final iconSize = wide ? 54.0 : 38.0;
+    // 手机上「一起看」这张整行长卡压紧一档（Android / iPhone 同一套宽度），
+    // 别让它比上面四张小卡高出一大截；iPad 与桌面保持原来的长卡。
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final iconSize = wide ? (compact ? 44.0 : 54.0) : 38.0;
     return Pressable(
       onTap: item.onTap,
       hoverLift: 0,
       hoverShadow: false,
       borderRadius: BorderRadius.circular(CitroColors.radii.inner),
       child: Container(
-        padding: EdgeInsets.all(wide ? AppSpacing.x3 : AppSpacing.x2),
+        padding: EdgeInsets.all(
+          wide ? (compact ? AppSpacing.x2 : AppSpacing.x3) : AppSpacing.x2,
+        ),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
@@ -218,7 +223,7 @@ class _QuickTile extends StatelessWidget {
               child: Center(
                 child: AppIcon(
                   strokeSvg(item.icon, width: 2),
-                  size: wide ? 27 : 19,
+                  size: wide ? (compact ? 24 : 27) : 19,
                   color: c.accentInk,
                 ),
               ),
@@ -234,7 +239,9 @@ class _QuickTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.heading(
-                      size: wide ? CitroType.title : CitroType.label,
+                      size: wide
+                          ? (compact ? CitroType.bodyLg : CitroType.title)
+                          : CitroType.label,
                     ),
                   ),
                   const SizedBox(height: 1),

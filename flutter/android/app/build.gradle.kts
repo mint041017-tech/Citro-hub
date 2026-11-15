@@ -123,6 +123,24 @@ android {
             if ((project.findProperty("target-platform") as String?) == "android-arm64") {
                 excludes += listOf("lib/armeabi-v7a/**", "lib/x86_64/**")
             }
+            /* 声网扩展瘦身：Agora 扩展是 enableExtension 按需 dlopen 的，
+               代码里未启用下列任何扩展，纯属插件 AAR 顺手带进来的死重。
+               主持端麦克风（声网发布链）需要 AI 回消 / AI 降噪，这两个
+               库重新保留。保留：ffmpeg（全格式视频解码）、
+               screen_capture（屏幕共享采集器）、video_encoder/dec（软编解码
+               兜底）等核心链路库。 */
+            excludes += listOf(
+                "**/libagora_lip_sync_extension.so",            // 6.6MB 唇形同步
+                "**/libagora_clear_vision_extension.so",        // 5.4MB 画质增强
+                "**/libagora_spatial_audio_extension.so",       // 4.4MB 空间音频
+                "**/libagora_face_capture_extension.so",        // 2.7MB 表情驱动
+                "**/libagora_segmentation_extension.so",        // 2.7MB 人像分割
+                "**/libagora_audio_beauty_extension.so",        // 1.9MB 美声
+                "**/libagora_content_inspect_extension.so",     // 1.7MB 内容审核
+                "**/libagora_video_quality_analyzer_extension.so", // 1.3MB 质量分析
+                "**/libagora_video_av1_encoder_extension.so",   // 1.2MB AV1 编码
+                "**/libagora_face_detection_extension.so",      // 1.2MB 人脸检测
+            )
         }
     }
 }

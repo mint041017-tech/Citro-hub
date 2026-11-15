@@ -46,6 +46,44 @@ if (fs.existsSync(path.join(portableDir, 'Citro.exe'))) {
   }
 }
 
+// ── flutter_webrtc Windows 音频补丁 ────────────────────────────────────
+// 插件自带的 WASAPI loopback 采集器用固定 10 ms 定时器喂帧，迟到时不补发，
+// ring 涨到 200 ms 硬顶后整段丢弃 —— 观众端听到的就是系统声音周期性断续。
+// 仓库里的补丁版本加了按墙钟追赶、1 ms 定时器分辨率和 20 ms 采集缓冲。
+// Flutter 会直接编译 pub 缓存里的源码，所以构建前把补丁文件覆盖进去。
+function patchFlutterWebrtc() {
+  const source = path.join(
+    dir, 'tool', 'patches', 'flutter_webrtc-1.6.3', 'application_loopback_capturer.cc',
+  );
+  if (!fs.existsSync(source)) return;
+  let version = '1.6.3';
+  try {
+    const lock = fs.readFileSync(path.join(dir, 'pubspec.lock'), 'utf8');
+    const at = lock.indexOf('flutter_webrtc:');
+    const tail = at >= 0 ? lock.slice(at, at + 600) : '';
+    const m = tail.match(/version:\s*"([^"]+)"/);
+    if (m) version = m[1];
+  } catch (e) {}
+  if (version !== '1.6.3') {
+    console.warn(`⚠️ flutter_webrtc 已升级到 ${version}，跳过 Windows 音频补丁（补丁基于 1.6.3）`);
+    return;
+  }
+  const cache = process.env.PUB_CACHE || path.join(
+    process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || '', 'AppData', 'Local'),
+    'Pub', 'Cache', 'hosted', 'pub.dev',
+  );
+  const target = path.join(
+    cache, `flutter_webrtc-${version}`, 'windows', 'application_loopback_capturer.cc',
+  );
+  if (!fs.existsSync(target)) {
+    console.warn(`⚠️ 找不到 flutter_webrtc 缓存，音频补丁未应用：${target}`);
+    return;
+  }
+  fs.copyFileSync(source, target);
+  console.log(`> 已应用 flutter_webrtc ${version} Windows 音频补丁`);
+}
+patchFlutterWebrtc();
+
 const buildArgs = ['build', 'windows', '--release', `--dart-define=APP_VERSION=${version}`];
 if (process.env.WINDOWS_UPDATE_MANIFEST_URL) {
   buildArgs.push(`--dart-define=WINDOWS_UPDATE_MANIFEST_URL=${process.env.WINDOWS_UPDATE_MANIFEST_URL}`);

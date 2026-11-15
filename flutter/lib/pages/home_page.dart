@@ -104,8 +104,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   /// 当前背景露出高度与卡片覆盖比例（驱动背景模糊）。
-  double _bgHeight = 400;
-  double _bgCover = 0;
+  ///
+  /// 背景图尺寸是异步解码的：图信息晚到时如果让英雄区变矮，整页滚动内容会
+  /// 突然缩短，[ScrollView] 会把用户正在拖动的位置钳回顶部（表现为「刚进
+  /// 主界面几秒内怎么拖都被拉回原位」）。所以同一尺寸下只允许增高，不允许
+  /// 回缩；只有屏幕/窗口尺寸变化时才重新计算。
+  double _bgHeight = 0;
+  Size? _bgLayoutSize;
+
+  /// 卡片覆盖比例（0..1），驱动背景模糊强度。
+  ///
+  /// 用 ValueNotifier 而不是 setState 字段：滚动路径上每帧都会更新它，
+  /// setState 会把整页（含 HomeBento 卡片栅格）连带重新 build/layout；
+  /// ValueNotifier 只通知真正依赖它的背景层那一个 builder。
+  final ValueNotifier<double> _bgCover = ValueNotifier<double>(0);
 
   /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
   AnimationController? _negAuto;
@@ -166,8 +178,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _onScrollOffset() {
     if (!_scroll.hasClients) return;
     final cover = (_scroll.offset / _bgHeight).clamp(0.0, 1.0);
-    if ((cover - _bgCover).abs() > .01) {
-      setState(() => _bgCover = cover);
+    // 只在超过 1% 时才写 notifier（避免每像素一帧），但只通知背景层，
+    // 不再 setState 整页——卡片栅格在滚动时保持不重建。
+    if ((cover - _bgCover.value).abs() > .01) {
+      _bgCover.value = cover;
     }
   }
 
@@ -240,22 +254,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final heroBottom = wide
         ? math.min(480.0, media.height * .60)
         : (media.height * .68).clamp(440.0, 640.0);
-    // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时先按默认英雄区。
-    // 「抬高」= 卡片区往上提，所以上限比图低 24px，顶多占视口 60%。
+    // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时按「视口
+    // 55%」估算 —— 与 [CitroBlendImage] 对图片显示高度的封顶一致，
+    // 图信息晚到后英雄区不会忽然变矮。
     final bgEdge = CitroBlendImage.bottomEdge.value;
     final rawBg = bgEdge > 0
         ? math.max(120.0, bgEdge - topBarReserved)
-        : math.max(120.0, heroBottom - topBarReserved);
-    final bgHeight = math.min(rawBg, media.height * 0.55);
-    _bgHeight = bgHeight;
+        : math.max(
+            120.0,
+            math.min(heroBottom, media.height * 0.55) - topBarReserved,
+          );
+    final nextBgHeight = math.min(rawBg, media.height * 0.55);
+    if (_bgLayoutSize != media) {
+      // 首次布局 / 旋转 / 窗口尺寸变化：允许重新定高。
+      _bgLayoutSize = media;
+      _bgHeight = nextBgHeight;
+    } else {
+      // 同一尺寸下图片尺寸晚到：只增高不回缩，滚动内容不会突然变短。
+      _bgHeight = math.max(_bgHeight, nextBgHeight);
+    }
+    final bgHeight = _bgHeight;
     // 抽屉（负一屏）高度按内容自然高算，不再用屏高比例：
-    // 标题区 ≈75 + 小卡两排 70×2 + 行距 16×2 + 屏幕分享长卡 102 ≈ 349，
-    // 再加顶部安全区与底部 16px 呼吸位。上一版按 .355 取比例（≈300）是旧排版
-    // （3 小卡一行，内容 ≈267）的校准值；内容变高后长卡被裁在抽屉视口外，
-    // 完全展开时首页顶边又正好贴在抽屉底边上，看起来就像被首页盖住。
-    // 矮屏 / 横屏用 0.62 封顶，超出部分交给抽屉内滚动。
+    // 标题区 ≈75 + 小卡两排 70×2 + 行距 16×2 + 一起看长卡
+    // （桌面 102 / 手机 76）。手机端长卡收紧后抽屉也跟着矮一点，
+    // 否则底部会多出一截空白。
+    // 再加顶部安全区与底部 16px 呼吸位。矮屏 / 横屏用 0.62 封顶，
+    // 超出部分交给抽屉内滚动。
     final safeTop = MediaQuery.paddingOf(context).top;
-    const negContent = 349.0;
+    final negContent = media.width < 600 ? 323.0 : 349.0;
     final negHeight = math.min(
       media.height * .62,
       safeTop + negContent + AppSpacing.x2,
@@ -304,15 +330,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
                   // 首页英雄区是白字，强制深色罩面。
                   // Windows 左右分栏时背景只属于左栏，不在这里铺。
+                  // 模糊强度从滚动 notifier 读：滚动时只有这一层重建，
+                  // 不会把上面的卡片栅格一起拖下水（旧实现每 1% 滚动
+                  // setState 整页，是滑动掉帧的主因之一）。
                   if (!split)
                     Positioned.fill(
                       child: IgnorePointer(
-                        child: CitroAmbientBackground(
-                          blurred: true,
-                          blurSigma: _bgCover * 16,
-                          darkScrim: true,
-                          // 深色主题下把背景图再压暗一点。
-                          dim: 0.18,
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _bgCover,
+                          builder: (context, cover, _) => CitroAmbientBackground(
+                            blurred: true,
+                            blurSigma: cover * 16,
+                            darkScrim: true,
+                            // 深色主题下把背景图再压暗一点。
+                            dim: 0.18,
+                          ),
                         ),
                       ),
                     )
@@ -346,6 +378,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               : NotificationListener<ScrollNotification>(
                                   onNotification: _onScrollNotification,
                                   child: SingleChildScrollView(
+                                    key: const ValueKey('home-scroll'),
                                     controller: _scroll,
                                     // 去掉回弹：到底 / 到顶都硬停，不弹。
                                     physics: const ClampingScrollPhysics(
@@ -513,6 +546,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: NotificationListener<ScrollNotification>(
               onNotification: _onScrollNotification,
               child: SingleChildScrollView(
+                key: const ValueKey('home-scroll'),
                 controller: _scroll,
                 physics: const ClampingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),

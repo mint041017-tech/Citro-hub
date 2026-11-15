@@ -1,0 +1,48 @@
+name = "citro-screen-share"
+main = "src/index.ts"
+# compatibility_date 固定在本机 workerd 能跑测试的上限（2025-09-06）。
+# 代码用到的能力（acceptWebSocket / serializeAttachment / storage.setAlarm /
+# crypto.subtle）都远早于这个日期，所以生产部署同样适用；
+# 将来用到新 API 时再往上抬，并同步升级本地 wrangler。
+compatibility_date = "2025-09-06"
+# DO 的 WebSocket / 结构化克隆需要 Node 兼容标志之外的基础能力；
+# 会话复用窗口依赖的 RTC 能力由 SFU 侧提供，Worker 只做信令。
+compatibility_flags = []
+
+# 自定义域：两个 zone 都已建在 Cloudflare，share 子域走代理指向本 Worker；
+# 主站各记录保持「仅 DNS」，源站不动。
+#   chimu-claw.xyz  zone 8ce4c5e9…  NS eleanor / kareem
+#   mint1017.cn    zone cd9934c8…  NS kirk / tessa
+# 注意：routes 是顶层键，必须写在任何 [table] 之前，否则会被并进上一个表。
+routes = [
+  { pattern = "share.chimu-claw.xyz", custom_domain = true },
+  { pattern = "share.mint1017.cn", custom_domain = true },
+]
+
+# 每个房间一个 Durable Object 实例。
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+# SQLite 存储的 DO 是 2026 年新建 DO 的推荐形态：支持 SQL 查询，
+# 也兼容 storage.put/get 的 KV 风格 API。
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+# 静态资源：分享首页 / 观众降级页。
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# 密钥（wrangler secret put，绝不入库）：
+#   CF_REALTIME_APP_ID / CF_REALTIME_APP_SECRET
+#   CF_TURN_KEY_ID / CF_TURN_KEY_SECRET
+#   ROOM_TOKEN_SECRET
+#   TRASH_API_BASE / TRASH_API_SECRET（可选，用于校验 X-Trash-Token）
+[vars]
+ROOM_MAX_VIEWERS = "50"
+ROOM_TTL_HOURS = "12"
+ROOM_TOKEN_TTL_HOURS = "2"
+HOST_GRACE_MINUTES = "5"
+CHAT_HISTORY_LIMIT = "50"

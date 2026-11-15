@@ -483,8 +483,17 @@ class _SplashGateState extends State<SplashGate> {
       unawaited(_enterMainFlow());
     } else if (!loggedIn && _wasLoggedIn) {
       // 登出 / 会话失效：回到登录页，必须重新登录才能进主界面。
+      // SplashGate 只是根路由的内容，个人页、设置、弹层都压在它上面，
+      // 不把它们弹掉的话，底下换成登录页也看不见。
       _enterFuture = null;
       _pendingProfilePrompt = false;
+      // 放到下一帧再弹：登出可能发生在路由转场中，Navigator 此时是
+      // locked 的，直接 popUntil 会触发断言。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          citroNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+        }
+      });
       setState(() => _enterMain = false);
     }
     _wasLoggedIn = loggedIn;
@@ -516,7 +525,8 @@ class _SplashGateState extends State<SplashGate> {
         onTimeout: () {},
       );
     } catch (_) {}
-    if (!mounted) return;
+    // 背景预载最长要 5 秒，期间可能已经登出：不能再把壳拉起来。
+    if (!mounted || !AppState.instance.loggedIn) return;
     setState(() => _enterMain = true);
     _maybePromptProfile();
   }
@@ -557,10 +567,60 @@ class _SplashGateState extends State<SplashGate> {
       child = const _EnteringHome(key: ValueKey('entering'));
     }
     return AnimatedSwitcher(
-      duration: CitroMotion.popover,
+      duration: kIsWeb ? CitroMotion.popover : const Duration(milliseconds: 520),
       switchInCurve: CitroMotion.easeOut,
-      switchOutCurve: Curves.easeIn,
+      switchOutCurve: CitroMotion.exit,
+      // 两个 child 都铺满全屏，避免过渡期间 Stack 按内容收缩。
+      layoutBuilder: (current, previous) => Stack(
+        fit: StackFit.expand,
+        children: [...previous, ?current],
+      ),
+      transitionBuilder: _switchTransition,
       child: child,
+    );
+  }
+
+  /// 启动页 → 主界面的过渡：启动页淡出并轻轻放大，主界面从下方上浮淡入。
+  ///
+  /// Web 端保持「无动画」约定；系统开启「减少动态」时只保留 child。
+  Widget _switchTransition(Widget child, Animation<double> animation) {
+    if (kIsWeb || CitroMotion.reduced(context)) return child;
+    final leavingSplash = child.key == const ValueKey('splash');
+    // animation 已由 AnimatedSwitcher 套上 switchIn/OutCurve，这里直接用。
+    final visual = leavingSplash
+        // 启动页退场：淡出 + 略微放大，像把封面推开。
+        ? FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              // 退场时 animation 反向：从 1 放大到 1.08。
+              scale: Tween<double>(begin: 1.08, end: 1).animate(animation),
+              child: child,
+            ),
+          )
+        // 主界面进场：淡入 + 从下方上浮 + 轻微缩放。
+        : FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .025),
+                end: Offset.zero,
+              ).animate(animation),
+              child: ScaleTransition(
+                scale: Tween<double>(begin: .985, end: 1).animate(animation),
+                child: child,
+              ),
+            ),
+          );
+    // 正在退场的旧页面（启动页 / 过渡页）不再接收指针，
+    // 免得「刚进主界面」时手势被上面残留的一层挡住。
+    return AnimatedBuilder(
+      animation: animation,
+      child: visual,
+      builder: (context, visual) => IgnorePointer(
+        ignoring: animation.status == AnimationStatus.reverse ||
+            animation.status == AnimationStatus.dismissed,
+        child: visual!,
+      ),
     );
   }
 }

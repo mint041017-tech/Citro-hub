@@ -507,6 +507,11 @@ class _NonoBoardState extends State<_NonoBoard> {
   ) {
     final c = context.c;
     final id = GameIdentityScope.of(context);
+    // 深色主题下不能继续用固定纸白：整块棋盘会变成刺眼的亮岛。
+    // 用深卡面混一点身份色做主纸面，提示、叉号再按主题换墨色。
+    final paper = c.dark
+        ? Color.alphaBlend(id.primary.withValues(alpha: .10), c.surface2)
+        : GameIdentity.paper;
     return SizedBox(
       width: boardW,
       height: boardH,
@@ -517,7 +522,9 @@ class _NonoBoardState extends State<_NonoBoard> {
               decoration: BoxDecoration(
                 color: c.surface,
                 borderRadius: BorderRadius.circular(CitroColors.radii.card),
-                border: Border.all(color: id.deep.withAlpha(80)),
+                border: Border.all(
+                  color: (c.dark ? id.primary : id.deep).withAlpha(80),
+                ),
                 boxShadow: CitroColors.shadows.card(c),
               ),
             ),
@@ -531,7 +538,7 @@ class _NonoBoardState extends State<_NonoBoard> {
                   color: id.soft.withAlpha(c.dark ? 60 : 120),
                   borderRadius: BorderRadius.circular(CitroColors.radii.small),
                 ),
-                child: _grid(cell, hintColW, hintRowH),
+                child: _grid(cell, hintColW, hintRowH, paper),
               ),
             ),
           ),
@@ -548,10 +555,14 @@ class _NonoBoardState extends State<_NonoBoard> {
     );
   }
 
-  Widget _grid(double cell, double hintColW, double hintRowH) {
-    // 纸面谜题：空格与提示区都铺 identity.paper，格线由 2px 间隙里的
-    // identity.soft 低透明透出来；深 / 浅主题下提示数字都压得在纸面上。
-    const paper = GameIdentity.paper;
+  Widget _grid(
+    double cell,
+    double hintColW,
+    double hintRowH,
+    Color paper,
+  ) {
+    // 纸面谜题：空格与提示区铺同一张纸，格线由 2px 间隙里的
+    // identity.soft 低透明透出来；浅色用固定纸白，深色用深卡面。
     final gap = const SizedBox(width: _gap, height: _gap);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -634,6 +645,12 @@ class _RowHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = GameIdentityScope.of(context);
+    final c = context.c;
+    // 深色纸面用提亮身份色；完成行再用弱墨，避免深绿线压在深底上。
+    final hintInk = c.dark
+        ? Color.lerp(c.ink, id.primary, .18)!
+        : id.primaryInk;
+    final doneInk = c.dark ? c.inkSoft : id.deep;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
       child: FittedBox(
@@ -654,11 +671,11 @@ class _RowHint extends StatelessWidget {
                     size: CitroType.meta,
                     weight: CitroType.strong,
                     // 完成行：划线 + 降饱和的深色，不用低对比的浅色。
-                    color: done ? id.deep : id.primaryInk,
+                    color: done ? doneInk : hintInk,
                   )
                   .copyWith(
                     decoration: done ? TextDecoration.lineThrough : null,
-                    decorationColor: id.primaryInk,
+                    decorationColor: doneInk,
                     decorationThickness: 1.5,
                   ),
             ),
@@ -679,6 +696,11 @@ class _ColHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = GameIdentityScope.of(context);
+    final c = context.c;
+    final hintInk = c.dark
+        ? Color.lerp(c.ink, id.primary, .18)!
+        : id.primaryInk;
+    final doneInk = c.dark ? c.inkSoft : id.deep;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 3),
       child: Column(
@@ -695,11 +717,11 @@ class _ColHint extends StatelessWidget {
                     size: CitroType.meta,
                     weight: CitroType.strong,
                     height: 1,
-                    color: done ? id.deep : id.primaryInk,
+                    color: done ? doneInk : hintInk,
                   )
                   .copyWith(
                     decoration: done ? TextDecoration.lineThrough : null,
-                    decorationColor: id.primaryInk,
+                    decorationColor: doneInk,
                     decorationThickness: 1.5,
                   ),
             ),
@@ -730,6 +752,7 @@ class _NonoCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = GameIdentityScope.of(context);
+    final c = context.c;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -751,7 +774,7 @@ class _NonoCell extends StatelessWidget {
                   style: context.body(
                     size: (size * 0.42).clamp(14.0, 26.0),
                     weight: CitroType.strong,
-                    color: id.deep,
+                    color: c.dark ? Color.lerp(c.ink, id.primary, .18) : id.deep,
                   ),
                 ),
               )

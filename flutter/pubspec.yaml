@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.9.10）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 2.6.7+2670
+version: 3.1.67+3167
 
 environment:
   sdk: ^3.13.5
@@ -40,6 +40,15 @@ dependencies:
   qr_flutter: 4.1.0
   mobile_scanner: 5.2.3
   liquid_glass_widgets: ^1.17.1
+  # 屏幕共享：flutter_webrtc 1.6.3 是全平台最新，提供采集 / 发布 / 订阅。
+  # 注意：1.6.3 的 pubspec 没有声明 web 平台，Flutter Web 端不能用，
+  # Web 观众走 share.mint1017.cn 的纯网页实现（见 screen_share/README.md）。
+  flutter_webrtc: ^1.6.3
+  # 声网 Agora：国内直连的媒体主链路（Cloudflare SFU 兜底）。
+  # agora_rtc_engine 只覆盖移动端；Windows 端官方无插件，降级走 flutter_webrtc。
+  agora_rtc_engine: ^6.5.2
+  # 房间事件通道（聊天 / 成员 / 发布者上下线）。
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

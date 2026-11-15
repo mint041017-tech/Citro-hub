@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : FlutterActivity() {
     private var pendingResult: MethodChannel.Result? = null
+    private var pendingMicResult: MethodChannel.Result? = null
+    private var micPermissionCancelled = false
     private var memoryChannel: MethodChannel? = null
     private var ledgerChannel: MethodChannel? = null
     private var ledgerAttached = false
@@ -80,15 +82,22 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "maxRefreshRate" -> result.success(maxRefreshRate())
+                // 诊断通道：Dart 侧在 setHighRefresh 后与 ~800ms 后各查一次，
+                // 用 requested/supported/best 对比 refresh 就能判断
+                // 「申请了 120 但实际跑 60」卡在哪一环。
                 "currentRefreshRate" -> result.success(
-                    mapOf<String, Any>(
-                        "refresh" to (display?.refreshRate ?: 0f),
-                        "mode" to (display?.mode?.refreshRate ?: 0f),
-                        "powerSave" to (
-                            getSystemService(android.os.PowerManager::class.java)
-                                ?.isPowerSaveMode ?: false
-                            ),
-                    )
+                    run {
+                        val d = activeDisplay()
+                        val pm = getSystemService(android.os.PowerManager::class.java)
+                        mapOf<String, Any>(
+                            "refresh" to (d?.refreshRate ?: 0f),
+                            "mode" to (d?.mode?.refreshRate ?: 0f),
+                            "requested" to (wAttributesRefreshRate() ?: 0f),
+                            "supported" to (d?.supportedModes?.map { it.refreshRate } ?: emptyList()),
+                            "best" to (bestSameResolutionMode()?.refreshRate ?: 0f),
+                            "powerSave" to (pm?.isPowerSaveMode ?: false),
+                        )
+                    }
                 )
                 else -> result.notImplemented()
             }
@@ -136,6 +145,63 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // 屏幕共享：Android 14+ 要求先起 mediaProjection 前台服务再采集。
+        // 失败一律返回 false 而不是抛异常 —— 最坏情况是安卓旧版本上少一条
+        // 常驻通知，不能因此让共享直接崩掉。
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/screen_capture")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        val ok = runCatching { ScreenCaptureService.start(this) }.isSuccess
+                        result.success(ok)
+                    }
+                    "stop" -> {
+                        val ok = runCatching { ScreenCaptureService.stop(this) }.isSuccess
+                        result.success(ok)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // 一起看弹幕悬浮窗：观众聊天滚动在主持人屏幕画面上（应用最小化后仍在，
+        // MediaProjection 采整屏时会把悬浮窗一起采进视频流）。所有方法都吞异常
+        // 返回 false/null —— 弹幕是锦上添花，绝不能让聊天消息把房间页打崩。
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/danmaku")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "canShow" -> result.success(runCatching { DanmakuOverlay.canShow(this) }.getOrDefault(false))
+                    "show" -> result.success(runCatching { DanmakuOverlay.show(this) }.getOrDefault(false))
+                    "hide" -> {
+                        runCatching { DanmakuOverlay.hide(this) }
+                        result.success(true)
+                    }
+                    "push" -> {
+                        val name = call.argument<String>("name") ?: ""
+                        val text = call.argument<String>("text") ?: ""
+                        runCatching { DanmakuOverlay.push(name, text) }
+                        result.success(true)
+                    }
+                    "clear" -> {
+                        runCatching { DanmakuOverlay.clear() }
+                        result.success(true)
+                    }
+                    "openPermissionSettings" -> result.success(
+                        runCatching { DanmakuOverlay.openPermissionSettings(this) }.getOrDefault(false)
+                    )
+                    else -> result.notImplemented()
+                }
+            }
+        // 麦克风权限预取：一起看的主持人开麦走声网 SDK 自采，SDK 原生层
+        // 不做运行时权限请求（只靠 manifest 声明），Android 23+ 上
+        // RECORD_AUDIO 未请求过就是 denied —— 表现就是「开麦没声」。
+        // 开麦时在这里把权限弹掉（观众端不开麦，不会白弹）。
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/mic_permission")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "request" -> requestMicPermission(result)
+                    "check" -> result.success(hasMicPermission())
+                    else -> result.notImplemented()
+                }
+            }
         // 系统分享入口：其他 App 分享图片到 Citro 时交给 Dart 侧识别记账。
         val ledger = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/ledger_intake")
         ledgerChannel = ledger
@@ -403,6 +469,7 @@ class MainActivity : FlutterActivity() {
         locationHandler?.removeCallbacksAndMessages(null)
         locationHandler = null
         pendingResult = null
+        pendingMicResult = null
         memoryChannel = null
         ledgerChannel = null
         ledgerAttached = false
@@ -426,6 +493,17 @@ class MainActivity : FlutterActivity() {
         if (hasFocus && highRefreshRequested) applyFrameRate()
     }
 
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode)
+        // 分屏/自由窗口切换会重建窗口 attributes，重申请一次。
+        if (highRefreshRequested) applyFrameRate()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        if (highRefreshRequested) applyFrameRate()
+    }
+
     /**
      * 游戏页期间请求窗口首选刷新率 = 屏幕最高刷新率（通常是 120Hz），
      * 退出游戏恢复「无偏好」，让系统回到默认刷新策略省电。
@@ -438,7 +516,10 @@ class MainActivity : FlutterActivity() {
     private fun applyFrameRate() {
         val w = window ?: return
         val attrs = w.attributes
-        if (highRefreshRequested) {
+        // 省电模式下不抢高刷：系统会全局降频，此时硬顶 120Hz 只会
+        // 让亮屏功耗飙升且经常被系统静默拒绝。清空偏好交给系统。
+        val powerSave = getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true
+        if (highRefreshRequested && !powerSave) {
             val same = bestSameResolutionMode()
             if (same != null) {
                 attrs.preferredRefreshRate = same.refreshRate
@@ -463,11 +544,34 @@ class MainActivity : FlutterActivity() {
         w.attributes = attrs
     }
 
+    /** 诊断用：读回窗口 attributes 里实际记录的申请值（0 表示未申请）。 */
+    private fun wAttributesRefreshRate(): Float? = window?.attributes?.preferredRefreshRate
+
+    /**
+     * 当前可用的 Display。Activity.getDisplay() 是 API 30+，旧版本用
+     * 已废弃的 WindowManager.defaultDisplay —— 之前两个 best* 函数都被
+     * SDK < R 守卫拦死，Android 10 及以下永远拿不到 display、直接 no-op，
+     * 这是「没请求 120Hz」的根因之一（preferredRefreshRate 自 API 21、
+     * Display.Mode 自 API 23 就存在，门槛没理由是 R）。
+     */
+    private fun activeDisplay(): android.view.Display? = try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay
+        }
+    } catch (_: Throwable) {
+        null
+    }
+
     /** 当前分辨率下刷新率最高的模式；找不到返回 null。 */
     private fun bestSameResolutionMode(): android.view.Display.Mode? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        // Display.Mode / getSupportedModes / preferredDisplayModeId 都是
+        // API 23（M）起就有；preferredRefreshRate 是 API 21。
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
         return try {
-            val d = display ?: return null
+            val d = activeDisplay() ?: return null
             val current = d.mode
             var best: android.view.Display.Mode? = null
             for (mode in d.supportedModes) {
@@ -487,9 +591,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun bestRefreshRate(): Float {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return 0f
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return 0f
         return try {
-            val d = display ?: return 0f
+            val d = activeDisplay() ?: return 0f
             var max = d.mode.refreshRate.coerceAtLeast(60f)
             for (mode in d.supportedModes) {
                 if (mode.refreshRate > max) max = mode.refreshRate
@@ -506,6 +610,37 @@ class MainActivity : FlutterActivity() {
     private fun hasLocationPermission(): Boolean =
         checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    /** RECORD_AUDIO 是否已授权（Android 6.0 起需运行时请求）。 */
+    private fun hasMicPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * 请求麦克风权限。已授权直接 true；未授权弹系统框，结果经
+     * [onRequestPermissionsResult] 回传。被拒返回 false（调用方提示用户）。
+     */
+    private fun requestMicPermission(result: MethodChannel.Result) {
+        if (hasMicPermission()) {
+            result.success(true)
+            return
+        }
+        if (pendingMicResult != null) {
+            result.error("busy", "正在请求麦克风权限", null)
+            return
+        }
+        pendingMicResult = result
+        micPermissionCancelled = false
+        requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_MIC)
+    }
+
+    /** 通话中切走（权限框被系统收起）时把挂起的回调放掉，避免 Dart 侧悬挂。 */
+    override fun onPause() {
+        if (pendingMicResult != null && micPermissionCancelled) {
+            pendingMicResult = null
+        }
+        super.onPause()
+    }
 
     private fun requestLocation(result: MethodChannel.Result) {
         if (pendingResult != null) {
@@ -525,6 +660,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_MIC) {
+            val result = pendingMicResult
+            pendingMicResult = null
+            result?.success(hasMicPermission())
+            return
+        }
         if (requestCode != REQUEST_LOCATION) return
         val result = pendingResult ?: return
         pendingResult = null
@@ -628,6 +769,7 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val REQUEST_LOCATION = 4301
+        private const val REQUEST_MIC = 4302
         private const val TIMER_CHANNEL_ID = "citro_reminders"
     }
 }

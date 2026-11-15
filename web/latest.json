@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "2.1.0",
-    "build_number": "2100",
-    "build_id": "c7057a7e9ca07934622b7ce3e9450910",
-    "file": "Citro-web-2.1.0.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-2.1.0.zip",
-    "size": 31363958,
-    "sha256": "c7057a7e9ca07934622b7ce3e9450910c707463f6821a99d2d441d0ab97c862c",
-    "published_at": "2026-11-09T09:42:51Z",
-    "notes": "2.1.0：首页卡片编排与迷你卡、记账/待办/日历、倒数日与纪念日、评论时间右上、性能与安全优化。"
+    "version": "3.1.67",
+    "build_number": "3167",
+    "build_id": "456be2bbfbcd4e599845a70463329eb7",
+    "file": "Citro-web-3.1.67.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.1.67.zip",
+    "size": 49107418,
+    "sha256": "456be2bbfbcd4e599845a70463329eb7070db8fd6114396f0cd5befbccb8d999",
+    "published_at": "2026-11-15T16:23:45Z",
+    "notes": "3.1.67:「一起看」网页观看端接通声网主链路,断线自动回退;全屏新增聊天按钮;修复手机 App 退出全屏画面压条;画面比例完整显示。"
 }

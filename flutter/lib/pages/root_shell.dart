@@ -135,7 +135,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   /// 启动完成、网络请求也让出主线程之后，再预解码常用小图。
   /// 这样打开星象 / AI 对话时不会在首帧临时解码 9 张猫图。
   Future<void> _warmAssets() async {
-    if (kIsWeb) return;
+    // 测试环境没有解码器 / 插件，预解码只会留下一个等不到头的延时。
+    if (kIsWeb || platform.isTest) return;
     await Future<void>.delayed(
       Duration(milliseconds: !kIsWeb && platform.isWindows ? 5000 : 2200),
     );
@@ -162,7 +163,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   }
 
   Future<void> _requestPermissions() async {
-    if (kIsWeb) return;
+    // widget 测试里没有定位 / 通知插件，等定位超时只会给测试留下一个
+    // 20 秒的 pending timer。启动预热与滚动这类测试不需要它。
+    if (kIsWeb || platform.isTest) return;
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     // 启动时自动定位：用户手动选过城市的话，AppState 内部会直接跳过。
@@ -322,6 +325,12 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       child: TickerMode(enabled: active || leaving, child: _pages[i]),
     );
     return Positioned.fill(
+      // 稳定的 key 不能省：Stack 里页面的先后顺序会随「预热其余 Tab」
+      // 和切页动画变化。没有 key 时，同类型的 Positioned 会按位置复用，
+      // 首页前面一插入计划页，后面的首页 Element 就被整棵替换重建 ——
+      // 滚动位置、负一屏开度全部丢光（表现就是「刚打开几秒内怎么滑都
+      // 被拉回原位」）。加了 key 之后 Flutter 才能按 key 搬运同一个页。
+      key: ValueKey<String>('citro-page-$i'),
       child: Offstage(
         offstage: !active && !leaving,
         child: IgnorePointer(

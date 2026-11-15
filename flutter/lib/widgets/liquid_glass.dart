@@ -53,7 +53,12 @@ class CitroLiquidGlass extends StatelessWidget {
       // 独立图层：Tab 栏、负一屏这类「浮在内容之上」的表面各自成层，
       // 不进分组渲染，避免和页面里的其它玻璃互相串味。
       useOwnLayer: true,
-      quality: GlassQuality.premium,
+      // standard 档：轻量 fragment shader，官方基准比 premium 的
+      // 全管线 shader 快 5–10 倍。premium 每帧对身后全宽内容做实时
+      // 折射模糊 —— Tab 栏身后正是滚动中的首页，滚动时每帧都在变，
+      // 120Hz 的帧预算被它吃掉大半，是「滑动掉帧」的主要渲染负担。
+      // 视觉差异在深色磨砂下几乎不可辨。
+      quality: GlassQuality.standard,
       settings: settings ?? borderlessSettings(context),
       width: width,
       height: height,

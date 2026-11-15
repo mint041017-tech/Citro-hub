@@ -35,10 +35,15 @@ class Api {
     return path;
   }
 
-  static Map<String, String> _headers({bool json = false, bool auth = false}) {
+  static Map<String, String> _headers({
+    bool json = false,
+    bool auth = false,
+    String? tokenOverride,
+  }) {
     final h = <String, String>{'Accept': 'application/json'};
     if (json) h['Content-Type'] = 'application/json';
-    if (auth && token != null && token!.isNotEmpty) h['X-Trash-Token'] = token!;
+    final t = tokenOverride ?? token;
+    if (auth && t != null && t.isNotEmpty) h['X-Trash-Token'] = t;
     return h;
   }
 
@@ -48,11 +53,13 @@ class Api {
     Object? body,
     bool auth = true,
     Duration timeout = const Duration(seconds: 20),
+    String? tokenOverride,
   }) async {
     final uri = Uri.parse('$base$path');
     http.Response res;
     try {
-      final headers = _headers(json: body != null, auth: auth);
+      final headers =
+          _headers(json: body != null, auth: auth, tokenOverride: tokenOverride);
       final encoded = body == null ? null : jsonEncode(body);
       res = await switch (method) {
         'GET' => _client.get(uri, headers: headers),
@@ -210,6 +217,23 @@ class Api {
 
   static Future<Map<String, dynamic>> logout([String? pushToken]) =>
       post('/api/auth/logout', pushToken == null ? null : {'token': pushToken});
+
+  /// 本地登出会先把 [token] 清掉，服务端还得拿旧 token 删 session、
+  /// 解绑推送；所以这里显式传入 token。Web 端 token 为空时浏览器自动
+  /// 带 httpOnly Cookie，同样能通过鉴权。
+  static Future<Map<String, dynamic>> logoutWithToken(
+    String? sessionToken,
+    String? pushToken,
+  ) async {
+    final r = await _request(
+      'POST',
+      '/api/auth/logout',
+      body: pushToken == null ? null : {'token': pushToken},
+      tokenOverride: sessionToken,
+      timeout: const Duration(seconds: 8),
+    );
+    return r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
+  }
 
   static Future<Map<String, dynamic>> deleteAccount(String password) =>
       post('/api/auth/delete', {'password': password});

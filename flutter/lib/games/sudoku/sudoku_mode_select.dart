@@ -279,7 +279,9 @@ class _ResumeCard extends StatelessWidget {
               color: c.accent.withValues(alpha: .18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: gameIcon(GameIcons.play, size: 14, color: c.accentText),
+            // accentLt 是浅色语义底：深色主题下 accentText 会变成近黑，
+            // 压在深青底上几乎看不见，这里必须用 accentInk。
+            child: gameIcon(GameIcons.play, size: 14, color: c.accentInk),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -300,7 +302,7 @@ class _ResumeCard extends StatelessWidget {
                   '${resume.remainingLabel(DateTime.now())}',
                   style: context.body(
                     size: 11,
-                    color: c.accentText,
+                    color: c.accentInk,
                     height: 1.4,
                   ),
                 ),
@@ -656,7 +658,7 @@ class _Tag extends StatelessWidget {
         style: context.body(
           size: 9,
           weight: FontWeight.w700,
-          color: c.accentText,
+          color: c.accentInk,
           height: 1.2,
         ),
       ),
@@ -698,7 +700,7 @@ class _StartChip extends StatelessWidget {
               style: context.body(
                 size: compact ? 10 : 11,
                 weight: FontWeight.w700,
-                color: c.accentText,
+                color: c.accentInk,
                 height: 1,
               ),
             ),
@@ -706,7 +708,7 @@ class _StartChip extends StatelessWidget {
             gameIcon(
               GameIcons.arrowRightSolid,
               size: compact ? 8 : 9,
-              color: c.accentText,
+              color: c.accentInk,
             ),
           ],
         ),

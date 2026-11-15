@@ -45,6 +45,10 @@ class AppState extends ChangeNotifier {
   int unread = 0;
   bool notificationsEnabled = true;
   bool _pushBindingBlocked = false;
+  /// 登录态代数：登出清理是异步的，期间可能已经重新登录。
+  /// 每次登录 / 登出自增，旧的清理流程发现代数变了就停手，
+  /// 避免把新会话的 token / 卡面缓存又清掉。
+  int _authEpoch = 0;
   bool reduceMotion = false;
   // HyperOS / MIUI 在后台会限制网络与 CPU；退到后台后暂停未读/动态轮询，
   // 回前台再补一次，避免每分钟醒来发请求。
@@ -201,9 +205,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> _clearAuth() async {
     _pushBindingBlocked = true;
-    try {
-      await PushNotifications.setActive(account: user?.name, enabled: false);
-    } catch (_) {}
+    final epoch = ++_authEpoch;
+    final account = user?.name;
     _notifyTimer?.cancel();
     _postSeeded = false;
     _lastPostTs = null;
@@ -212,11 +215,19 @@ class AppState extends ChangeNotifier {
     _cloudCheckedToday = false;
     user = null;
     Api.token = null;
+    // 先通知，让 SplashGate 立刻切登录页。Push 解绑和 8 个 Prefs 写入
+    // 都放到通知之后 —— 弱网时它们可能要几十秒，不能把登出 UI 卡住。
+    notifyListeners();
+    try {
+      await PushNotifications.setActive(account: account, enabled: false);
+    } catch (_) {}
+    // 这期间用户可能已经重新登录：旧清理流程不能再动新会话。
+    if (epoch != _authEpoch) return;
     await Prefs.setString(PrefKeys.token, null);
     await Prefs.setString(PrefKeys.authUser, null);
     await Prefs.setString(PrefKeys.cardOwner, null);
+    if (epoch != _authEpoch) return;
     await _clearLocalCardState();
-    notifyListeners();
   }
 
   Future<void> login(String account, String password) async {
@@ -224,6 +235,7 @@ class AppState extends ChangeNotifier {
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
     _pushBindingBlocked = false;
+    _authEpoch++;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -237,6 +249,7 @@ class AppState extends ChangeNotifier {
     Api.token = token;
     user = User.fromJson(userJson);
     _pushBindingBlocked = false;
+    _authEpoch++;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -260,6 +273,7 @@ class AppState extends ChangeNotifier {
     Api.token = j['token']?.toString();
     user = User.fromJson(j['user']);
     _pushBindingBlocked = false;
+    _authEpoch++;
     await _persistAuth();
     notifyListeners();
     _startNotifyPolling();
@@ -270,14 +284,27 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     _pushBindingBlocked = true;
-    try {
-      await PushNotifications.setActive(account: user?.name, enabled: false);
-    } catch (_) {}
-    try {
-      final pushToken = await PushNotifications.currentToken();
-      await Api.logout(pushToken?.token);
-    } catch (_) {}
+    final account = user?.name;
+    final authToken = Api.token;
+    // 服务端退登要清 Cookie / 推送绑定，但绝不能挡登录页：先把 token
+    // 抓在手里，后台拿 Push token 再发请求；UI 走本地优先的 _clearAuth。
+    final serverLogout = () async {
+      String? pushToken;
+      try {
+        pushToken = (await PushNotifications.currentToken()
+                .timeout(const Duration(seconds: 2)))
+            ?.token;
+      } catch (_) {}
+      try {
+        await Api.logoutWithToken(authToken, pushToken);
+      } catch (_) {}
+    }();
+    unawaited(
+      PushNotifications.setActive(account: account, enabled: false)
+          .catchError((_) {}),
+    );
     await _clearAuth();
+    unawaited(serverLogout);
   }
 
   /// 注销账号：服务端删除账号与全部个人数据，本机同步清理登录态与账号缓存。
@@ -415,10 +442,61 @@ class AppState extends ChangeNotifier {
         final grew = n > unread && unread >= 0;
         unread = n;
         notifyListeners();
-        if (grew && notificationsEnabled)
-          unawaited(Notifications.show('Citro 社区', '你有 $n 条新消息'));
+        if (grew && notificationsEnabled) {
+          // 本地通知不要只说「你有 N 条新消息」：从同一份响应里取最新
+          // 一条未读，带上类型、昵称和正文，锁屏上就能直接看懂发生了什么。
+          final items = (j['notifications'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<Map>()
+              .map((e) => InboxItem.fromJson(Map<String, dynamic>.from(e)))
+              .toList();
+          InboxItem? latest;
+          for (final item in items) {
+            if (item.unread) {
+              latest = item;
+              break;
+            }
+          }
+          if (latest == null) {
+            unawaited(Notifications.show('Citro 社区', '你有 $n 条新消息'));
+          } else {
+            unawaited(
+              Notifications.show(_inboxTitle(latest), _inboxBody(latest, n)),
+            );
+          }
+        }
       }
     } catch (_) {}
+  }
+
+  /// 消息通知标题：谁做了什么。
+  static String _inboxTitle(InboxItem item) {
+    switch (item.type) {
+      case 'reply':
+        return '${item.nick} 回复了你';
+      case 'comment':
+        return '${item.nick} 评论了你的动态';
+      case 'like':
+        return '${item.nick} 赞了你的动态';
+      default:
+        return 'Citro 社区';
+    }
+  }
+
+  /// 消息通知正文：优先评论/回复内容，其次原动态摘要。
+  static String _inboxBody(InboxItem item, int total) {
+    String clip(String value, int max) {
+      final text = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+      return text.length > max ? '${text.substring(0, max)}…' : text;
+    }
+
+    final text = clip(item.text, 80);
+    final post = clip(item.postText, 60);
+    if (item.type == 'like') {
+      return post.isNotEmpty ? '动态：$post' : '送了你一个赞';
+    }
+    if (text.isNotEmpty) return text;
+    if (post.isNotEmpty) return '动态：$post';
+    return '你有 $total 条新消息';
   }
 
   /// App 前后台切换：后台暂停轮询，回前台立即补一次未读与动态。

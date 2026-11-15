@@ -416,7 +416,7 @@ class HomeCardOption {
 }
 
 /// 与资源库一致：手机上这四项已经并进「游戏」页，不再重复出现在资源库。
-const Set<String> _kToolsMovedToGames = {'玩法抽签', '瞬投', '屏幕分享', '视野live'};
+const Set<String> _kToolsMovedToGames = {'玩法抽签', '瞬投', '一起看', '视野live'};
 
 /// 首页布局的单一数据源：负责读写偏好、移动 / 缩放 / 显隐。
 class HomeLayoutStore extends ChangeNotifier {
