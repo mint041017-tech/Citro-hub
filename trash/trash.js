@@ -872,11 +872,22 @@ const PLAY_PUNS = [
   '鸡同鸭讲（这局只能用方言交流）',
   '面壁思过（杀一个人要面对墙站 2 秒）',
   '画地为牢（杀一个人原地转 2 圈）',
+  '胡言乱语（必须回答所有人的问题，但回答内容不能与问题相关）',
+  '白痴（别人与你说话不能回应，但不可全程闭麦）',
+  '痴呆（每句话结尾都要加上“阿巴阿巴”）',
+  '歌手（所有沟通内容必须以歌唱的形式唱出）',
+  '妃子（随机选择一人为皇上，你扮演妃子，必须以臣妾自称）',
+  '武器盲盒（本局只能使用捡到的枪械）',
+  '反向报点（例如：敌人在A你需要报B）',
 ];
 /* 抽签不再有 10 分钟冷却（用户要求去掉）；0 = 不冷却。
    再往下那条 limited(ip,'playdraw',20,60000) 是防刷的，保留。 */
 const PLAY_CD_MS = 0;
-const PLAY_KEEP = 60;
+/* 全站记录只展示最近 40 条，但个人记录（mine）从这 400 条里筛，
+   避免别人抽得多时把自己的记录挤出窗口、看起来像「没计入」。 */
+const PLAY_KEEP = 400;
+/* 同一身份 6 小时内尽量不抽到重复的签。 */
+const PLAY_REPEAT_WINDOW_MS = 6 * 60 * 60 * 1000;
 const playFile = path.join(DATA_DIR, 'play.json');
 const playRaw = readJson(playFile, {});
 let playRecords = Array.isArray(playRaw.records)
@@ -888,16 +899,87 @@ let playCooldowns =
   playRaw.cooldowns && typeof playRaw.cooldowns === 'object' && !Array.isArray(playRaw.cooldowns)
     ? playRaw.cooldowns
     : {};
+/* 每个身份（u:昵称 / g:设备号）最近 6 小时抽过的签，用于去重。 */
+let playHistory =
+  playRaw.history && typeof playRaw.history === 'object' && !Array.isArray(playRaw.history)
+    ? playRaw.history
+    : {};
 function savePlay() {
-  writeAtomic(playFile, { records: playRecords, cooldowns: playCooldowns });
+  writeAtomic(playFile, {
+    records: playRecords,
+    cooldowns: playCooldowns,
+    history: playHistory,
+  });
 }
 function playKeyOf(me, deviceId) {
   if (me && me.name) return 'u:' + me.name;
   const g = String(deviceId || '').trim();
   return GID_RE.test(g) ? 'g:' + g : null;
 }
+/* 发签：同一身份 6 小时内先用没抽过的签；签池已被抽完时，优先给最久没抽到
+   的那张，尽量拉开重复间隔（而不是纯随机重复）。历史随 play.json 落盘。 */
+function playPickText(key, now) {
+  const cutoff = now - PLAY_REPEAT_WINDOW_MS;
+  const history = (Array.isArray(playHistory[key]) ? playHistory[key] : []).filter(
+    function (r) {
+      return r && typeof r.t === 'string' && typeof r.ts === 'number' && r.ts >= cutoff;
+    }
+  );
+  const seen = {};
+  history.forEach(function (r) {
+    seen[r.t] = true;
+  });
+  const fresh = PLAY_PUNS.filter(function (t) {
+    return !seen[t];
+  });
+  let text;
+  if (fresh.length > 0) {
+    text = fresh[Math.floor(Math.random() * fresh.length)];
+  } else {
+    const lastSeen = {};
+    history.forEach(function (r) {
+      if (!lastSeen[r.t] || r.ts > lastSeen[r.t]) lastSeen[r.t] = r.ts;
+    });
+    text = PLAY_PUNS.slice().sort(function (a, b) {
+      return (lastSeen[a] || 0) - (lastSeen[b] || 0);
+    })[0];
+  }
+  history.push({ t: text, ts: now });
+  if (history.length > PLAY_PUNS.length) {
+    history.splice(0, history.length - PLAY_PUNS.length);
+  }
+  playHistory[key] = history;
+  return text;
+}
+/* 清掉所有身份里超出 6 小时窗口的历史，避免 play.json 无限增长。 */
+function playPruneHistory(now) {
+  Object.keys(playHistory).forEach(function (k) {
+    const kept = (Array.isArray(playHistory[k]) ? playHistory[k] : []).filter(function (r) {
+      return (
+        r &&
+        typeof r.t === 'string' &&
+        typeof r.ts === 'number' &&
+        r.ts >= now - PLAY_REPEAT_WINDOW_MS
+      );
+    });
+    if (kept.length > 0) playHistory[k] = kept;
+    else delete playHistory[k];
+  });
+}
 function playList(key) {
   const now = Date.now();
+  /* 本人记录单独返回：不再依赖全站 40 条里的 you 标记。 */
+  const mine = key
+    ? playRecords
+        .filter(function (r) {
+          return r.key === key;
+        })
+        .slice(-40)
+        .reverse()
+        .map(function (r) {
+          return { t: r.t, name: r.name, ts: r.ts };
+        })
+    : [];
   return {
     ok: true,
     cd: key ? Math.max(0, (parseInt(playCooldowns[key], 10) || 0) - now) : 0,
@@ -907,6 +989,7 @@ function playList(key) {
       .map(function (r) {
         return { t: r.t, name: r.name, ts: r.ts, you: !!key && r.key === key };
       }),
+    mine: mine,
   };
 }
 
@@ -1200,7 +1283,13 @@ async function runCiciPass(trigger) {
       };
       p.comments = p.comments || [];
       p.comments.push(c);
-      made.push({ postId: p.id, owner: p.uid, text: text, comment: pubComment(c, null) });
+      made.push({
+        postId: p.id,
+        owner: p.uid,
+        text: text,
+        postText: (p.text || '').slice(0, 60),
+        comment: pubComment(c, null),
+      });
       total++;
       if (total >= CICI_DAY_MAX) break;
     }
@@ -1217,6 +1306,7 @@ async function runCiciPass(trigger) {
         owner: item.owner,
         nick: CICI_NAME,
         text: item.text,
+        postText: item.postText,
       });
     });
     return { comments: made };
@@ -1319,6 +1409,7 @@ async function runCiciReply(postId, commentId, trigger) {
     replyTo: cm.uid,
     nick: CICI_NAME,
     text: text,
+    postText: p.text,
   });
   console.log('[cici] 回复了 ' + reply.nick);
 }
@@ -1440,7 +1531,12 @@ function queueCommunityPush(options) {
   targets.forEach(function (target) {
     const isReply = Boolean(options.replyTo) && target === options.replyTo;
     const type = options.type === 'like' ? 'like' : isReply ? 'reply' : 'comment';
-    const payload = pushNotifications.interactionPayload(type, options.nick || options.actor, options.text);
+    const payload = pushNotifications.interactionPayload(
+      type,
+      options.nick || options.actor,
+      options.text,
+      options.postText,
+    );
     pushNotifications.devicesForUser(pushState, target, sessions).forEach(function (device) {
       const sentDevice = pushState.devices[device.token];
       sendApns(APNS_CONFIG, device.token, device.environment, payload)
@@ -2138,6 +2234,12 @@ function migrateAuxUserData(oldName, name) {
   if (playCooldowns['u:' + oldName] !== undefined) {
     playCooldowns['u:' + name] = playCooldowns['u:' + oldName];
     delete playCooldowns['u:' + oldName];
+    playDirty = true;
+  }
+  /* 6 小时去重历史也一起过户，避免改名后立刻抽到刚抽过的签 */
+  if (playHistory['u:' + oldName] !== undefined) {
+    playHistory['u:' + name] = playHistory['u:' + oldName];
+    delete playHistory['u:' + oldName];
     playDirty = true;
   }
   if (playDirty) savePlay();
@@ -2925,14 +3027,16 @@ const server = http.createServer(async function (req, res) {
     });
     if (drawDirty) saveZodiacDraws();
 
-    /* 玩法抽签：清掉本人记录与冷却 */
+    /* 玩法抽签：清掉本人记录、冷却与 6 小时去重历史 */
     const playBefore = playRecords.length;
     const hadPlayCd = playCooldowns['u:' + name] !== undefined;
+    const hadPlayHistory = playHistory['u:' + name] !== undefined;
     playRecords = playRecords.filter(function (r) {
       return !(r && r.key === 'u:' + name);
     });
     delete playCooldowns['u:' + name];
-    if (playRecords.length !== playBefore || hadPlayCd) savePlay();
+    delete playHistory['u:' + name];
+    if (playRecords.length !== playBefore || hadPlayCd || hadPlayHistory) savePlay();
     if (u.birth) {
       ['natal', 'transit'].forEach(function (scope) {
         try {
@@ -3182,6 +3286,7 @@ const server = http.createServer(async function (req, res) {
           actor: me.name,
           owner: p.uid,
           nick: me.name,
+          postText: p.text,
         });
       }
       return json(res, 200, { id: p.id, likes: p.likes, liked: i === -1 });
@@ -3287,6 +3392,7 @@ const server = http.createServer(async function (req, res) {
         replyTo: replyTarget ? replyTarget.uid : null,
         nick: c.nick,
         text: text,
+        postText: p.text,
       });
       /* 回复的是 CiCi 的评论，或明确 @CiCi：让 CiCi 接着回复。 */
       if (replyTarget && replyTarget.uid === CICI_NAME) {
@@ -3893,7 +3999,7 @@ const server = http.createServer(async function (req, res) {
     return json(res, 200, playList(playKeyOf(me, qs.get('deviceId'))));
   }
   if (req.method === 'POST' && url === '/api/play') {
-    if (limited(ip, 'playdraw', 20, 60000)) return json(res, 429, { err: '操作太频繁' });
+    if (limited(ip, 'playdraw', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
     const b = await body();
     const key = playKeyOf(me, b && b.deviceId);
     if (!key) return json(res, 400, { err: '缺少身份标识' });
@@ -3906,14 +4012,15 @@ const server = http.createServer(async function (req, res) {
     }
     const gn = String((b && b.name) || '').trim();
     const who = me ? me.name : validGuestName(gn) ? gn : '游客';
-    const text = PLAY_PUNS[Math.floor(Math.random() * PLAY_PUNS.length)];
+    const text = playPickText(key, now);
     playRecords.push({ key: key, name: who, t: text, ts: now });
     if (playRecords.length > PLAY_KEEP) playRecords = playRecords.slice(-PLAY_KEEP);
     playCooldowns[key] = now + PLAY_CD_MS;
-    /* 顺手清掉过期一天以上的冷却键，避免文件无限长大 */
+    /* 顺手清掉过期一天以上的冷却键与 6 小时窗口外的抽签历史，避免文件无限长大 */
     Object.keys(playCooldowns).forEach(function (k) {
       if ((parseInt(playCooldowns[k], 10) || 0) < now - 86400000) delete playCooldowns[k];
     });
+    playPruneHistory(now);
     savePlay();
     return json(res, 200, Object.assign({ t: text, ts: now }, playList(key)));
   }

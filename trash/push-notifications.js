@@ -91,9 +91,12 @@ function truncate(text, max) {
   return value.length > max ? value.slice(0, max) + '…' : value;
 }
 
-function interactionPayload(type, nick, text) {
+function interactionPayload(type, nick, text, postText) {
   const bodyText = text == null ? '' : text;
   const name = truncate(nick, 24) || '有人';
+  // 原动态摘要作为 subtitle：锁屏上能直接看出「是哪条动态」，
+  // 不用点进去才知道。短通知样式不展示 subtitle 时也不影响正文。
+  const subtitle = truncate(postText, 40);
   let title;
   let body;
   if (type === 'reply') {
@@ -104,13 +107,15 @@ function interactionPayload(type, nick, text) {
     body = truncate(bodyText, 60) || '给你写了评论';
   } else if (type === 'like') {
     title = name + ' 赞了你的动态';
-    body = '有人给你送了一个赞';
+    body = truncate(bodyText, 60) || '送了你一个赞';
   } else {
     throw new Error('unsupported notification type');
   }
+  const alert = { title: title, body: body };
+  if (subtitle) alert.subtitle = subtitle;
   return {
     aps: {
-      alert: { title: title, body: body },
+      alert: alert,
       sound: 'default',
       'thread-id': 'citro-community',
     },

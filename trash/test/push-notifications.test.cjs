@@ -74,6 +74,18 @@ test('community interactions build bounded alert payloads', () => {
       'thread-id': 'citro-community',
     },
   });
+  // 带上原动态摘要时作为 subtitle，锁屏就能看出是哪条动态。
+  assert.deepEqual(interactionPayload('comment', '小明', text, '今天去爬山'), {
+    aps: {
+      alert: {
+        title: '小明 评论了你的动态',
+        subtitle: '今天去爬山',
+        body: 'x'.repeat(60) + '…',
+      },
+      sound: 'default',
+      'thread-id': 'citro-community',
+    },
+  });
   assert.deepEqual(interactionPayload('reply', '阿珍', '你好'), {
     aps: {
       alert: { title: '阿珍 回复了你', body: '你好' },
@@ -81,9 +93,20 @@ test('community interactions build bounded alert payloads', () => {
       'thread-id': 'citro-community',
     },
   });
+  assert.deepEqual(interactionPayload('like', '阿强', '', '今天的晚饭'), {
+    aps: {
+      alert: {
+        title: '阿强 赞了你的动态',
+        subtitle: '今天的晚饭',
+        body: '送了你一个赞',
+      },
+      sound: 'default',
+      'thread-id': 'citro-community',
+    },
+  });
   assert.deepEqual(interactionPayload('like', '阿强', ''), {
     aps: {
-      alert: { title: '阿强 赞了你的动态', body: '有人给你送了一个赞' },
+      alert: { title: '阿强 赞了你的动态', body: '送了你一个赞' },
       sound: 'default',
       'thread-id': 'citro-community',
     },
