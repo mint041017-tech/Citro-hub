@@ -13,6 +13,12 @@ import '../services/platform.dart' as platform;
 import '../services/speech.dart';
 import '../state/app_state.dart';
 import '../services/models.dart';
+import '../calendar/calendar_ai.dart';
+import '../calendar/calendar_models.dart';
+import '../calendar/calendar_store.dart';
+import '../ledger/ledger_ai.dart';
+import '../ledger/ledger_models.dart';
+import '../ledger/ledger_store.dart';
 import '../todo/todo_ai.dart';
 import '../todo/todo_models.dart';
 import '../todo/todo_store.dart';
@@ -316,17 +322,35 @@ class _AiChatSheetState extends State<_AiChatSheet>
           assistant.text = '我刚刚走神了，再问我一次吧。';
         });
       } else {
-        // CiCi 可以在回复里带上待办草稿，这里落库并补一句确认。
-        final (clean, drafts) = TodoAi.parseReply(assistant.text);
-        final created = drafts.isEmpty
+        // CiCi 可以在回复里带上待办、账单、日历标记的指令：按
+        // 「待办 → 日历 → 账单」的顺序剥掉指令并落库，再补一行回执。
+        final (afterTodo, todoDrafts) = TodoAi.parseReply(assistant.text);
+        final (afterCalendar, markDrafts) = CalendarAi.parseReply(afterTodo);
+        final (clean, ledgerDrafts) = LedgerAi.parseReply(
+          afterCalendar,
+          categories: LedgerStore.instance.categories,
+        );
+        final created = todoDrafts.isEmpty
             ? const <String>[]
-            : _createTodos(drafts);
-        if (created.isNotEmpty) {
+            : _createTodos(todoDrafts);
+        final marks = markDrafts.isEmpty
+            ? const <String>[]
+            : await _createCalendarMarks(markDrafts);
+        if (!mounted) return;
+        final entries = ledgerDrafts.isEmpty
+            ? const <String>[]
+            : _createLedgerEntries(ledgerDrafts);
+        final confirmations = <String>[
+          if (created.isNotEmpty) '已加入待办：${created.join('、')}',
+          if (marks.isNotEmpty) '已加入日历：${marks.join('、')}',
+          if (entries.isNotEmpty) '已记账：${entries.join('；')}',
+        ];
+        if (confirmations.isNotEmpty) {
           setState(() {
             assistant.pending = false;
             assistant.text =
                 '${clean.trim().isEmpty ? '已经帮你记下了。' : clean.trim()}\n\n'
-                '已加入待办：${created.join('、')}';
+                '${confirmations.join('\n')}';
           });
         } else if (clean.trim().isNotEmpty && clean != assistant.text) {
           setState(() => assistant.text = clean.trim());
@@ -507,16 +531,40 @@ class _AiChatSheetState extends State<_AiChatSheet>
         '请温柔地接住这件事、肯定对方，不要说教、不要追问隐私；2~4 句，口语化。',
       );
     } else {
-      // 首页的 CiCi 也能顺手把待办建出来，和待办页用同一套约定。
-      final store = TodoStore.instance;
-      store.ensureInit();
-      parts.add(TodoAi.assistantSystem);
+      // 首页的 CiCi 除了聊天，还能把待办、账单、倒数日/纪念日直接记进 App。
+      final todoStore = TodoStore.instance;
+      todoStore.ensureInit();
+      final ledgerStore = LedgerStore.instance;
+      ledgerStore.ensureInit();
+      final calendarStore = CalendarStore.instance;
+      calendarStore.ensureInit();
+      final now = DateTime.now();
+      final monthKey = LedgerDates.monthKey(now);
+      parts.add(_homeToolSystem);
       parts.add(
-        '【当前待办数据】\n${TodoAi.contextFor(tasks: store.tasks, moods: store.moods, focusMinutes: 0, streak: store.streak, now: DateTime.now())}',
+        '【当前待办数据】\n${TodoAi.contextFor(tasks: todoStore.tasks, moods: todoStore.moods, focusMinutes: 0, streak: todoStore.streak, now: now)}',
+      );
+      parts.add(
+        '【当前账本数据】\n${LedgerAi.contextFor(monthKey: monthKey, summary: ledgerStore.summaryFor(monthKey), plan: ledgerStore.planFor(monthKey), budgets: ledgerStore.categoryBudgets(monthKey), recent: ledgerStore.recentEntries(limit: 5), monthEntries: ledgerStore.entriesInMonth(monthKey), categories: ledgerStore.categories, now: now)}',
+      );
+      parts.add(
+        '【当前日历标记】\n${CalendarAi.contextFor(marks: calendarStore.marks, now: now)}',
       );
     }
     return parts.isEmpty ? null : parts.join('\n');
   }
+
+  /// 首页 CiCi 的工具约定：待办走行内标记、记账走 ledger 代码块、
+  /// 倒数日 / 纪念日走 [[CAL]] 标记。三段分节写给模型，互不干扰。
+  static const _homeToolSystem =
+      '你是 CiCi。除了聊天，你还能直接帮用户把三类事记进 App：待办、收支账单、倒数日/纪念日。\n'
+      '写入类动作只在用户明确要求时执行；只是聊天、查询或分析时不要输出任何指令。\n\n'
+      '【待办】\n'
+      '${TodoAi.assistantSystem}\n'
+      '【记账】\n'
+      '${LedgerAi.homeAssistantSystem}\n'
+      '【倒数日 / 纪念日】\n'
+      '${CalendarAi.assistantSystem}';
 
   /// 把 CiCi 返回的任务草稿落成真正的待办，返回已建好的标题。
   List<String> _createTodos(List<TodoDraft> drafts) {
@@ -568,6 +616,65 @@ class _AiChatSheetState extends State<_AiChatSheet>
         source: 'cici',
       );
       out.add(title);
+    }
+    return out;
+  }
+
+  /// 把 CiCi 返回的日历草稿落成倒数日 / 纪念日，返回用于回执的文案。
+  Future<List<String>> _createCalendarMarks(
+    List<CalendarMarkDraft> drafts,
+  ) async {
+    final store = CalendarStore.instance;
+    final now = DateTime.now();
+    final out = <String>[];
+    var seq = 0;
+    for (final d in drafts) {
+      final title = d.title.trim();
+      if (title.isEmpty) continue;
+      // 同名视为修改已有标记：用户重复说同一件事时不该叠出两条。
+      CalendarMark? existing;
+      for (final mark in store.marks) {
+        if (mark.title.trim() == title) {
+          existing = mark;
+          break;
+        }
+      }
+      final mark = CalendarMark(
+        id:
+            existing?.id ??
+            'cal-${DateTime.now().microsecondsSinceEpoch}-${seq++}',
+        title: title,
+        date: CalendarDates.dayOnly(d.date),
+        kind: d.kind,
+        yearly: d.yearly,
+        note: d.note.trim(),
+        createdAt: existing?.createdAt ?? DateTime.now().millisecondsSinceEpoch,
+      );
+      await store.saveMark(mark);
+      out.add('$title（${CalendarDates.labelFor(mark, now)}）');
+    }
+    return out;
+  }
+
+  /// 把 CiCi 解析出的账单写入账本（来源标记为 cici），返回回执文案。
+  List<String> _createLedgerEntries(List<LedgerDraft> drafts) {
+    final store = LedgerStore.instance;
+    final out = <String>[];
+    for (final d in drafts) {
+      if (d.amountCents <= 0) continue;
+      final category = store.categoryOf(d.categoryId, kind: d.kind);
+      store.addEntry(
+        kind: d.kind,
+        amountCents: d.amountCents,
+        categoryId: category.id,
+        note: d.note,
+        occurredAt: d.occurredAt,
+        source: LedgerSource.cici,
+      );
+      out.add(
+        '${d.kind.label} ${ledgerMoney(d.amountCents)} · ${category.name}'
+        '${d.note.trim().isEmpty ? '' : ' · ${d.note.trim()}'}',
+      );
     }
     return out;
   }
@@ -795,7 +902,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
         ? ['这道菜怎么补救？', '换成家常做法', '帮我看下火候', '列个采购清单']
         : widget.goodDeed
         ? const <String>[]
-        : ['帮我写一句手账文案', '今天吃什么？', '社区怎么玩？', '安慰一下我'];
+        : const [
+            '午饭 35 块，记一下',
+            '记个 12 月 5 日的生日',
+            '帮我写一句手账文案',
+            '今天吃什么？',
+            '社区怎么玩？',
+            '安慰一下我',
+          ];
     final greeting = widget.recipe != null
         ? '关于《${widget.recipe!.name}》，想聊点什么？'
         : widget.goodDeed

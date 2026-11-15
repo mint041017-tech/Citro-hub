@@ -1,5 +1,4 @@
 import 'package:citro/games/game_loader.dart';
-import 'package:citro/services/platform.dart' as platform;
 import 'package:citro/games/game_registry.dart';
 import 'package:citro/games/game_ui.dart';
 import 'package:citro/overlays/ai_chat.dart';
@@ -108,12 +107,29 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 500));
-    if (platform.isWindows) {
-      // Windows 侧栏不分组。
-      expect(find.text('逛一逛'), findsNothing);
-    } else {
-      expect(find.text('逛一逛'), findsOneWidget);
-    }
+    // iPad 侧栏与 Windows 对齐：资源库 / CiCi 直接进栏，无「我的」与分组标题。
+    expect(find.text('逛一逛'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(CitroTabletSidebar),
+        matching: find.text('资源库'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CitroTabletSidebar),
+        matching: find.text('CiCi'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CitroTabletSidebar),
+        matching: find.text('我的'),
+      ),
+      findsNothing,
+    );
     expect(find.text('食谱日记'), findsOneWidget);
     expect(find.text('Citro · 今天也要开心'), findsOneWidget);
     expect(tester.takeException(), isNull);

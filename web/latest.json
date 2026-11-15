@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.1.67",
-    "build_number": "3167",
-    "build_id": "456be2bbfbcd4e599845a70463329eb7",
-    "file": "Citro-web-3.1.67.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.1.67.zip",
-    "size": 49107418,
-    "sha256": "456be2bbfbcd4e599845a70463329eb7070db8fd6114396f0cd5befbccb8d999",
-    "published_at": "2026-11-15T16:23:45Z",
-    "notes": "3.1.67:「一起看」网页观看端接通声网主链路,断线自动回退;全屏新增聊天按钮;修复手机 App 退出全屏画面压条;画面比例完整显示。"
+    "version": "3.1.68",
+    "build_number": "3168",
+    "build_id": "94b560a66453f812771e77236a031da1",
+    "file": "Citro-web-3.1.68.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.1.68.zip",
+    "size": 49113538,
+    "sha256": "94b560a66453f812771e77236a031da12856871c9a7cbd875fca13a5a53ee41a",
+    "published_at": "2026-11-15T19:11:10Z",
+    "notes": "3.1.68:首页 CiCi 现在能直接帮你记一笔收支、添加倒数日和纪念日,写完即时回执;修复同一时刻连续入账可能产生的重复账单;记账连续入账 id 唯一性修复。"
 }

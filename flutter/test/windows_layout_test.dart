@@ -92,17 +92,13 @@ void main() {
     expect(find.text('游戏'), findsOneWidget);
     expect(find.text('社区'), findsOneWidget);
     expect(find.text('计划'), findsOneWidget);
-    if (platform.isWindows) {
-      // Windows 侧栏：资源库 / CiCi 直接进栏，也不要分组标题。
-      expect(find.text('资源库'), findsOneWidget);
-      expect(find.text('CiCi'), findsOneWidget);
-      expect(find.text('我的'), findsNothing);
-      expect(find.text('逛一逛'), findsNothing);
-      expect(find.text('我的 Citro'), findsNothing);
-    } else {
-      expect(find.text('资源库'), findsNothing);
-      expect(find.text('我的'), findsOneWidget);
-    }
+    // Windows / iPad 共用同一套侧栏：资源库与 CiCi 直接进栏，
+    // 不再有「我的」入口和分组标题（「我的」只由底部头像卡打开）。
+    expect(find.text('资源库'), findsOneWidget);
+    expect(find.text('CiCi'), findsOneWidget);
+    expect(find.text('我的'), findsNothing);
+    expect(find.text('逛一逛'), findsNothing);
+    expect(find.text('我的 Citro'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -64,7 +64,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   bool _wasLoggedIn = false;
   Size? _orientationSize;
 
-  /// 五格导航：首页、计划、游戏、社区、资源库（资源库仅 Windows 侧栏到达）。
+  /// 五格导航：首页、计划、游戏、社区、资源库（资源库由 Windows / iPad 侧栏到达）。
   static int get _tabCount => 5;
 
   /// 当前页是否自己渲染左侧 rail。计划页把待办/记账/日历竖排在一页里，
@@ -393,7 +393,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       case 3:
         return const CommunityPage();
       case 4:
-        // Windows 侧栏的「资源库」Tab。
+        // Windows / iPad 侧栏的「资源库」Tab。
         return const ResPage(embedded: true);
       default:
         return HomePage(onSwitchTab: switchTo);

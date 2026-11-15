@@ -37,33 +37,6 @@
 | --- | --- | --- |
 | <img src="scr-3.1.67/06-game-sudoku.png" width="280" alt="数独对局"> | <img src="scr-3.1.67/04-community.png" width="280" alt="社区"> | <img src="scr-3.1.67/05-resources.png" width="280" alt="资源库"> |
 
-## App Store 截图
-
-> 1.9.9（1909）· iPhone 6.3 英寸 1206×2622 / iPad 13 英寸 2064×2752 · 演示账号 `CitroReview`
->
-> 截图已上传 App Store Connect（两端各 6 张）；iPad 游戏页保留「小工具/资源库」入口，为外部工具导航。
-> 文件与说明见 [`app dist/screenshots/final/README.txt`](app%20dist/screenshots/final/README.txt)。
-
-### iPhone 6.3 英寸
-
-| 首页 | 游戏 | 游戏内 |
-| --- | --- | --- |
-| <img src="app%20dist/screenshots/final/iphone-6.3-01-home.jpg" width="240" alt="iPhone 首页"> | <img src="app%20dist/screenshots/final/iphone-6.3-02-games.jpg" width="240" alt="iPhone 游戏"> | <img src="app%20dist/screenshots/final/iphone-6.3-03-game-slide.jpg" width="240" alt="iPhone 数字华容道"> |
-
-| 社区 | 食谱 | 听隅 |
-| --- | --- | --- |
-| <img src="app%20dist/screenshots/final/iphone-6.3-04-community.jpg" width="240" alt="iPhone 社区"> | <img src="app%20dist/screenshots/final/iphone-6.3-05-cook.jpg" width="240" alt="iPhone 食谱库"> | <img src="app%20dist/screenshots/final/iphone-6.3-06-tingyu.jpg" width="240" alt="iPhone 听隅"> |
-
-### iPad 13 英寸
-
-| 首页 | 游戏 | 游戏内 |
-| --- | --- | --- |
-| <img src="app%20dist/screenshots/final/ipad-13-01-home.jpg" width="300" alt="iPad 首页"> | <img src="app%20dist/screenshots/final/ipad-13-02-games.jpg" width="300" alt="iPad 游戏"> | <img src="app%20dist/screenshots/final/ipad-13-03-game-slide.jpg" width="300" alt="iPad 数字华容道"> |
-
-| 食谱 | 听隅 | 记忆卡牌 |
-| --- | --- | --- |
-| <img src="app%20dist/screenshots/final/ipad-13-04-cook.jpg" width="300" alt="iPad 食谱库"> | <img src="app%20dist/screenshots/final/ipad-13-05-tingyu.jpg" width="300" alt="iPad 听隅"> | <img src="app%20dist/screenshots/final/ipad-13-06-game-memory.jpg" width="300" alt="iPad 记忆卡牌"> |
-
 ## 技术栈
 
 - **Web**：Flutter 3.47 原生 Widget，与移动端共享页面和状态；浏览器定位、录音等能力通过条件导入适配

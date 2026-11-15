@@ -66,6 +66,20 @@ void main() {
     expect(daily[0].income, 800000);
   });
 
+  test('连续入账的 id 不会因为时间戳分辨率不足而重复', () {
+    final ids = <String>{
+      for (var i = 0; i < 50; i++)
+        store
+            .addEntry(
+              kind: LedgerKind.expense,
+              amountCents: 100,
+              categoryId: 'food',
+            )
+            .id,
+    };
+    expect(ids.length, 50);
+  });
+
   test('总预算、剩余、日均和分类预算超支排序', () {
     store.addEntry(
       kind: LedgerKind.expense,

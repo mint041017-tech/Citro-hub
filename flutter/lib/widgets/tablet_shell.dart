@@ -5,7 +5,6 @@ import '../overlays/ai_chat.dart';
 import '../services/api.dart';
 import '../pages/me_page.dart';
 import '../services/orientation.dart';
-import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -66,7 +65,6 @@ class CitroTabletSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final app = context.app;
-    final windows = platform.isWindows;
     final avatarUrl = Api.imageUrl(app.user?.av);
     Widget avatarFallback({Color? background}) => ColoredBox(
       color: background ?? c.surface2,
@@ -155,21 +153,6 @@ class CitroTabletSidebar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Windows 不要分组标题（「逛一逛」「我的 Citro」），
-                        // 其它宽屏（iPad）保持原样。
-                        if (!windows) ...[
-                          Text(
-                            '逛一逛',
-                            // 分栏标题用系统字体 + 负字距，像 macOS/iPadOS 的 section header。
-                            style: context.ui(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: c.inkSoft,
-                              letterSpacing: .8,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.x1),
-                        ],
                         _SidebarNav(
                           index: index,
                           items: [
@@ -204,15 +187,13 @@ class CitroTabletSidebar extends StatelessWidget {
                             ),
                           ],
                         ),
-                        if (windows) ...[
-                          _SidebarItem(
-                            label: '资源库',
-                            icon: AppIcons.library,
-                            active: index == 4,
-                            showHighlight: false,
-                            onTap: () => onChanged(4),
-                          ),
-                        ],
+                        _SidebarItem(
+                          label: '资源库',
+                          icon: AppIcons.library,
+                          active: index == 4,
+                          showHighlight: false,
+                          onTap: () => onChanged(4),
+                        ),
                         _SidebarItem(
                           label: '全站搜索',
                           icon: AppIcons.search,
@@ -220,33 +201,13 @@ class CitroTabletSidebar extends StatelessWidget {
                           onTap: () =>
                               Navigator.of(context).pushNamed('/search'),
                         ),
-                        if (windows) ...[
-                          const SizedBox(height: AppSpacing.x1),
-                          _SidebarItem(
-                            label: 'CiCi',
-                            icon: AppIcons.sparkle,
-                            active: false,
-                            onTap: () => showAiChat(context),
-                          ),
-                        ] else ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            '我的 Citro',
-                            style: context.ui(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: c.inkSoft,
-                              letterSpacing: .8,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.x1),
-                          _SidebarItem(
-                            label: '我的',
-                            icon: AppIcons.user,
-                            active: false,
-                            onTap: () => openMePage(context),
-                          ),
-                        ],
+                        const SizedBox(height: AppSpacing.x1),
+                        _SidebarItem(
+                          label: 'CiCi',
+                          icon: AppIcons.sparkle,
+                          active: false,
+                          onTap: () => showAiChat(context),
+                        ),
                       ],
                     ),
                   ),

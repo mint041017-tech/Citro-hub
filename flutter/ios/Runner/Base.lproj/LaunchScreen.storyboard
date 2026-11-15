@@ -16,14 +16,14 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView opaque="NO" clipsSubviews="YES" contentMode="scaleAspectFill" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="YRO-k0-Ey4"/>
+                            <imageView opaque="NO" clipsSubviews="YES" contentMode="scaleAspectFit" image="LaunchBrand" translatesAutoresizingMaskIntoConstraints="NO" id="YRO-k0-Ey4"/>
                         </subviews>
-                        <color key="backgroundColor" red="0.98431372549019602" green="0.96862745098039216" blue="0.92549019607843142" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="1a2-6s-vTC"/>
-                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="2a3-7t-wUD"/>
-                            <constraint firstAttribute="trailing" secondItem="YRO-k0-Ey4" secondAttribute="trailing" id="3b4-8u-xVE"/>
-                            <constraint firstAttribute="bottom" secondItem="YRO-k0-Ey4" secondAttribute="bottom" id="4c5-9v-yWF"/>
+                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="width" constant="240" id="1a2-6s-vTC"/>
+                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="height" constant="352" id="2a3-7t-wUD"/>
+                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="3b4-8u-xVE"/>
+                            <constraint firstItem="YRO-k0-Ey4" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="4c5-9v-yWF"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -33,6 +33,9 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchImage" width="540" height="960"/>
+        <image name="LaunchBrand" width="240" height="352"/>
+        <namedColor name="LaunchBackground">
+            <color red="0.97647058823529409" green="0.92941176470588238" blue="0.84313725490196079" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
     </resources>
 </document>

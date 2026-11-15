@@ -36,12 +36,17 @@ class LedgerStore extends ChangeNotifier {
     _entries = [];
     _categories = _defaultCategories();
     _plans = {};
+    _idSeq = 0;
     _invalidateSummary();
   }
 
   int _updatedAt = 0;
   bool _accountSynced = false;
   Timer? _pushTimer;
+
+  /// Windows 的 DateTime.now 只有约 1ms 分辨率：cici 一次入账多笔时
+  /// 时间戳会撞在一起，补一个自增序号保证 id 唯一。
+  int _idSeq = 0;
 
   /// 只有账号与 token 同时就绪才请求云端；测试 / 游客状态一律走本地。
   bool get _signedIn =>
@@ -185,7 +190,7 @@ class LedgerStore extends ChangeNotifier {
   // -------------------------------------------------------------------------
 
   String _newId(String prefix) =>
-      '$prefix-${DateTime.now().microsecondsSinceEpoch}';
+      '$prefix-${DateTime.now().microsecondsSinceEpoch}-${_idSeq++}';
 
   LedgerEntry addEntry({
     required LedgerKind kind,

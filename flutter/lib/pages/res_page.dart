@@ -63,7 +63,10 @@ class _ResPageState extends State<ResPage> {
         .toList();
     final drivers = [...kDriversWeb, ...kDriversClient];
     // iPad 上装不了 PC 外设驱动，整块不展示（用户要求）。
-    final hideDrivers = platform.isIOS && (layout?.tabletNav ?? false);
+    // 不能只依赖 tabletNav：iPad 从横屏转竖屏 / 分屏时 RootShell 会退到手机布局，
+    // 但 index=4 的嵌入资源页还在；embedded 是更稳的「iPad Tab」判据。
+    final hideDrivers =
+        platform.isIOS && (widget.embedded || (layout?.tabletNav ?? false));
     return Scaffold(
       body: CitroBackground(
         child: SafeArea(

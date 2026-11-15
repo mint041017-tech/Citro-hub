@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`3.1.67+3167` · 更新日期：2026-11-16
+> 当前版本：`3.1.68+3168` · 更新日期：2026-11-16
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `3.1.67+3167` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `3.1.68+3168` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.1.67 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3167 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.1.68 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3168 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=3.1.67`、`FLUTTER_BUILD_NUMBER=3167`。
+`FLUTTER_BUILD_NAME=3.1.68`、`FLUTTER_BUILD_NUMBER=3168`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -70,6 +70,22 @@
 - 图片 / 音效缓存上限：`ImageStore` 24MB、`GameSfx` 12MB；系统低内存时一并释放。
 - 其它：const 补齐、铃渡选关 `ListView.builder` 懒加载、我的页 `RepaintBoundary`。
 
+### 2.5 启动页与 iPad 侧栏
+
+- iOS 原生启动页（`LaunchScreen.storyboard`）与 Flutter 启动页同一套设计：奶米底、
+  logo 柔光、`Citro · 今天也要开心` 与底部胶囊；不再使用 1.8.0 时期的猫咪插画，
+  冷启动不再出现旧图到 logo 页的跳变。
+- 原生页只放一块 **240×352pt 的透明品牌块**（`LaunchBrand.imageset`）：居中、
+  `scaleAspectFit`、宽高由约束钉死，所以任何机型、任何横竖屏都不会被裁切或拉伸，
+  也不会随屏幕比例改尺寸；版面尺寸与 Flutter 端 176pt logo 区 / 148pt 图一致。
+- 背景用命名色 `LaunchBackground`（`LaunchBackground.colorset`）：浅色 `#F9EDD7`、
+  深色 `#1E1A18`；品牌块另有 `LaunchBrandDark` 深色变体（墨色文字、深底胶囊）。
+  两套资源都由 `flutter/tool/make_launch_images.py` 生成（logo 与圆体字取自 App
+  资源），改配色 / 字号后重跑脚本即可，不要手工改 PNG。
+- iPad 侧栏与 Windows 完全对齐：首页、计划、游戏、社区、资源库、全站搜索、CiCi；
+  「我的」只由底部头像卡打开，不再单独占一项。
+- iPad 的资源库 Tab 仍隐藏外设驱动板块（`ResPage.hideDrivers`）。
+
 ## 3. Mac 构建步骤
 
 ```bash
@@ -88,7 +104,7 @@ bash ios/build_ipa.sh
 ```bash
 flutter build ipa --release \
   --export-method app-store \
-  --dart-define=APP_VERSION=2.1.0
+  --dart-define=APP_VERSION=3.1.68
 ```
 
 产物：`flutter/build/ios/ipa/*.ipa`。
@@ -96,18 +112,22 @@ flutter build ipa --release \
 ## 4. 产物归档与上传
 
 ```bash
-cp build/ios/ipa/*.ipa "../IPA/Citro-v2.1.0-unsigned.ipa"
-shasum -a 256 "../IPA/Citro-v2.1.0-unsigned.ipa"
+cp build/ios/ipa/*.ipa "../IPA/Citro-v3.1.68-unsigned.ipa"
+shasum -a 256 "../IPA/Citro-v3.1.68-unsigned.ipa"
 
-curl -X PUT -T "IPA/Citro-v2.1.0-unsigned.ipa" \
+curl -X PUT -T "IPA/Citro-v3.1.68-unsigned.ipa" \
   -H "Content-Type: application/octet-stream" \
-  "https://obs.chimu-claw.xyz/IPA/Citro-v2.1.0-unsigned.ipa"
+  "https://obs.chimu-claw.xyz/IPA/Citro-v3.1.68-unsigned.ipa"
 ```
 
 ## 5. 发版前验证
 
-1. `CFBundleShortVersionString` 为 `2.1.0`，`CFBundleVersion` 为 `2100`。
+1. `CFBundleShortVersionString` 为 `3.1.68`，`CFBundleVersion` 为 `3168`。
 2. 真机走查：
+   - 冷启动首屏是奶米底 logo 启动页（与 Flutter 启动页同款），不再出现旧猫咪插画；
+   - 系统深色模式下冷启动是深底变体，浅色模式下是奶米底，两套都不会裁切 logo；
+   - iPad 侧栏包含首页、计划、游戏、社区、资源库、全站搜索、CiCi，且没有「我的」项；
+   - iPad 的资源库 Tab 不显示外设驱动板块；
    - 我的页快捷区不再出现「编辑资料」，点击顶部头像仍可编辑资料；
    - 主题胶囊更短，下拉菜单选项完整显示；
    - 侧栏底部头像能显示真实头像，加载时先显示昵称首字；
@@ -150,3 +170,4 @@ curl -X PUT -T "IPA/Citro-v2.1.0-unsigned.ipa" \
 | 2.0.16–2.0.40 | 新增记账 / 待办 / 日历详情 / 倒数日与纪念日 / 首页卡片编排与迷你卡；评论时间右上角；CiCi 自定义性格；后台轮询门控与低内存清理；CORS、限流、WebView 外链与备份安全加固。 |
 | 2.1.0 | 版本号与 iOS 构建配置同步到 `2.1.0+2100`；日历/待办/记账卡与评论时间定稿；性能与安全修复合并；四端重新打包，IPA 待 macOS 生成。 |
 | 3.1.67 | 版本号与 iOS 构建配置同步到 `3.1.67+3167`；「一起看」声网主链路 + CF 兜底架构、网页观看端链路角标与全屏聊天按钮、App 全屏退出画面压条修复、抽签记录与圆形角标优化；IPA 待 macOS 生成。 |
+| 3.1.68 | 版本号与 iOS 构建配置同步到 `3.1.68+3168`；首页 CiCi 新增直接记账、倒数日与纪念日（指令解析、写入与回执），修复连续入账 id 重复；iOS 原生启动页换成与 Flutter 启动页一致的 logo 版；iPad 侧栏与 Windows 对齐（资源库 / CiCi 进栏、移除我的，资源库隐藏驱动）；IPA 待 macOS 生成。 |
