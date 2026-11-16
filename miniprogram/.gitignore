@@ -1,0 +1,6 @@
+# CI 依赖与上传密钥绝不入库
+node_modules/
+private.*.key
+*.key
+project.private.config.json
+*.log

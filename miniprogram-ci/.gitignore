@@ -1,0 +1,5 @@
+# 上传工具依赖与密钥绝不入库
+node_modules/
+*.key
+private.*.key
+*.log

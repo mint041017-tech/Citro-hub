@@ -1,0 +1,16 @@
+/* Citro 配色（light）取自 flutter/lib/theme/tokens.dart */
+page {
+  min-height: 100vh;
+  background: #F9EDD7;
+  background-image: linear-gradient(180deg, #F9EDD7 0%, #F0E3C8 100%);
+  color: #614A44;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+}
+
+view,
+text,
+button {
+  box-sizing: border-box;
+}

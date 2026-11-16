@@ -1,0 +1,12 @@
+{
+  "name": "citro-miniprogram-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "上传 Citro 小程序代码包",
+  "scripts": {
+    "upload": "node upload.js"
+  },
+  "dependencies": {
+    "miniprogram-ci": "^2.0.0"
+  }
+}

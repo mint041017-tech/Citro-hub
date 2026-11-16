@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/draw/draw"
+  ],
+  "window": {
+    "navigationBarTitleText": "玩法抽签",
+    "navigationBarBackgroundColor": "#F9EDD7",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F9EDD7",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

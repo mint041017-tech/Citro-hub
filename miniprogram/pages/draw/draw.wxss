@@ -1,0 +1,379 @@
+/* 页面排版参照 flutter/lib/pages/play_page.dart：
+   纸张底色 + 圆角卡片 + 青绿主按钮（颜色取自 tokens.dart 的 light 主题）。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 24rpx 36rpx 72rpx;
+}
+
+.header {
+  padding: 24rpx 8rpx 0;
+}
+
+.title {
+  font-size: 60rpx;
+  font-weight: 700;
+  text-align: center;
+  color: #614A44;
+  letter-spacing: 1rpx;
+}
+
+.subtitle {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  text-align: center;
+  color: #9C867F;
+}
+
+.me-line {
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #9C867F;
+}
+
+.me-name {
+  max-width: 360rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.me-edit {
+  margin-left: 14rpx;
+  padding: 4rpx 16rpx;
+  border: 1rpx solid #D8C5A4;
+  border-radius: 999rpx;
+  color: #3E5A55;
+  font-size: 22rpx;
+}
+
+/* ---------------- 卡片 ---------------- */
+
+.card {
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 32rpx;
+  box-shadow: 0 16rpx 40rpx rgba(97, 74, 68, 0.08);
+}
+
+.stage-card {
+  margin-top: 40rpx;
+  height: 360rpx;
+  padding: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage {
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #614A44;
+  word-break: break-all;
+}
+
+.stage-short {
+  font-size: 60rpx;
+}
+
+.stage-medium {
+  font-size: 48rpx;
+}
+
+.stage-long {
+  font-size: 40rpx;
+}
+
+.stage-xlong {
+  font-size: 34rpx;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.actions {
+  margin-top: 28rpx;
+  display: flex;
+  align-items: stretch;
+}
+
+.btn {
+  margin: 0;
+  height: 96rpx;
+  line-height: 96rpx;
+  padding: 0 24rpx;
+  border-radius: 24rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-hover {
+  opacity: 0.86;
+}
+
+.btn.primary {
+  flex: 1;
+  background: #A9C9C4;
+  color: #2E4A46;
+  font-weight: 600;
+}
+
+.btn.ghost {
+  width: 140rpx;
+  margin-left: 16rpx;
+  padding: 0;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  color: #7D655E;
+  font-size: 26rpx;
+}
+
+/* ---------------- 大家的抽签 ---------------- */
+
+.panel {
+  margin-top: 32rpx;
+  padding: 32rpx;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12rpx;
+}
+
+.panel-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.link {
+  margin-left: auto;
+  padding: 8rpx 4rpx;
+  font-size: 24rpx;
+  color: #9C867F;
+}
+
+.spinner {
+  margin-left: auto;
+  width: 28rpx;
+  height: 28rpx;
+  border: 3rpx solid #DCEAE7;
+  border-top-color: #8FB3AE;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hint {
+  padding: 40rpx 0;
+  font-size: 26rpx;
+  text-align: center;
+  color: #9C867F;
+}
+
+.hint-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+}
+
+.record {
+  display: flex;
+  padding: 12rpx 0;
+}
+
+.avatar {
+  width: 48rpx;
+  height: 48rpx;
+  margin-top: 2rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #F3E7CE;
+  border: 1rpx solid #D8C5A4;
+  color: #9C867F;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-you {
+  background: #A9C9C4;
+  border-color: #A9C9C4;
+  color: #2E4A46;
+}
+
+.record-body {
+  margin-left: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.record-top {
+  display: flex;
+  align-items: baseline;
+}
+
+.record-name {
+  margin-right: 10rpx;
+  font-size: 24rpx;
+  color: #9C867F;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-name.you {
+  color: #3E5A55;
+  font-weight: 600;
+}
+
+.record-time {
+  font-size: 20rpx;
+  color: #B7A69E;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-text {
+  margin-top: 2rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+  color: #7D655E;
+  word-break: break-all;
+}
+
+.footer {
+  margin-top: 36rpx;
+  font-size: 24rpx;
+  text-align: center;
+  color: #9C867F;
+}
+
+/* ---------------- 登录门禁 ---------------- */
+
+.auth-gate {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  background: rgba(97, 74, 68, 0.42);
+}
+
+.auth-wrap {
+  min-height: 100%;
+  padding: 56rpx 36rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 680rpx;
+  padding: 44rpx 40rpx 36rpx;
+}
+
+.auth-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.auth-desc {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: #9C867F;
+}
+
+.auth-tabs {
+  margin-top: 28rpx;
+  padding: 6rpx;
+  display: flex;
+  background: #F3E7CE;
+  border-radius: 20rpx;
+}
+
+.auth-tab {
+  flex: 1;
+  height: 68rpx;
+  line-height: 68rpx;
+  text-align: center;
+  font-size: 27rpx;
+  color: #9C867F;
+  border-radius: 16rpx;
+}
+
+.auth-tab.on {
+  background: #FFF8EC;
+  color: #3E5A55;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(97, 74, 68, 0.08);
+}
+
+.auth-field {
+  margin-top: 20rpx;
+  height: 96rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  background: #FFF8EC;
+  border: 1rpx solid #D8C5A4;
+  border-radius: 20rpx;
+}
+
+.auth-input {
+  flex: 1;
+  min-width: 0;
+  height: 96rpx;
+  font-size: 29rpx;
+  color: #614A44;
+}
+
+.auth-placeholder {
+  color: #B7A69E;
+  font-size: 26rpx;
+}
+
+.auth-error {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #B05A4A;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 28rpx;
+}
+
+.auth-submit[disabled] {
+  background: #F3E7CE;
+  color: #9C867F;
+  opacity: 1;
+}
+
+.auth-foot {
+  margin-top: 18rpx;
+  font-size: 22rpx;
+  text-align: center;
+  color: #9C867F;
+}

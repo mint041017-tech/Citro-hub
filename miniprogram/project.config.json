@@ -1,0 +1,34 @@
+{
+  "appid": "wx4c6c70936e99fc1a",
+  "projectname": "citro-play-draw",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "libVersion": "3.4.10",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "tools"
+      },
+      {
+        "type": "file",
+        "value": "README.md"
+      },
+      {
+        "type": "file",
+        "value": ".gitignore"
+      },
+      {
+        "type": "suffix",
+        "value": ".key"
+      }
+    ]
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}
