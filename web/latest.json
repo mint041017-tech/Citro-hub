@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.1.68",
-    "build_number": "3168",
-    "build_id": "94b560a66453f812771e77236a031da1",
-    "file": "Citro-web-3.1.68.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.1.68.zip",
-    "size": 49113538,
-    "sha256": "94b560a66453f812771e77236a031da12856871c9a7cbd875fca13a5a53ee41a",
-    "published_at": "2026-11-15T19:11:10Z",
-    "notes": "3.1.68:首页 CiCi 现在能直接帮你记一笔收支、添加倒数日和纪念日,写完即时回执;修复同一时刻连续入账可能产生的重复账单;记账连续入账 id 唯一性修复。"
+    "version": "3.2.0",
+    "build_number": "3200",
+    "build_id": "0dbfbe4b8a4b6d60acb32222bc82241a",
+    "file": "Citro-web-3.2.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.2.0.zip",
+    "size": 49116367,
+    "sha256": "0dbfbe4b8a4b6d60acb32222bc82241a53b3125334a5ab93932008bd87d04709",
+    "published_at": "2026-11-17T14:51:31Z",
+    "notes": "3.2.0:手机竖屏游戏顶栏改版,游戏名靠左,错误/用时/最佳等读数收进顶栏;放不下时读数自动折到标题下方,棋盘区域更大。"
 }

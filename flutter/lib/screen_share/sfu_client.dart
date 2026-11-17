@@ -301,11 +301,19 @@ class SfuClient {
 
   /// 发布屏幕（画面 + 系统声音；不再发布麦克风）。
   ///
+  /// [includeSystemAudio]：是否把采集流里的系统声音轨也发到 SFU。Windows
+  /// 上声网已在发布系统声时必须传 false —— WebRTC 的 Windows ADM 会把
+  /// 播放流登记成「通信」类别，只要 SFU 链路上有音频发送者，系统就会触发
+  /// communications ducking，把其它应用（以及用户自己放的音乐）音量压到
+  /// 20%。实测 SFU 带系统声时端点峰值 0.4109 → 0.0517，纯画面则全程
+  /// 0.41。声网链路不受影响，观众照样从声网收系统声。
+  ///
   /// 返回 SFU 侧的 sessionId，后续停止共享时用来关 session。
   Future<String> publishScreen(
     MediaStream stream,
-    ShareQuality quality,
-  ) async {
+    ShareQuality quality, {
+    bool includeSystemAudio = true,
+  }) async {
     // 发布走独立的 PC/session，绝不碰订阅链路。
     final pc = await _ensurePublishPc();
     _localStream = stream;
@@ -321,7 +329,7 @@ class SfuClient {
     // 系统声音（桌面端 loopback）是独立于麦克风的一路轨。名字必须上报给
     // Worker，订阅端才能把它和 `mic` 分开播；老版本 Worker 只认 screen /
     // mic，所以下面有「摘掉再发一次」的降级。
-    final systemTrack = stream.getAudioTracks().isEmpty
+    final systemTrack = !includeSystemAudio || stream.getAudioTracks().isEmpty
         ? null
         : stream.getAudioTracks().first;
     if (systemTrack != null) {

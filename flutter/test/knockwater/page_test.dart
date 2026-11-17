@@ -84,14 +84,15 @@ void main() {
       expect(scaffold.gameKey, 'gknockwater');
       expect(scaffold.rankGame, 'knockwater');
       expect(scaffold.liveProgress, isNotNull);
-      expect(find.text('游戏空间'), findsOneWidget);
+      // 手机竖屏的紧凑顶栏只显示身份点 + 游戏名，不再有「游戏空间」小标签。
+      expect(find.text('游戏空间'), findsNothing);
       expect(find.byKey(const ValueKey('kw-title')), findsOneWidget);
       expect(find.byKey(const ValueKey('kw-start')), findsOneWidget);
       expect(find.text('入 水'), findsOneWidget);
       expect(find.text('铃渡'), findsWidgets);
-      // 标准动作区必须是骨架提供的排行榜入口。
+      // 手机竖屏的排行榜入口挪到顶栏圆形按钮（保留调用方传入的 key）。
       expect(find.byKey(const ValueKey('kw-rank')), findsOneWidget);
-      expect(find.text('排行榜'), findsOneWidget);
+      expect(find.text('排行榜'), findsNothing);
       expect(tester.takeException(), isNull);
 
       await disposePage(tester);

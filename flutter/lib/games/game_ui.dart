@@ -7,6 +7,11 @@
 //   操作行      新游戏 / 撤销 / 重开，居中成排，主按钮用身份色
 //   正在玩      底部横条，身份色小圆点
 //
+// 手机竖屏（宽 ≤ 600 且竖放）不同：游戏名左靠，只读读数收进顶栏右侧，
+// 棋盘上方的 HUD 卡整块消失，把高度让给棋盘。宽度不够（长标题 / 大字号 /
+// 多位数）时自动折成标题下方的一行小字，仍不挤占游戏名。平板、桌面和横屏
+// 维持上面的老版式。
+//
 // 颜色只来自 [GameIdentity]（每个游戏固定），不读 `CitroColors.accent`：
 // 主题在亮 / 暗之间切换时，游戏页的强调色不变，玩家靠颜色就能认出游戏。
 import 'dart:async';
@@ -70,6 +75,20 @@ class GameMetrics {
   static const double gutter = 16;
 }
 
+/// 顶栏只读读数：手机竖屏把统计收进顶栏时用的数据。
+///
+/// 只承载文字，不是按钮；桌面 / 竖屏平板仍走 [GameScorePill] 卡片。
+@immutable
+class GameHudStat {
+  const GameHudStat(this.label, this.value, {this.accent = false});
+
+  final String label;
+  final String value;
+
+  /// true = 数值用游戏身份色（分数刷新时的 bump 语义）。
+  final bool accent;
+}
+
 /// 游戏页图标（取自 index.html 游戏页内联 svg，lucide 路径）
 class GameIcons {
   const GameIcons._();
@@ -126,6 +145,7 @@ class GameScaffold extends StatefulWidget {
     this.identity,
     this.above = const [],
     this.pills = const [],
+    this.hudStats = const [],
     this.actions = const [],
     this.hud,
     this.board,
@@ -157,6 +177,12 @@ class GameScaffold extends StatefulWidget {
   /// 棋盘上方的整行控件（难度/模式分段器等），每项独占一行
   final List<Widget> above;
   final List<Widget> pills;
+
+  /// 手机竖屏顶栏只读读数；为空时自动从 [pills] 里的 [GameScorePill] 提取。
+  ///
+  /// 淘气小球 / 跳一跳把 pill 包在自定义 [hud] 里，无法反推 label/value，
+  /// 由页面显式再传一份；非手机布局仍用各自的 [hud] 原样画。
+  final List<GameHudStat> hudStats;
 
   /// 棋盘下方的操作按钮（新游戏/撤销/排行榜等）
   final List<Widget> actions;
@@ -255,6 +281,28 @@ class _GameScaffoldState extends State<GameScaffold> {
 
   GameIdentity get _identity => widget.identity ?? identityOf(widget.gameKey);
 
+  /// 手机竖屏：宽度 ≤ 600 且更窄的一边竖放。
+  ///
+  /// 只影响顶栏和 HUD 的排布，不动棋盘逻辑；平板、桌面和横屏继续用
+  /// 「标题居中 + 棋盘上方 HUD 卡」的老版式。
+  bool _compactChrome(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    return screen.width <= 600 && screen.height > screen.width;
+  }
+
+  /// 顶栏要显示的只读读数。
+  ///
+  /// 常规页面直接复用 `pills` 里的 [GameScorePill]；自定义 `hud` 的页面
+  /// 由 [GameScaffold.hudStats] 显式给出。没有读数时返回空表，顶栏只留标题。
+  List<GameHudStat> get _compactStats {
+    if (widget.hudStats.isNotEmpty) return widget.hudStats;
+    return [
+      for (final pill in widget.pills)
+        if (pill is GameScorePill)
+          GameHudStat(pill.label, pill.value, accent: pill.bump),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -287,15 +335,24 @@ class _GameScaffoldState extends State<GameScaffold> {
 
   Widget _portraitBody(BuildContext context) {
     final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final compact = _compactChrome(context);
+    // 只有真的拿到了读数才收起棋盘上方的 HUD 卡；自定义 hud 又没给
+    // hudStats 的页面保持原样，避免统计凭空消失。
+    final compactHud = compact && _compactStats.isNotEmpty;
     // 顶栏参与布局，不再浮动：浮动时它的高度随系统状态栏变化，
     // 而内容区写死 top:64，真机状态栏一高就压到 HUD / 棋盘上。
     return Column(
       children: [
-        _floatingHeader(context),
+        _floatingHeader(context, compact: compact),
         Expanded(
           child: Column(
             children: [
-              _hudStrip(context),
+              // HUD 收进顶栏后，模式条和棋盘之间留一口气，别贴在一起。
+              _hudStrip(
+                context,
+                showHud: !compactHud,
+                belowGap: compactHud ? 16 : 0,
+              ),
               Expanded(child: _boardArea(context)),
               _actionsStrip(context),
               if (widget.showLive && !kbOpen)
@@ -320,9 +377,11 @@ class _GameScaffoldState extends State<GameScaffold> {
   }
 
   /// 浮动顶栏：返回 + 标题（带身份色标记）+ 排行榜。
-  Widget _floatingHeader(BuildContext context) {
+  ///
+  /// 手机竖屏（[compact]）标题左靠，只读读数收进顶栏：宽度够就单行
+  /// （标题左、读数右），不够自动折成标题下一行小字，不会挤到游戏名。
+  Widget _floatingHeader(BuildContext context, {required bool compact}) {
     final c = context.c;
-    final identity = _identity;
     final rank = _rankButton;
     return SafeArea(
       bottom: false,
@@ -343,46 +402,14 @@ class _GameScaffoldState extends State<GameScaffold> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: CitroHero(
-                  tag: CitroHero.tagOf('game-title', widget.gameKey),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: identity.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: identity.primary.withAlpha(120),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: context.heading(
-                            size: widget.titleSize ?? CitroType.bodyLg,
-                            color: c.ink,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: compact
+                    ? _compactHeader(context)
+                    : _centeredTitle(context),
               ),
               const SizedBox(width: 10),
               if (rank != null)
                 _RoundIconButton(
+                  key: rank.key,
                   onTap: rank.onTap,
                   size: 40,
                   child: gameIcon(
@@ -399,16 +426,152 @@ class _GameScaffoldState extends State<GameScaffold> {
     );
   }
 
+  Widget _centeredTitle(BuildContext context) => CitroHero(
+    tag: CitroHero.tagOf('game-title', widget.gameKey),
+    child: _titleRow(context, compact: false),
+  );
+
+  /// 手机顶栏中段：单行放得下就标题左、读数右；否则读数折到标题下方。
+  Widget _compactHeader(BuildContext context) {
+    final stats = _compactStats;
+    final title = CitroHero(
+      tag: CitroHero.tagOf('game-title', widget.gameKey),
+      child: _titleRow(context, compact: true),
+    );
+    if (stats.isEmpty) {
+      return Align(alignment: Alignment.centerLeft, child: title);
+    }
+    return LayoutBuilder(
+      builder: (context, box) {
+        // 用真实文本宽度判断，而不是按屏幕宽度猜：长标题、6 位分数、
+        // 系统大字号都会把单行顶爆，这时自动退回标题下的那一行。
+        final single =
+            !box.maxWidth.isFinite ||
+            _titleRowWidth(context) +
+                    24 +
+                    _statsClusterWidth(context, stats) <=
+                box.maxWidth;
+        if (single) {
+          return Row(
+            children: [
+              Expanded(
+                child: Align(alignment: Alignment.centerLeft, child: title),
+              ),
+              const SizedBox(width: 20),
+              _CompactHudCluster(stats: stats),
+            ],
+          );
+        }
+        return _CompactHudTitleColumn(title: title, stats: stats);
+      },
+    );
+  }
+
+  /// 标题行（身份点 + 游戏名）。[compact] 时整体左靠，否则居中。
+  Widget _titleRow(BuildContext context, {required bool compact}) {
+    final c = context.c;
+    final identity = _identity;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: compact
+          ? MainAxisAlignment.start
+          : MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: identity.primary,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: identity.primary.withAlpha(120),
+                blurRadius: 6,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            widget.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: compact ? TextAlign.left : TextAlign.center,
+            style: context.heading(
+              size: widget.titleSize ?? CitroType.bodyLg,
+              color: c.ink,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double _titleRowWidth(BuildContext context) {
+    final c = context.c;
+    final style = context.heading(
+      size: widget.titleSize ?? CitroType.bodyLg,
+      color: c.ink,
+    );
+    return 7 + 8 + _textWidth(context, widget.title, style);
+  }
+
+  /// 单行读数组的宽度：每组取标签/数值里较宽的一个，再算分隔线。
+  double _statsClusterWidth(BuildContext context, List<GameHudStat> stats) {
+    final c = context.c;
+    final labelStyle = context.body(
+      size: CitroType.micro,
+      weight: CitroType.medium,
+      color: c.inkSoft,
+      letterSpacing: .5,
+      height: 1,
+    );
+    final valueStyle = context.hand(
+      size: 13,
+      weight: CitroType.strong,
+      color: c.ink,
+      height: 1.08,
+    );
+    var width = 0.0;
+    for (var i = 0; i < stats.length; i++) {
+      if (i > 0) width += 21; // 分隔竖线 1 + 左右各 10
+      width += math.max(
+        _textWidth(context, stats[i].label, labelStyle),
+        _textWidth(context, stats[i].value, valueStyle),
+      );
+    }
+    return width;
+  }
+
+  double _textWidth(BuildContext context, String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
   /// 棋盘上方：above 槽位 + HUD 条。HUD 贴在棋盘之上，读分不用抬头。
-  Widget _hudStrip(BuildContext context, {bool showHud = true}) {
+  ///
+  /// [belowGap] 给手机竖屏用：HUD 收进顶栏后，模式条和棋盘之间补一口气。
+  Widget _hudStrip(
+    BuildContext context, {
+    bool showHud = true,
+    double belowGap = 0,
+  }) {
     final hasHud = showHud && (widget.hud != null || widget.pills.isNotEmpty);
     if (widget.above.isEmpty && !hasHud) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         GameMetrics.gutter,
         4,
         GameMetrics.gutter,
-        0,
+        belowGap,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1039,7 +1202,12 @@ class GameHead extends StatelessWidget {
 }
 
 class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.child, this.onTap, this.size = 38});
+  const _RoundIconButton({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.size = 38,
+  });
   final Widget child;
   final VoidCallback? onTap;
   final double size;
@@ -1183,6 +1351,146 @@ class GameScorePill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 手机顶栏读数（单行）：标签在上、数值在下，组与组之间一条细竖线。
+class _CompactHudCluster extends StatelessWidget {
+  const _CompactHudCluster({required this.stats});
+
+  final List<GameHudStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final identity = GameIdentityScope.of(context);
+    final children = <Widget>[];
+    for (var i = 0; i < stats.length; i++) {
+      if (i > 0) {
+        children.add(
+          Container(
+            width: 1,
+            height: 18,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            color: c.line2,
+          ),
+        );
+      }
+      final stat = stats[i];
+      children.add(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              stat.label,
+              maxLines: 1,
+              softWrap: false,
+              style: context.body(
+                size: CitroType.micro,
+                weight: CitroType.medium,
+                color: c.inkSoft,
+                letterSpacing: .5,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              stat.value,
+              maxLines: 1,
+              softWrap: false,
+              style: context.hand(
+                size: 13,
+                weight: CitroType.strong,
+                // 身份色在暗色下要提亮，否则 bump 的深蓝在近黑底上读不清。
+                color: stat.accent
+                    ? (c.dark ? identity.onDark() : identity.primaryInk)
+                    : c.ink,
+                height: 1.08,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: children,
+    );
+  }
+}
+
+/// 手机顶栏读数（回退）：标题下一行小字，横向排；放不下自动换行。
+class _CompactHudTitleColumn extends StatelessWidget {
+  const _CompactHudTitleColumn({required this.title, required this.stats});
+
+  final Widget title;
+  final List<GameHudStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        title,
+        const SizedBox(height: 3),
+        Padding(
+          padding: const EdgeInsets.only(left: 15),
+          child: _CompactHudLine(stats: stats),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactHudLine extends StatelessWidget {
+  const _CompactHudLine({required this.stats});
+
+  final List<GameHudStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final identity = GameIdentityScope.of(context);
+    return Wrap(
+      spacing: 12,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final stat in stats)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                stat.label,
+                maxLines: 1,
+                softWrap: false,
+                style: context.body(
+                  size: 10,
+                  weight: CitroType.medium,
+                  color: c.inkSoft,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                stat.value,
+                maxLines: 1,
+                softWrap: false,
+                style: context.hand(
+                  size: CitroType.small,
+                  weight: CitroType.strong,
+                  color: stat.accent
+                      ? (c.dark ? identity.onDark() : identity.primaryInk)
+                      : c.ink2,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

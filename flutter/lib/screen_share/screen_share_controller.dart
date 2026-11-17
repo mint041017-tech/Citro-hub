@@ -18,6 +18,19 @@ import 'screen_capture.dart';
 import 'share_quality.dart';
 import 'sfu_client.dart';
 
+/// Windows 上声网已经在发系统声时，SFU 是否还要带系统声。
+///
+/// 抽成独立函数是为了能在单测里覆盖这条规则：WebRTC 的 Windows ADM 会把
+/// 音频播放流登记成通信类别，SFU 链路上只要有音频发送者，系统就会触发
+/// communications ducking，把其它应用音量压到 20%。声网没起来（或本来
+/// 就没开内容声音）时，SFU 仍要带声音 —— 否则观众什么都听不到。
+@visibleForTesting
+bool sfuIncludesSystemAudio({
+  required bool isWindows,
+  required bool agoraSharing,
+  required bool withAudio,
+}) => !(isWindows && agoraSharing && withAudio);
+
 /// 房间控制器：把 REST（进房 / SDP 交换）、WebSocket（房间事件）和
 /// SFU（媒体收发）三条链路收成一个可监听的状态机。
 ///
@@ -73,7 +86,13 @@ class ScreenShareController extends ChangeNotifier {
 
   /// 当前这条共享是否真的带系统声音。没在共享、采集没拿到 loopback、
   /// 或旧版 Worker 不认 `system` 轨时都是 false，设置里的滑杆会禁用。
-  bool get hasSystemAudio => _publishing && (_sfu?.hasSystemAudio ?? false);
+  ///
+  /// Windows 上声网在发系统声时 SFU 刻意不带声音（见 [startSharing]），
+  /// 这时 [SfuClient.hasSystemAudio] 是 false，但观众从声网听得到，滑杆
+  /// 仍应可用 —— 所以两条链路取并集。
+  bool get hasSystemAudio =>
+      _publishing &&
+      ((_sharedWithAudio && _agoraSharing) || (_sfu?.hasSystemAudio ?? false));
 
   String? get selfUid => _selfUid;
   String? get roomId => _roomId;
@@ -135,6 +154,13 @@ class ScreenShareController extends ChangeNotifier {
   /// 主持人是否已把画面发到声网（声网原生采集成功启动）。
   /// 与 [_publishing]（CF 链路状态）独立：声网失败时画面只走 CF。
   bool _agoraSharing = false;
+
+  /// 本次共享是否带了系统声（发起时「开启内容声音」的选择）。
+  ///
+  /// 声网链路有声音不代表 SFU 链路也有：Windows 上为了避免 WebRTC 触发
+  /// 系统 ducking，声网在发系统声时 SFU 只发画面（见 [startSharing]）。
+  /// 音量滑杆的可用状态要两条链路合起来看，不能只看 SFU。
+  bool _sharedWithAudio = false;
   MediaStream? _previewStream;
   RTCVideoRenderer? _localRenderer;
   final Map<String, RTCVideoRenderer> _renderers = <String, RTCVideoRenderer>{};
@@ -691,6 +717,7 @@ class ScreenShareController extends ChangeNotifier {
         withSystemAudio: withAudio,
       );
       _previewStream = stream;
+      _sharedWithAudio = withAudio;
 
       final renderer = RTCVideoRenderer();
       await renderer.initialize();
@@ -715,9 +742,23 @@ class ScreenShareController extends ChangeNotifier {
         }
       }
 
+      // Windows + 声网已发系统声：SFU 只发画面。WebRTC 的 Windows ADM 会
+      // 把播放流登记成「通信」类别，只要这条 PC 上有音频发送者，Windows
+      // 就会 duck 其它所有应用（实测端点峰值 0.4109 → 0.0517，纯画面不变）。
+      // 声网自带系统声，只有老客户端 / 网页端听不到 —— 比起「一开共享，
+      // 全系统声音被压低」，这个取舍更可接受；声网没起来时仍由 SFU 带声音。
+      final sfuWithAudio = sfuIncludesSystemAudio(
+        isWindows: platform.isWindows,
+        agoraSharing: _agoraSharing,
+        withAudio: withAudio,
+      );
       final sfu = _ensureSfu();
       try {
-        await sfu.publishScreen(stream, _quality);
+        await sfu.publishScreen(
+          stream,
+          _quality,
+          includeSystemAudio: sfuWithAudio,
+        );
         // 把用户之前拖好的音量补到新音轨上（默认都是 1.0）。
         await sfu.setSystemVolume(_systemVolume);
       } catch (e) {
@@ -729,6 +770,11 @@ class ScreenShareController extends ChangeNotifier {
         } else {
           rethrow;
         }
+      }
+      if (_agoraSharing) {
+        // 声网系统声不在 SFU 上，发起时也要把滑杆音量补过去。此前只在
+        // 用户拖动提交时调，默认 100% 把这个缺口掩盖了。
+        await _agora?.setSystemVolume(_systemVolume);
       }
       _publishing = true;
 
@@ -745,6 +791,7 @@ class ScreenShareController extends ChangeNotifier {
       _error = '开始共享失败：$e';
       _cleanupPreview();
     } finally {
+      if (!_publishing) _sharedWithAudio = false;
       _busy = false;
       _notify();
     }
@@ -827,6 +874,7 @@ class ScreenShareController extends ChangeNotifier {
     }
     _cleanupPreview();
     _publishing = false;
+    _sharedWithAudio = false;
     // 明确上报「已无发布轨」，覆盖掉之前 screen/system 的发布状态。
     _ws?.sendPublishState(const <RoomTrack>[]);
     _notify();
@@ -1024,6 +1072,7 @@ class ScreenShareController extends ChangeNotifier {
     _agora = null;
     _viaAgora = false;
     _agoraSharing = false;
+    _sharedWithAudio = false;
     try {
       await _sfu?.close();
     } catch (_) {}

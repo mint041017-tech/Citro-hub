@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.1.68",
-    "build_number": "3168",
-    "file": "Citro-downloads-3.1.68.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.1.68.zip",
-    "size": 1088744,
-    "sha256": "eba144c0a221378a730ba5137b545589115839ab9eafd4f45f46f79b250170eb",
-    "published_at": "2026-11-15T19:11:06Z",
-    "notes": "Citro downloads 静态站 3.1.68:Windows / Android 入口更新到 3.1.68,补充 CiCi 直接记账、倒数日与纪念日更新日志。"
+    "version": "3.2.0",
+    "build_number": "3200",
+    "file": "Citro-downloads-3.2.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.2.0.zip",
+    "size": 1088758,
+    "sha256": "0f46471fa0b612ba30323268ee4d12a0ed8cf0d9a89ef9a4fded0e34b307bba8",
+    "published_at": "2026-11-17T14:51:32Z",
+    "notes": "Citro downloads 静态站 3.2.0:Windows / Android 入口更新到 3.2.0,补充手机端游戏顶栏改版的更新日志。"
 }

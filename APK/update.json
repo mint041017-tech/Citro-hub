@@ -1,13 +1,13 @@
 {
-  "version": "3.1.68",
-  "versionCode": 3168,
-  "url": "https://obs.chimu-claw.xyz/APK/Citro-v3.1.68-release.apk",
+  "version": "3.2.0",
+  "versionCode": 3200,
+  "url": "https://obs.chimu-claw.xyz/APK/Citro-v3.2.0-release.apk",
   "size": 129460653,
   "notes": [
-    "CiCi 现在不只会记待办:还能直接帮你记一笔收支、添加倒数日和纪念日,写完即时回执",
-    "首页 CiCi 的快捷提示新增记账与纪念日示例,一句话就能记好",
-    "记账一次记多笔也稳了:修复同一时刻连续入账可能产生重复账单的问题"
+    "手机竖屏的游戏页换了新顶栏:游戏名靠左,错误、用时、最佳这些读数缩小收进右上角",
+    "读数一行放不下时会自动折到游戏名下方,长标题、大字号和多位数分数都不再挤在一起",
+    "收起棋盘上方的读数卡后棋盘整体上移,难度条和棋盘之间留出 24dp 间距"
   ],
-  "publishedAt": "2026-11-16",
+  "publishedAt": "2026-11-17",
   "force": false
 }

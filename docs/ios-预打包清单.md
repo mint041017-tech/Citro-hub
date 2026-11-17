@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`3.1.68+3168` · 更新日期：2026-11-16
+> 当前版本：`3.2.0+3200` · 更新日期：2026-11-17
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `3.1.68+3168` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `3.2.0+3200` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.1.68 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3168 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.2.0 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3200 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=3.1.68`、`FLUTTER_BUILD_NUMBER=3168`。
+`FLUTTER_BUILD_NAME=3.2.0`、`FLUTTER_BUILD_NUMBER=3200`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -86,6 +86,13 @@
   「我的」只由底部头像卡打开，不再单独占一项。
 - iPad 的资源库 Tab 仍隐藏外设驱动板块（`ResPage.hideDrivers`）。
 
+### 2.6 游戏页手机竖屏顶栏
+
+- 手机竖屏（宽 ≤ 600 且高 > 宽）所有 `GameScaffold` 游戏启用紧凑顶栏：游戏名靠左，
+  错误 / 用时 / 最佳等只读读数缩小收进顶栏右侧；平板、桌面与横屏保持居中标题 + 读数卡。
+- 读数按真实文本宽度排布，放不下时自动折到标题下方一行；难度条与棋盘之间留 24dp 间距。
+- 淘气小球、跳一跳这类自定义 `hud:` 页面显式提供 `hudStats`，其余游戏从 `pills` 自动提取。
+
 ## 3. Mac 构建步骤
 
 ```bash
@@ -104,7 +111,7 @@ bash ios/build_ipa.sh
 ```bash
 flutter build ipa --release \
   --export-method app-store \
-  --dart-define=APP_VERSION=3.1.68
+  --dart-define=APP_VERSION=3.2.0
 ```
 
 产物：`flutter/build/ios/ipa/*.ipa`。
@@ -112,17 +119,17 @@ flutter build ipa --release \
 ## 4. 产物归档与上传
 
 ```bash
-cp build/ios/ipa/*.ipa "../IPA/Citro-v3.1.68-unsigned.ipa"
-shasum -a 256 "../IPA/Citro-v3.1.68-unsigned.ipa"
+cp build/ios/ipa/*.ipa "../IPA/Citro-v3.2.0-unsigned.ipa"
+shasum -a 256 "../IPA/Citro-v3.2.0-unsigned.ipa"
 
-curl -X PUT -T "IPA/Citro-v3.1.68-unsigned.ipa" \
+curl -X PUT -T "IPA/Citro-v3.2.0-unsigned.ipa" \
   -H "Content-Type: application/octet-stream" \
-  "https://obs.chimu-claw.xyz/IPA/Citro-v3.1.68-unsigned.ipa"
+  "https://obs.chimu-claw.xyz/IPA/Citro-v3.2.0-unsigned.ipa"
 ```
 
 ## 5. 发版前验证
 
-1. `CFBundleShortVersionString` 为 `3.1.68`，`CFBundleVersion` 为 `3168`。
+1. `CFBundleShortVersionString` 为 `3.2.0`，`CFBundleVersion` 为 `3200`（CI 上传时会按 TestFlight 已有构建号自增，以收据为准）。
 2. 真机走查：
    - 冷启动首屏是奶米底 logo 启动页（与 Flutter 启动页同款），不再出现旧猫咪插画；
    - 系统深色模式下冷启动是深底变体，浅色模式下是奶米底，两套都不会裁切 logo；
@@ -135,7 +142,8 @@ curl -X PUT -T "IPA/Citro-v3.1.68-unsigned.ipa" \
    - 手机「我的 → 扫一扫」可识别二维码并提示「已确认登录」；
    - 手机号 / 邮箱切换文字在胶囊内居中；
    - 后台运行设置行与其它设置项左对齐；
-   - 切页动效与 2.0.14 一致。
+   - 切页动效与 2.0.14 一致；
+   - 游戏页手机竖屏：顶栏读数不挤压标题，HUD 卡收起，难度条与棋盘间距 24dp，长标题与大字体自动折行。
 3. 服务端已部署新版 `trash/trash.js`（`pm2 restart trash`），扫码三个接口可用。
 
 > ⚠️ 扫码登录依赖 2.0.14 引入的后端接口。若线上尚未部署 `trash/trash.js`，
@@ -171,3 +179,4 @@ curl -X PUT -T "IPA/Citro-v3.1.68-unsigned.ipa" \
 | 2.1.0 | 版本号与 iOS 构建配置同步到 `2.1.0+2100`；日历/待办/记账卡与评论时间定稿；性能与安全修复合并；四端重新打包，IPA 待 macOS 生成。 |
 | 3.1.67 | 版本号与 iOS 构建配置同步到 `3.1.67+3167`；「一起看」声网主链路 + CF 兜底架构、网页观看端链路角标与全屏聊天按钮、App 全屏退出画面压条修复、抽签记录与圆形角标优化；IPA 待 macOS 生成。 |
 | 3.1.68 | 版本号与 iOS 构建配置同步到 `3.1.68+3168`；首页 CiCi 新增直接记账、倒数日与纪念日（指令解析、写入与回执），修复连续入账 id 重复；iOS 原生启动页换成与 Flutter 启动页一致的 logo 版；iPad 侧栏与 Windows 对齐（资源库 / CiCi 进栏、移除我的，资源库隐藏驱动）；IPA 待 macOS 生成。 |
+| 3.2.0 | 版本号与 iOS 构建配置同步到 `3.2.0+3200`；游戏页手机竖屏顶栏改版（游戏名靠左、错误/用时/最佳读数收进顶栏、放不下时折到标题下方），平板 / 桌面 / 横屏版式不变；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |

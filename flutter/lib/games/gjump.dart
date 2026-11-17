@@ -1060,6 +1060,10 @@ class GameJumpView extends StatelessWidget {
       gameKey: 'gjump',
       title: '跳一跳',
       hud: hud,
+      hudStats: [
+        GameHudStat('分数', '$score'),
+        GameHudStat('最高分', '$best'),
+      ],
       actions: [
         GameActionButton(
           label: '新游戏',

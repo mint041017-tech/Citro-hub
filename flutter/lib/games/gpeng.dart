@@ -880,6 +880,11 @@ class GamePengView extends StatelessWidget {
       gameKey: 'gpeng',
       title: '淘气小球',
       hud: hud,
+      hudStats: [
+        GameHudStat('分数', '$score'),
+        GameHudStat('最高分', '$best'),
+        GameHudStat('时间', '$time'),
+      ],
       actions: [
         GameActionButton(
           label: '新游戏',

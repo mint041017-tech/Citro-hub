@@ -400,6 +400,57 @@ void main() {
     });
   });
 
+  // ── SFU 系统声规则 ──────────────────────────────────────────────────
+  // Windows 上 WebRTC 的 ADM 会把音频播放流登记成通信类别，SFU 链路只要
+  // 带音频发送者，Windows 就会把其它应用的音量压到 20%（实测 0.41→0.05）。
+  // 声网发系统声时 SFU 必须只发画面；声网没起来时 SFU 仍要带声音。
+
+  group('sfuIncludesSystemAudio', () {
+    test('Windows + 声网发系统声时，SFU 只发画面', () {
+      expect(
+        sfuIncludesSystemAudio(
+          isWindows: true,
+          agoraSharing: true,
+          withAudio: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('声网没共享时 SFU 带声音（否则观众完全没声）', () {
+      expect(
+        sfuIncludesSystemAudio(
+          isWindows: true,
+          agoraSharing: false,
+          withAudio: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('没开内容声音时无音轨可带，规则放行', () {
+      expect(
+        sfuIncludesSystemAudio(
+          isWindows: true,
+          agoraSharing: true,
+          withAudio: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('非 Windows 平台 SFU 始终带声音（ducking 是 Windows 专属）', () {
+      expect(
+        sfuIncludesSystemAudio(
+          isWindows: false,
+          agoraSharing: true,
+          withAudio: true,
+        ),
+        isTrue,
+      );
+    });
+  });
+
   // ── 邀请链接解析 ────────────────────────────────────────────────────
 
   group('extractRoomCode', () {

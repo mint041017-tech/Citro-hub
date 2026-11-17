@@ -189,3 +189,7 @@ _refute_*
 
 # ---------- 3.1.79 起不再重复入库的辅助脚本 ----------
 web/make_web_zip_template.py.txt
+
+# ---------- 3.2.0 声学排查临时文件（含房间 token，不入库） ----------
+.audio_probe/
+flutter/tool/share_probe_main.dart
