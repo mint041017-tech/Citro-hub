@@ -3,11 +3,9 @@
 // 登录门禁放行前不发请求；单张卡失败只降级自己，不阻塞其它卡片。
 const api = require("../../utils/api");
 const session = require("../../utils/session");
-const catalog = require("../../data/cards_index.json");
 
 const HERO_KEY = "citro_home_hero_v1";
 const TODO_KEY = "citro_todo_v1";
-const WEATHER_CITY_KEY = "citro_weather_city";
 
 const HERO_ORDER = ["dawn", "day", "dusk", "night"];
 const HERO_SUB = {
@@ -67,24 +65,6 @@ const QUOTES = [
   { t: "夜里把心事放轻，明天再想。", f: "Citro" },
 ];
 
-// 卡面目录：内置 catalog 的 base + file 拼出 OBS 地址，id 用于服务端记账。
-const CARD_MAP = {};
-const CARD_IDS = [];
-(catalog.categories || []).forEach((cat) => {
-  ((cat && cat.cards) || []).forEach((card) => {
-    if (!card || !card.id) return;
-    const id = String(card.id);
-    if (CARD_MAP[id]) return;
-    CARD_MAP[id] = card;
-    CARD_IDS.push(id);
-  });
-});
-const CARD_TOTAL = CARD_IDS.length;
-const CARD_BASE = String(catalog.base || "").replace(/\/+$/, "");
-
-function cardUrl(file) {
-  return encodeURI(CARD_BASE + "/" + String(file || ""));
-}
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -139,24 +119,6 @@ function greetingFor(hour) {
   return "晚上好";
 }
 
-// WMO weather code -> 中文描述，只覆盖 Open-Meteo 常见码值。
-function weatherText(code) {
-  const n = Number(code);
-  if (n === 0) return "晴";
-  if (n === 1 || n === 2) return "多云";
-  if (n === 3) return "阴";
-  if (n === 45 || n === 48) return "雾";
-  if ((n >= 51 && n <= 57) || n === 61 || n === 66 || n === 67) return "小雨";
-  if (n === 63) return "中雨";
-  if (n === 65) return "大雨";
-  if (n === 71 || n === 77 || n === 85) return "小雪";
-  if (n === 73 || n === 86) return "中雪";
-  if (n === 75) return "大雪";
-  if (n === 80 || n === 81 || n === 82) return "阵雨";
-  if (n === 95 || n === 96 || n === 99) return "雷雨";
-  return "多云";
-}
-
 function readStoredJson(key) {
   const raw = wx.getStorageSync(key);
   if (!raw) return null;
@@ -167,27 +129,6 @@ function readStoredJson(key) {
   } catch (e) {
     return null;
   }
-}
-
-function readCity() {
-  let v = wx.getStorageSync(WEATHER_CITY_KEY);
-  if (typeof v === "string") {
-    try {
-      v = JSON.parse(v);
-    } catch (e) {
-      v = null;
-    }
-  }
-  if (!v || typeof v !== "object") return null;
-  const lat = Number(v.lat);
-  const lon = Number(v.lon);
-  if (!isFinite(lat) || !isFinite(lon)) return null;
-  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-  return {
-    name: String(v.name || "").trim() || "这里的天气",
-    lat,
-    lon,
-  };
 }
 
 function readManualHero() {
@@ -211,33 +152,8 @@ Page({
     todayText: "",
     heroClass: "hero hero-day",
     heroPeriod: "day",
-    heroSrc: "/assets/home/day.webp",
-    heroImageFailed: false,
     heroSub: HERO_SUB.day,
 
-    // 今日卡面（同时供卡面收藏卡复用）
-    cardsFailed: false,
-    cardsHint: "…",
-    cardsFlipped: false,
-    flipClass: "flip-inner",
-    todayCardId: "",
-    todayCardImage: "",
-    ownedCount: 0,
-    cardTotal: CARD_TOTAL,
-    ownedPercent: "0%",
-    cardsLine: "收藏进度同步中…",
-    collectionLine: "收藏进度同步中…",
-
-    // 打卡
-    checkinDone: false,
-    checkinStatusText: "同步中",
-    checkinChipClass: "status-chip chip-off",
-    checkinStreakText: "…",
-    checkinStreakUnit: "",
-    checkinSub: "正在同步打卡记录",
-    checkinButtonText: "打卡",
-    checkinButtonDisabled: true,
-    checkinBusy: false,
 
     // 摸鱼日历
     fishMain: "…",
@@ -245,14 +161,6 @@ Page({
     fishRestText: "",
     fishShowChip: false,
     fishHasConfig: false,
-
-    // 天气（城市只读，由天气页写入）
-    weatherCity: "",
-    weatherHasCity: false,
-    weatherShowTemp: false,
-    weatherTempText: "",
-    weatherDesc: "…",
-    weatherDetail: "",
 
     // 心情（本地 todo 数据的 moods）
     moodHas: false,
@@ -371,36 +279,11 @@ Page({
 
   resetRemote() {
     this.setData({
-      cardsFailed: false,
-      cardsHint: "…",
-      cardsFlipped: false,
-      flipClass: "flip-inner",
-      todayCardId: "",
-      todayCardImage: "",
-      ownedCount: 0,
-      ownedPercent: "0%",
-      cardsLine: "收藏进度同步中…",
-      collectionLine: "收藏进度同步中…",
-      checkinDone: false,
-      checkinStatusText: "同步中",
-      checkinChipClass: "status-chip chip-off",
-      checkinStreakText: "…",
-      checkinStreakUnit: "",
-      checkinSub: "正在同步打卡记录",
-      checkinButtonText: "打卡",
-      checkinButtonDisabled: true,
-      checkinBusy: false,
       fishMain: "…",
       fishSub: "正在同步摸鱼配置",
       fishRestText: "",
       fishShowChip: false,
       fishHasConfig: false,
-      weatherCity: "",
-      weatherHasCity: false,
-      weatherShowTemp: false,
-      weatherTempText: "",
-      weatherDesc: "…",
-      weatherDetail: "",
       cookTitleText: "…",
       cookSub: "正在看看你的食谱",
     });
@@ -460,8 +343,6 @@ Page({
     if (period !== this.data.heroPeriod) {
       patch.heroPeriod = period;
       patch.heroClass = "hero hero-" + period;
-      patch.heroSrc = "/assets/home/" + period + ".webp";
-      patch.heroImageFailed = false;
     }
     this.setData(patch);
     this.refreshMood(now);
@@ -511,173 +392,9 @@ Page({
     const token = session.token();
     if (!token) return Promise.resolve();
     return Promise.all([
-      this.loadCards(token),
-      this.loadCheckin(token),
       this.loadFish(token),
-      this.loadWeather(),
       this.loadCook(token),
     ]).catch(() => {});
-  },
-
-  loadCards(token) {
-    return api
-      .cardsToday(token, CARD_IDS, false)
-      .then((res) => {
-        if (!this.alive) return;
-        const state = (res && res.state) || {};
-        const cardId = String((res && res.card) || "");
-        const meta = CARD_MAP[cardId];
-        const seen = {};
-        let owned = 0;
-        const list = Array.isArray(state.owned) ? state.owned : [];
-        for (let i = 0; i < list.length; i += 1) {
-          const id = String(list[i]);
-          if (!seen[id] && CARD_MAP[id]) {
-            seen[id] = true;
-            owned += 1;
-          }
-        }
-        const rawCredits = Number(state.credits);
-        const credits =
-          isFinite(rawCredits) && rawCredits > 0 ? Math.floor(rawCredits) : 0;
-        const percent = CARD_TOTAL
-          ? Math.min(100, Math.round((owned / CARD_TOTAL) * 100))
-          : 0;
-        const patch = {
-          cardsFailed: false,
-          ownedCount: owned,
-          cardTotal: CARD_TOTAL,
-          ownedPercent: percent + "%",
-          cardsLine:
-            "已收集 " +
-            owned +
-            " / " +
-            CARD_TOTAL +
-            " · 剩余抽取 " +
-            credits +
-            " 次",
-          collectionLine: "已收集 " + owned + " / " + CARD_TOTAL,
-        };
-        if (meta && meta.file) {
-          patch.todayCardId = cardId;
-          patch.todayCardImage = cardUrl(meta.file);
-          patch.cardsHint = "轻点翻面";
-          if (cardId !== this.data.todayCardId) {
-            patch.cardsFlipped = false;
-            patch.flipClass = "flip-inner";
-          }
-        } else {
-          patch.todayCardId = "";
-          patch.todayCardImage = "";
-          patch.cardsHint = "今日卡面稍后见";
-          patch.cardsFlipped = false;
-          patch.flipClass = "flip-inner";
-        }
-        this.setData(patch);
-      })
-      .catch(() => {
-        if (!this.alive) return;
-        this.setData({
-          cardsFailed: true,
-          cardsHint: "今日卡面稍后见",
-          todayCardId: "",
-          todayCardImage: "",
-          cardsFlipped: false,
-          flipClass: "flip-inner",
-          cardsLine: "收藏进度稍后同步",
-          collectionLine: "已收集 — / " + CARD_TOTAL,
-          ownedPercent: "0%",
-        });
-      });
-  },
-
-  loadCheckin(token) {
-    return api
-      .checkinStats(token)
-      .then((res) => {
-        if (!this.alive) return;
-        const done = !!(res && res.checkedInToday);
-        const raw = Number(res && res.streak);
-        const streak = isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
-        this.applyCheckin(done, streak);
-      })
-      .catch(() => {
-        if (!this.alive) return;
-        const done = this.data.checkinDone;
-        this.setData({
-          checkinStatusText: done ? "已打卡" : "稍后同步",
-          checkinChipClass: done ? "status-chip" : "status-chip chip-off",
-          checkinStreakText: done ? this.data.checkinStreakText : "—",
-          checkinStreakUnit: done ? "天" : "",
-          checkinSub: done ? this.data.checkinSub : "打卡数据稍后再试",
-          checkinButtonText: done ? "今天已打卡" : "打卡",
-          checkinButtonDisabled: done,
-          checkinBusy: false,
-        });
-      });
-  },
-
-  applyCheckin(done, streak) {
-    const sub = done
-      ? streak > 0
-        ? "连续第 " + streak + " 天，今天也来过啦"
-        : "今天来过啦"
-      : "来过就算数，轻轻按一下";
-    this.setData({
-      checkinDone: done,
-      checkinStreakText: String(streak),
-      checkinStreakUnit: "天",
-      checkinStatusText: done ? "已打卡" : "未打卡",
-      checkinChipClass: done ? "status-chip" : "status-chip chip-off",
-      checkinSub: sub,
-      checkinButtonText: done ? "今天已打卡" : "打卡",
-      checkinButtonDisabled: done,
-      checkinBusy: false,
-    });
-  },
-
-  onCheckin() {
-    if (!this.ready) return;
-    if (this.data.checkinBusy || this.data.checkinDone) return;
-    const token = session.token();
-    if (!token) {
-      wx.showToast({ title: "请先登录", icon: "none" });
-      return;
-    }
-    this.setData({
-      checkinBusy: true,
-      checkinButtonDisabled: true,
-      checkinButtonText: "打卡中…",
-    });
-    api
-      .checkinSave(token)
-      .then((res) => {
-        if (!this.alive) return;
-        const done =
-          res && typeof res.checkedInToday === "boolean"
-            ? res.checkedInToday
-            : true;
-        let streak = Number(this.data.checkinStreakText);
-        if (!isFinite(streak) || streak < 0) streak = 0;
-        const raw = Number(res && res.streak);
-        if (isFinite(raw) && raw >= 0) streak = Math.floor(raw);
-        this.applyCheckin(done, streak);
-        wx.showToast({ title: "今天也来过啦", icon: "none" });
-        // 打卡后刷新打卡数据与卡面收藏进度。
-        Promise.all([this.loadCheckin(token), this.loadCards(token)]).catch(
-          () => {}
-        );
-      })
-      .catch(() => {
-        if (!this.alive) return;
-        const done = this.data.checkinDone;
-        this.setData({
-          checkinBusy: false,
-          checkinButtonDisabled: done,
-          checkinButtonText: done ? "今天已打卡" : "打卡",
-        });
-        wx.showToast({ title: "打卡失败，请稍后再试", icon: "none" });
-      });
   },
 
   loadFish(token) {
@@ -749,63 +466,6 @@ Page({
       fishRestText: "本周休息 " + rest.length + " 天",
       fishShowChip: true,
     });
-  },
-
-  loadWeather() {
-    const city = readCity();
-    if (!city) {
-      this.setData({
-        weatherCity: "",
-        weatherHasCity: false,
-        weatherShowTemp: false,
-        weatherTempText: "",
-        weatherDesc: "选择城市看天气",
-        weatherDetail: "在天气页手动选一个城市",
-      });
-      return Promise.resolve();
-    }
-    const patch = { weatherCity: city.name, weatherHasCity: true };
-    if (!this.data.weatherShowTemp) {
-      patch.weatherDesc = "…";
-      patch.weatherDetail = "正在看看外面的天气";
-    }
-    this.setData(patch);
-    return api
-      .weather(city.lat, city.lon)
-      .then((body) => {
-        if (!this.alive) return;
-        const current = body && body.current;
-        if (!current || typeof current !== "object") {
-          throw new Error("weather shape");
-        }
-        const temp = Math.round(Number(current.temperature_2m));
-        const feels = Math.round(Number(current.apparent_temperature));
-        const daily = body && body.daily;
-        const maxArr = daily && daily.temperature_2m_max;
-        const minArr = daily && daily.temperature_2m_min;
-        const max = Array.isArray(maxArr) ? Math.round(Number(maxArr[0])) : NaN;
-        const min = Array.isArray(minArr) ? Math.round(Number(minArr[0])) : NaN;
-        const parts = [];
-        if (isFinite(feels)) parts.push("体感 " + feels + "°");
-        if (isFinite(max) && isFinite(min)) {
-          parts.push("最高 " + max + "° / 最低 " + min + "°");
-        }
-        this.setData({
-          weatherShowTemp: true,
-          weatherTempText: isFinite(temp) ? temp + "°" : "—",
-          weatherDesc: weatherText(current.weather_code),
-          weatherDetail: parts.join(" · ") || "出门前看看窗外",
-        });
-      })
-      .catch(() => {
-        if (!this.alive) return;
-        this.setData({
-          weatherShowTemp: false,
-          weatherTempText: "",
-          weatherDesc: "天气稍后见",
-          weatherDetail: "稍后刷新试试",
-        });
-      });
   },
 
   loadCook(token) {
@@ -887,31 +547,7 @@ Page({
     this.setData({
       heroPeriod: next,
       heroClass: "hero hero-" + next,
-      heroSrc: "/assets/home/" + next + ".webp",
       heroSub: HERO_SUB[next],
-      heroImageFailed: false,
-    });
-  },
-
-  onHeroImageError() {
-    this.setData({ heroImageFailed: true });
-  },
-
-  onFlipCard() {
-    if (!this.data.todayCardImage) return;
-    const flipped = !this.data.cardsFlipped;
-    this.setData({
-      cardsFlipped: flipped,
-      flipClass: flipped ? "flip-inner flipped" : "flip-inner",
-    });
-  },
-
-  onCardImageError() {
-    this.setData({
-      todayCardImage: "",
-      cardsHint: "今日卡面稍后见",
-      cardsFlipped: false,
-      flipClass: "flip-inner",
     });
   },
 
@@ -919,16 +555,8 @@ Page({
     wx.switchTab({ url: "/pages/me/me" });
   },
 
-  onOpenCards() {
-    wx.navigateTo({ url: "/pages/cards/cards" });
-  },
-
   onOpenFish() {
     wx.navigateTo({ url: "/pages/fish/fish" });
-  },
-
-  onOpenWeather() {
-    wx.navigateTo({ url: "/pages/weather/weather" });
   },
 
   onOpenMood() {

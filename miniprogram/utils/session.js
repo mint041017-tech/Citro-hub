@@ -6,7 +6,7 @@ const USER_KEY = "citro_user";
 // 协议同意记录：记录同意的版本与时间。条款有实质修改时提升版本号，
 // 老用户下次进入会重新看到同意浮层。
 const AGREEMENT_KEY = "citro_agreement";
-const AGREEMENT_VERSION = "2026-11-17-tabs";
+const AGREEMENT_VERSION = "2026-11-17-tabs-v3";
 
 function token() {
   const v = wx.getStorageSync(TOKEN_KEY);

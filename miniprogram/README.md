@@ -1,24 +1,29 @@
 # Citro 小程序
 
 与 Flutter / Windows / Web 端共享同一套账号和后端（`https://chimu-claw.xyz/trashapi`）
-的微信原生小程序。当前版本 **0.2.0**，包含四个 tab 和全部二级页面，
+的微信原生小程序。当前版本 **0.2.4**，包含四个 tab 和全部二级页面，
 不包含小游戏、社区、AI 对话、一起看与桌面端外壳。
 
 ## 四个 tab
 
 | tab | 页面 | 内容 |
 | --- | --- | --- |
-| 首页 | `pages/home/home` | 英雄图、卡面收藏、打卡、摸鱼、天气、心情、听隅、食谱、每日一句 |
+| 首页 | `pages/home/home` | 时段光晕、摸鱼、心情、听隅、食谱、每日一句 |
 | 计划 | `pages/plan/plan` | 今天（农历/节气/节日/倒数日）、待办摘要、记账摘要 |
 | 玩法 | `pages/draw/draw` | 随机抽取玩法、大家的抽取记录 |
 | 我的 | `pages/me/me` | 资料、数据概览、协议、关于、退出、注销账号 |
 
-二级页面：`agreement`（协议）、`fish`（摸鱼日历）、`weather`（天气）、
-`mood`（心情）、`tingyu`（听隅）、`cards`（卡面馆）、`cook`（食谱/广场/购物清单）、
+二级页面：`agreement`（协议）、`fish`（摸鱼日历）、
+`mood`（心情）、`tingyu`（听隅）、`cook`（食谱/广场/购物清单）、
 `calendar`（日历）、`todo` + `todo/edit`（待办）、`ledger`（记账）。
 
-`app.json` 的 tabBar 图标在 `assets/tab/`（81×81 PNG，本地文件）；
-`pages/fortune` 已从包内移除，避免「星象 / 运势」类目与迷信审核风险。
+`app.json` 的 tabBar 图标在 `assets/tab/`（81×81 PNG，本地文件）。
+首页背景不再用四张 1024×1024 webp，改为纯 CSS 的 dawn / day / dusk / night
+四套时段渐变（双击 hero 可切换，选择存 `citro_home_hero_v1`），包体少了约 639KB。
+
+> `pages/fortune`、`pages/checkin`、`pages/cards` 与 `pages/weather` 都不在包内。
+> 小程序不做今日签 / 宜忌 / 卡面抽取等运势与收藏玩法，也不提供天气查询；
+> 相关审核风险与定位说明随之移除；需要这些功能时请使用 App 端。
 
 ## 运行
 
@@ -27,13 +32,20 @@
 3. `Ctrl+B` 编译。开发阶段可在「详情 → 本地设置」勾选「不校验合法域名」，
    但**正式版与体验版仍会校验**，上线前必须配置服务器域名（见下）。
 
+`app.json` 的 `entryPagePath` 固定为 `pages/home/home`，启动落在首页；
+tabBar 的第一项也是首页，二者保持一致。
+
+> 小程序运行时 `require()` **只支持 JS 模块，不支持 `.json` 文件**。
+> 页面需要的静态数据必须写成 `module.exports = {...}` 的 JS 文件，
+> 一旦引用 `.json`，页面会在注册前抛错，表现为整页空白。
+
 ### 服务器域名
 
 | 类型 | 域名 | 用途 |
 | --- | --- | --- |
-| request | `https://chimu-claw.xyz` | 全部接口、天气代理 |
+| request | `https://chimu-claw.xyz` | 全部接口 |
 | downloadFile | `https://chimu-claw.xyz` | 食谱封面 / 步骤图（`/trashapi/media/...`） |
-| downloadFile | `https://obs.chimu-claw.xyz` | 卡面图片、听隅音频 |
+| downloadFile | `https://obs.chimu-claw.xyz` | 听隅音频 |
 
 `<image>` 与 `InnerAudioContext` 都走 downloadFile 域名；图片和音频缺一个都会静默失败。
 域名需完成 ICP 备案，且小程序主体不能是个人。
@@ -48,7 +60,7 @@
 ```bash
 "/c/Program Files (x86)/Tencent/微信web开发者工具/cli.bat" upload \
   --project "C:/webflu/Citro/miniprogram" \
-  -v 0.2.0 -d "Citro 小程序 0.2.0" --lang en
+  -v 0.2.2 -d "Citro 小程序 0.2.2" --lang en
 ```
 
 预览用 `cli.bat preview --project ... --qr-format image -o preview.png`。
@@ -60,8 +72,8 @@
 npm install --prefix miniprogram-ci
 WX_APPID=wx4c6c70936e99fc1a \
 WX_UPLOAD_KEY=miniprogram-ci/private.wx4c6c70936e99fc1a.key \
-WX_VERSION=0.2.0 \
-WX_DESC="Citro 小程序 0.2.0" \
+WX_VERSION=0.2.2 \
+WX_DESC="Citro 小程序 0.2.2" \
 node miniprogram-ci/upload.js
 ```
 
@@ -73,7 +85,7 @@ node miniprogram-ci/upload.js
 小程序没有游客模式，首次进入先看到协议同意，再登录 / 注册；四个 tab 内都挂了
 同一个 `components/login-gate`，登录态跨 tab 共享 `utils/session.js`。
 
-- 同意：必须主动勾选，无默认勾选；版本号 `AGREEMENT_VERSION = "2026-11-17-tabs"`。
+- 同意：必须主动勾选，无默认勾选；版本号 `AGREEMENT_VERSION = "2026-11-17-tabs-v3"`。
   修改条款时同时提升该版本与 `pages/agreement/content.js` 的 `VERSION`；
 - 登录：`POST /api/auth/login`（`account` / `password`），token 存 `citro_token`；
 - 校验：启动调 `GET /api/auth/me`；失效则清 token 并重新拉起登录门禁；
@@ -99,16 +111,10 @@ node miniprogram-ci/upload.js
 
 ### 首页
 
-- 打卡：`GET /api/checkin/stats`、`POST /api/checkin`；
 - 摸鱼：`GET/PUT /api/moyu/config`；
-- 卡面：目录内置在 `data/cards_index.json`（由 OBS 的 `card/index.json` 同步，
-  111 张），卡图从 `https://obs.chimu-claw.xyz/card/` 加载；
-  `POST /api/cards/today|draw|sync|grant`；抽取不收费，机会来自打卡/食谱等记录；
-- 天气：`GET /api/weather?lat=&lon=` 与 `GET /api/weather/geocode?q=`，
-  服务端代理 Open-Meteo 并缓存；小程序**不调用** `wx.getLocation`，城市由用户搜索选择；
 - 心情：读写 `citro_todo_v1.moods`，与待办共用一份快照；
-- 听隅：`https://obs.chimu-claw.xyz/ambient%20noise/{id}.wav`，单轨播放、
-  循环、15/30/60 分钟定时，页面隐藏即停止并销毁；
+- 听隅：28 条声景，`https://obs.chimu-claw.xyz/ambient%20noise/{id}.wav`；
+  单轨播放、循环、15/30/60 分钟定时，页面隐藏即停止并销毁；
 - 食谱：`/api/cook*`，封面/步骤图压缩后以 base64 走 `POST /api/cook/img`。
 
 ### 玩法
@@ -132,24 +138,25 @@ node miniprogram-ci/upload.js
 
 `trash/trash.js` 已加入：
 
-1. `/api/weather`、`/api/weather/geocode` 的 Open-Meteo 代理与缓存；
+1. `/api/weather`、`/api/weather/geocode` 的 Open-Meteo 代理与缓存（App 端使用，
+   小程序已不含天气）；
 2. 待办/日历/记账/首页布局的请求体上限放宽；
 3. `/api/report` 支持 `recipe` 类型与 `recipeId`。
 
 部署顺序：备份 `trash/data` → 覆盖 `trash/trash.js` → `pm2 restart trash`。
-天气与举报在部署前不可用；计划同步会退回纯本地。
+举报在部署前不可用；App 端天气接口同样依赖这次部署；计划同步会退回纯本地。
 
 ## 审核清单
 
 - [ ] 服务器域名：request `chimu-claw.xyz`，downloadFile `chimu-claw.xyz` +
       `obs.chimu-claw.xyz`；域名已备案；
 - [ ] 用户隐私保护指引：声明手机号/邮箱、昵称、食谱图片（相册与相机）、
-      天气城市、待办/日历/记账数据；说明保存位置与删除方式；
+      待办/日历/记账数据；说明保存位置与删除方式；
 - [ ] 注销账号入口可用，且不要求联系客服；
 - [ ] 所有「抽取」均为免费，无支付、无充值、无概率公示缺失；
 - [ ] 玩法文案只写娱乐，不出现改运、占卜、算命、赌博等承诺；
 - [ ] 食谱广场的举报入口与说明可见；必要时审核期先隐藏广场；
-- [ ] 卡面与听隅素材版权可商用/可展示（OBS 自托管）；
+- [ ] 听隅素材版权可商用/可展示（OBS 自托管）；
 - [ ] 提交审核前用独立测试账号，不填真实个人密码。
 
 已知风险（用户已知情并选择保留）：四个 tab 都是全页登录门禁，
@@ -162,11 +169,9 @@ node miniprogram-ci/upload.js
 miniprogram/
 ├─ app.js / app.json / app.wxss       # 入口、路由/tabBar、全局 token
 ├─ project.config.json                # 开发者工具配置
-├─ assets/home/                       # 首页四时段英雄图（webp）
 ├─ assets/tab/                        # 8 个 tabBar 图标（81×81 PNG）
 ├─ components/login-gate/             # 协议 → 登录/注册 共用门禁
-├─ data/cards_index.json              # 卡面目录快照（base 指向 OBS）
-├─ pages/                             # 15 个页面（见上方表格）
+├─ pages/                             # 13 个页面（见上方表格）
 └─ utils/
    ├─ api.js                          # wx.request 封装与全部接口
    ├─ session.js                      # token / 用户 / 协议同意
@@ -182,6 +187,6 @@ miniprogram/
 - 账号字段与校验在两处各有一份，改动服务端注册规则时同步
   `components/login-gate/login-gate.js`；
 - 签池：`trash/trash.js` → `flutter/lib/data/puns.dart` → `utils/puns.js`；
-- 卡面目录：以 OBS 的 `card/index.json` 为准；增删卡面后同步覆盖
-  `data/cards_index.json`，`base` 字段保持 OBS 地址；
-- 协议正文 `pages/agreement/content.js` 与 App 端法律页保持同一版本口径。
+- 协议正文 `pages/agreement/content.js` 与 App 端法律页保持同一版本口径；
+  本次移除打卡、卡面与天气后，协议版本升到 `v1.3`，对应的
+  `AGREEMENT_VERSION` 为 `2026-11-17-tabs-v3`。

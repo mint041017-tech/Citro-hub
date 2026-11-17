@@ -1,6 +1,6 @@
 // 听隅 · 小程序端
 // 声音名称与分类以 flutter/lib/tingyu/tingyu_models.dart 的 sounds 为准，
-// 这里精选 27 条，一次只播一条，离开页面就停止并销毁音频。
+// 这里精选 28 条，一次只播一条，离开页面就停止并销毁音频。
 const session = require("../../utils/session");
 
 const AUDIO_BASE = "https://obs.chimu-claw.xyz/ambient%20noise/";
@@ -99,12 +99,33 @@ function audioUrl(id) {
   return AUDIO_BASE + encodeURIComponent(String(id || "")) + ".wav";
 }
 
+function endClockText(deadline) {
+  if (!deadline) return "";
+  const d = new Date(deadline);
+  return "将于 " + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + " 结束";
+}
+
+function statusWord(playing, loading) {
+  if (loading) return "载入中";
+  return playing ? "循环中" : "已暂停";
+}
+
 function buildCategoryChips(selected) {
   const chips = [
-    { id: "全部", name: "全部", on: selected === "全部" },
+    {
+      id: "全部",
+      name: "全部",
+      on: selected === "全部",
+      ariaLabel: "全部" + (selected === "全部" ? "，已选中" : ""),
+    },
   ];
   CATEGORY_ORDER.forEach((name) => {
-    chips.push({ id: name, name, on: selected === name });
+    chips.push({
+      id: name,
+      name,
+      on: selected === name,
+      ariaLabel: name + (selected === name ? "，已选中" : ""),
+    });
   });
   return chips;
 }
@@ -114,46 +135,41 @@ function buildTimerChips(activeMin) {
     min,
     label: min + " 分钟",
     on: min === activeMin,
+    ariaLabel: min + " 分钟" + (min === activeMin ? "，计时中" : ""),
   }));
 }
 
-function buildGroups(selected, currentId, playing, loading) {
-  const names = selected === "全部" ? CATEGORY_ORDER : [selected];
-  const groups = [];
-  names.forEach((name) => {
-    const meta = CATEGORY_META[name] || { glyph: "声", color: "#9C867F" };
-    const items = SOUNDS.filter((s) => s.category === name).map((s) => {
-      const on = s.id === currentId;
-      let stateLabel = "▶";
-      if (on) stateLabel = loading ? "…" : playing ? "Ⅱ" : "▶";
-      return {
-        id: s.id,
-        name: s.name,
-        desc: s.desc,
-        letter: meta.glyph,
-        iconStyle:
-          "background:" +
-          rgba(meta.color, 0.16) +
-          ";color:" +
-          meta.color +
-          ";",
-        on,
-        rowClass: "sound" + (on ? " on" : "") + (on && playing ? " playing" : ""),
-        stateClass: "sound-state" + (on ? " on" : ""),
-        stateLabel,
-      };
-    });
-    if (items.length) {
-      groups.push({
-        id: name,
-        name,
-        color: meta.color,
-        countText: items.length + " 条",
-        items,
-      });
+function buildSounds(selected, currentId, playing, loading) {
+  return SOUNDS.filter(
+    (s) => selected === "全部" || s.category === selected
+  ).map((s) => {
+    const meta = CATEGORY_META[s.category] || { glyph: "声", color: "#9C867F" };
+    const selectedOn = s.id === currentId;
+    const isPlaying = selectedOn && playing;
+    let statusText = "";
+    if (selectedOn) {
+      statusText = loading ? "载入中" : playing ? "播放中" : "已暂停";
     }
+    return {
+      id: s.id,
+      name: s.name,
+      desc: s.desc,
+      category: s.category,
+      glyph: meta.glyph,
+      tint: rgba(meta.color, 0.14),
+      playing: isPlaying,
+      selected: selectedOn,
+      statusText,
+      ariaLabel:
+        s.name +
+        "，" +
+        s.category +
+        "，" +
+        (statusText || "未播放") +
+        "，点击" +
+        (isPlaying ? "暂停" : "播放"),
+    };
   });
-  return groups;
 }
 
 Page({
@@ -161,18 +177,35 @@ Page({
     ready: false,
     selectedCat: "全部",
     categories: buildCategoryChips("全部"),
-    groups: buildGroups("全部", "", false, false),
+    sounds: buildSounds("全部", "", false, false),
+    soundCount: SOUNDS.length,
+    filteredCount: SOUNDS.length,
     hasActive: false,
     playing: false,
     loading: false,
-    playerName: "还没有播放",
-    playerSub: "从下面选一条声音开始",
-    playerGlyph: "▶",
     progress: 0,
     timeNow: "00:00",
     timeTotal: "--:--",
-    volume: 70,
+    heroName: "把世界调低一点。",
+    heroSub: "从声音库里，挑一条留给耳朵。",
+    heroStatus: "未播放",
+    heroAria: "尚未播放，先从声音库选择一条声音",
+    playAria: "选择声音后播放",
+    dockVisible: false,
+    dockName: "",
+    dockGlyph: "",
+    dockTint: "",
+    dockSub: "",
+    volumeValue: 70,
+    sliderActiveColor: "#A9C9C4",
+    sliderBgColor: "#E8D9BE",
+    sliderBlockColor: "#614A44",
     timerActive: false,
+    timerOpen: false,
+    timerPillText: "定时",
+    timerPillAria: "设置睡眠定时",
+    timerRemainingText: "未设定",
+    timerEndText: "",
     timerStateText: "未设定",
     timerChips: buildTimerChips(0),
   },
@@ -218,27 +251,26 @@ Page({
   onSelectCategory(e) {
     const id = e && e.currentTarget && e.currentTarget.dataset.id;
     if (!id || id === this.data.selectedCat) return;
+    const sounds = buildSounds(id, this.currentId, this.playing, this.loading);
     this.setData({
       selectedCat: id,
       categories: buildCategoryChips(id),
-      groups: buildGroups(
-        id,
-        this.currentId,
-        this.playing,
-        this.loading
-      ),
+      sounds,
+      filteredCount: sounds.length,
     });
   },
 
   refreshList() {
     if (!this.alive) return;
+    const sounds = buildSounds(
+      this.data.selectedCat,
+      this.currentId,
+      this.playing,
+      this.loading
+    );
     this.setData({
-      groups: buildGroups(
-        this.data.selectedCat,
-        this.currentId,
-        this.playing,
-        this.loading
-      ),
+      sounds,
+      filteredCount: sounds.length,
     });
   },
 
@@ -408,28 +440,75 @@ Page({
     }
   },
 
+  onHeroTap() {
+    if (!this.currentId) {
+      wx.showToast({ title: "先从声音库里选一条声音", icon: "none" });
+      return;
+    }
+    this.onTogglePlay();
+  },
+
   onVolume(e) {
     const raw = Number(e && e.detail && e.detail.value);
     const v = isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : 0;
     this.volume = v;
     if (this.audio) this.audio.volume = v / 100;
-    if (v !== this.data.volume) this.setData({ volume: v });
+    if (v !== this.data.volumeValue) this.setData({ volumeValue: v });
   },
 
   publishPlayer() {
     if (!this.alive) return;
-    this.setData({
-      hasActive: !!this.currentId,
-      playerName: this.currentName || "还没有播放",
-      playerSub: this.playerSubText(),
-      playerGlyph: this.loading ? "…" : this.playing ? "Ⅱ" : "▶",
-      playing: this.playing,
-      loading: this.loading,
-    });
+    const active = !!this.currentId;
+    const meta = active
+      ? CATEGORY_META[this.currentCat] || { glyph: "声", color: "#9C867F" }
+      : null;
+    const status = active ? statusWord(this.playing, this.loading) : "未播放";
+    const patch = Object.assign(
+      {
+        hasActive: active,
+        playing: this.playing,
+        loading: this.loading,
+        heroName: active ? this.currentName : "把世界调低一点。",
+        heroSub: active
+          ? this.heroSubText()
+          : "从声音库里，挑一条留给耳朵。",
+        heroStatus: status,
+        heroAria: active
+          ? "当前声音 " +
+            this.currentName +
+            "，" +
+            this.currentCat +
+            "，" +
+            status +
+            "，点击切换播放"
+          : "尚未播放，先从声音库选择一条声音",
+        playAria: active
+          ? this.loading
+            ? "载入中：" + this.currentName
+            : this.playing
+            ? "暂停 " + this.currentName
+            : "播放 " + this.currentName
+          : "选择声音后播放",
+        dockVisible: active,
+        dockName: active ? this.currentName : "",
+        dockGlyph: active && meta ? meta.glyph : "",
+        dockTint: active && meta ? rgba(meta.color, 0.14) : "",
+        dockSub: active ? this.dockSubText() : "",
+        timerActive: this.timerActive,
+        timerChips: buildTimerChips(this.timerActive ? this.timerMin : 0),
+      },
+      this.timerMeta()
+    );
+    this.setData(patch);
   },
 
-  playerSubText() {
-    if (!this.currentId) return "从下面选一条声音开始";
+  heroSubText() {
+    const cat = this.currentCat || "声音";
+    return cat + " · " + statusWord(this.playing, this.loading);
+  },
+
+  dockSubText() {
+    if (!this.currentId) return "";
     const cat = this.currentCat || "声音";
     if (this.timerActive) {
       const remain = Math.max(
@@ -438,10 +517,49 @@ Page({
       );
       return cat + " · 定时剩余 " + clockText(remain);
     }
-    return cat + " · 循环播放";
+    return cat + " · " + statusWord(this.playing, this.loading);
+  },
+
+  timerMeta() {
+    if (!this.timerActive) {
+      return {
+        timerPillText: "定时",
+        timerPillAria: "设置睡眠定时",
+        timerRemainingText: "未设定",
+        timerEndText: "",
+        timerStateText: "未设定",
+      };
+    }
+    const remain = Math.max(
+      0,
+      Math.ceil((this.timerDeadline - Date.now()) / 1000)
+    );
+    const remainText = clockText(remain);
+    return {
+      timerPillText: remainText,
+      timerPillAria: "睡眠定时，剩余 " + remainText + "，点击调整",
+      timerRemainingText: "剩余 " + remainText,
+      timerEndText: endClockText(this.timerDeadline),
+      timerStateText: "剩余 " + remainText,
+    };
   },
 
   /* ---------------- 睡眠定时 ---------------- */
+
+  onOpenTimer() {
+    if (!this.alive) return;
+    this.setData({ timerOpen: true });
+  },
+
+  onCloseTimer() {
+    this.setData({ timerOpen: false });
+  },
+
+  onPickTimer(e) {
+    this.onTimer(e);
+  },
+
+  noop() {},
 
   onTimer(e) {
     const raw = Number(e && e.currentTarget && e.currentTarget.dataset.min);
@@ -467,22 +585,15 @@ Page({
 
   publishTimer() {
     if (!this.alive) return;
-    if (!this.timerActive) {
-      this.setData({
-        timerStateText: "未设定",
-        timerChips: buildTimerChips(0),
-        playerSub: this.playerSubText(),
-      });
-      return;
-    }
-    const remain = Math.max(
-      0,
-      Math.ceil((this.timerDeadline - Date.now()) / 1000)
+    const patch = Object.assign(
+      {
+        timerActive: this.timerActive,
+        timerChips: buildTimerChips(this.timerActive ? this.timerMin : 0),
+        dockSub: this.currentId ? this.dockSubText() : "",
+      },
+      this.timerMeta()
     );
-    this.setData({
-      timerStateText: "剩余 " + clockText(remain),
-      playerSub: this.playerSubText(),
-    });
+    this.setData(patch);
   },
 
   expireTimerEnd() {
@@ -564,20 +675,34 @@ Page({
     this.playing = false;
     this.loading = false;
     if (!update || !this.alive) return;
+    const sounds = buildSounds(this.data.selectedCat, "", false, false);
     this.setData({
       hasActive: false,
       playing: false,
       loading: false,
-      playerName: "还没有播放",
-      playerSub: "从下面选一条声音开始",
-      playerGlyph: "▶",
+      heroName: "把世界调低一点。",
+      heroSub: "从声音库里，挑一条留给耳朵。",
+      heroStatus: "未播放",
+      heroAria: "尚未播放，先从声音库选择一条声音",
+      playAria: "选择声音后播放",
+      dockVisible: false,
+      dockName: "",
+      dockGlyph: "",
+      dockTint: "",
+      dockSub: "",
       progress: 0,
       timeNow: "00:00",
       timeTotal: "--:--",
       timerActive: false,
+      timerOpen: false,
+      timerPillText: "定时",
+      timerPillAria: "设置睡眠定时",
+      timerRemainingText: "未设定",
+      timerEndText: "",
       timerStateText: "未设定",
       timerChips: buildTimerChips(0),
+      sounds,
+      filteredCount: sounds.length,
     });
-    this.refreshList();
   },
 });

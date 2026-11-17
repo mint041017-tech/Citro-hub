@@ -1,4 +1,5 @@
 {
+  "entryPagePath": "pages/home/home",
   "pages": [
     "pages/home/home",
     "pages/plan/plan",
@@ -6,10 +7,8 @@
     "pages/me/me",
     "pages/agreement/agreement",
     "pages/fish/fish",
-    "pages/weather/weather",
     "pages/mood/mood",
     "pages/tingyu/tingyu",
-    "pages/cards/cards",
     "pages/cook/cook",
     "pages/calendar/calendar",
     "pages/todo/todo",

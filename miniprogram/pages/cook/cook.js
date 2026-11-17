@@ -6,7 +6,6 @@ const api = require("../../utils/api");
 const session = require("../../utils/session");
 const cook = require("./cook-utils");
 
-const GRANT_KEY = "citro_cook_grant_date";
 const WIZARD_LABELS = ["基本信息", "食材", "步骤", "封面"];
 const FRIDGE_UNITS = ["个", "包", "瓶", "罐", "把", "克", "斤", "毫升", "升", "杯", "少许", "适量"];
 
@@ -902,7 +901,6 @@ Page({
         self.renderMine("");
         self.renderSquare("");
         wx.showToast({ title: "食谱已保存", icon: "none" });
-        self.maybeGrantCard();
       },
       (e) => {
         if (self.destroyed) return;
@@ -1279,37 +1277,4 @@ Page({
       });
   },
 
-  /* ---------------- 每日第一次保存的卡面机会 ---------------- */
-
-  maybeGrantCard() {
-    const token = session.token();
-    if (!token) return;
-    const today = cook.todayKey();
-    let stored = "";
-    try {
-      stored = wx.getStorageSync(GRANT_KEY) || "";
-    } catch (e) {
-      stored = "";
-    }
-    if (stored === today) return;
-    const self = this;
-    api.cardsGrant(token, "recipe").then(
-      (res) => {
-        try {
-          wx.setStorageSync(GRANT_KEY, today);
-        } catch (e) {}
-        if (self.destroyed) return;
-        if (res && res.granted) {
-          setTimeout(() => {
-            if (!self.destroyed) {
-              wx.showToast({ title: "获得 1 次卡面抽取机会", icon: "none" });
-            }
-          }, 700);
-        }
-      },
-      () => {
-        // 奖励失败不影响食谱保存，静默处理。
-      }
-    );
-  },
-});
+  });

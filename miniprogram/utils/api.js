@@ -125,28 +125,6 @@ function playDraw(token) {
   return request("POST", "/api/play", { data: {}, token });
 }
 
-/* ---------------- 首页：打卡 / 今日签 ---------------- */
-
-function checkinStats(token) {
-  return request("GET", "/api/checkin/stats", { token });
-}
-
-function checkinSave(token, payload) {
-  return request("POST", "/api/checkin", { data: payload || {}, token });
-}
-
-function fortuneGet(token) {
-  return request("GET", "/api/draw", { token });
-}
-
-function fortuneDraw(token) {
-  return request("POST", "/api/draw", { data: {}, token });
-}
-
-function fortuneReroll(token) {
-  return request("POST", "/api/draw/reroll", { data: {}, token });
-}
-
 /* ---------------- 首页：摸鱼配置 ---------------- */
 
 function moyuGet(token) {
@@ -156,48 +134,6 @@ function moyuGet(token) {
 function moyuSave(token, config) {
   return request("PUT", "/api/moyu/config", {
     data: { config },
-    token,
-  });
-}
-
-/* ---------------- 首页：天气（服务端代理） ---------------- */
-
-function weather(lat, lon) {
-  return request("GET", "/api/weather", {
-    query: { lat, lon },
-  });
-}
-
-function weatherGeocode(q) {
-  return request("GET", "/api/weather/geocode", { query: { q } });
-}
-
-/* ---------------- 首页：卡面收藏 ---------------- */
-
-function cardsSync(token, payload) {
-  return request("POST", "/api/cards/sync", {
-    data: payload || {},
-    token,
-  });
-}
-
-function cardsToday(token, candidates, reroll) {
-  return request("POST", "/api/cards/today", {
-    data: { candidates, reroll: !!reroll },
-    token,
-  });
-}
-
-function cardsDraw(token, candidates) {
-  return request("POST", "/api/cards/draw", {
-    data: { candidates },
-    token,
-  });
-}
-
-function cardsGrant(token, source) {
-  return request("POST", "/api/cards/grant", {
-    data: { source },
     token,
   });
 }
@@ -302,19 +238,8 @@ module.exports = {
   deleteAccount,
   playRecords,
   playDraw,
-  checkinStats,
-  checkinSave,
-  fortuneGet,
-  fortuneDraw,
-  fortuneReroll,
   moyuGet,
   moyuSave,
-  weather,
-  weatherGeocode,
-  cardsSync,
-  cardsToday,
-  cardsDraw,
-  cardsGrant,
   todoGet,
   todoSave,
   calendarGet,

@@ -1,5 +1,6 @@
-/* 首页：奶油纸张底色 + 时段大图 + 固定顺序卡片。
-   颜色沿用 app.wxss 的 light token，卡片圆角按首页规格收窄到 32rpx。 */
+/* 首页：奶油纸张 + 纯 CSS 时段光晕 + 固定顺序卡片。
+   背景不再使用 4 张 1024×1024 webp，改为可随时段变化的轻渐变，
+   卡片质感与 App 对齐（48rpx 圆角、中性阴影、无描边）。 */
 
 /* ---------------- 1. 自定义顶栏 ---------------- */
 
@@ -9,13 +10,25 @@
   right: 0;
   top: 0;
   z-index: 40;
-  padding-left: 28rpx;
+  padding-left: 32rpx;
   box-sizing: border-box;
+}
+
+.topbar-dawn,
+.topbar-day,
+.topbar-dusk {
   background: linear-gradient(
     180deg,
-    rgba(45, 32, 27, 0.24) 0%,
-    rgba(45, 32, 27, 0.06) 72%,
-    rgba(45, 32, 27, 0) 100%
+    rgba(249, 237, 215, 0.86) 0%,
+    rgba(249, 237, 215, 0) 100%
+  );
+}
+
+.topbar-night {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 26, 24, 0.5) 0%,
+    rgba(30, 26, 24, 0) 100%
   );
 }
 
@@ -30,6 +43,10 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 2rpx;
+  color: var(--ink);
+}
+
+.topbar-night .brand {
   color: #fff8ec;
   text-shadow: 0 2rpx 12rpx rgba(30, 20, 18, 0.35);
 }
@@ -57,66 +74,115 @@
 
 .hero {
   position: relative;
-  min-height: 480rpx;
-  padding-left: 32rpx;
-  padding-right: 32rpx;
-  padding-bottom: 72rpx;
+  height: 55vh;
+  min-height: 560rpx;
+  max-height: 760rpx;
+  padding-left: 40rpx;
+  padding-right: 40rpx;
+  padding-bottom: 96rpx;
   display: flex;
   align-items: flex-end;
   box-sizing: border-box;
   overflow: hidden;
+  background-color: var(--bg);
 }
 
-.hero-dawn {
-  background: linear-gradient(160deg, #e9c9ae 0%, #c99c87 55%, #8e6a60 100%);
-}
-
-.hero-day {
-  background: linear-gradient(160deg, #b9d3cc 0%, #d8c6a8 55%, #a68b78 100%);
-}
-
-.hero-dusk {
-  background: linear-gradient(160deg, #d9b08b 0%, #a9786a 55%, #6e534f 100%);
-}
-
-.hero-night {
-  background: linear-gradient(160deg, #3f4a5a 0%, #2e343f 55%, #221e24 100%);
-}
-
-.hero-img {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.hero-scrim {
+/* 纸纹：远看是纸，近看有细颗粒 */
+.hero::after {
+  content: "";
   position: absolute;
   left: 0;
   top: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(38, 28, 25, 0.34) 0%,
-    rgba(38, 28, 25, 0.1) 38%,
-    rgba(34, 25, 22, 0.62) 100%
-  );
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(97, 74, 68, 0.035) 0,
+      rgba(97, 74, 68, 0.035) 1rpx,
+      rgba(0, 0, 0, 0) 1rpx,
+      rgba(0, 0, 0, 0) 4rpx
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 1rpx,
+      rgba(0, 0, 0, 0) 1rpx,
+      rgba(0, 0, 0, 0) 6rpx
+    );
+}
+
+.hero-dawn {
+  background:
+    radial-gradient(
+      90% 60% at 20% 0%,
+      rgba(255, 255, 255, 0.75) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    radial-gradient(
+      70% 45% at 82% 12%,
+      rgba(238, 205, 208, 0.55) 0%,
+      rgba(238, 205, 208, 0) 70%
+    ),
+    linear-gradient(180deg, #f7e3e0 0%, #f9edd7 70%, #f9edd7 100%);
+}
+
+.hero-day {
+  background:
+    radial-gradient(
+      80% 55% at 72% 6%,
+      rgba(244, 195, 156, 0.45) 0%,
+      rgba(244, 195, 156, 0) 68%
+    ),
+    radial-gradient(
+      70% 45% at 18% 2%,
+      rgba(255, 255, 255, 0.7) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(180deg, #faeedc 0%, #f9edd7 64%, #f9edd7 100%);
+}
+
+.hero-dusk {
+  background:
+    radial-gradient(
+      85% 55% at 50% 0%,
+      rgba(250, 187, 149, 0.5) 0%,
+      rgba(250, 187, 149, 0) 66%
+    ),
+    linear-gradient(180deg, #f3d2c2 0%, #f9edd7 72%, #f9edd7 100%);
+}
+
+.hero-night {
+  background:
+    radial-gradient(
+      90% 60% at 50% 18%,
+      rgba(67, 70, 105, 0.9) 0%,
+      rgba(67, 70, 105, 0) 70%
+    ),
+    linear-gradient(180deg, #262a40 0%, #3a3e5d 42%, #252842 82%, #4a3a34 100%);
 }
 
 .hero-body {
   position: relative;
   z-index: 2;
   width: 100%;
+  max-width: 620rpx;
+  color: var(--ink);
+}
+
+.hero-night .hero-body {
   color: #fff8ec;
 }
 
 .hero-greet {
-  font-size: 52rpx;
+  font-size: 56rpx;
   font-weight: 600;
   line-height: 1.3;
   letter-spacing: 1rpx;
+}
+
+.hero-night .hero-greet {
   text-shadow: 0 4rpx 20rpx rgba(30, 20, 18, 0.35);
 }
 
@@ -124,6 +190,10 @@
   margin-top: 14rpx;
   font-size: 24rpx;
   letter-spacing: 2rpx;
+  color: var(--ink2);
+}
+
+.hero-night .hero-date {
   color: rgba(255, 248, 236, 0.82);
 }
 
@@ -131,6 +201,10 @@
   margin-top: 10rpx;
   font-size: 26rpx;
   line-height: 1.6;
+  color: var(--ink2);
+}
+
+.hero-night .hero-copy {
   color: rgba(255, 248, 236, 0.9);
 }
 
@@ -139,10 +213,11 @@
 .panel {
   position: relative;
   z-index: 5;
-  margin-top: -32rpx;
-  padding: 44rpx 28rpx 0;
+  margin-top: -48rpx;
+  padding: 48rpx 32rpx 0;
   background: var(--bg);
-  border-radius: 32rpx 32rpx 0 0;
+  border-radius: 48rpx 48rpx 0 0;
+  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, 0.06);
 }
 
 .c-card-first {
@@ -152,11 +227,10 @@
 .c-card {
   position: relative;
   margin-top: 24rpx;
-  padding: 28rpx;
+  padding: 32rpx;
   background: var(--surface);
-  border: 2rpx solid var(--line);
-  border-radius: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(97, 74, 68, 0.05);
+  border-radius: 48rpx;
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -180,7 +254,7 @@
 }
 
 .c-title {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: var(--ink);
 }
@@ -191,26 +265,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 22rpx;
-  color: var(--ink-soft);
+  font-size: 24rpx;
+  color: var(--ink2);
 }
 
 .c-arrow {
   margin-left: auto;
   padding-left: 12rpx;
-  font-size: 34rpx;
+  font-size: 36rpx;
   line-height: 1;
   color: var(--ink-soft);
 }
 
-.c-head-chip {
-  margin-left: auto;
-}
-
-.chip-off {
-  background: var(--surface2);
-  color: var(--ink-soft);
-}
 
 /* ---------------- 通用卡片文案 ---------------- */
 
@@ -225,7 +291,7 @@
   margin-top: 8rpx;
   font-size: 24rpx;
   line-height: 1.6;
-  color: var(--ink-soft);
+  color: var(--ink2);
 }
 
 .card-meta {
@@ -234,208 +300,7 @@
   align-items: center;
 }
 
-/* ---------------- 3. 今日卡面 ---------------- */
-
-.flip {
-  width: 300rpx;
-  height: 400rpx;
-  margin: 8rpx auto 22rpx;
-  perspective: 1200rpx;
-  -webkit-perspective: 1200rpx;
-}
-
-.flip-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  transition: transform 0.5s ease;
-  -webkit-transition: -webkit-transform 0.5s ease;
-}
-
-.flip-inner.flipped {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-}
-
-.face {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 24rpx;
-  overflow: hidden;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.face-back {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(150deg, #f3e7ce 0%, #fff8ec 55%, #efe0c4 100%);
-  border: 2rpx solid var(--line2);
-}
-
-.back-ring {
-  width: 100rpx;
-  height: 100rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2rpx solid #c9b497;
-  border-radius: 50%;
-  font-size: 30rpx;
-  font-weight: 600;
-  letter-spacing: 1rpx;
-  color: #8a6f5e;
-}
-
-.back-word {
-  margin-top: 18rpx;
-  font-size: 20rpx;
-  letter-spacing: 7rpx;
-  color: #b9a28a;
-}
-
-.face-front {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-  background: var(--surface2);
-}
-
-.card-face-img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.today-line {
-  text-align: center;
-  font-size: 24rpx;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
-.today-actions {
-  margin-top: 18rpx;
-  display: flex;
-  justify-content: center;
-}
-
-.mini-btn {
-  height: 64rpx;
-  margin: 0;
-  padding: 0 30rpx;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 999rpx;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 25rpx;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.mini-btn::after {
-  border: none;
-}
-
-.mini-btn-hover {
-  opacity: 0.86;
-}
-
-.mini-btn[disabled] {
-  background: var(--surface2);
-  color: var(--ink-soft);
-  opacity: 1;
-}
-
-/* ---------------- 4. 打卡 ---------------- */
-
-.checkin-body {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-}
-
-.streak {
-  display: flex;
-  align-items: baseline;
-  padding-right: 16rpx;
-}
-
-.streak-num {
-  font-size: 72rpx;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -2rpx;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.streak-unit {
-  margin-left: 8rpx;
-  font-size: 26rpx;
-  color: var(--ink-soft);
-}
-
-.checkin-right {
-  max-width: 340rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.checkin-sub {
-  margin-bottom: 14rpx;
-  font-size: 22rpx;
-  line-height: 1.5;
-  text-align: right;
-  color: var(--ink-soft);
-}
-
-/* ---------------- 6. 天气 ---------------- */
-
-.weather-body {
-  display: flex;
-  align-items: center;
-}
-
-.weather-temp {
-  font-size: 80rpx;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -2rpx;
-  color: var(--accent-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.weather-side {
-  margin-left: 24rpx;
-  display: flex;
-  flex-direction: column;
-}
-
-.weather-desc {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.weather-detail {
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  line-height: 1.6;
-  color: var(--ink-soft);
-}
-
-/* ---------------- 7. 心情 ---------------- */
+/* ---------------- 4. 心情 ---------------- */
 
 .mood-body {
   display: flex;
@@ -467,11 +332,11 @@
   margin-top: 10rpx;
   font-size: 24rpx;
   line-height: 1.6;
-  color: var(--ink-soft);
+  color: var(--ink2);
   word-break: break-all;
 }
 
-/* ---------------- 8. 听隅 ---------------- */
+/* ---------------- 5. 听隅 ---------------- */
 
 .sound-row {
   display: flex;
@@ -503,7 +368,7 @@
   color: var(--ink-soft);
 }
 
-/* ---------------- 9. 食谱日记 ---------------- */
+/* ---------------- 6. 食谱日记 ---------------- */
 
 .cook-body {
   display: flex;
@@ -546,28 +411,10 @@
   color: var(--ink-soft);
 }
 
-/* ---------------- 10. 卡面收藏 ---------------- */
-
-.collect-line {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.collect-progress {
-  margin-top: 16rpx;
-}
-
-.collect-hint {
-  margin-top: 14rpx;
-  font-size: 22rpx;
-  color: var(--ink-soft);
-}
-
-/* ---------------- 11. 每日一言 ---------------- */
+/* ---------------- 7. 每日一言 ---------------- */
 
 .quote-card {
-  padding: 44rpx 36rpx 40rpx;
+  padding: 48rpx 40rpx 44rpx;
   text-align: center;
 }
 
@@ -595,7 +442,7 @@
   color: var(--ink-soft);
 }
 
-/* ---------------- 12. 页脚 ---------------- */
+/* ---------------- 8. 页脚 ---------------- */
 
 .footer {
   padding: 48rpx 0 48rpx;

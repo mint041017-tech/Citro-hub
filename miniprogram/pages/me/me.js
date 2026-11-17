@@ -6,7 +6,7 @@ const session = require("../../utils/session");
 
 // 与 trash.js 的注册/改名校验保持一致
 const NAME_RE = /^[一-龥A-Za-z0-9_]{2,16}$/;
-const VERSION = "0.2.0";
+const VERSION = "0.2.4";
 const OVERVIEW_GAP = 1500;
 
 function pad2(n) {
@@ -67,7 +67,6 @@ Page({
     // 数据概览：加载中显示 …，失败显示 —
     statTodo: "…",
     statExpense: "…",
-    statCheckin: "…",
 
     // 昵称编辑
     editing: false,
@@ -165,7 +164,6 @@ Page({
     return Promise.all([
       this.loadTodo(token),
       this.loadLedger(token),
-      this.loadCheckin(token),
     ]).catch(() => {});
   },
 
@@ -213,23 +211,6 @@ Page({
       });
   },
 
-  loadCheckin(token) {
-    return api
-      .checkinStats(token)
-      .then((res) => {
-        if (!this.alive || !this.data.ready) return;
-        const streak = Number(res && res.streak);
-        const text =
-          isFinite(streak) && streak >= 0
-            ? Math.floor(streak) + " 天"
-            : "—";
-        this.setData({ statCheckin: text });
-      })
-      .catch(() => {
-        if (!this.alive || !this.data.ready) return;
-        this.setData({ statCheckin: "—" });
-      });
-  },
 
   /* ---------------- 昵称编辑 ---------------- */
 
@@ -441,7 +422,6 @@ Page({
       hasAvatar: false,
       statTodo: "—",
       statExpense: "—",
-      statCheckin: "—",
       editing: false,
       editName: "",
       editError: "",

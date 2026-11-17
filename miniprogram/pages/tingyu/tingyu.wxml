@@ -1,100 +1,212 @@
-<view class="page tingyu-page">
-  <view class="hero">
-    <view class="hero-title">把世界调低一点，留一条缝给耳朵</view>
-    <view class="hero-sub">单轨播放 · 一次只听一种声音</view>
+<view class="page tingyu-page {{dockVisible ? 'has-dock' : ''}}">
+  <view class="page-head">
+    <view class="eyebrow-row">
+      <text class="eyebrow">听隅 · QUIET NOOK</text>
+      <view class="count-pill">{{soundCount}} 段声景</view>
+    </view>
+    <view class="page-title">为现在，留一点安静。</view>
+    <view class="page-subtitle">单轨播放 · 一次只听一种声音</view>
+  </view>
+
+  <view
+    class="hero"
+    bindtap="onHeroTap"
+    hover-class="press"
+    aria-role="group"
+    aria-label="{{heroAria}}"
+  >
+    <view class="hero-ring ring-a"></view>
+    <view class="hero-ring ring-b"></view>
+    <view class="hero-ring ring-c"></view>
+    <view class="hero-inner">
+      <view class="hero-top">
+        <text class="hero-eyebrow">NOW PLAYING</text>
+        <view
+          class="timer-pill-hit"
+          catchtap="onOpenTimer"
+          hover-class="press"
+          aria-role="button"
+          aria-label="{{timerPillAria}}"
+        >
+          <view class="timer-pill {{timerActive ? 'timer-pill-on' : ''}}">
+            <view class="timer-pill-dot" wx:if="{{timerActive}}"></view>
+            <text class="timer-pill-text">{{timerPillText}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="hero-main">
+        <view class="hero-copy">
+          <view class="hero-name">{{heroName}}</view>
+          <view class="hero-sub">{{heroSub}}</view>
+        </view>
+        <view
+          class="hero-play-hit"
+          catchtap="onTogglePlay"
+          hover-class="press"
+          aria-role="button"
+          aria-label="{{playAria}}"
+        >
+          <view class="hero-play">
+            <view wx:if="{{loading}}" class="spinner"></view>
+            <view wx:elif="{{playing}}" class="pause-icon">
+              <view class="pause-bar"></view>
+              <view class="pause-bar"></view>
+            </view>
+            <view wx:else class="play-icon"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="library-head">
+    <text class="library-title">声音库</text>
+    <text class="library-count">{{filteredCount}} 条</text>
   </view>
 
   <scroll-view class="cat-scroll" scroll-x show-scrollbar="{{false}}">
     <view class="cat-row">
       <view
-        class="chip cat-chip {{item.on ? 'chip-on' : ''}}"
+        class="chip-hit"
         wx:for="{{categories}}"
         wx:key="id"
         data-id="{{item.id}}"
         bindtap="onSelectCategory"
-      >{{item.name}}</view>
+        hover-class="press"
+        aria-role="button"
+        aria-label="{{item.ariaLabel}}"
+      >
+        <view class="cat-chip {{item.on ? 'cat-chip-on' : ''}}">{{item.name}}</view>
+      </view>
     </view>
   </scroll-view>
 
-  <view class="card timer-card">
-    <view class="timer-head">
-      <view class="timer-title">睡眠定时</view>
-      <text class="timer-state">{{timerStateText}}</text>
-    </view>
-    <view class="timer-chips">
-      <view
-        class="chip timer-chip {{item.on ? 'chip-on' : ''}}"
-        wx:for="{{timerChips}}"
-        wx:key="min"
-        data-min="{{item.min}}"
-        bindtap="onTimer"
-      >{{item.label}}</view>
-      <view class="chip timer-chip timer-cancel" wx:if="{{timerActive}}" bindtap="onCancelTimer">关闭定时</view>
-    </view>
-  </view>
-
-  <view class="group" wx:for="{{groups}}" wx:key="id" wx:for-item="group">
-    <view class="group-head">
-      <view class="group-dot" style="background:{{group.color}};"></view>
-      <text class="group-name">{{group.name}}</text>
-      <text class="group-count">{{group.countText}}</text>
-    </view>
-    <view class="sound-list">
-      <view
-        class="{{item.rowClass}}"
-        wx:for="{{group.items}}"
-        wx:key="id"
-        data-id="{{item.id}}"
-        bindtap="onTapSound"
-      >
-        <view class="sound-tile" style="{{item.iconStyle}}">{{item.letter}}</view>
-        <view class="sound-body">
-          <view class="sound-name">{{item.name}}</view>
-          <view class="sound-desc">{{item.desc}}</view>
+  <view class="sound-grid">
+    <view
+      class="sound-card {{item.selected ? 'selected' : ''}} {{item.playing ? 'playing' : ''}}"
+      wx:for="{{sounds}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onTapSound"
+      hover-class="press"
+      aria-role="button"
+      aria-label="{{item.ariaLabel}}"
+    >
+      <view class="sound-top">
+        <view class="sound-glyph" style="background:{{item.tint}};">{{item.glyph}}</view>
+        <view class="sound-mark">
+          <view wx:if="{{item.playing}}" class="wave" aria-hidden="true">
+            <view class="wave-bar bar-a"></view>
+            <view class="wave-bar bar-b"></view>
+            <view class="wave-bar bar-c"></view>
+          </view>
+          <view wx:elif="{{item.selected}}" class="check-dot" aria-hidden="true">
+            <view class="check-mark"></view>
+          </view>
         </view>
-        <view class="{{item.stateClass}}">{{item.stateLabel}}</view>
+      </view>
+      <view class="sound-name">{{item.name}}</view>
+      <view class="sound-desc">{{item.desc}}</view>
+      <view class="sound-foot">
+        <text class="sound-cat">{{item.category}}</text>
+        <text class="sound-status" wx:if="{{item.statusText}}">{{item.statusText}}</text>
       </view>
     </view>
   </view>
 
-  <view class="hint-card">
-    音频通过网络加载，请保持网络连接；声音版权归原权利人所有
-  </view>
-
-  <view class="footer">声音只是陪伴，累了就把音量再调低一点。</view>
+  <view class="footnote">只留一段声音，离开页面自动停止。</view>
 </view>
 
-<view class="player">
-  <view class="player-head">
-    <view class="player-info">
-      <view class="player-name">{{playerName}}</view>
-      <view class="player-sub">{{playerSub}}</view>
+<view class="dock" wx:if="{{dockVisible}}" aria-role="region" aria-label="当前声音与音量">
+  <view class="dock-row">
+    <view class="dock-glyph" style="background:{{dockTint}};">{{dockGlyph}}</view>
+    <view class="dock-copy">
+      <view class="dock-name">{{dockName}}</view>
+      <view class="dock-sub">{{dockSub}}</view>
     </view>
-    <view class="player-btn {{hasActive ? '' : 'disabled'}}" bindtap="onTogglePlay">{{playerGlyph}}</view>
-  </view>
-
-  <view class="progress-row">
-    <text class="time">{{timeNow}}</text>
-    <view class="progress">
-      <view class="progress-bar" style="width:{{progress}}%;"></view>
+    <view
+      class="dock-play-hit"
+      catchtap="onTogglePlay"
+      hover-class="press"
+      aria-role="button"
+      aria-label="{{playAria}}"
+    >
+      <view class="dock-play">
+        <view wx:if="{{loading}}" class="spinner spinner-sm"></view>
+        <view wx:elif="{{playing}}" class="pause-icon">
+          <view class="pause-bar pause-bar-sm"></view>
+          <view class="pause-bar pause-bar-sm"></view>
+        </view>
+        <view wx:else class="play-icon play-icon-sm"></view>
+      </view>
     </view>
-    <text class="time time-right">{{timeTotal}}</text>
   </view>
-
-  <view class="volume-row">
+  <view class="dock-volume">
     <text class="vol-label">音量</text>
     <slider
       class="vol-slider"
       min="0"
       max="100"
-      value="{{volume}}"
-      activeColor="#A9C9C4"
-      backgroundColor="rgba(249, 237, 215, 0.22)"
-      block-color="#FFF8EC"
-      block-size="20"
+      value="{{volumeValue}}"
+      activeColor="{{sliderActiveColor}}"
+      backgroundColor="{{sliderBgColor}}"
+      block-color="{{sliderBlockColor}}"
+      block-size="18"
       bindchanging="onVolume"
       bindchange="onVolume"
+      aria-role="slider"
+      aria-label="音量，当前 {{volumeValue}}%"
     />
-    <text class="vol-value">{{volume}}%</text>
+    <text class="vol-value">{{volumeValue}}</text>
+  </view>
+</view>
+
+<view class="sheet-mask" wx:if="{{timerOpen}}" catchtap="onCloseTimer" catchtouchmove="noop">
+  <view class="timer-sheet" catchtap="noop" aria-role="dialog" aria-label="睡眠定时">
+    <view class="sheet-handle"></view>
+    <view class="sheet-head">
+      <text class="sheet-title">睡眠定时</text>
+      <view
+        class="sheet-close"
+        catchtap="onCloseTimer"
+        hover-class="press-soft"
+        aria-role="button"
+        aria-label="关闭定时设置"
+      >
+        <view class="close-bar close-bar-a"></view>
+        <view class="close-bar close-bar-b"></view>
+      </view>
+    </view>
+    <view class="sheet-hint">选中即开始计时，到点会停止播放；即使尚未播放也会计时。</view>
+    <view class="timer-options">
+      <view
+        class="timer-option {{item.on ? 'timer-option-on' : ''}}"
+        wx:for="{{timerChips}}"
+        wx:key="min"
+        data-min="{{item.min}}"
+        catchtap="onPickTimer"
+        hover-class="press"
+        aria-role="button"
+        aria-label="{{item.ariaLabel}}"
+      >
+        <text class="timer-option-label">{{item.label}}</text>
+        <view class="timer-option-mark" wx:if="{{item.on}}">
+          <view class="check-mark"></view>
+        </view>
+      </view>
+    </view>
+    <view class="timer-live" wx:if="{{timerActive}}">
+      <view class="timer-live-row">
+        <text class="timer-live-remain">{{timerRemainingText}}</text>
+        <text class="timer-live-end">{{timerEndText}}</text>
+      </view>
+      <view
+        class="timer-cancel"
+        catchtap="onCancelTimer"
+        hover-class="press"
+        aria-role="button"
+        aria-label="取消睡眠定时"
+      >取消定时</view>
+    </view>
   </view>
 </view>

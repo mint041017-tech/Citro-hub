@@ -51,11 +51,6 @@
           <view class="stat-value stat-money">{{statExpense}}</view>
           <view class="stat-label">本月支出</view>
         </view>
-        <view class="stat-sep"></view>
-        <view class="stat">
-          <view class="stat-value">{{statCheckin}}</view>
-          <view class="stat-label">连续打卡</view>
-        </view>
       </view>
     </view>
 

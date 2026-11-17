@@ -8,7 +8,7 @@
  *                  小程序代码上传 → 生成并下载，只显示一次）
  *
  * 可选：
- *   WX_VERSION     版本号，默认 0.2.0
+ *   WX_VERSION     版本号，默认 0.2.2
  *   WX_DESC        版本描述，默认 "Citro 小程序"
  *   WX_ROBOT       CI 机器人编号，默认 1
  *
@@ -37,7 +37,7 @@ function fail(message) {
 
 const appid = String(process.env.WX_APPID || readProjectAppid()).trim();
 const keyPath = String(process.env.WX_UPLOAD_KEY || "").trim();
-const version = String(process.env.WX_VERSION || "0.2.0").trim();
+const version = String(process.env.WX_VERSION || "0.2.4").trim();
 const desc = String(process.env.WX_DESC || "Citro 小程序").trim();
 const robot = Number(process.env.WX_ROBOT || 1);
 

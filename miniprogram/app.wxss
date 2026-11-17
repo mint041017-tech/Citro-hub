@@ -17,6 +17,7 @@ page {
   --mint: #8FB8A0;
   --mint-ink: #3E5A4A;
   --mint-soft: #E0EDE5;
+  --mint-line: #C9DED0;
   --danger: #B05A4A;
   --danger-soft: #F5E3E0;
   --shadow-card: 0 12rpx 32rpx rgba(0, 0, 0, 0.078);
