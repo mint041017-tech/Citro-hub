@@ -1,0 +1,608 @@
+/* 卡面馆：奶油纸面 + 3:4 卡面（圆角 20rpx），收藏墙 3 列。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 20rpx 32rpx 120rpx;
+}
+
+/* ---------------- 顶部 ---------------- */
+
+.hero {
+  padding: 24rpx 8rpx 8rpx;
+}
+
+.hero-title {
+  font-size: 62rpx;
+  font-weight: 700;
+  line-height: 1.18;
+  color: var(--ink);
+}
+
+.hero-sub {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 今日卡面 ---------------- */
+
+.today-card {
+  margin-top: 30rpx;
+  padding: 30rpx;
+  border-radius: 40rpx;
+}
+
+.loading-card {
+  padding: 70rpx 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spinner {
+  width: 44rpx;
+  height: 44rpx;
+  border: 4rpx solid var(--surface2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.today-chip {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+  font-size: 21rpx;
+}
+
+.today-stage {
+  padding: 24rpx 0 8rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.today-frame {
+  position: relative;
+  width: 440rpx;
+  height: 0;
+  padding-top: 586rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 2rpx solid var(--accent);
+  box-shadow: 0 20rpx 48rpx rgba(97, 74, 68, 0.16);
+}
+
+.card-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.face-shade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.18) 45%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+  pointer-events: none;
+}
+
+.today-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(46, 36, 32, 0.62);
+  border: 1rpx solid rgba(255, 248, 236, 0.4);
+  color: #fff8ec;
+  font-size: 19rpx;
+  letter-spacing: 1rpx;
+}
+
+.face-meta {
+  position: absolute;
+  left: 18rpx;
+  right: 18rpx;
+  bottom: 16rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.face-name {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #fff8ec;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
+}
+
+.face-no {
+  font-size: 21rpx;
+  color: rgba(255, 248, 236, 0.88);
+  font-variant-numeric: tabular-nums;
+}
+
+.today-stats {
+  margin-top: 24rpx;
+  padding: 20rpx 0;
+  display: flex;
+  align-items: center;
+  border-top: 2rpx solid var(--line);
+  border-bottom: 2rpx solid var(--line);
+}
+
+.today-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.stat-sep {
+  width: 2rpx;
+  height: 52rpx;
+  background: var(--line);
+}
+
+.draw-btn {
+  width: 100%;
+  height: 92rpx;
+  margin-top: 24rpx;
+  border-radius: 999rpx;
+}
+
+.draw-btn.draw-empty {
+  background: var(--surface2);
+  color: var(--ink-soft);
+}
+
+.draw-hint {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 空状态 / 错误 ---------------- */
+
+.empty-today {
+  padding: 56rpx 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-title {
+  margin-top: 12rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.empty-btn {
+  margin-top: 26rpx;
+  min-width: 280rpx;
+}
+
+.error-banner {
+  margin-top: 22rpx;
+  padding: 18rpx 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--danger-soft);
+  border-radius: 24rpx;
+}
+
+.error-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.error-action {
+  flex: none;
+  margin-left: 16rpx;
+  padding: 4rpx 8rpx;
+  font-size: 23rpx;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* ---------------- 收藏墙 ---------------- */
+
+.wall-card {
+  margin-top: 32rpx;
+  padding: 30rpx 28rpx 20rpx;
+  border-radius: 40rpx;
+}
+
+.cat-scroll {
+  margin-top: 18rpx;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.cat-row {
+  display: inline-flex;
+  align-items: center;
+  padding-bottom: 6rpx;
+}
+
+.cat-chip {
+  margin-right: 12rpx;
+  flex: none;
+  padding: 8rpx 22rpx;
+  font-size: 23rpx;
+}
+
+.wall-group-head {
+  margin-top: 20rpx;
+  display: flex;
+  align-items: baseline;
+}
+
+.wall-group-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.wall-group-count {
+  margin-left: 12rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.wall-grid {
+  margin-top: 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.wall-cell {
+  width: 31%;
+  margin-bottom: 20rpx;
+}
+
+.wall-frame {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: 133.33%;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 2rpx solid var(--line);
+}
+
+.wall-frame.owned {
+  border-color: var(--accent);
+  box-shadow: 0 8rpx 20rpx rgba(97, 74, 68, 0.1);
+}
+
+.wall-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wall-frame .today-badge {
+  top: 8rpx;
+  right: 8rpx;
+  padding: 2rpx 10rpx;
+  font-size: 17rpx;
+}
+
+/* ---------------- 卡背 ---------------- */
+
+.card-back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0e3c8;
+  background-image: linear-gradient(
+      45deg,
+      rgba(169, 201, 196, 0.16) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgba(169, 201, 196, 0.16) 75%
+    ),
+    linear-gradient(
+      45deg,
+      rgba(169, 201, 196, 0.16) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgba(169, 201, 196, 0.16) 75%
+    );
+  background-size: 28rpx 28rpx;
+  background-position: 0 0, 14rpx 14rpx;
+}
+
+.card-back::after {
+  content: "";
+  position: absolute;
+  left: 12rpx;
+  right: 12rpx;
+  top: 12rpx;
+  bottom: 12rpx;
+  border: 2rpx solid rgba(169, 201, 196, 0.5);
+  border-radius: 14rpx;
+}
+
+.back-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12rpx;
+}
+
+.back-mark {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2rpx solid var(--accent);
+  color: var(--accent-ink);
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.back-word {
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  letter-spacing: 4rpx;
+  color: var(--ink2);
+}
+
+.back-label {
+  margin-top: 6rpx;
+  font-size: 18rpx;
+  letter-spacing: 1rpx;
+  color: var(--ink-soft);
+}
+
+.card-back.small .back-mark {
+  width: 44rpx;
+  height: 44rpx;
+  font-size: 24rpx;
+}
+
+.card-back.small .back-word {
+  margin-top: 6rpx;
+  font-size: 16rpx;
+  letter-spacing: 2rpx;
+}
+
+.card-back.small .back-label {
+  margin-top: 4rpx;
+  font-size: 15rpx;
+}
+
+/* ---------------- 页脚 ---------------- */
+
+.footer {
+  margin-top: 38rpx;
+  font-size: 22rpx;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 浮层 ---------------- */
+
+.overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 80;
+  overflow-y: auto;
+  background: rgba(46, 36, 32, 0.66);
+}
+
+.overlay-inner {
+  min-height: 100%;
+  padding: 60rpx 40rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-panel,
+.draw-panel {
+  width: 560rpx;
+  max-width: 100%;
+  padding: 24rpx;
+  background: var(--surface);
+  border-radius: 36rpx;
+  box-shadow: var(--shadow-lg);
+}
+
+.detail-frame,
+.draw-frame {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: 133.33%;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 2rpx solid var(--accent);
+}
+
+.detail-frame {
+  margin: 0 auto;
+}
+
+.detail-line {
+  margin-top: 22rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.detail-cat {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.detail-no {
+  font-size: 23rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.detail-close {
+  width: 100%;
+  height: 78rpx;
+  margin-top: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  color: var(--ink2);
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.draw-panel {
+  width: 600rpx;
+  padding: 30rpx 30rpx 26rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: draw-pop 0.28s ease-out;
+}
+
+@keyframes draw-pop {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.draw-badge {
+  padding: 4rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+  font-size: 21rpx;
+  letter-spacing: 2rpx;
+}
+
+.draw-frame {
+  width: 400rpx;
+  height: 0;
+  padding-top: 533rpx;
+  margin-top: 18rpx;
+  box-shadow: 0 20rpx 44rpx rgba(97, 74, 68, 0.2);
+}
+
+.draw-meta {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.draw-caption {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--ink2);
+}
+
+.draw-collected {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.draw-again {
+  width: 100%;
+  height: 82rpx;
+  margin-top: 20rpx;
+}
+
+.draw-close {
+  width: 100%;
+  height: 82rpx;
+  margin-top: 14rpx;
+}
+
+/* 今日卡面在小屏上略收一点，避免横向拥挤 */
+@media screen and (max-width: 360px) {
+  .today-frame {
+    width: 400rpx;
+    padding-top: 533rpx;
+  }
+}

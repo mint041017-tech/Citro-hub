@@ -1,0 +1,449 @@
+/* 天气页：奶油纸张底色 + 圆角卡片，颜色取自 app.wxss 的 light token。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 20rpx 32rpx 80rpx;
+}
+
+.card {
+  margin-top: 32rpx;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 36rpx;
+  box-shadow: 0 16rpx 40rpx rgba(97, 74, 68, 0.08);
+  overflow: hidden;
+}
+
+.pressed {
+  opacity: 0.75;
+}
+
+/* ---------------- 搜索 ---------------- */
+
+.search-card {
+  margin-top: 12rpx;
+  padding: 22rpx 22rpx 22rpx;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  height: 76rpx;
+  padding: 0 8rpx 0 26rpx;
+  background: #F3E7CE;
+  border-radius: 999rpx;
+}
+
+.search-ico {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 76rpx;
+  margin-left: 14rpx;
+  font-size: 28rpx;
+  color: #614A44;
+}
+
+.search-ph {
+  color: #B8A79E;
+}
+
+.search-btn {
+  flex-shrink: 0;
+  height: 60rpx;
+  padding: 0 30rpx;
+  line-height: 60rpx;
+  border-radius: 999rpx;
+  background: #A9C9C4;
+  color: #2E4A46;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.hint {
+  margin-top: 16rpx;
+  padding-left: 26rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #9C867F;
+}
+
+.results {
+  margin-top: 16rpx;
+  padding: 0 12rpx;
+  border-top: 1rpx solid #F0E3C8;
+}
+
+.result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 22rpx 8rpx;
+  border-bottom: 1rpx solid #F0E3C8;
+  border-radius: 16rpx;
+}
+
+.result-hover {
+  background: #F3E7CE;
+}
+
+.result-main {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.result-sub {
+  margin-left: 20rpx;
+  font-size: 22rpx;
+  color: #9C867F;
+  text-align: right;
+}
+
+.result-empty {
+  padding: 28rpx 8rpx;
+  text-align: center;
+  font-size: 25rpx;
+  color: #9C867F;
+}
+
+/* ---------------- 引导 / 加载 / 失败 ---------------- */
+
+.guide,
+.state {
+  padding: 60rpx 44rpx;
+  text-align: center;
+}
+
+.guide-emoji,
+.state-emoji {
+  font-size: 88rpx;
+  line-height: 1.2;
+}
+
+.guide-title,
+.state-title {
+  margin-top: 20rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.guide-text,
+.state-text {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #9C867F;
+}
+
+.retry-btn {
+  display: inline-block;
+  margin-top: 30rpx;
+  height: 76rpx;
+  padding: 0 48rpx;
+  line-height: 76rpx;
+  border-radius: 999rpx;
+  background: #A9C9C4;
+  color: #2E4A46;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+/* ---------------- 当前天气 ---------------- */
+
+.now {
+  padding: 36rpx 36rpx 30rpx;
+  background: linear-gradient(150deg, #FFF8EC 45%, #EDF3EA 100%);
+}
+
+.now-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.now-city-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.now-city {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.now-date {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #9C867F;
+}
+
+.refresh {
+  flex-shrink: 0;
+  margin-left: 20rpx;
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #A9C9C4;
+  color: #2E4A46;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.now-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12rpx;
+}
+
+.now-emoji {
+  margin-right: 22rpx;
+  font-size: 92rpx;
+  line-height: 1;
+}
+
+.now-temp {
+  font-size: 116rpx;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2rpx;
+  color: #614A44;
+}
+
+.now-desc {
+  margin-top: 10rpx;
+  text-align: center;
+  font-size: 32rpx;
+  color: #7D655E;
+}
+
+.now-divider {
+  height: 1rpx;
+  margin: 30rpx 0 24rpx;
+  background: #E8D9BE;
+}
+
+.now-meta {
+  display: flex;
+}
+
+.meta-item {
+  flex: 1;
+  text-align: center;
+}
+
+.meta-item + .meta-item {
+  border-left: 1rpx solid #E8D9BE;
+}
+
+.meta-label {
+  font-size: 23rpx;
+  color: #9C867F;
+}
+
+.meta-value {
+  margin-top: 6rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.now-updated {
+  margin-top: 26rpx;
+  text-align: right;
+  font-size: 22rpx;
+  color: #B8A79E;
+}
+
+/* ---------------- 分区 ---------------- */
+
+.section {
+  padding: 30rpx 28rpx 26rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 10rpx;
+}
+
+.section-bar {
+  width: 8rpx;
+  height: 30rpx;
+  margin-right: 16rpx;
+  border-radius: 8rpx;
+  background: #A9C9C4;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+/* ---------------- 逐小时 ---------------- */
+
+.hours-scroll {
+  margin-top: 14rpx;
+  white-space: nowrap;
+}
+
+.hours {
+  display: inline-flex;
+  padding-bottom: 4rpx;
+}
+
+.hour {
+  flex-shrink: 0;
+  width: 118rpx;
+  padding: 18rpx 0 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 28rpx;
+}
+
+.hour + .hour {
+  margin-left: 8rpx;
+}
+
+.hour:nth-child(2n) {
+  background: #F6EFDF;
+}
+
+.hour-time {
+  font-size: 23rpx;
+  color: #9C867F;
+}
+
+.hour-emoji {
+  margin: 10rpx 0;
+  font-size: 40rpx;
+  line-height: 1.1;
+}
+
+.hour-temp {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.hour-pop {
+  height: 28rpx;
+  line-height: 28rpx;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: #7C9A94;
+}
+
+/* ---------------- 7 天 ---------------- */
+
+.days {
+  margin-top: 6rpx;
+}
+
+.day {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 4rpx;
+}
+
+.day + .day {
+  border-top: 1rpx solid #F0E3C8;
+}
+
+.day-name {
+  width: 96rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.day-emoji {
+  width: 56rpx;
+  text-align: center;
+  font-size: 32rpx;
+  line-height: 1.2;
+}
+
+.day-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #7D655E;
+}
+
+.day-pop {
+  width: 88rpx;
+  text-align: right;
+  font-size: 23rpx;
+  color: #7C9A94;
+}
+
+.day-temp {
+  width: 160rpx;
+  margin-left: 12rpx;
+  text-align: right;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.day-low {
+  font-weight: 400;
+  color: #9C867F;
+}
+
+/* ---------------- 日出日落 ---------------- */
+
+.sun {
+  display: flex;
+  align-items: center;
+  padding: 30rpx 20rpx;
+}
+
+.sun-item {
+  flex: 1;
+  text-align: center;
+}
+
+.sun-label {
+  font-size: 23rpx;
+  color: #9C867F;
+}
+
+.sun-emoji {
+  margin: 8rpx 0;
+  font-size: 40rpx;
+  line-height: 1.1;
+}
+
+.sun-time {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.sun-split {
+  width: 1rpx;
+  height: 96rpx;
+  background: #E8D9BE;
+}
+
+/* ---------------- 页脚 ---------------- */
+
+.foot {
+  margin: 46rpx 0 16rpx;
+  text-align: center;
+  font-size: 22rpx;
+  letter-spacing: 0.5rpx;
+  color: #B8A79E;
+}

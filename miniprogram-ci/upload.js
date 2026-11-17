@@ -8,8 +8,8 @@
  *                  小程序代码上传 → 生成并下载，只显示一次）
  *
  * 可选：
- *   WX_VERSION     版本号，默认 0.1.0
- *   WX_DESC        版本描述，默认 "Citro 玩法抽签"
+ *   WX_VERSION     版本号，默认 0.2.0
+ *   WX_DESC        版本描述，默认 "Citro 小程序"
  *   WX_ROBOT       CI 机器人编号，默认 1
  *
  * 上传机器 IP 需要在后台的 IP 白名单里（或在后台关闭白名单）。
@@ -37,8 +37,8 @@ function fail(message) {
 
 const appid = String(process.env.WX_APPID || readProjectAppid()).trim();
 const keyPath = String(process.env.WX_UPLOAD_KEY || "").trim();
-const version = String(process.env.WX_VERSION || "0.1.0").trim();
-const desc = String(process.env.WX_DESC || "Citro 玩法抽签").trim();
+const version = String(process.env.WX_VERSION || "0.2.0").trim();
+const desc = String(process.env.WX_DESC || "Citro 小程序").trim();
 const robot = Number(process.env.WX_ROBOT || 1);
 
 if (!appid || appid === "touristappid") {

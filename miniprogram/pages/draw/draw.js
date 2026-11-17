@@ -1,31 +1,13 @@
-// 玩法抽签 · 小程序端
+// 玩法 · 小程序端
 // 对应 flutter/lib/pages/play_page.dart 与 trash/trash.js 的 /api/play。
-// 首次进入必须先登录（与 App 共用同一套账号）；登录后抽签记录归到账号（u:昵称）。
-// 关键顺序和 Flutter 端一致：点击瞬间先 POST 落库，动画只负责揭晓服务端发回的签。
+// 四个 tab 共用全页登录门禁：未同意先同意，未登录先登录，ready 后再拉取与抽取。
+// 关键顺序和 Flutter 端一致：点击瞬间先 POST 落库，动画只负责揭晓服务端发回的结果。
 const api = require("../../utils/api");
 const { PUNS } = require("../../utils/puns");
 const session = require("../../utils/session");
 
-const STAGE_IDLE = "点击「开始抽取」，命运交给橘子";
+const STAGE_IDLE = "点击「随机抽取」，给这局挑个玩法";
 const POLL_MS = 10000;
-
-// 与 trash.js 的注册校验保持一致
-const NAME_RE = /^[一-龥A-Za-z0-9_]{2,16}$/;
-const PHONE_RE = /^1[3-9]\d{9}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const AUTH_FIELDS = {
-  account: "authAccount",
-  name: "authName",
-  password: "authPassword",
-  confirm: "authConfirm",
-};
-
-function accountBody(account) {
-  const a = String(account || "").trim();
-  return EMAIL_RE.test(a)
-    ? { email: a.toLowerCase() }
-    : { phone: a.replace(/\D/g, "") };
-}
 
 function timeText(ts) {
   const d = new Date(ts || 0);
@@ -42,7 +24,7 @@ function timeText(ts) {
   );
 }
 
-// 签面长度差得多（最短 5 字，最长近 60 字），分四档字号保证卡片放得下。
+// 玩法文案长度差得多（最短 5 字，最长近 60 字），分四档字号保证卡片放得下。
 function stageClassFor(text) {
   const len = Array.from(text || "").length;
   if (len <= 14) return "stage-short";
@@ -63,16 +45,8 @@ Page({
     // syncing | offline | empty | list
     viewState: "syncing",
 
-    // 登录门禁
+    ready: false,
     user: null,
-    authGate: false,
-    authMode: "login", // login | register
-    authAccount: "",
-    authName: "",
-    authPassword: "",
-    authConfirm: "",
-    authBusy: false,
-    authError: "",
   },
 
   onLoad() {
@@ -81,22 +55,34 @@ Page({
     this.cancelRoll = false;
     this.remoteVersion = 0;
     this._rollTimer = null;
-
-    // 有本地缓存就先放行，再用 /api/auth/me 校验 token 是否仍然有效。
-    const cached = session.token() ? session.user() : null;
-    this.user = cached;
-    this.setData({
-      user: cached,
-      authGate: !cached,
-      authMode: "login",
-    });
-    this.restoreSession();
+    // 有本地会话时先展示昵称，门禁组件会立即放行并在后台校验。
+    this.setData({ user: session.user() });
   },
 
   onShow() {
+    this.syncGate();
+    if (!this.data.ready) return;
     this.startPolling();
-    // 全站记录本身是公开的，未登录也先拉一份，登录后立即有数据。
     this.refresh({ silent: this.data.viewState === "list" });
+  },
+
+  // 在「我的」退出登录后回到本页，需要收回门禁与旧记录。
+  syncGate() {
+    const gate = this.selectComponent("#gate");
+    if (!gate) return;
+    if (!session.token() && this.data.ready) {
+      this.onGateExpired();
+      if (typeof gate.boot === "function") gate.boot();
+      return;
+    }
+    if (
+      session.token() &&
+      gate.data &&
+      gate.data.stage === "auth" &&
+      typeof gate.boot === "function"
+    ) {
+      gate.boot();
+    }
   },
 
   onHide() {
@@ -113,178 +99,48 @@ Page({
   },
 
   onPullDownRefresh() {
+    if (!this.data.ready) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     this.refresh({ silent: false }).finally(() => {
       wx.stopPullDownRefresh();
     });
   },
 
-  /* ---------------- 登录状态 ---------------- */
+  /* ---------------- 全页登录门禁 ---------------- */
 
-  async restoreSession() {
-    const token = session.token();
-    if (!token) {
-      this.user = null;
-      this.setData({ user: null, authGate: true, authMode: "login" });
-      return;
-    }
-    try {
-      const res = await api.authMe(token);
-      const u = res && res.user;
-      if (!u || !u.name) {
-        this.expireSession("登录已过期，请重新登录");
-        return;
-      }
-      const user = { name: u.name, av: u.av || "" };
-      session.save(token, user);
-      this.user = user;
-      this.setData({ user, authGate: false, authError: "" });
-      this.refresh({ silent: true });
-    } catch (e) {
-      // 网络不通时：本地有缓存会话就继续用；没有就停在登录门禁。
-      this.setData({
-        authGate: !this.user,
-        authError: this.user ? "" : "暂时连不上服务器，请检查网络后重试",
-      });
-    }
+  onGateReady(e) {
+    const user = (e && e.detail && e.detail.user) || null;
+    this.setData({ ready: true, user });
+    this.startPolling();
+    this.refresh({ silent: false });
   },
 
-  expireSession(message) {
-    session.clear();
-    this.user = null;
+  onGateUser(e) {
+    const user = (e && e.detail && e.detail.user) || null;
+    if (user) this.setData({ user });
+  },
+
+  onGateExpired() {
+    this.stopPolling();
     this.setData({
+      ready: false,
       user: null,
-      authGate: true,
-      authMode: "login",
-      authError: message || "登录已过期，请重新登录",
-      authPassword: "",
-      authConfirm: "",
+      records: [],
+      loading: false,
+      viewState: "syncing",
     });
   },
 
-  /* ---------------- 登录表单 ---------------- */
-
-  onAuthMode(e) {
-    const mode = e && e.currentTarget && e.currentTarget.dataset.mode;
-    if (mode !== "login" && mode !== "register") return;
-    this.setData({
-      authMode: mode,
-      authError: "",
-      authPassword: "",
-      authConfirm: "",
+  onOpenDoc(e) {
+    const type = e && e.currentTarget && e.currentTarget.dataset.type;
+    wx.navigateTo({
+      url:
+        "/pages/agreement/agreement?type=" +
+        (type === "privacy" ? "privacy" : "terms"),
     });
   },
-
-  onAuthInput(e) {
-    const field = e && e.currentTarget && e.currentTarget.dataset.field;
-    const key = AUTH_FIELDS[field];
-    if (!key) return;
-    const value = (e && e.detail && e.detail.value) || "";
-    const patch = { authError: "" };
-    patch[key] = value;
-    this.setData(patch);
-  },
-
-  validateAuth() {
-    const mode = this.data.authMode;
-    const account = String(this.data.authAccount || "").trim();
-    const password = String(this.data.authPassword || "");
-    if (!account) return "请填写手机号或邮箱";
-    if (!EMAIL_RE.test(account)) {
-      const phone = account.replace(/\D/g, "");
-      if (!PHONE_RE.test(phone)) return "请填写正确的邮箱地址或 11 位手机号";
-    }
-    if (mode === "register") {
-      const name = String(this.data.authName || "").trim();
-      if (!NAME_RE.test(name)) return "昵称需 2-16 位，中英文/数字/下划线";
-      if (name.indexOf("游客") === 0) return "昵称不能以「游客」开头";
-      if (name === "CiCi") return "该昵称不可用";
-      if (password.length < 6 || password.length > 32) return "密码需 6-32 位";
-      if (String(this.data.authConfirm || "") !== password)
-        return "两次输入的密码不一致";
-    } else if (!password) {
-      return "请填写密码";
-    }
-    return "";
-  },
-
-  async onAuthSubmit() {
-    if (this.data.authBusy) return;
-    const err = this.validateAuth();
-    if (err) {
-      this.setData({ authError: err });
-      return;
-    }
-    this.setData({ authBusy: true, authError: "" });
-    const mode = this.data.authMode;
-    try {
-      let res;
-      if (mode === "register") {
-        res = await api.register(
-          Object.assign(accountBody(this.data.authAccount), {
-            name: String(this.data.authName || "").trim(),
-            password: this.data.authPassword,
-          })
-        );
-      } else {
-        res = await api.login(
-          String(this.data.authAccount || "").trim(),
-          this.data.authPassword
-        );
-      }
-      const token = res && res.token;
-      const u = res && res.user;
-      if (!token || !u || !u.name) {
-        throw new api.ApiError("登录失败，请重试", 0, null);
-      }
-      const user = { name: u.name, av: u.av || "" };
-      session.save(token, user);
-      this.user = user;
-      this.setData({
-        user,
-        authGate: false,
-        authBusy: false,
-        authError: "",
-        authPassword: "",
-        authConfirm: "",
-      });
-      wx.showToast({ title: "登录成功", icon: "none" });
-      this.refresh({ silent: true });
-    } catch (e) {
-      this.setData({
-        authBusy: false,
-        authError: (e && e.message) || "登录失败，请重试",
-      });
-    }
-  },
-
-  onLogout() {
-    const token = session.token();
-    const self = this;
-    wx.showModal({
-      title: "退出登录",
-      content: "退出后需要重新登录才能抽签。",
-      confirmText: "退出",
-      confirmColor: "#B05A4A",
-      success(res) {
-        if (!res.confirm) return;
-        if (token) api.logout(token).catch(() => {});
-        session.clear();
-        self.user = null;
-        self.setData({
-          user: null,
-          authGate: true,
-          authMode: "login",
-          authAccount: "",
-          authPassword: "",
-          authConfirm: "",
-          authError: "",
-        });
-        self.refresh({ silent: true }); // 刷掉列表里的「你」标记
-      },
-    });
-  },
-
-  noop() {},
 
   /* ---------------- 全站记录 ---------------- */
 
@@ -334,7 +190,7 @@ Page({
 
   async refresh(options) {
     const silent = !!(options && options.silent);
-    if (this.busy) return;
+    if (this.busy || !session.token()) return;
     this.busy = true;
     const version = this.remoteVersion;
     if (!silent) this.setData({ loading: true, error: "" });
@@ -408,12 +264,12 @@ Page({
   },
 
   async onDraw() {
-    if (!this.user) {
-      this.setData({ authGate: true });
+    if (!this.data.ready || !session.token()) {
+      wx.showToast({ title: "请先登录", icon: "none" });
       return;
     }
     if (this.data.rolling) {
-      // 再点一次只是提前结束揭晓动画；POST 已经在路上，抽签不会丢。
+      // 再点一次只是提前结束揭晓动画；POST 已经在路上，抽取不会丢。
       this.cancelRoll = true;
       return;
     }
@@ -440,8 +296,8 @@ Page({
     await this.rollAnimation();
     if (this.destroyed) return;
     if (!settled) {
-      // 别把最后一帧的随机签当成抽到的签。
-      this.setData({ stageText: "正在记录这次抽签…" });
+      // 别把最后一帧的随机文案当成抽到的结果。
+      this.setData({ stageText: "正在记录这次抽取…" });
     }
 
     const out = await pending;
@@ -449,7 +305,8 @@ Page({
 
     if (out.sessionExpired) {
       this.setData({ rolling: false, stageText: "登录已过期，请重新登录" });
-      this.expireSession("登录已过期，请重新登录");
+      session.clear();
+      this.setData({ ready: false, user: null });
       return;
     }
 
@@ -457,15 +314,14 @@ Page({
     const text = String((body && body.t) || "").trim();
 
     if (!text) {
-      // 429 可能仍带一份全站快照：先刷新列表，再报错。
       if (body && Array.isArray(body.records)) this.applyRemote(body);
       const msg =
-        out.error || (body && body.err) || "云端抽签失败，请稍后重试";
+        out.error || (body && body.err) || "云端抽取失败，请稍后重试";
       this.setData({
         rolling: false,
         stageText: out.rateLimited
           ? "操作太频繁，稍后再试"
-          : "抽签失败，请联网后重试",
+          : "抽取失败，请联网后重试",
         error: msg,
         viewState: this.data.records.length ? "list" : "offline",
       });
@@ -474,7 +330,7 @@ Page({
       return;
     }
 
-    // POST 已返回最新全站快照，用它刷新「大家的抽签」。
+    // POST 已返回最新全站快照，用它刷新「大家的抽取」。
     this.remoteVersion += 1;
     this.setData({
       rolling: false,
@@ -488,21 +344,22 @@ Page({
   /* ---------------- 交互 ---------------- */
 
   onRefresh() {
-    wx.showToast({ title: "正在刷新云端抽签记录", icon: "none" });
+    if (!this.data.ready) return;
+    wx.showToast({ title: "正在刷新云端记录", icon: "none" });
     this.refresh({ silent: false });
   },
 
   onShareAppMessage() {
     const pun = this.data.lastPun;
     return {
-      title: pun ? "我抽到了：" + pun : "无畏契约 · 玩法抽签",
+      title: pun ? "这局这样玩：" + pun : "随机玩法 · 给这局找点乐子",
       path: "/pages/draw/draw",
     };
   },
 
   onShareTimeline() {
     return {
-      title: this.data.lastPun || "无畏契约 · 玩法抽签",
+      title: this.data.lastPun || "随机玩法 · 给这局找点乐子",
     };
   },
 });

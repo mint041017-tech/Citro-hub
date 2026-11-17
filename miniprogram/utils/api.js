@@ -12,6 +12,17 @@ class ApiError extends Error {
   }
 }
 
+function queryString(params) {
+  if (!params) return "";
+  const parts = [];
+  Object.keys(params).forEach((key) => {
+    const v = params[key];
+    if (v === undefined || v === null || v === "") return;
+    parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(v));
+  });
+  return parts.length ? "?" + parts.join("&") : "";
+}
+
 function request(method, path, options) {
   const opts = options || {};
   return new Promise((resolve, reject) => {
@@ -19,7 +30,7 @@ function request(method, path, options) {
     if (opts.data) header["Content-Type"] = "application/json";
     if (opts.token) header["X-Trash-Token"] = opts.token;
     wx.request({
-      url: BASE + path,
+      url: BASE + path + queryString(opts.query),
       method,
       data: opts.data,
       timeout: opts.timeout || 20000,
@@ -83,6 +94,25 @@ function logout(token) {
   });
 }
 
+function profile(token, payload) {
+  return request("POST", "/api/auth/profile", { data: payload, token });
+}
+
+function updateAvatar(token, dataUrl) {
+  return request("POST", "/api/auth/avatar", {
+    data: { img: dataUrl },
+    token,
+    timeout: 30000,
+  });
+}
+
+function deleteAccount(token, password) {
+  return request("POST", "/api/auth/delete", {
+    data: { password },
+    token,
+  });
+}
+
 /* ---------------- 玩法抽签 ---------------- */
 
 // 登录后不传 deviceId：服务端优先按账号记账（u:昵称）。
@@ -95,6 +125,171 @@ function playDraw(token) {
   return request("POST", "/api/play", { data: {}, token });
 }
 
+/* ---------------- 首页：打卡 / 今日签 ---------------- */
+
+function checkinStats(token) {
+  return request("GET", "/api/checkin/stats", { token });
+}
+
+function checkinSave(token, payload) {
+  return request("POST", "/api/checkin", { data: payload || {}, token });
+}
+
+function fortuneGet(token) {
+  return request("GET", "/api/draw", { token });
+}
+
+function fortuneDraw(token) {
+  return request("POST", "/api/draw", { data: {}, token });
+}
+
+function fortuneReroll(token) {
+  return request("POST", "/api/draw/reroll", { data: {}, token });
+}
+
+/* ---------------- 首页：摸鱼配置 ---------------- */
+
+function moyuGet(token) {
+  return request("GET", "/api/moyu/config", { token });
+}
+
+function moyuSave(token, config) {
+  return request("PUT", "/api/moyu/config", {
+    data: { config },
+    token,
+  });
+}
+
+/* ---------------- 首页：天气（服务端代理） ---------------- */
+
+function weather(lat, lon) {
+  return request("GET", "/api/weather", {
+    query: { lat, lon },
+  });
+}
+
+function weatherGeocode(q) {
+  return request("GET", "/api/weather/geocode", { query: { q } });
+}
+
+/* ---------------- 首页：卡面收藏 ---------------- */
+
+function cardsSync(token, payload) {
+  return request("POST", "/api/cards/sync", {
+    data: payload || {},
+    token,
+  });
+}
+
+function cardsToday(token, candidates, reroll) {
+  return request("POST", "/api/cards/today", {
+    data: { candidates, reroll: !!reroll },
+    token,
+  });
+}
+
+function cardsDraw(token, candidates) {
+  return request("POST", "/api/cards/draw", {
+    data: { candidates },
+    token,
+  });
+}
+
+function cardsGrant(token, source) {
+  return request("POST", "/api/cards/grant", {
+    data: { source },
+    token,
+  });
+}
+
+/* ---------------- 计划：待办 / 日历 / 记账 ---------------- */
+
+function todoGet(token) {
+  return request("GET", "/api/todo", { token });
+}
+
+function todoSave(token, todo) {
+  return request("POST", "/api/todo", { data: { todo }, token });
+}
+
+function calendarGet(token) {
+  return request("GET", "/api/calendar", { token });
+}
+
+function calendarSave(token, calendar) {
+  return request("POST", "/api/calendar", {
+    data: { calendar },
+    token,
+  });
+}
+
+function ledgerGet(token) {
+  return request("GET", "/api/ledger", { token });
+}
+
+function ledgerSave(token, ledger) {
+  return request("POST", "/api/ledger", {
+    data: { ledger },
+    token,
+  });
+}
+
+/* ---------------- 举报（UGC） ---------------- */
+
+// type: post | comment | recipe | user；食谱使用 {type:"recipe", recipeId, reason, detail}
+function report(token, payload) {
+  return request("POST", "/api/report", {
+    data: payload || {},
+    token,
+  });
+}
+
+/* ---------------- 首页：食谱日记 ---------------- */
+
+function cookData(token) {
+  return request("GET", "/api/cook", { token });
+}
+
+function cookSquare(token) {
+  return request("GET", "/api/cook/square", { token });
+}
+
+function cookSaveRecipe(token, recipe) {
+  return request("POST", "/api/cook/recipe", {
+    data: { recipe },
+    token,
+  });
+}
+
+function cookDeleteRecipe(token, id) {
+  return request("POST", "/api/cook/recipe/delete", {
+    data: { id },
+    token,
+  });
+}
+
+function cookImage(token, dataUrl) {
+  return request("POST", "/api/cook/img", {
+    data: { img: dataUrl },
+    token,
+    timeout: 30000,
+  });
+}
+
+function cookSaveShopping(token, shopping) {
+  return request("POST", "/api/cook/shopping", {
+    data: { shopping },
+    token,
+  });
+}
+
+function cookSaveFridge(token, fridge) {
+  return request("POST", "/api/cook/fridge", {
+    data: { fridge },
+    token,
+  });
+}
+
 module.exports = {
   BASE,
   ApiError,
@@ -102,6 +297,36 @@ module.exports = {
   login,
   register,
   logout,
+  profile,
+  updateAvatar,
+  deleteAccount,
   playRecords,
   playDraw,
+  checkinStats,
+  checkinSave,
+  fortuneGet,
+  fortuneDraw,
+  fortuneReroll,
+  moyuGet,
+  moyuSave,
+  weather,
+  weatherGeocode,
+  cardsSync,
+  cardsToday,
+  cardsDraw,
+  cardsGrant,
+  todoGet,
+  todoSave,
+  calendarGet,
+  calendarSave,
+  ledgerGet,
+  ledgerSave,
+  report,
+  cookData,
+  cookSquare,
+  cookSaveRecipe,
+  cookDeleteRecipe,
+  cookImage,
+  cookSaveShopping,
+  cookSaveFridge,
 };

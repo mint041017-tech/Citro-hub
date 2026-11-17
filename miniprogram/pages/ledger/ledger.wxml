@@ -1,0 +1,278 @@
+<view class="page ledger-page" wx:if="{{ready}}">
+  <!-- 月份切换：不能超过当前月 -->
+  <view class="month-bar">
+    <view class="month-arrow" hover-class="month-arrow-hover" bindtap="onPrevMonth">‹</view>
+    <view class="month-center">
+      <view class="month-label">{{monthLabel}}</view>
+      <view class="month-back" wx:if="{{!isCurrentMonth}}" bindtap="onBackToCurrent">回到本月</view>
+    </view>
+    <view class="month-arrow {{canNext ? '' : 'off'}}" bindtap="onNextMonth">›</view>
+  </view>
+
+  <!-- 本月概览 -->
+  <view class="card overview-card">
+    <view class="ov-head">
+      <text class="ov-label">{{expenseLabel}}</text>
+      <text class="ov-count">{{monthCountText}}</text>
+    </view>
+    <view class="ov-expense">{{overviewExpenseText}}</view>
+    <view class="ov-stats">
+      <view class="ov-stat">
+        <view class="ov-stat-label">收入</view>
+        <view class="ov-stat-value income">{{overviewIncomeText}}</view>
+      </view>
+      <view class="ov-stat">
+        <view class="ov-stat-label">结余</view>
+        <view class="{{overviewBalanceClass}}">{{overviewBalanceText}}</view>
+      </view>
+    </view>
+
+    <view class="budget-block" wx:if="{{hasBudget}}">
+      <view class="budget-top">
+        <text>{{budgetLabel}} {{budgetText}}</text>
+        <text class="budget-percent">{{budgetPercentText}}</text>
+      </view>
+      <view class="progress budget-progress">
+        <view class="{{budgetBarClass}}" style="width: {{budgetBarWidth}}"></view>
+      </view>
+      <view class="budget-foot">
+        <text>{{budgetHint}}</text>
+        <text class="budget-link" bindtap="onSetBudget">调整预算</text>
+      </view>
+    </view>
+    <view class="budget-invite" wx:else bindtap="onSetBudget">
+      <view class="budget-invite-text">{{budgetInviteText}}</view>
+      <view class="budget-invite-btn">设置预算</view>
+    </view>
+  </view>
+
+  <!-- 近 7 日支出 -->
+  <view class="card chart-card">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">近 7 日支出</text>
+      </view>
+      <text class="section-sub" wx:if="{{chartMaxText}}">{{chartMaxText}}</text>
+    </view>
+    <view class="chart" wx:if="{{!chartEmpty}}">
+      <view class="chart-col" wx:for="{{chartBars}}" wx:key="key">
+        <view class="chart-bar-wrap">
+          <view class="{{item.barClass}}" style="{{item.barStyle}}"></view>
+        </view>
+        <view class="{{item.labelClass}}">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="chart-empty" wx:else>
+      <view class="chart-flat"></view>
+      <view class="state-text">这 7 天还没有支出</view>
+    </view>
+  </view>
+
+  <!-- 当月流水 -->
+  <view class="card list-card" wx:if="{{!monthEmpty}}">
+    <view class="section-head list-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">流水</text>
+      </view>
+      <text class="section-sub">{{monthCountText}}</text>
+    </view>
+    <block wx:for="{{groups}}" wx:key="key" wx:for-item="group">
+      <view class="day-head">
+        <text class="day-title">{{group.title}}</text>
+        <view class="day-subs">
+          <text class="day-sub" wx:if="{{group.expenseText}}">{{group.expenseText}}</text>
+          <text class="day-sub income" wx:if="{{group.incomeText}}">{{group.incomeText}}</text>
+        </view>
+      </view>
+      <view
+        class="entry"
+        wx:for="{{group.items}}"
+        wx:key="key"
+        data-id="{{item.id}}"
+        bindtap="onEditEntry"
+      >
+        <view class="entry-dot" style="{{item.dotStyle}}"></view>
+        <view class="entry-body">
+          <view class="entry-top">
+            <text class="entry-name">{{item.name}}</text>
+            <text class="{{item.amountClass}}">{{item.amountText}}</text>
+          </view>
+          <view class="entry-bottom">
+            <view class="entry-note" wx:if="{{item.note}}">{{item.note}}</view>
+            <text class="entry-del" catchtap="onDeleteEntry" data-id="{{item.id}}">删除</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="card empty-card" wx:if="{{monthEmpty}}">
+    <view class="empty-mark">账</view>
+    <view class="empty-title">{{emptyTitle}}</view>
+    <view class="empty-sub">把每天的收支记下来，翻账时心里有数。</view>
+    <button class="btn btn-primary empty-btn" hover-class="btn-hover" bindtap="onOpenSheet">
+      记下第一笔
+    </button>
+  </view>
+
+  <view class="fab-bar">
+    <button class="btn fab-btn" hover-class="btn-hover" bindtap="onOpenSheet">记一笔</button>
+  </view>
+
+  <!-- 记一笔 / 编辑账单 -->
+  <view class="mask" wx:if="{{sheetOpen}}" catchtouchmove="noop" bindtap="onCloseSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-grab"></view>
+      <view class="sheet-head">
+        <text class="sheet-title">{{sheetTitle}}</text>
+        <text class="sheet-close" bindtap="onCloseSheet">关闭</text>
+      </view>
+
+      <scroll-view class="sheet-body" scroll-y>
+        <view class="kind-tabs">
+          <view
+            class="kind-tab {{sheetKind === 'expense' ? 'on' : ''}}"
+            data-kind="expense"
+            bindtap="onKindTap"
+          >
+            支出
+          </view>
+          <view
+            class="kind-tab {{sheetKind === 'income' ? 'on' : ''}}"
+            data-kind="income"
+            bindtap="onKindTap"
+          >
+            收入
+          </view>
+        </view>
+
+        <view class="amount-row">
+          <text class="amount-symbol">¥</text>
+          <input
+            class="amount-input"
+            type="digit"
+            maxlength="12"
+            value="{{amountText}}"
+            placeholder="0.00"
+            placeholder-class="amount-ph"
+            cursor-spacing="24"
+            bindinput="onAmountInput"
+          />
+        </view>
+
+        <view class="sheet-label">分类</view>
+        <view class="cat-grid">
+          <view
+            class="{{item.itemClass}}"
+            wx:for="{{sheetCategories}}"
+            wx:key="key"
+            data-id="{{item.id}}"
+            bindtap="onCategoryTap"
+          >
+            <view class="cat-avatar" style="{{item.dotStyle}}">{{item.initial}}</view>
+            <view class="cat-name">{{item.name}}</view>
+          </view>
+          <view class="cat-item" bindtap="onToggleCustom">
+            <view class="cat-avatar cat-add-avatar">+</view>
+            <view class="cat-name">自定义</view>
+          </view>
+        </view>
+
+        <view class="custom-panel" wx:if="{{customOpen}}">
+          <view class="custom-row">
+            <input
+              class="custom-input"
+              maxlength="8"
+              value="{{customName}}"
+              placeholder="新分类名称"
+              placeholder-class="placeholder"
+              bindinput="onCustomNameInput"
+            />
+            <button class="btn btn-primary custom-btn" hover-class="btn-hover" bindtap="onAddCustom">
+              添加
+            </button>
+          </view>
+          <view class="swatches">
+            <view
+              class="{{item.swatchClass}}"
+              wx:for="{{presetColors}}"
+              wx:key="key"
+              style="{{item.style}}"
+              data-index="{{index}}"
+              bindtap="onColorTap"
+            ></view>
+          </view>
+        </view>
+
+        <view class="sheet-label">日期</view>
+        <picker mode="date" value="{{sheetDate}}" bindchange="onDateChange">
+          <view class="sheet-field">{{sheetDateText}}</view>
+        </picker>
+
+        <view class="sheet-label">备注</view>
+        <input
+          class="note-input"
+          maxlength="40"
+          value="{{sheetNote}}"
+          placeholder="写点什么（可选）"
+          placeholder-class="placeholder"
+          bindinput="onNoteInput"
+        />
+
+        <view class="sheet-delete" wx:if="{{sheetEditing}}" bindtap="onSheetDelete">删除这笔账单</view>
+      </scroll-view>
+
+      <view class="sheet-foot">
+        <button class="btn btn-primary sheet-save" hover-class="btn-hover" bindtap="onSaveEntry">
+          {{sheetSaveText}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 设置预算 -->
+  <view class="mask mask-center" wx:if="{{budgetOpen}}" catchtouchmove="noop" bindtap="onCloseBudget">
+    <view class="budget-panel" catchtap="noop">
+      <view class="budget-panel-title">{{budgetPanelTitle}}</view>
+      <view class="budget-panel-sub">{{monthLabel}} · 只填总预算也可以</view>
+
+      <view class="sheet-label">本月总预算（元）</view>
+      <view class="budget-field">
+        <input
+          class="budget-input"
+          type="digit"
+          maxlength="12"
+          value="{{budgetInput}}"
+          placeholder="例如 3000"
+          placeholder-class="placeholder"
+          data-field="budget"
+          bindinput="onBudgetInput"
+        />
+      </view>
+
+      <view class="sheet-label">收入目标（元，可选）</view>
+      <view class="budget-field">
+        <input
+          class="budget-input"
+          type="digit"
+          maxlength="12"
+          value="{{incomeInput}}"
+          placeholder="例如 8000"
+          placeholder-class="placeholder"
+          data-field="income"
+          bindinput="onBudgetInput"
+        />
+      </view>
+
+      <view class="budget-error" wx:if="{{budgetError}}">{{budgetError}}</view>
+
+      <view class="budget-actions">
+        <button class="btn btn-ghost" hover-class="btn-hover" bindtap="onCloseBudget">取消</button>
+        <button class="btn btn-primary" hover-class="btn-hover" bindtap="onSaveBudget">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

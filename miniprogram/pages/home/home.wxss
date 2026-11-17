@@ -1,0 +1,630 @@
+/* 首页：奶油纸张底色 + 时段大图 + 固定顺序卡片。
+   颜色沿用 app.wxss 的 light token，卡片圆角按首页规格收窄到 32rpx。 */
+
+/* ---------------- 1. 自定义顶栏 ---------------- */
+
+.topbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 40;
+  padding-left: 28rpx;
+  box-sizing: border-box;
+  background: linear-gradient(
+    180deg,
+    rgba(45, 32, 27, 0.24) 0%,
+    rgba(45, 32, 27, 0.06) 72%,
+    rgba(45, 32, 27, 0) 100%
+  );
+}
+
+.topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 2rpx;
+  color: #fff8ec;
+  text-shadow: 0 2rpx 12rpx rgba(30, 20, 18, 0.35);
+}
+
+.user-dot {
+  width: 56rpx;
+  height: 56rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 248, 236, 0.92);
+  color: var(--ink);
+  font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 14rpx rgba(30, 20, 18, 0.18);
+}
+
+.user-dot-hover {
+  opacity: 0.86;
+}
+
+/* ---------------- 2. Hero ---------------- */
+
+.hero {
+  position: relative;
+  min-height: 480rpx;
+  padding-left: 32rpx;
+  padding-right: 32rpx;
+  padding-bottom: 72rpx;
+  display: flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hero-dawn {
+  background: linear-gradient(160deg, #e9c9ae 0%, #c99c87 55%, #8e6a60 100%);
+}
+
+.hero-day {
+  background: linear-gradient(160deg, #b9d3cc 0%, #d8c6a8 55%, #a68b78 100%);
+}
+
+.hero-dusk {
+  background: linear-gradient(160deg, #d9b08b 0%, #a9786a 55%, #6e534f 100%);
+}
+
+.hero-night {
+  background: linear-gradient(160deg, #3f4a5a 0%, #2e343f 55%, #221e24 100%);
+}
+
+.hero-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-scrim {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(38, 28, 25, 0.34) 0%,
+    rgba(38, 28, 25, 0.1) 38%,
+    rgba(34, 25, 22, 0.62) 100%
+  );
+}
+
+.hero-body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  color: #fff8ec;
+}
+
+.hero-greet {
+  font-size: 52rpx;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 1rpx;
+  text-shadow: 0 4rpx 20rpx rgba(30, 20, 18, 0.35);
+}
+
+.hero-date {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  letter-spacing: 2rpx;
+  color: rgba(255, 248, 236, 0.82);
+}
+
+.hero-copy {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: rgba(255, 248, 236, 0.9);
+}
+
+/* ---------------- 卡片面板 ---------------- */
+
+.panel {
+  position: relative;
+  z-index: 5;
+  margin-top: -32rpx;
+  padding: 44rpx 28rpx 0;
+  background: var(--bg);
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.c-card-first {
+  margin-top: 0;
+}
+
+.c-card {
+  position: relative;
+  margin-top: 24rpx;
+  padding: 28rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 32rpx;
+  box-shadow: 0 8rpx 24rpx rgba(97, 74, 68, 0.05);
+  overflow: hidden;
+}
+
+.card-hover {
+  opacity: 0.9;
+}
+
+.c-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18rpx;
+}
+
+.c-dot {
+  width: 8rpx;
+  height: 28rpx;
+  margin-right: 14rpx;
+  flex: none;
+  border-radius: 8rpx;
+  background: var(--accent);
+}
+
+.c-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.c-note {
+  max-width: 320rpx;
+  margin-left: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.c-arrow {
+  margin-left: auto;
+  padding-left: 12rpx;
+  font-size: 34rpx;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+.c-head-chip {
+  margin-left: auto;
+}
+
+.chip-off {
+  background: var(--surface2);
+  color: var(--ink-soft);
+}
+
+/* ---------------- 通用卡片文案 ---------------- */
+
+.card-main {
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.card-sub {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.card-meta {
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+}
+
+/* ---------------- 3. 今日卡面 ---------------- */
+
+.flip {
+  width: 300rpx;
+  height: 400rpx;
+  margin: 8rpx auto 22rpx;
+  perspective: 1200rpx;
+  -webkit-perspective: 1200rpx;
+}
+
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+  -webkit-transition: -webkit-transform 0.5s ease;
+}
+
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+}
+
+.face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 24rpx;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.face-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(150deg, #f3e7ce 0%, #fff8ec 55%, #efe0c4 100%);
+  border: 2rpx solid var(--line2);
+}
+
+.back-ring {
+  width: 100rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #c9b497;
+  border-radius: 50%;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  color: #8a6f5e;
+}
+
+.back-word {
+  margin-top: 18rpx;
+  font-size: 20rpx;
+  letter-spacing: 7rpx;
+  color: #b9a28a;
+}
+
+.face-front {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+  background: var(--surface2);
+}
+
+.card-face-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.today-line {
+  text-align: center;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.today-actions {
+  margin-top: 18rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.mini-btn {
+  height: 64rpx;
+  margin: 0;
+  padding: 0 30rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999rpx;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mini-btn::after {
+  border: none;
+}
+
+.mini-btn-hover {
+  opacity: 0.86;
+}
+
+.mini-btn[disabled] {
+  background: var(--surface2);
+  color: var(--ink-soft);
+  opacity: 1;
+}
+
+/* ---------------- 4. 打卡 ---------------- */
+
+.checkin-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.streak {
+  display: flex;
+  align-items: baseline;
+  padding-right: 16rpx;
+}
+
+.streak-num {
+  font-size: 72rpx;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2rpx;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.streak-unit {
+  margin-left: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+.checkin-right {
+  max-width: 340rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.checkin-sub {
+  margin-bottom: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  text-align: right;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 6. 天气 ---------------- */
+
+.weather-body {
+  display: flex;
+  align-items: center;
+}
+
+.weather-temp {
+  font-size: 80rpx;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2rpx;
+  color: var(--accent-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-side {
+  margin-left: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-desc {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.weather-detail {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 7. 心情 ---------------- */
+
+.mood-body {
+  display: flex;
+  align-items: center;
+}
+
+.mood-dot {
+  width: 18rpx;
+  height: 18rpx;
+  margin-right: 16rpx;
+  flex: none;
+  border-radius: 50%;
+}
+
+.mood-label {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mood-time {
+  margin-left: auto;
+  padding-left: 16rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.mood-note {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+/* ---------------- 8. 听隅 ---------------- */
+
+.sound-row {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 0;
+}
+
+.sound-row + .sound-row {
+  border-top: 2rpx solid var(--line);
+}
+
+.sound-index {
+  width: 48rpx;
+  flex: none;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.sound-name {
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.sound-tag {
+  margin-left: auto;
+  padding-left: 16rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 9. 食谱日记 ---------------- */
+
+.cook-body {
+  display: flex;
+  align-items: center;
+}
+
+.cook-tile {
+  width: 88rpx;
+  height: 88rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--line);
+  border-radius: 24rpx;
+  background: var(--surface2);
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #8a6f5e;
+}
+
+.cook-text {
+  margin-left: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.cook-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cook-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 10. 卡面收藏 ---------------- */
+
+.collect-line {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.collect-progress {
+  margin-top: 16rpx;
+}
+
+.collect-hint {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 11. 每日一言 ---------------- */
+
+.quote-card {
+  padding: 44rpx 36rpx 40rpx;
+  text-align: center;
+}
+
+.quote-label {
+  display: block;
+  font-size: 22rpx;
+  letter-spacing: 6rpx;
+  color: var(--ink-soft);
+}
+
+.quote-text {
+  display: block;
+  margin-top: 22rpx;
+  font-size: 34rpx;
+  line-height: 1.8;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.quote-from {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 12. 页脚 ---------------- */
+
+.footer {
+  padding: 48rpx 0 48rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.footer-brand {
+  font-size: 23rpx;
+  letter-spacing: 2rpx;
+  color: var(--ink-soft);
+}
+
+.footer-links {
+  margin-top: 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.footer-link {
+  padding: 8rpx 4rpx;
+  color: var(--accent-ink);
+}
+
+.footer-sep {
+  margin: 0 10rpx;
+  color: #b7a69e;
+}

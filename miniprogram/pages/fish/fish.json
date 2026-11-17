@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "摸鱼日历",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#F9EDD7",
+  "backgroundTextStyle": "dark",
+  "navigationBarBackgroundColor": "#F9EDD7",
+  "navigationBarTextStyle": "black"
+}

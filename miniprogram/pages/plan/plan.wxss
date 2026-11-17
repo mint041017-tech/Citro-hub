@@ -1,0 +1,595 @@
+/* 计划页：奶油纸底 + 圆角卡片 + 薄荷点缀。
+   颜色取自 app.wxss 的 token（与 Flutter 端 light 主题一致）。 */
+
+.plan-page {
+  max-width: 1120rpx;
+  padding: 24rpx 32rpx 80rpx;
+}
+
+.plan-head {
+  padding: 8rpx 8rpx 4rpx;
+}
+
+.plan-page .page-title {
+  font-size: 72rpx;
+  line-height: 1.12;
+}
+
+.plan-page .page-sub {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+}
+
+/* ---------------- 卡片通用 ---------------- */
+
+.plan-card {
+  margin-top: 28rpx;
+  padding: 28rpx;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 32rpx;
+  box-shadow: 0 16rpx 40rpx rgba(97, 74, 68, 0.08);
+  overflow: hidden;
+}
+
+.card-hover {
+  opacity: 0.92;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14rpx;
+}
+
+.card-title-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.card-dot {
+  width: 12rpx;
+  height: 12rpx;
+  margin-right: 12rpx;
+  flex: none;
+  border-radius: 50%;
+  background: #A9C9C4;
+}
+
+.card-dot.mint {
+  background: #8FB8A0;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #614A44;
+  letter-spacing: 1rpx;
+}
+
+.card-note {
+  margin-left: auto;
+  max-width: 320rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 22rpx;
+  color: #9C867F;
+}
+
+.chevron {
+  margin-left: 12rpx;
+  flex: none;
+  font-size: 36rpx;
+  line-height: 1;
+  color: #B7A69E;
+}
+
+.plan-progress {
+  height: 14rpx;
+  margin-top: 16rpx;
+  overflow: hidden;
+  background: #F3E7CE;
+  border-radius: 999rpx;
+}
+
+.plan-progress-fill {
+  height: 100%;
+  background: #A9C9C4;
+  border-radius: 999rpx;
+  transition: width 0.25s ease;
+}
+
+.plan-progress-fill.is-over {
+  background: #B05A4A;
+}
+
+.empty-soft {
+  padding: 28rpx 8rpx 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #9C867F;
+}
+
+/* ---------------- 今天卡 ---------------- */
+
+.today-top {
+  display: flex;
+  align-items: flex-start;
+}
+
+.today-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.today-date {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #614A44;
+}
+
+.today-headline {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #9C867F;
+}
+
+.week-row {
+  display: flex;
+  margin-top: 18rpx;
+}
+
+.week-cell {
+  flex: 1;
+  min-width: 0;
+  margin-right: 8rpx;
+  padding: 12rpx 2rpx 10rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #F3E7CE;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 32rpx;
+}
+
+.week-cell:last-child {
+  margin-right: 0;
+}
+
+.week-cell.is-today {
+  background: #A9C9C4;
+  border-color: #A9C9C4;
+}
+
+.week-wd {
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: #9C867F;
+}
+
+.week-day {
+  margin-top: 4rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #614A44;
+}
+
+.week-label {
+  width: 100%;
+  margin-top: 4rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  font-size: 18rpx;
+  line-height: 1.3;
+  color: #9C867F;
+}
+
+.week-label.is-festival {
+  color: #3E5A55;
+}
+
+.week-label.is-term {
+  color: #3E5A4A;
+}
+
+.week-label.is-lunar {
+  color: #9C867F;
+}
+
+.week-label.is-empty {
+  color: transparent;
+}
+
+.week-cell.is-today .week-wd,
+.week-cell.is-today .week-day,
+.week-cell.is-today .week-label {
+  color: #2E4A46;
+}
+
+.today-meta {
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #7D655E;
+  background: #F9EDD7;
+  border-radius: 20rpx;
+}
+
+.countdown-line {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #E8D9BE;
+}
+
+.countdown-dot {
+  width: 10rpx;
+  height: 10rpx;
+  margin-right: 12rpx;
+  flex: none;
+  border-radius: 50%;
+  background: #8FB8A0;
+}
+
+.countdown-label {
+  margin-right: 10rpx;
+  flex: none;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #3E5A4A;
+}
+
+.countdown-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 24rpx;
+  color: #7D655E;
+}
+
+.countdown-text.is-empty {
+  color: #9C867F;
+}
+
+/* ---------------- 待办卡 ---------------- */
+
+.todo-main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 4rpx;
+}
+
+.todo-count {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.todo-num {
+  font-size: 52rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: #614A44;
+}
+
+.todo-unit {
+  margin-left: 8rpx;
+  margin-bottom: 4rpx;
+  font-size: 22rpx;
+  color: #9C867F;
+}
+
+.todo-percent {
+  margin-left: 16rpx;
+  flex: none;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #3E5A55;
+}
+
+.todo-overdue {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #B05A4A;
+}
+
+.todo-list {
+  margin-top: 8rpx;
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  min-height: 60rpx;
+  padding: 6rpx 0;
+}
+
+.todo-check {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 14rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  line-height: 1;
+  color: #FFF8EC;
+  background: #FFF8EC;
+  border: 2rpx solid #D8C5A4;
+  border-radius: 50%;
+}
+
+.todo-check.is-done {
+  background: #A9C9C4;
+  border-color: #A9C9C4;
+  color: #2E4A46;
+}
+
+.todo-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 26rpx;
+  color: #614A44;
+}
+
+.todo-title.is-done {
+  color: #9C867F;
+  text-decoration: line-through;
+}
+
+.todo-kind {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  flex: none;
+  font-size: 18rpx;
+  color: #3E5A4A;
+  background: #E0EDE5;
+  border-radius: 999rpx;
+}
+
+.todo-due {
+  margin-left: 12rpx;
+  flex: none;
+  font-size: 22rpx;
+  color: #9C867F;
+}
+
+/* ---------------- 记账卡 ---------------- */
+
+.ledger-main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 4rpx;
+}
+
+.ledger-amount-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+.ledger-amount {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #614A44;
+}
+
+.ledger-amount-label {
+  margin-left: 8rpx;
+  margin-bottom: 4rpx;
+  flex: none;
+  font-size: 20rpx;
+  color: #9C867F;
+}
+
+.ledger-side {
+  margin-left: 16rpx;
+  flex: none;
+  text-align: right;
+}
+
+.ledger-side-text {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #7D655E;
+}
+
+.ledger-side-text.is-mint {
+  color: #3E5A4A;
+}
+
+.ledger-side-text.is-danger {
+  color: #B05A4A;
+}
+
+.ledger-side-text.is-empty {
+  color: #9C867F;
+}
+
+.ledger-budget {
+  margin-top: 16rpx;
+}
+
+.ledger-budget-row {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ledger-budget-label {
+  font-size: 22rpx;
+  color: #9C867F;
+}
+
+.ledger-budget-note {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  text-align: right;
+  color: #9C867F;
+}
+
+.ledger-budget-note.is-over {
+  font-weight: 600;
+  color: #B05A4A;
+}
+
+.ledger-budget-hint {
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #9C867F;
+}
+
+.bars-head {
+  margin-top: 20rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.bars-title {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #7D655E;
+}
+
+.bars-note {
+  font-size: 18rpx;
+  color: #9C867F;
+}
+
+.bars {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar-col {
+  flex: 1;
+  min-width: 0;
+  margin-right: 10rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bar-col:last-child {
+  margin-right: 0;
+}
+
+.bar-track {
+  width: 24rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: #F3E7CE;
+  border-radius: 999rpx;
+}
+
+.bar-fill {
+  width: 100%;
+  background: #A9C9C4;
+  border-radius: 999rpx;
+}
+
+.bar-label {
+  margin-top: 6rpx;
+  font-size: 18rpx;
+  color: #9C867F;
+}
+
+/* ---------------- 今日小结 ---------------- */
+
+.today-foot {
+  padding-bottom: 24rpx;
+}
+
+.foot-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.foot-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.foot-row {
+  display: flex;
+}
+
+.foot-cell {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12rpx;
+  padding: 16rpx 12rpx;
+  background: #F3E7CE;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 20rpx;
+}
+
+.foot-cell:last-child {
+  margin-right: 0;
+}
+
+.foot-value {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.foot-label {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #9C867F;
+}
+
+.foot-note {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #9C867F;
+}
+
+/* ---------------- 未放行 ---------------- */
+
+.loading-card {
+  margin-top: 48rpx;
+  padding: 72rpx 32rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #9C867F;
+}

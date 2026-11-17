@@ -1,0 +1,118 @@
+<view class="page mood-page">
+  <view class="hero">
+    <view class="hero-eyebrow">心情手记</view>
+    <view class="hero-title">今天感觉怎么样？</view>
+    <view class="hero-sub">选一个此刻最接近的心情，写一句话留给自己。</view>
+  </view>
+
+  <view class="card editor" id="mood-editor">
+    <view class="editor-head">
+      <view class="editor-head-main">
+        <view class="editor-title">{{editorTitle}}</view>
+        <view class="editor-hint">{{editorHint}}</view>
+      </view>
+      <view class="back-today" wx:if="{{!editingIsToday}}" bindtap="onBackToday">回到今天</view>
+      <view class="back-today is-today" wx:else>今天</view>
+    </view>
+
+    <view class="mood-grid">
+      <view
+        class="mood-option {{item.on ? 'on' : ''}}"
+        wx:for="{{options}}"
+        wx:key="key"
+        data-kind="{{item.key}}"
+        bindtap="onSelectKind"
+      >
+        <view class="{{item.faceClass}}" style="background:{{item.circleBg}};color:{{item.faceInk}};">
+          <view class="mood-eye mood-eye-left"></view>
+          <view class="mood-eye mood-eye-right"></view>
+          <view class="mood-mouth"></view>
+        </view>
+        <view class="mood-label">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="note-wrap">
+      <textarea
+        class="note"
+        value="{{note}}"
+        maxlength="120"
+        cursor-spacing="24"
+        placeholder="发生了什么？可选，写给自己看。"
+        placeholder-class="placeholder"
+        bindinput="onNoteInput"
+      ></textarea>
+      <view class="note-count">{{noteLen}}/120</view>
+    </view>
+
+    <button class="btn btn-primary save-btn" hover-class="btn-hover" loading="{{saveBusy}}" bindtap="onSave">
+      {{saveText}}
+    </button>
+
+    <view class="load-hint" wx:if="{{loadError}}">
+      <text>{{loadError}}</text>
+      <text class="load-retry" bindtap="onRetryLoad">重试</text>
+    </view>
+    <view class="empty-hint" wx:if="{{!loading && !hasAnyMood && !loadError}}">
+      还没有心情记录，从上面选一个此刻的感觉开始吧。
+    </view>
+  </view>
+
+  <view class="card history">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">最近 30 天</text>
+      </view>
+      <text class="section-sub">点一天可以补记</text>
+    </view>
+
+    <view class="history-list">
+      <view
+        class="{{item.rowClass}}"
+        wx:for="{{history}}"
+        wx:key="key"
+        data-date="{{item.key}}"
+        bindtap="onPickDay"
+      >
+        <view class="history-date">
+          <text class="history-day">{{item.dayText}}</text>
+          <text class="history-week">{{item.weekText}}</text>
+        </view>
+        <view class="history-dot" style="{{item.dotStyle}}"></view>
+        <text class="history-kind">{{item.kindLabel}}</text>
+        <text class="history-note">{{item.noteText}}</text>
+        <text class="history-flag">{{item.actionText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card stats">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">心情分布</text>
+      </view>
+      <text class="section-sub">六种心情的累计次数</text>
+    </view>
+
+    <view wx:if="{{!statsEmpty}}" class="stat-list">
+      <view class="stat-row" wx:for="{{stats}}" wx:key="key">
+        <view class="stat-label">
+          <view class="stat-dot" style="background:{{item.color}};"></view>
+          <text>{{item.label}}</text>
+        </view>
+        <view class="stat-track">
+          <view class="stat-fill" style="{{item.barStyle}}"></view>
+        </view>
+        <text class="stat-count">{{item.countText}}</text>
+      </view>
+    </view>
+    <view wx:else class="state">
+      <view class="state-icon">○</view>
+      <view class="state-text">记录几次之后，这里会长出六种颜色的横条。</view>
+    </view>
+  </view>
+
+  <view class="footer">心情没有对错，记下来就好。</view>
+</view>

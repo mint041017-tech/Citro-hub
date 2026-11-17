@@ -1,0 +1,212 @@
+<view class="page calendar-page" wx:if="{{ready}}">
+  <view class="head">
+    <view class="head-copy">
+      <view class="head-title">日历</view>
+      <view class="head-sub">把期待和纪念，都收在这里</view>
+    </view>
+    <view class="add-btn" hover-class="add-hover" bindtap="onAdd">＋</view>
+  </view>
+
+  <!-- 月视图：周一开头，42 格，今天描边，命中标记显示圆点 -->
+  <view class="month-card">
+    <view class="month-bar">
+      <view class="month-arrow" hover-class="arrow-hover" bindtap="onPrevMonth">‹</view>
+      <view class="month-center" bindtap="onBackToday">
+        <view class="month-label">{{monthLabel}}</view>
+        <view class="month-back" wx:if="{{showBackToday}}">回到今天</view>
+      </view>
+      <view class="month-arrow" hover-class="arrow-hover" bindtap="onNextMonth">›</view>
+    </view>
+
+    <view class="week-row">
+      <view class="week-cell" wx:for="{{weekdays}}" wx:key="*this">{{item}}</view>
+    </view>
+
+    <view class="cal-grid">
+      <view
+        wx:for="{{cells}}"
+        wx:key="key"
+        class="{{item.className}}"
+        data-index="{{index}}"
+        bindtap="onCellTap"
+      >
+        <view class="cell-day">{{item.day}}</view>
+        <view class="cell-dots">
+          <view class="cell-dot dot-countdown" wx:if="{{item.hasCountdown}}"></view>
+          <view class="cell-dot dot-anniv" wx:if="{{item.hasAnniversary}}"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="selected-strip">
+      <view class="sel-top">
+        <text class="sel-date">{{selectedDateText}}</text>
+        <text class="sel-today" wx:if="{{selectedIsToday}}">今天</text>
+      </view>
+      <view class="sel-info">{{selectedInfoText}}</view>
+      <view class="sel-marks" wx:if="{{hasSelectedMarks}}">
+        <view class="sel-mark" wx:for="{{selectedMarks}}" wx:key="key">{{item.title}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 未来 60 天的标记 -->
+  <view class="section">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">即将到来</text>
+      </view>
+      <text class="section-sub">未来 60 天</text>
+    </view>
+
+    <view class="list-card" wx:if="{{hasUpcoming}}">
+      <view
+        class="up-item"
+        wx:for="{{upcoming}}"
+        wx:key="key"
+        data-id="{{item.id}}"
+        bindtap="onEditMark"
+      >
+        <view class="up-date">
+          <view class="up-day">{{item.dayText}}</view>
+          <view class="up-month">{{item.monthText}}</view>
+        </view>
+        <view class="up-body">
+          <view class="up-title-row">
+            <text class="up-title">{{item.title}}</text>
+            <text class="{{item.kindClass}}">{{item.kindLabel}}</text>
+          </view>
+          <view class="up-meta">{{item.metaText}}</view>
+        </view>
+        <text class="{{item.labelClass}}">{{item.label}}</text>
+      </view>
+    </view>
+    <view class="section-empty" wx:elif="{{upcomingEmpty}}">未来 60 天没有标记</view>
+  </view>
+
+  <!-- 全部标记 -->
+  <view class="section">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">全部标记</text>
+      </view>
+      <text class="section-sub" wx:if="{{hasMarks}}">{{countText}}</text>
+    </view>
+
+    <view class="list-card" wx:if="{{hasMarks}}">
+      <view
+        class="mark-item"
+        wx:for="{{marks}}"
+        wx:key="key"
+        data-id="{{item.id}}"
+        bindtap="onEditMark"
+      >
+        <view class="mark-dot {{item.dotClass}}"></view>
+        <view class="mark-body">
+          <view class="mark-top">
+            <text class="mark-title">{{item.title}}</text>
+            <text class="mark-tag">{{item.kindLabel}}</text>
+          </view>
+          <view class="mark-meta">{{item.metaText}}</view>
+          <view class="mark-note" wx:if="{{item.note}}">{{item.note}}</view>
+          <view class="mark-year" wx:if="{{item.yearText}}">{{item.yearText}}</view>
+        </view>
+        <text class="{{item.labelClass}}">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="empty-card" wx:else>
+      <view class="empty-mark">日</view>
+      <view class="empty-title">记下重要的日子，时间会有回声</view>
+      <view class="empty-sub">一个倒数日，或一个纪念日，都可以从这里开始。</view>
+      <button class="btn btn-primary empty-btn" hover-class="btn-hover" bindtap="onAdd">
+        新增标记
+      </button>
+    </view>
+  </view>
+
+  <!-- 新增 / 编辑浮层 -->
+  <view class="mask" wx:if="{{sheetOpen}}" catchtouchmove="noop" bindtap="onCloseSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-grab"></view>
+      <view class="sheet-head">
+        <text class="sheet-title">{{sheetTitle}}</text>
+        <text class="sheet-close" bindtap="onCloseSheet">关闭</text>
+      </view>
+
+      <scroll-view class="sheet-body" scroll-y>
+        <view class="sheet-label">标题</view>
+        <input
+          class="text-field"
+          maxlength="20"
+          value="{{formTitle}}"
+          placeholder="妈妈生日、出发去大理…"
+          placeholder-class="placeholder"
+          bindinput="onTitleInput"
+        />
+
+        <view class="sheet-label">类型</view>
+        <view class="kind-tabs">
+          <view
+            class="{{countdownTabClass}}"
+            data-kind="countdown"
+            bindtap="onKindTap"
+          >倒数日</view>
+          <view
+            class="{{annivTabClass}}"
+            data-kind="anniversary"
+            bindtap="onKindTap"
+          >纪念日</view>
+        </view>
+        <view class="kind-hint">倒数日数着还有多久，纪念日数着一路走了多远。</view>
+
+        <view class="sheet-label">日期</view>
+        <picker
+          mode="date"
+          value="{{formDate}}"
+          start="1900-01-01"
+          end="2100-12-31"
+          bindchange="onDateChange"
+        >
+          <view class="sheet-field">{{formDateText}}</view>
+        </picker>
+
+        <view class="switch-row">
+          <view class="switch-copy">
+            <view class="switch-title">每年重复</view>
+            <view class="switch-sub">生日、周年纪念会每年提醒一次</view>
+          </view>
+          <switch
+            class="yearly-switch"
+            checked="{{formYearly}}"
+            color="#A9C9C4"
+            bindchange="onYearlyChange"
+          />
+        </view>
+
+        <view class="sheet-label">备注</view>
+        <textarea
+          class="note-area"
+          maxlength="40"
+          value="{{formNote}}"
+          placeholder="写点什么（可选）"
+          placeholder-class="placeholder"
+          bindinput="onNoteInput"
+          auto-height
+        ></textarea>
+
+        <view class="sheet-delete" wx:if="{{sheetEditing}}" bindtap="onSheetDelete">
+          删除这个标记
+        </view>
+      </scroll-view>
+
+      <view class="sheet-foot">
+        <button class="btn btn-primary sheet-save" hover-class="btn-hover" bindtap="onSaveMark">
+          保存
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

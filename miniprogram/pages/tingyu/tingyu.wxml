@@ -1,0 +1,100 @@
+<view class="page tingyu-page">
+  <view class="hero">
+    <view class="hero-title">把世界调低一点，留一条缝给耳朵</view>
+    <view class="hero-sub">单轨播放 · 一次只听一种声音</view>
+  </view>
+
+  <scroll-view class="cat-scroll" scroll-x show-scrollbar="{{false}}">
+    <view class="cat-row">
+      <view
+        class="chip cat-chip {{item.on ? 'chip-on' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onSelectCategory"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="card timer-card">
+    <view class="timer-head">
+      <view class="timer-title">睡眠定时</view>
+      <text class="timer-state">{{timerStateText}}</text>
+    </view>
+    <view class="timer-chips">
+      <view
+        class="chip timer-chip {{item.on ? 'chip-on' : ''}}"
+        wx:for="{{timerChips}}"
+        wx:key="min"
+        data-min="{{item.min}}"
+        bindtap="onTimer"
+      >{{item.label}}</view>
+      <view class="chip timer-chip timer-cancel" wx:if="{{timerActive}}" bindtap="onCancelTimer">关闭定时</view>
+    </view>
+  </view>
+
+  <view class="group" wx:for="{{groups}}" wx:key="id" wx:for-item="group">
+    <view class="group-head">
+      <view class="group-dot" style="background:{{group.color}};"></view>
+      <text class="group-name">{{group.name}}</text>
+      <text class="group-count">{{group.countText}}</text>
+    </view>
+    <view class="sound-list">
+      <view
+        class="{{item.rowClass}}"
+        wx:for="{{group.items}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onTapSound"
+      >
+        <view class="sound-tile" style="{{item.iconStyle}}">{{item.letter}}</view>
+        <view class="sound-body">
+          <view class="sound-name">{{item.name}}</view>
+          <view class="sound-desc">{{item.desc}}</view>
+        </view>
+        <view class="{{item.stateClass}}">{{item.stateLabel}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="hint-card">
+    音频通过网络加载，请保持网络连接；声音版权归原权利人所有
+  </view>
+
+  <view class="footer">声音只是陪伴，累了就把音量再调低一点。</view>
+</view>
+
+<view class="player">
+  <view class="player-head">
+    <view class="player-info">
+      <view class="player-name">{{playerName}}</view>
+      <view class="player-sub">{{playerSub}}</view>
+    </view>
+    <view class="player-btn {{hasActive ? '' : 'disabled'}}" bindtap="onTogglePlay">{{playerGlyph}}</view>
+  </view>
+
+  <view class="progress-row">
+    <text class="time">{{timeNow}}</text>
+    <view class="progress">
+      <view class="progress-bar" style="width:{{progress}}%;"></view>
+    </view>
+    <text class="time time-right">{{timeTotal}}</text>
+  </view>
+
+  <view class="volume-row">
+    <text class="vol-label">音量</text>
+    <slider
+      class="vol-slider"
+      min="0"
+      max="100"
+      value="{{volume}}"
+      activeColor="#A9C9C4"
+      backgroundColor="rgba(249, 237, 215, 0.22)"
+      block-color="#FFF8EC"
+      block-size="20"
+      bindchanging="onVolume"
+      bindchange="onVolume"
+    />
+    <text class="vol-value">{{volume}}%</text>
+  </view>
+</view>

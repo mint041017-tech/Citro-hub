@@ -264,116 +264,32 @@
   color: #9C867F;
 }
 
-/* ---------------- 登录门禁 ---------------- */
-
-.auth-gate {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 50;
-  background: rgba(97, 74, 68, 0.42);
+.footer-sub {
+  margin: 10rpx 20rpx 0;
+  font-size: 22rpx;
+  line-height: 1.6;
+  text-align: center;
+  color: #9C867F;
 }
 
-.auth-wrap {
-  min-height: 100%;
-  padding: 56rpx 36rpx;
-  box-sizing: border-box;
+/* ---------------- 协议入口 ---------------- */
+
+.legal-links {
+  margin-top: 10rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 680rpx;
-  padding: 44rpx 40rpx 36rpx;
-}
-
-.auth-title {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: #614A44;
-}
-
-.auth-desc {
-  margin-top: 10rpx;
   font-size: 23rpx;
-  line-height: 1.6;
   color: #9C867F;
 }
 
-.auth-tabs {
-  margin-top: 28rpx;
-  padding: 6rpx;
-  display: flex;
-  background: #F3E7CE;
-  border-radius: 20rpx;
-}
-
-.auth-tab {
-  flex: 1;
-  height: 68rpx;
-  line-height: 68rpx;
-  text-align: center;
-  font-size: 27rpx;
-  color: #9C867F;
-  border-radius: 16rpx;
-}
-
-.auth-tab.on {
-  background: #FFF8EC;
+.legal-link {
+  padding: 6rpx 4rpx;
   color: #3E5A55;
-  font-weight: 600;
-  box-shadow: 0 4rpx 12rpx rgba(97, 74, 68, 0.08);
 }
 
-.auth-field {
-  margin-top: 20rpx;
-  height: 96rpx;
-  padding: 0 24rpx;
-  display: flex;
-  align-items: center;
-  background: #FFF8EC;
-  border: 1rpx solid #D8C5A4;
-  border-radius: 20rpx;
-}
-
-.auth-input {
-  flex: 1;
-  min-width: 0;
-  height: 96rpx;
-  font-size: 29rpx;
-  color: #614A44;
-}
-
-.auth-placeholder {
+.legal-sep {
+  margin: 0 12rpx;
   color: #B7A69E;
-  font-size: 26rpx;
 }
 
-.auth-error {
-  margin-top: 16rpx;
-  font-size: 24rpx;
-  line-height: 1.5;
-  color: #B05A4A;
-}
-
-.auth-submit {
-  width: 100%;
-  margin-top: 28rpx;
-}
-
-.auth-submit[disabled] {
-  background: #F3E7CE;
-  color: #9C867F;
-  opacity: 1;
-}
-
-.auth-foot {
-  margin-top: 18rpx;
-  font-size: 22rpx;
-  text-align: center;
-  color: #9C867F;
-}

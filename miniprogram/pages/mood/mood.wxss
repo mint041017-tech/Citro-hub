@@ -1,0 +1,407 @@
+/* 心情页：奶油底 + 低饱和心情色，排版参照 todo_mood.dart 的半屏表单。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 20rpx 32rpx 120rpx;
+}
+
+/* ---------------- 顶部 ---------------- */
+
+.hero {
+  padding: 24rpx 8rpx 8rpx;
+}
+
+.hero-eyebrow {
+  font-size: 22rpx;
+  letter-spacing: 4rpx;
+  color: var(--ink-soft);
+}
+
+.hero-title {
+  margin-top: 10rpx;
+  font-size: 62rpx;
+  font-weight: 700;
+  line-height: 1.18;
+  color: var(--ink);
+}
+
+.hero-sub {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 记录卡 ---------------- */
+
+.editor {
+  margin-top: 32rpx;
+  padding: 32rpx;
+  border-radius: 40rpx;
+}
+
+.editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.editor-head-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.editor-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.editor-hint {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}
+
+.back-today {
+  flex: none;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  border: 2rpx solid var(--line);
+  color: var(--accent-ink);
+  font-size: 22rpx;
+}
+
+.back-today.is-today {
+  background: var(--mint-soft);
+  border-color: transparent;
+  color: var(--mint-ink);
+}
+
+.mood-grid {
+  margin-top: 24rpx;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.mood-option {
+  width: 31%;
+  margin-bottom: 18rpx;
+  padding: 18rpx 6rpx 14rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 28rpx;
+  border: 2rpx solid transparent;
+}
+
+.mood-option.on {
+  background: var(--surface2);
+  border-color: var(--line2);
+}
+
+.mood-face {
+  position: relative;
+  width: 94rpx;
+  height: 94rpx;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transition: background 0.18s ease;
+}
+
+.mood-eye {
+  position: absolute;
+  top: 35%;
+  width: 9rpx;
+  height: 9rpx;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mood-eye-left {
+  left: 27%;
+}
+
+.mood-eye-right {
+  right: 27%;
+}
+
+.mood-mouth {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  transform: translateX(-50%);
+}
+
+.face-happy .mood-mouth {
+  width: 30rpx;
+  height: 16rpx;
+  border-bottom: 4rpx solid currentColor;
+  border-radius: 0 0 22rpx 22rpx;
+}
+
+.face-calm .mood-mouth {
+  width: 24rpx;
+  height: 8rpx;
+  border-bottom: 4rpx solid currentColor;
+  border-radius: 0 0 12rpx 12rpx;
+}
+
+.face-neutral .mood-mouth {
+  width: 24rpx;
+  height: 4rpx;
+  background: currentColor;
+  border-radius: 4rpx;
+}
+
+.face-tired .mood-mouth {
+  width: 22rpx;
+  height: 4rpx;
+  background: currentColor;
+  border-radius: 4rpx;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.face-low .mood-mouth {
+  width: 24rpx;
+  height: 10rpx;
+  border-top: 4rpx solid currentColor;
+  border-radius: 12rpx 12rpx 0 0;
+}
+
+.face-anxious .mood-mouth {
+  width: 20rpx;
+  height: 8rpx;
+  border-top: 4rpx solid currentColor;
+  border-radius: 10rpx 10rpx 0 0;
+}
+
+.mood-label {
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.mood-option.on .mood-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.note-wrap {
+  margin-top: 6rpx;
+  padding: 20rpx 22rpx 10rpx;
+  background: var(--surface2);
+  border: 2rpx solid var(--line);
+  border-radius: 26rpx;
+}
+
+.note {
+  width: 100%;
+  height: 148rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.note-count {
+  margin-top: 4rpx;
+  text-align: right;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.save-btn {
+  width: 100%;
+  height: 92rpx;
+  margin-top: 26rpx;
+  border-radius: 999rpx;
+}
+
+.load-hint {
+  margin-top: 18rpx;
+  padding: 16rpx 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--danger-soft);
+  border-radius: 20rpx;
+  font-size: 23rpx;
+  color: var(--danger);
+}
+
+.load-retry {
+  margin-left: 16rpx;
+  padding: 4rpx 10rpx;
+  flex: none;
+  font-weight: 600;
+}
+
+.empty-hint {
+  margin-top: 20rpx;
+  padding: 18rpx 22rpx;
+  background: var(--mint-soft);
+  border-radius: 22rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--mint-ink);
+}
+
+/* ---------------- 历史 ---------------- */
+
+.history,
+.stats {
+  margin-top: 32rpx;
+  padding: 30rpx 28rpx;
+  border-radius: 40rpx;
+}
+
+.history-list {
+  margin-top: 14rpx;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 8rpx;
+  border-bottom: 2rpx solid var(--line);
+  border-radius: 0;
+}
+
+.history-row.on {
+  background: var(--mint-soft);
+  border-radius: 20rpx;
+  border-bottom-color: transparent;
+}
+
+.history-row.empty .history-kind {
+  color: var(--ink-soft);
+}
+
+.history-date {
+  width: 156rpx;
+  flex: none;
+  display: flex;
+  align-items: baseline;
+}
+
+.history-day {
+  font-size: 25rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.history-week {
+  margin-left: 8rpx;
+  font-size: 19rpx;
+  color: var(--ink-soft);
+}
+
+.history-dot {
+  width: 20rpx;
+  height: 20rpx;
+  margin-right: 14rpx;
+  flex: none;
+  border-radius: 50%;
+  background: var(--line2);
+}
+
+.history-row.empty .history-dot {
+  background: transparent;
+  border: 2rpx dashed var(--line2);
+  box-sizing: border-box;
+}
+
+.history-kind {
+  width: 96rpx;
+  flex: none;
+  font-size: 25rpx;
+  color: var(--ink2);
+}
+
+.history-note {
+  flex: 1;
+  min-width: 0;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-flag {
+  width: 76rpx;
+  flex: none;
+  text-align: right;
+  font-size: 21rpx;
+  color: var(--accent-ink);
+}
+
+.history-row.on .history-flag {
+  font-weight: 600;
+  color: var(--mint-ink);
+}
+
+/* ---------------- 统计 ---------------- */
+
+.stat-list {
+  margin-top: 14rpx;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.stat-label {
+  width: 132rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  font-size: 25rpx;
+  color: var(--ink2);
+}
+
+.stat-dot {
+  width: 16rpx;
+  height: 16rpx;
+  margin-right: 10rpx;
+  border-radius: 50%;
+}
+
+.stat-track {
+  flex: 1;
+  height: 16rpx;
+  background: var(--surface2);
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  transition: width 0.35s ease;
+}
+
+.stat-count {
+  width: 92rpx;
+  flex: none;
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 页脚 ---------------- */
+
+.footer {
+  margin-top: 40rpx;
+  font-size: 23rpx;
+  text-align: center;
+  color: var(--ink-soft);
+}

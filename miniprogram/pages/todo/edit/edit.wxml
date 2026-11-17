@@ -1,0 +1,255 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="header">
+    <view class="title">{{pageTitle}}</view>
+    <view class="subtitle">{{pageSub}}</view>
+  </view>
+
+  <!-- 内容 -->
+  <view class="panel">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">内容</text>
+    </view>
+    <view class="field">
+      <input
+        class="input title-input"
+        value="{{title}}"
+        placeholder="要做什么？"
+        placeholder-class="placeholder"
+        maxlength="120"
+        bindinput="onTitleInput"
+      />
+    </view>
+    <view class="note-field">
+      <textarea
+        class="textarea"
+        value="{{note}}"
+        placeholder="补充备注、地点或要带的东西（可选）"
+        placeholder-class="placeholder"
+        maxlength="500"
+        auto-height
+        bindinput="onNoteInput"
+      />
+    </view>
+  </view>
+
+  <!-- 类型 -->
+  <view class="panel">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">类型</text>
+    </view>
+    <view class="kind-grid">
+      <view
+        wx:for="{{kindOptions}}"
+        wx:key="value"
+        class="kind {{item.value === kind ? 'kind-on' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onKindTap"
+      >
+        <view class="kind-label">{{item.label}}</view>
+        <view class="kind-desc">{{item.desc}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提醒 / 待办的时间 -->
+  <view class="panel" wx:if="{{showSchedule}}">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">{{scheduleLabel}}</text>
+    </view>
+
+    <view class="form-row">
+      <text class="form-label">日期</text>
+      <picker
+        class="form-picker"
+        mode="date"
+        value="{{dateStr}}"
+        bindchange="onDateChange"
+      >
+        <view class="picker-value">
+          <text>{{dateText}}</text>
+          <text class="chev">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-row line-top">
+      <text class="form-label">时间</text>
+      <picker
+        class="form-picker"
+        mode="time"
+        value="{{timeStr}}"
+        bindchange="onTimeChange"
+      >
+        <view class="picker-value">
+          <text>{{timeStr}}</text>
+          <text class="chev">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="field-block line-top" wx:if="{{showLead}}">
+      <view class="field-label">提前提醒</view>
+      <view class="choices">
+        <view
+          wx:for="{{leadOptions}}"
+          wx:key="value"
+          class="choice {{item.on ? 'choice-on' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onToggleLead"
+        >{{item.label}}</view>
+      </view>
+      <view class="field-hint">可多选；「准时」表示到点提醒。</view>
+    </view>
+  </view>
+
+  <!-- 习惯 -->
+  <view class="panel" wx:if="{{showHabit}}">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">习惯</text>
+    </view>
+
+    <view class="field-block">
+      <view class="field-label">执行的星期</view>
+      <view class="days">
+        <view
+          wx:for="{{habitDayOptions}}"
+          wx:key="value"
+          class="day {{item.on ? 'day-on' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onToggleDay"
+        >{{item.label}}</view>
+      </view>
+      <view class="field-hint">可多选，习惯会按选中的星期出现。</view>
+    </view>
+
+    <view class="form-row line-top">
+      <text class="form-label">执行时间</text>
+      <picker
+        class="form-picker"
+        mode="time"
+        value="{{habitTime}}"
+        bindchange="onHabitTimeChange"
+      >
+        <view class="picker-value">
+          <text>{{habitTime}}</text>
+          <text class="chev">›</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 归属与优先级 -->
+  <view class="panel">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">归属</text>
+    </view>
+
+    <view class="form-row">
+      <text class="form-label">清单</text>
+      <picker
+        class="form-picker"
+        range="{{listNames}}"
+        value="{{listIndex}}"
+        bindchange="onListChange"
+      >
+        <view class="picker-value">
+          <text>{{listText}}</text>
+          <text class="chev">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-row line-top">
+      <text class="form-label">分类</text>
+      <picker
+        class="form-picker"
+        range="{{categoryNames}}"
+        value="{{categoryIndex}}"
+        bindchange="onCategoryChange"
+      >
+        <view class="picker-value">
+          <text>{{categoryText}}</text>
+          <text class="chev">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-row form-row-chips line-top">
+      <text class="form-label">优先级</text>
+      <view class="choices choices-end">
+        <view
+          wx:for="{{priorityOptions}}"
+          wx:key="value"
+          class="choice {{item.value === priority ? 'choice-on' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onPriorityTap"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 子任务 -->
+  <view class="panel">
+    <view class="panel-head">
+      <view class="section-bar"></view>
+      <text class="section-title">子任务</text>
+    </view>
+
+    <view class="subtask" wx:for="{{subtasks}}" wx:key="id">
+      <view
+        class="sub-check {{item.done ? 'sub-check-on' : ''}}"
+        data-index="{{index}}"
+        bindtap="onToggleSubtask"
+      >
+        <text class="sub-tick" wx:if="{{item.done}}">✓</text>
+      </view>
+      <text class="sub-title {{item.done ? 'sub-title-done' : ''}}">{{item.title}}</text>
+      <view class="sub-del" data-index="{{index}}" bindtap="onDeleteSubtask">删除</view>
+    </view>
+
+    <view class="sub-empty" wx:if="{{subtasks.length === 0}}">
+      还没有子任务，拆小一点更好开始。
+    </view>
+
+    <view class="sub-add">
+      <view class="sub-add-field">
+        <input
+          class="sub-input"
+          value="{{subtaskDraft}}"
+          placeholder="添加子任务"
+          placeholder-class="placeholder"
+          maxlength="80"
+          confirm-type="done"
+          bindinput="onSubtaskInput"
+          bindconfirm="onAddSubtask"
+        />
+      </view>
+      <button class="btn add-btn" hover-class="btn-hover" bindtap="onAddSubtask">添加</button>
+    </view>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="footer-bar">
+    <view class="footer-inner">
+      <button
+        wx:if="{{isEdit}}"
+        class="btn btn-ghost delete-btn"
+        hover-class="btn-hover"
+        bindtap="onDelete"
+        disabled="{{saving}}"
+      >删除</button>
+      <button
+        class="btn btn-primary save-btn"
+        hover-class="btn-hover"
+        bindtap="onSave"
+        loading="{{saving}}"
+        disabled="{{saving}}"
+      >保存</button>
+    </view>
+  </view>
+</view>

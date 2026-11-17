@@ -1,0 +1,1314 @@
+/* 食谱日记：奶油底 + 纸面卡片 + 薄荷点缀。
+   颜色取自 app.wxss 的全局 token，尺寸按 750rpx 设计稿。 */
+
+.cook-page {
+  padding: 8rpx 32rpx 160rpx;
+}
+
+.cook-head {
+  padding: 16rpx 4rpx 8rpx;
+}
+
+.cook-title {
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 1rpx;
+  color: var(--ink);
+}
+
+.cook-sub {
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 顶部 tab ---------------- */
+
+.tabs {
+  margin-top: 28rpx;
+  padding: 8rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border-radius: 999rpx;
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.tab.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 4rpx 14rpx rgba(97, 74, 68, 0.09);
+}
+
+.tab-count {
+  margin-left: 8rpx;
+  padding: 0 10rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: 999rpx;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.tab.on .tab-count {
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+}
+
+/* ---------------- 搜索 ---------------- */
+
+.search {
+  margin-top: 24rpx;
+  padding: 0 28rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 999rpx;
+  box-shadow: 0 8rpx 22rpx rgba(97, 74, 68, 0.04);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.search-clear {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 42rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--ink-soft);
+  font-size: 26rpx;
+}
+
+/* ---------------- 列表头 ---------------- */
+
+.list-head {
+  margin-top: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.list-title-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.count-text {
+  margin-left: 14rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.new-btn {
+  flex: none;
+  margin: 0;
+  height: 72rpx;
+  padding: 0 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.new-btn::after {
+  border: none;
+}
+
+/* ---------------- 状态块 ---------------- */
+
+.state-card {
+  margin-top: 24rpx;
+  padding: 54rpx 32rpx;
+  text-align: center;
+  background: var(--surface);
+  border-radius: 34rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.state-mark {
+  width: 92rpx;
+  height: 92rpx;
+  margin: 0 auto 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--accent-ink);
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.state-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.state-sub {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.state-btn {
+  display: block;
+  width: 360rpx;
+  height: 80rpx;
+  margin: 28rpx auto 0;
+  padding: 0;
+  font-size: 27rpx;
+  line-height: 80rpx;
+}
+
+.loading-line {
+  padding: 16rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.spinner {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 14rpx;
+  border: 3rpx solid #dceae7;
+  border-top-color: #8fb3ae;
+  border-radius: 50%;
+  animation: cook-spin 0.8s linear infinite;
+}
+
+@keyframes cook-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------- 食谱卡片 ---------------- */
+
+.recipe-list {
+  margin-top: 20rpx;
+}
+
+/* 广场是用户内容，底部常驻说明与举报入口提示。 */
+.ugc-note {
+  margin: 8rpx 8rpx 30rpx;
+  padding: 18rpx 22rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  text-align: center;
+  background: var(--surface2);
+  border-radius: 20rpx;
+}
+
+.recipe-card {
+  margin-bottom: 22rpx;
+  padding: 20rpx;
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-radius: 34rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.cover-wrap {
+  position: relative;
+  flex: none;
+  width: 232rpx;
+  height: 174rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cover-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3e7ce, #e9dcc2);
+  color: var(--ink-soft);
+  font-size: 25rpx;
+  letter-spacing: 6rpx;
+}
+
+.vis {
+  position: absolute;
+  right: 10rpx;
+  top: 10rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  line-height: 1.7;
+}
+
+.vis-public {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.vis-private {
+  background: rgba(255, 248, 236, 0.94);
+  border: 1rpx solid var(--line);
+  color: var(--ink-soft);
+}
+
+.recipe-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 22rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.recipe-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 33rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.recipe-note {
+  margin-top: 6rpx;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.meta-row {
+  margin-top: 8rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.meta {
+  margin-right: 18rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.tag-row {
+  margin-top: 8rpx;
+  display: flex;
+  flex-wrap: wrap;
+  max-height: 44rpx;
+  overflow: hidden;
+}
+
+.tag {
+  margin: 0 10rpx 6rpx 0;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+  font-size: 21rpx;
+  line-height: 1.7;
+}
+
+.recipe-foot {
+  margin-top: auto;
+  padding-top: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.author {
+  max-width: 58%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 21rpx;
+  color: var(--mint-ink);
+}
+
+.updated {
+  flex: none;
+  font-size: 20rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 购物清单 / 冰箱 ---------------- */
+
+.seg {
+  margin-top: 20rpx;
+  padding: 6rpx;
+  display: flex;
+  background: var(--surface2);
+  border-radius: 999rpx;
+}
+
+.seg-item {
+  flex: 1;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.seg-item.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(97, 74, 68, 0.08);
+}
+
+.seg-count {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  color: var(--ink-soft);
+}
+
+.shop-head {
+  margin-top: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shop-progress {
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.shop-clear {
+  padding: 8rpx 4rpx;
+  font-size: 23rpx;
+  color: var(--danger);
+}
+
+.shop-list {
+  margin-top: 14rpx;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: 30rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.shop-row {
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  border-top: 1rpx solid var(--line);
+}
+
+.shop-row:first-child {
+  border-top: none;
+}
+
+.check {
+  flex: none;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--line2);
+  border-radius: 12rpx;
+  color: var(--bg);
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.check.on {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.shop-text {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.shop-text.done {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.shop-del {
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 46rpx;
+  text-align: center;
+  color: var(--danger);
+  font-size: 30rpx;
+}
+
+.shop-add {
+  margin-top: 22rpx;
+  display: flex;
+  align-items: center;
+}
+
+.shop-add-field {
+  flex: 1;
+  min-width: 0;
+  height: 88rpx;
+  padding: 0 26rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 2rpx solid var(--line2);
+  border-radius: 999rpx;
+}
+
+.shop-add-input {
+  flex: 1;
+  min-width: 0;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.add-btn {
+  flex: none;
+  margin: 0 0 0 16rpx;
+  height: 88rpx;
+  padding: 0 34rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 27rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.add-btn::after {
+  border: none;
+}
+
+.fridge-row {
+  padding: 22rpx 24rpx;
+  display: flex;
+  align-items: center;
+  border-top: 1rpx solid var(--line);
+}
+
+.fridge-row:first-child {
+  border-top: none;
+}
+
+.fridge-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fridge-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.fridge-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.fridge-exp {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--mint-ink);
+}
+
+.fridge-exp.exp-danger {
+  color: var(--danger);
+}
+
+.fridge-exp.exp-ok {
+  color: var(--mint-ink);
+}
+
+.fridge-add {
+  margin-top: 22rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--surface);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.fridge-field {
+  height: 76rpx;
+  margin: 0 12rpx 12rpx 0;
+  padding: 0 20rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1rpx solid var(--line);
+  border-radius: 18rpx;
+}
+
+.fridge-name-field {
+  flex: 1;
+  min-width: 240rpx;
+}
+
+.fridge-qty-field {
+  width: 124rpx;
+  flex: none;
+}
+
+.fridge-unit-field {
+  width: 116rpx;
+  flex: none;
+  padding: 0;
+  justify-content: center;
+}
+
+.fridge-input {
+  flex: 1;
+  min-width: 0;
+  height: 76rpx;
+  font-size: 26rpx;
+  color: var(--ink);
+}
+
+.fridge-unit-field picker {
+  width: 100%;
+}
+
+.unit-pick {
+  width: 100%;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--ink2);
+}
+
+.fridge-add-btn {
+  width: 148rpx;
+  margin: 0 0 12rpx 0;
+  padding: 0;
+  font-size: 26rpx;
+}
+
+/* ---------------- 详情 ---------------- */
+
+.overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 70;
+  background: rgba(97, 74, 68, 0.46);
+}
+
+.overlay-scroll {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.overlay-close {
+  flex: none;
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--ink2);
+  font-size: 34rpx;
+}
+
+.detail-card {
+  max-width: 900rpx;
+  margin: 32rpx 24rpx 80rpx;
+  padding: 28rpx 28rpx 40rpx;
+  background: var(--surface);
+  border-radius: 40rpx;
+  box-shadow: var(--shadow-lg);
+}
+
+.detail-top {
+  margin-bottom: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-kicker {
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  color: var(--ink-soft);
+}
+
+.detail-cover-wrap {
+  width: 100%;
+  height: 380rpx;
+  overflow: hidden;
+  border-radius: 26rpx;
+  background: var(--surface2);
+}
+
+.detail-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.detail-cover-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3e7ce, #e9dcc2);
+  color: var(--ink-soft);
+  font-size: 26rpx;
+  letter-spacing: 4rpx;
+}
+
+.detail-title {
+  margin-top: 24rpx;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.detail-tags {
+  margin-top: 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.detail-meta {
+  margin-top: 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  margin: 0 10rpx 10rpx 0;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  color: var(--ink2);
+  font-size: 22rpx;
+}
+
+.detail-author {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--mint-ink);
+}
+
+.detail-updated {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.detail-note {
+  margin-top: 18rpx;
+  padding: 22rpx 24rpx;
+  background: var(--surface2);
+  border-radius: 22rpx;
+  font-size: 27rpx;
+  line-height: 1.75;
+  color: var(--ink2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-source {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+.detail-section {
+  margin-top: 30rpx;
+}
+
+.detail-sec-head {
+  display: flex;
+  align-items: center;
+}
+
+.sec-sub {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.ing-card {
+  margin-top: 12rpx;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 1rpx solid var(--line);
+  border-radius: 24rpx;
+}
+
+.ing-row {
+  padding: 18rpx 22rpx;
+  display: flex;
+  align-items: baseline;
+  border-top: 1rpx solid var(--line);
+}
+
+.ing-row:first-child {
+  border-top: none;
+}
+
+.ing-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ing-amount {
+  flex: none;
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.step-row {
+  margin-top: 20rpx;
+  display: flex;
+  align-items: flex-start;
+}
+
+.step-no {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.step-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: 18rpx;
+}
+
+.step-text {
+  font-size: 28rpx;
+  line-height: 1.75;
+  color: var(--ink2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.step-timer {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--mint-ink);
+}
+
+.step-img {
+  display: block;
+  width: 100%;
+  height: 300rpx;
+  margin-top: 12rpx;
+  border-radius: 20rpx;
+  background: var(--surface2);
+}
+
+.empty-line {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.detail-actions {
+  margin-top: 34rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.detail-btn {
+  flex: 1;
+  min-width: 240rpx;
+  height: 88rpx;
+  margin: 0 12rpx 12rpx 0;
+  font-size: 28rpx;
+}
+
+.danger-btn {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.detail-foot-close {
+  margin-top: 18rpx;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 新建 / 编辑向导 ---------------- */
+
+.wizard {
+  z-index: 80;
+  background: rgba(97, 74, 68, 0.52);
+}
+
+.wizard-card {
+  max-width: 900rpx;
+  margin: 28rpx 24rpx 80rpx;
+  padding: 30rpx 28rpx 40rpx;
+  background: var(--surface);
+  border-radius: 40rpx;
+  box-shadow: var(--shadow-lg);
+}
+
+.wizard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wizard-title {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.wizard-steps {
+  margin-top: 22rpx;
+  padding: 16rpx 10rpx;
+  display: flex;
+  background: var(--surface2);
+  border-radius: 24rpx;
+}
+
+.wstep {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wstep-no {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 50%;
+  border: 1rpx solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.wstep-label {
+  margin-top: 6rpx;
+  font-size: 19rpx;
+  color: var(--ink-soft);
+}
+
+.wstep.on .wstep-no {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.wstep.on .wstep-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.wstep.done .wstep-no {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.wstep.done .wstep-label {
+  color: var(--mint-ink);
+}
+
+.wizard-body {
+  margin-top: 18rpx;
+}
+
+.wizard-hint {
+  margin-bottom: 16rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.f-label {
+  margin: 22rpx 0 10rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+.wfield {
+  display: flex;
+  align-items: center;
+  min-height: 92rpx;
+  padding: 0 24rpx;
+  background: var(--surface2);
+  border: 2rpx solid var(--line);
+  border-radius: 20rpx;
+}
+
+.wfield-area {
+  display: block;
+  padding: 18rpx 24rpx;
+}
+
+.winput {
+  flex: 1;
+  min-width: 0;
+  height: 92rpx;
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.wtextarea {
+  width: 100%;
+  height: 150rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: var(--ink);
+  box-sizing: border-box;
+}
+
+.wrow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.wcol {
+  flex: 1;
+  min-width: 0;
+}
+
+.wcol + .wcol {
+  margin-left: 18rpx;
+}
+
+.vis-toggle {
+  padding: 6rpx;
+  display: flex;
+  background: var(--surface2);
+  border-radius: 18rpx;
+}
+
+.vis-opt {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border-radius: 14rpx;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.vis-opt.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(97, 74, 68, 0.08);
+}
+
+.vis-note {
+  margin-top: 10rpx;
+  font-size: 21rpx;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.ing-edit {
+  margin-bottom: 14rpx;
+  padding: 16rpx;
+  background: var(--surface2);
+  border: 1rpx solid var(--line);
+  border-radius: 20rpx;
+}
+
+.ing-edit-main {
+  display: flex;
+  align-items: center;
+}
+
+.edit-input {
+  height: 76rpx;
+  padding: 0 16rpx;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  color: var(--ink);
+}
+
+.ing-name-in {
+  flex: 1.4;
+  min-width: 0;
+  margin-right: 10rpx;
+}
+
+.ing-qty-in {
+  flex: 0.9;
+  min-width: 0;
+  margin-right: 10rpx;
+}
+
+.ing-unit-in {
+  flex: 0.7;
+  min-width: 0;
+  margin-right: 10rpx;
+}
+
+.row-del {
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 52rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 30rpx;
+}
+
+.add-row {
+  padding: 20rpx;
+  text-align: center;
+  border: 2rpx dashed var(--line2);
+  border-radius: 18rpx;
+  font-size: 26rpx;
+  color: var(--accent-ink);
+}
+
+.step-edit {
+  margin-bottom: 14rpx;
+  padding: 16rpx;
+  background: var(--surface2);
+  border: 1rpx solid var(--line);
+  border-radius: 20rpx;
+}
+
+.step-edit-head {
+  margin-bottom: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.step-edit-no {
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 21rpx;
+  font-weight: 600;
+}
+
+.step-ta {
+  height: 130rpx;
+  padding: 14rpx 16rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.cover-pick {
+  position: relative;
+  width: 100%;
+  height: 360rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 2rpx dashed var(--line2);
+  border-radius: 24rpx;
+}
+
+.cover-pick-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cover-pick-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 25rpx;
+}
+
+.cover-pick-plus {
+  width: 84rpx;
+  height: 84rpx;
+  margin-bottom: 12rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 50%;
+  border: 1rpx solid var(--line);
+  background: var(--surface);
+  color: var(--accent-ink);
+  font-size: 40rpx;
+}
+
+.cover-busy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(97, 74, 68, 0.48);
+  color: #fff8ec;
+  font-size: 25rpx;
+}
+
+.cover-actions {
+  margin-top: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cover-link {
+  padding: 6rpx 0;
+  font-size: 24rpx;
+  color: var(--accent-ink);
+}
+
+.danger-link {
+  color: var(--danger);
+}
+
+.cover-tip {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.wizard-error {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.wizard-foot {
+  margin-top: 30rpx;
+  display: flex;
+  align-items: center;
+}
+
+.wizard-foot .btn {
+  height: 88rpx;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.back-btn {
+  flex: none;
+  width: 200rpx;
+  margin-right: 16rpx;
+}
+
+.next-btn {
+  flex: 1;
+}
+
+.wizard-cancel {
+  margin-top: 22rpx;
+  padding: 12rpx 0;
+  text-align: center;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}

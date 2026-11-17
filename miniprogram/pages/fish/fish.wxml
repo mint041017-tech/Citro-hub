@@ -1,0 +1,151 @@
+<view class="page">
+  <view class="top">
+    <view class="grow">
+      <view class="title">摸鱼日历</view>
+      <view class="subtitle">{{dateText}}</view>
+    </view>
+    <view class="set-btn" hover-class="hover-dim" bindtap="onOpenSettings">设置</view>
+  </view>
+
+  <view class="sync-note" wx:if="{{syncNote}}">{{syncNote}}</view>
+
+  <view class="status-card">
+    <view class="status-top">
+      <text class="status-chip {{chipCls}}">{{chipText}}</text>
+      <text class="status-schedule">{{configText}}</text>
+    </view>
+    <view class="status-title">{{statusTitle}}</view>
+    <view class="status-sub">{{statusSub}}</view>
+    <view class="count-row" wx:if="{{showCountdown}}">
+      <text class="count-label">距下班</text>
+      <text class="count-value">{{countdownText}}</text>
+    </view>
+  </view>
+
+  <view class="stats">
+    <view class="stat">
+      <view class="stat-label">本周摸鱼</view>
+      <view class="stat-value">
+        <text class="stat-num">{{weekFish}}</text>
+        <text class="stat-unit">天</text>
+      </view>
+      <view class="stat-sub">已休 {{weekFishDone}} 天</view>
+    </view>
+    <view class="stat">
+      <view class="stat-label">本月休息</view>
+      <view class="stat-value">
+        <text class="stat-num">{{monthRest}}</text>
+        <text class="stat-unit">天</text>
+      </view>
+      <view class="stat-sub">之后还有 {{monthRestLeft}} 天</view>
+    </view>
+  </view>
+
+  <view class="cal-card">
+    <view class="cal-head">
+      <view class="cal-title">{{monthTitle}}</view>
+      <view class="cal-nav">
+        <view class="today-btn" wx:if="{{showTodayBtn}}" hover-class="hover-dim" bindtap="onToday">回今天</view>
+        <view class="nav-btn" hover-class="hover-dim" bindtap="onPrevMonth">‹</view>
+        <view class="{{navNextCls}}" hover-class="hover-dim" bindtap="onNextMonth">›</view>
+      </view>
+    </view>
+
+    <view class="week-head">
+      <view class="week-cell" wx:for="{{weekdays}}" wx:key="key">{{item.label}}</view>
+    </view>
+
+    <view class="grid">
+      <view class="cell" wx:for="{{cells}}" wx:key="key">
+        <view class="{{item.cls}}">
+          <text class="cell-day">{{item.day}}</text>
+          <text class="cell-tag">{{item.tag}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="legend">
+      <view class="lg"><view class="lg-dot lg-work"></view><text>工作日</text></view>
+      <view class="lg"><view class="lg-dot lg-rest"></view><text>休息日</text></view>
+      <view class="lg"><view class="lg-dot lg-holiday"></view><text>节假日</text></view>
+      <view class="lg"><view class="lg-dot lg-makeup"></view><text>补班</text></view>
+    </view>
+  </view>
+
+  <view class="config-card">
+    <view class="config-row">
+      <text class="config-key">作息</text>
+      <text class="config-val">{{scheduleText}}</text>
+    </view>
+    <view class="config-row">
+      <text class="config-key">每周休息</text>
+      <text class="config-val">{{restText}}</text>
+    </view>
+  </view>
+
+  <view class="footer-note">下班不是逃跑，是把时间还给自己。</view>
+
+  <view class="mask" wx:if="{{showSettings}}" bindtap="onCloseSettings">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">摸鱼设置</view>
+        <view class="sheet-close" hover-class="hover-dim" bindtap="onCloseSettings">取消</view>
+      </view>
+
+      <view class="sheet-body">
+        <view class="field-row">
+          <text class="field-label">上班时间</text>
+          <picker class="picker" mode="time" value="{{editStart}}" bindchange="onEditStart">
+            <view class="time-pill">{{editStart}}</view>
+          </picker>
+        </view>
+        <view class="field-row">
+          <text class="field-label">下班时间</text>
+          <picker class="picker" mode="time" value="{{editEnd}}" bindchange="onEditEnd">
+            <view class="time-pill">{{editEnd}}</view>
+          </picker>
+        </view>
+        <view class="field-row">
+          <text class="field-label">午休</text>
+          <view class="switch-wrap">
+            <switch checked="{{editBreakOn}}" color="#A9C9C4" bindchange="onEditBreakToggle" />
+          </view>
+        </view>
+        <view class="field-row" wx:if="{{editBreakOn}}">
+          <text class="field-label">午休开始</text>
+          <picker class="picker" mode="time" value="{{editBreakStart}}" bindchange="onEditBreakStart">
+            <view class="time-pill">{{editBreakStart}}</view>
+          </picker>
+        </view>
+        <view class="field-row" wx:if="{{editBreakOn}}">
+          <text class="field-label">午休结束</text>
+          <picker class="picker" mode="time" value="{{editBreakEnd}}" bindchange="onEditBreakEnd">
+            <view class="time-pill">{{editBreakEnd}}</view>
+          </picker>
+        </view>
+
+        <view class="week-label">每周休息日</view>
+        <view class="week-chips">
+          <view
+            class="{{item.cls}}"
+            wx:for="{{editWeek}}"
+            wx:key="key"
+            data-value="{{item.value}}"
+            hover-class="hover-dim"
+            bindtap="onToggleWeek"
+          >{{item.label}}</view>
+        </view>
+        <view class="sheet-hint">点选每周固定的休息日。保存后会同步到云端，换设备也能带上。</view>
+      </view>
+
+      <view class="sheet-foot">
+        <button
+          class="btn btn-primary sheet-save"
+          hover-class="hover-dim"
+          disabled="{{saveDisabled}}"
+          bindtap="onSave"
+        >{{saveText}}</button>
+      </view>
+    </view>
+  </view>
+</view>

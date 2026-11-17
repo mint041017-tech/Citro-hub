@@ -1,0 +1,235 @@
+<view class="me-page">
+  <login-gate
+    id="gate"
+    bind:ready="onGateReady"
+    bind:expired="onGateExpired"
+    bind:user="onGateUser"
+  />
+
+  <block wx:if="{{ready}}">
+    <view class="profile-card">
+      <view class="profile-mint"></view>
+      <view class="profile-row">
+        <view class="avatar">
+          <image
+            wx:if="{{hasAvatar}}"
+            class="avatar-img"
+            src="{{avatarUrl}}"
+            mode="aspectFill"
+            binderror="onAvatarError"
+          />
+          <text wx:else class="avatar-initial">{{userInitial}}</text>
+        </view>
+        <view class="profile-body">
+          <view class="profile-name">{{userName}}</view>
+          <view class="profile-meta">
+            <view class="profile-status">
+              <view class="status-dot"></view>
+              <text>已登录</text>
+            </view>
+          </view>
+        </view>
+        <view
+          class="edit-btn"
+          hover-class="edit-btn-hover"
+          bindtap="onEditOpen"
+        >
+          编辑
+        </view>
+      </view>
+    </view>
+
+    <view class="me-section">
+      <view class="me-section-title">数据概览</view>
+      <view class="me-card stats-card">
+        <view class="stat">
+          <view class="stat-value">{{statTodo}}</view>
+          <view class="stat-label">待办</view>
+        </view>
+        <view class="stat-sep"></view>
+        <view class="stat">
+          <view class="stat-value stat-money">{{statExpense}}</view>
+          <view class="stat-label">本月支出</view>
+        </view>
+        <view class="stat-sep"></view>
+        <view class="stat">
+          <view class="stat-value">{{statCheckin}}</view>
+          <view class="stat-label">连续打卡</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="me-section">
+      <view class="me-section-title">协议与关于</view>
+      <view class="me-card">
+        <view
+          class="menu-row"
+          hover-class="row-hover"
+          data-type="terms"
+          bindtap="onOpenDoc"
+        >
+          <text class="menu-label">《用户服务协议》</text>
+          <view class="chevron"></view>
+        </view>
+        <view
+          class="menu-row"
+          hover-class="row-hover"
+          data-type="privacy"
+          bindtap="onOpenDoc"
+        >
+          <text class="menu-label">《隐私政策》</text>
+          <view class="chevron"></view>
+        </view>
+        <view class="menu-row" hover-class="row-hover" bindtap="onAboutOpen">
+          <text class="menu-label">关于 Citro</text>
+          <text class="menu-value">{{version}}</text>
+          <view class="chevron"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="me-section">
+      <view class="me-section-title">账号</view>
+      <view class="me-card">
+        <view class="logout-row" hover-class="row-hover" bindtap="onLogout">
+          退出登录
+        </view>
+      </view>
+      <view
+        class="delete-entry"
+        hover-class="delete-entry-hover"
+        bindtap="onDeleteTap"
+      >
+        注销账号
+      </view>
+    </view>
+
+    <view class="me-foot">
+      <view class="me-foot-version">Citro 小程序 {{version}}</view>
+      <view class="me-foot-note">数据保存在你的账号下</view>
+    </view>
+  </block>
+  <view class="me-wait" wx:else>登录后查看你的账号</view>
+
+  <!-- 编辑昵称 -->
+  <view class="overlay" wx:if="{{editing}}" bindtap="onEditCancel">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">修改昵称</view>
+      <view class="sheet-desc">
+        2–16 位中英文、数字或下划线。昵称会同步到 App 与其它端。
+      </view>
+      <view class="sheet-field">
+        <input
+          class="sheet-input"
+          type="text"
+          maxlength="16"
+          value="{{editName}}"
+          focus="{{editing}}"
+          placeholder="输入新昵称"
+          placeholder-class="sheet-placeholder"
+          bindinput="onEditInput"
+          bindconfirm="onEditSave"
+        />
+      </view>
+      <view class="sheet-error" wx:if="{{editError}}">{{editError}}</view>
+      <view class="sheet-actions">
+        <button
+          class="sheet-btn ghost"
+          hover-class="sheet-btn-hover"
+          disabled="{{editBusy}}"
+          bindtap="onEditCancel"
+        >
+          取消
+        </button>
+        <button
+          class="sheet-btn primary"
+          hover-class="sheet-btn-hover"
+          disabled="{{editBusy}}"
+          bindtap="onEditSave"
+        >
+          {{editBusy ? '保存中…' : '保存'}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 关于 Citro -->
+  <view class="overlay" wx:if="{{aboutOpen}}" bindtap="onAboutClose">
+    <view class="sheet" catchtap="noop">
+      <view class="about-head">
+        <view class="about-badge">C</view>
+        <view class="about-head-body">
+          <view class="sheet-title">关于 Citro</view>
+          <view class="about-version">小程序 {{version}}</view>
+        </view>
+      </view>
+      <view class="about-list">
+        <view class="about-row">
+          <text class="about-key">账号</text>
+          <text class="about-val">与 Citro App 共用同一套账号，数据跟账号走。</text>
+        </view>
+        <view class="about-row">
+          <text class="about-key">性质</text>
+          <text class="about-val">非商业个人项目。</text>
+        </view>
+        <view class="about-row">
+          <text class="about-key">KOOK</text>
+          <text class="about-val">25343821</text>
+        </view>
+        <view class="about-row">
+          <text class="about-key">微信</text>
+          <text class="about-val">Tangerine-1017</text>
+        </view>
+      </view>
+      <button
+        class="sheet-btn primary about-btn"
+        hover-class="sheet-btn-hover"
+        bindtap="onAboutClose"
+      >
+        知道了
+      </button>
+    </view>
+  </view>
+
+  <!-- 注销账号 -->
+  <view class="overlay" wx:if="{{deleteOpen}}" bindtap="onDeleteCancel">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title danger">注销账号</view>
+      <view class="sheet-desc">
+        账号与云端数据将被永久删除，无法恢复。请输入登录密码确认。
+      </view>
+      <view class="sheet-field">
+        <input
+          class="sheet-input"
+          password="{{true}}"
+          maxlength="64"
+          value="{{deletePassword}}"
+          focus="{{deleteOpen}}"
+          placeholder="登录密码"
+          placeholder-class="sheet-placeholder"
+          bindinput="onDeleteInput"
+          bindconfirm="onDeleteConfirm"
+        />
+      </view>
+      <view class="sheet-error" wx:if="{{deleteError}}">{{deleteError}}</view>
+      <view class="sheet-actions">
+        <button
+          class="sheet-btn ghost"
+          hover-class="sheet-btn-hover"
+          disabled="{{deleteBusy}}"
+          bindtap="onDeleteCancel"
+        >
+          取消
+        </button>
+        <button
+          class="sheet-btn danger"
+          hover-class="sheet-btn-hover"
+          disabled="{{deleteBusy}}"
+          bindtap="onDeleteConfirm"
+        >
+          {{deleteBusy ? '处理中…' : '确认注销'}}
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

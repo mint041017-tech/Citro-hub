@@ -1,0 +1,39 @@
+<view class="doc-page">
+  <view class="doc-tabs">
+    <view
+      class="doc-tab {{type === 'terms' ? 'on' : ''}}"
+      data-type="terms"
+      bindtap="onSwitch"
+    >
+      用户服务协议
+    </view>
+    <view
+      class="doc-tab {{type === 'privacy' ? 'on' : ''}}"
+      data-type="privacy"
+      bindtap="onSwitch"
+    >
+      隐私政策
+    </view>
+  </view>
+
+  <view class="doc-head">
+    <view class="doc-title">{{title}}</view>
+    <view class="doc-meta">生效日期：{{updated}} · 版本 {{version}}</view>
+  </view>
+
+  <view class="doc-note">
+    <view class="doc-note-bar"></view>
+    <view class="doc-note-text">{{note}}</view>
+  </view>
+
+  <view class="sec" wx:for="{{sections}}" wx:key="title" wx:for-item="sec" wx:for-index="si">
+    <view class="sec-title">{{si + 1}}. {{sec.title}}</view>
+    <view class="sec-p" wx:for="{{sec.paragraphs}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="doc-foot">
+    <view>Citro 运营者</view>
+    <view>KOOK：25343821 · 微信：Tangerine-1017</view>
+    <view class="doc-foot-sub">如本页面与线上公布版本不一致，以最新公布版本为准。</view>
+  </view>
+</view>

@@ -1,0 +1,109 @@
+/* 与抽签页共用纸张底色与墨色；正文以可读性优先，不做花哨排版。 */
+
+.doc-page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 0 36rpx 80rpx;
+  box-sizing: border-box;
+}
+
+.doc-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 -36rpx 28rpx;
+  padding: 20rpx 36rpx;
+  display: flex;
+  background: #F9EDD7;
+  border-bottom: 1rpx solid #E8D9BE;
+}
+
+.doc-tab {
+  flex: 1;
+  height: 64rpx;
+  line-height: 64rpx;
+  margin: 0 8rpx;
+  text-align: center;
+  font-size: 27rpx;
+  color: #9C867F;
+  border-radius: 16rpx;
+  background: #F3E7CE;
+}
+
+.doc-tab.on {
+  background: #FFF8EC;
+  color: #3E5A55;
+  font-weight: 600;
+  border: 1rpx solid #D8C5A4;
+}
+
+.doc-head {
+  padding: 8rpx 4rpx 0;
+}
+
+.doc-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.doc-meta {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #9C867F;
+}
+
+.doc-note {
+  margin-top: 24rpx;
+  padding: 22rpx 24rpx;
+  display: flex;
+  background: #F3E7CE;
+  border-radius: 20rpx;
+}
+
+.doc-note-bar {
+  width: 6rpx;
+  margin-right: 18rpx;
+  border-radius: 6rpx;
+  background: #A9C9C4;
+}
+
+.doc-note-text {
+  flex: 1;
+  font-size: 23rpx;
+  line-height: 1.75;
+  color: #7D655E;
+}
+
+.sec {
+  margin-top: 44rpx;
+}
+
+.sec-title {
+  font-size: 31rpx;
+  font-weight: 600;
+  color: #614A44;
+}
+
+.sec-p {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.85;
+  color: #7D655E;
+}
+
+.doc-foot {
+  margin-top: 56rpx;
+  padding-top: 28rpx;
+  border-top: 1rpx solid #E8D9BE;
+  font-size: 23rpx;
+  line-height: 1.8;
+  text-align: center;
+  color: #9C867F;
+}
+
+.doc-foot-sub {
+  margin-top: 10rpx;
+  font-size: 21rpx;
+  color: #B7A69E;
+}

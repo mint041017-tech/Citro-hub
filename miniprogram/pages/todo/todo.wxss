@@ -1,0 +1,432 @@
+/* 待办列表 · 视觉沿用 draw 页的奶油纸张 + 圆角卡片。
+   底色 #F9EDD7 / 卡片 #FFF8EC / 墨 #614A44 / 薄荷 #A9C9C4。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 24rpx 36rpx 250rpx;
+}
+
+/* ---------------- 今日概览 ---------------- */
+
+.hero {
+  position: relative;
+  padding: 34rpx 36rpx 30rpx;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 36rpx;
+  box-shadow: 0 16rpx 40rpx rgba(97, 74, 68, 0.08);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  top: -70rpx;
+  right: -50rpx;
+  width: 230rpx;
+  height: 230rpx;
+  border-radius: 50%;
+  background: #A9C9C4;
+  opacity: 0.15;
+}
+
+.hero-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.hero-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #614A44;
+}
+
+.hero-date {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: #9C867F;
+}
+
+.hero-stat {
+  text-align: right;
+}
+
+.hero-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+}
+
+.hero-done {
+  font-size: 64rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: #614A44;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-total {
+  margin-left: 4rpx;
+  font-size: 30rpx;
+  color: #9C867F;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-percent {
+  display: inline-block;
+  margin-top: 10rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: #E0EDE5;
+  color: #3E5A4A;
+  font-size: 22rpx;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-bar {
+  position: relative;
+  z-index: 1;
+  height: 16rpx;
+  margin-top: 28rpx;
+  border-radius: 999rpx;
+  background: #F0E3C8;
+  overflow: hidden;
+}
+
+.hero-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #A9C9C4 0%, #8FB8A0 100%);
+  transition: width 0.3s ease;
+}
+
+.hero-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+  font-size: 23rpx;
+}
+
+.hero-left {
+  color: #9C867F;
+}
+
+.overdue-pill {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: #E0EDE5;
+  color: #3E5A4A;
+  font-size: 22rpx;
+}
+
+.overdue-pill.is-hot {
+  background: #F5E3E0;
+  color: #B05A4A;
+  font-weight: 600;
+}
+
+/* ---------------- 筛选 ---------------- */
+
+.filters {
+  width: 100%;
+  height: 94rpx;
+  margin-top: 24rpx;
+  white-space: nowrap;
+}
+
+.filter-row {
+  display: inline-flex;
+  align-items: center;
+  height: 94rpx;
+  padding: 0 2rpx;
+}
+
+.filter-chip {
+  margin-right: 14rpx;
+  padding: 12rpx 28rpx;
+  border-radius: 999rpx;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  color: #7D655E;
+  font-size: 26rpx;
+  font-weight: 500;
+  line-height: 1.3;
+  max-width: 260rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-chip.is-on {
+  background: #A9C9C4;
+  border-color: #A9C9C4;
+  color: #2E4A46;
+  font-weight: 600;
+}
+
+.filter-label {
+  margin: 0 16rpx 0 8rpx;
+  color: #9C867F;
+  font-size: 23rpx;
+  line-height: 1.3;
+}
+
+/* ---------------- 任务卡 ---------------- */
+
+.task-list {
+  margin-top: 6rpx;
+}
+
+.task-card {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18rpx;
+  padding: 26rpx 22rpx 26rpx 20rpx;
+  background: #FFF8EC;
+  border: 1rpx solid #E8D9BE;
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 22rpx rgba(97, 74, 68, 0.05);
+}
+
+.task-card.is-done {
+  opacity: 0.7;
+}
+
+.check-hit {
+  width: 76rpx;
+  height: 76rpx;
+  margin: -14rpx 8rpx -14rpx -14rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-check {
+  width: 44rpx;
+  height: 44rpx;
+  border: 2rpx solid #D8C5A4;
+  border-radius: 50%;
+  background: #FFF8EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.task-check.is-on {
+  background: #A9C9C4;
+  border-color: #A9C9C4;
+}
+
+.check-mark {
+  color: #2E4A46;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2rpx;
+}
+
+.task-top {
+  display: flex;
+  align-items: center;
+}
+
+.cat-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.task-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #614A44;
+  word-break: break-word;
+}
+
+.task-title.is-done {
+  color: #9C867F;
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
+.prio-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-left: 14rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.prio-dot.is-important {
+  background: #E0A03E;
+}
+
+.prio-dot.is-urgent {
+  background: #B05A4A;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.kind-tag {
+  margin-right: 12rpx;
+  margin-bottom: 2rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 21rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.kind-reminder {
+  background: #F6E8D2;
+  color: #8A6A3E;
+}
+
+.kind-task {
+  background: #E0EDE5;
+  color: #3E5A4A;
+}
+
+.kind-habit {
+  background: #DDE8F0;
+  color: #4C6274;
+}
+
+.kind-quick {
+  background: #F0E3C8;
+  color: #7D655E;
+}
+
+.meta-time {
+  margin-right: 12rpx;
+  margin-bottom: 2rpx;
+  color: #7D655E;
+}
+
+.meta-overdue {
+  margin-right: 12rpx;
+  margin-bottom: 2rpx;
+  color: #B05A4A;
+  font-weight: 500;
+}
+
+.meta-sub {
+  margin-right: 12rpx;
+  margin-bottom: 2rpx;
+  color: #9C867F;
+}
+
+.meta-list {
+  margin-left: auto;
+  margin-bottom: 2rpx;
+  padding-left: 12rpx;
+  color: #B7A69E;
+}
+
+.task-del {
+  margin: 2rpx 0 0 10rpx;
+  padding: 12rpx 18rpx;
+  flex-shrink: 0;
+  border-radius: 999rpx;
+  background: #F5E3E0;
+  color: #B05A4A;
+  font-size: 21rpx;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ---------------- 空状态 ---------------- */
+
+.empty {
+  margin-top: 18rpx;
+  padding: 88rpx 40rpx;
+  text-align: center;
+  background: rgba(255, 248, 236, 0.62);
+  border: 1rpx dashed #D8C5A4;
+  border-radius: 30rpx;
+}
+
+.empty-dot {
+  width: 56rpx;
+  height: 56rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 50%;
+  background: #A9C9C4;
+  opacity: 0.35;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #9C867F;
+}
+
+/* ---------------- 底部固定按钮 ---------------- */
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 30rpx 36rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    180deg,
+    rgba(249, 237, 215, 0) 0%,
+    #F9EDD7 34%
+  );
+}
+
+.footer-inner {
+  max-width: 1120rpx;
+  margin: 0 auto;
+}
+
+.new-btn {
+  height: 92rpx;
+  padding: 0;
+  border: none;
+  border-radius: 28rpx;
+  background: #A9C9C4;
+  color: #2E4A46;
+  font-size: 31rpx;
+  font-weight: 600;
+  line-height: 92rpx;
+  box-shadow: 0 18rpx 36rpx rgba(97, 74, 68, 0.18);
+}
+
+.new-btn::after {
+  border: none;
+}
+
+.new-btn-hover {
+  opacity: 0.86;
+  transform: translateY(2rpx);
+}

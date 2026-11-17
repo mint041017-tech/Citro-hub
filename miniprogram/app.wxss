@@ -1,16 +1,268 @@
-/* Citro 配色（light）取自 flutter/lib/theme/tokens.dart */
+/* 全局 token：与 flutter/lib/theme/tokens.dart 的 light 主题一致。
+   尺寸按 750rpx 设计稿换算（1px ≈ 2rpx），页面里优先使用这些变量。 */
+
 page {
-  min-height: 100vh;
-  background: #F9EDD7;
-  background-image: linear-gradient(180deg, #F9EDD7 0%, #F0E3C8 100%);
-  color: #614A44;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+  --bg: #F9EDD7;
+  --bg2: #F0E3C8;
+  --surface: #FFF8EC;
+  --surface2: #F3E7CE;
+  --ink: #614A44;
+  --ink2: #7D655E;
+  --ink-soft: #9C867F;
+  --line: #E8D9BE;
+  --line2: #D8C5A4;
+  --accent: #A9C9C4;
+  --accent-ink: #3E5A55;
+  --on-accent: #2E4A46;
+  --mint: #8FB8A0;
+  --mint-ink: #3E5A4A;
+  --mint-soft: #E0EDE5;
+  --danger: #B05A4A;
+  --danger-soft: #F5E3E0;
+  --shadow-card: 0 12rpx 32rpx rgba(0, 0, 0, 0.078);
+  --shadow-lg: 0 32rpx 64rpx rgba(0, 0, 0, 0.122);
+
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Noto Sans SC",
     "Microsoft YaHei", sans-serif;
-  font-size: 28rpx;
+  font-size: 30rpx;
+  line-height: 1.5;
 }
 
 view,
 text,
-button {
+scroll-view,
+button,
+input,
+textarea {
   box-sizing: border-box;
+}
+
+/* ---------------- 布局 ---------------- */
+
+.page {
+  max-width: 1520rpx;
+  margin: 0 auto;
+  padding: 16rpx 32rpx 200rpx;
+}
+
+.stack > view + view {
+  margin-top: 48rpx;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------- 卡片 ---------------- */
+
+.card {
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: 48rpx;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.card-tight {
+  padding: 24rpx;
+}
+
+.card-flat {
+  background: var(--surface);
+  border-radius: 48rpx;
+  overflow: hidden;
+}
+
+/* ---------------- 标题 ---------------- */
+
+.page-title {
+  font-size: 80rpx;
+  font-weight: 700;
+  line-height: 1.12;
+  color: var(--ink);
+}
+
+.page-sub {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-bar {
+  width: 8rpx;
+  height: 32rpx;
+  margin-right: 16rpx;
+  border-radius: 8rpx;
+  background: var(--accent);
+}
+
+.section-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.section-sub {
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.danger {
+  color: var(--danger);
+}
+
+/* ---------------- 控件 ---------------- */
+
+.btn {
+  height: 88rpx;
+  padding: 0 32rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  color: var(--ink);
+  border: none;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-ink {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.btn-ghost {
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  color: var(--ink2);
+}
+
+.btn[disabled],
+.btn.disabled {
+  background: var(--surface2);
+  color: var(--ink-soft);
+  opacity: 1;
+}
+
+.btn-hover {
+  opacity: 0.86;
+}
+
+.chip {
+  padding: 8rpx 20rpx;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  color: var(--ink2);
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.chip-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.status-chip {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+  font-size: 22rpx;
+}
+
+.divider {
+  height: 2rpx;
+  background: var(--line);
+}
+
+/* ---------------- 状态 ---------------- */
+
+.state {
+  padding: 48rpx 24rpx;
+  text-align: center;
+}
+
+.state-icon {
+  font-size: 56rpx;
+}
+
+.state-text {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 进度 ---------------- */
+
+.progress {
+  height: 14rpx;
+  background: var(--surface2);
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999rpx;
+}
+
+/* ---------------- 表单 ---------------- */
+
+.field {
+  height: 96rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 2rpx solid var(--line2);
+  border-radius: 24rpx;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 96rpx;
+  font-size: 30rpx;
+  color: var(--ink);
+}
+
+.placeholder {
+  color: #B7A69E;
 }

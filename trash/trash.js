@@ -2505,6 +2505,71 @@ async function runAstro(mode, payload) {
   }
 }
 
+/* ---------------- 天气代理 ---------------- */
+/* 小程序不能把海外域名 api.open-meteo.com 加入 request 合法域名，
+   统一由本站代理。只读、60 秒短缓存、按 IP 限流，不落日志。 */
+const weatherCache = {};
+function httpsGetJson(hostname, pathWithQuery, timeoutMs) {
+  return new Promise(function (resolve, reject) {
+    let settled = false;
+    const fail = function (e) {
+      if (settled) return;
+      settled = true;
+      reject(e);
+    };
+    const req = https.request(
+      {
+        hostname: hostname,
+        path: pathWithQuery,
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'CitroWeatherProxy/1.0',
+        },
+      },
+      function (r) {
+        let raw = '',
+          size = 0;
+        r.on('data', function (c) {
+          size += c.length;
+          if (size > 2 * 1024 * 1024) {
+            req.destroy();
+            fail(new Error('response too large'));
+            return;
+          }
+          raw += c;
+        });
+        r.on('end', function () {
+          if (settled) return;
+          if (r.statusCode !== 200) return fail(new Error('upstream ' + r.statusCode));
+          try {
+            settled = true;
+            resolve(JSON.parse(raw));
+          } catch (e) {
+            fail(new Error('bad json'));
+          }
+        });
+      }
+    );
+    req.setTimeout(timeoutMs || 12000, function () {
+      req.destroy();
+      fail(new Error('timeout'));
+    });
+    req.on('error', fail);
+    req.end();
+  });
+}
+function weatherCacheGet(key) {
+  const hit = weatherCache[key];
+  if (hit && Date.now() - hit.at < 60000) return hit.data;
+  return null;
+}
+function weatherCacheSet(key, data) {
+  weatherCache[key] = { at: Date.now(), data: data };
+  const keys = Object.keys(weatherCache);
+  if (keys.length > 200) delete weatherCache[keys[0]];
+}
+
 /* ---------------- 路由 ---------------- */
 const server = http.createServer(async function (req, res) {
   try {
@@ -2514,10 +2579,11 @@ const server = http.createServer(async function (req, res) {
     return;
   }
   const url = req.url.split('?')[0].replace(/^\/trashapi/, '');
+  const query = new URL(req.url, 'http://localhost').searchParams;
   const ip = clientIp(req);
   const me = currentUser(req);
-  const body = function () {
-    return readBody(req).then(function (raw) {
+  const body = function (max) {
+    return readBody(req, max).then(function (raw) {
       if (raw == null) return null;
       try {
         return JSON.parse(raw);
@@ -2526,6 +2592,63 @@ const server = http.createServer(async function (req, res) {
       }
     });
   };
+
+  /* ===== 天气代理：小程序只请求本站备案域名 ===== */
+  if (req.method === 'GET' && url === '/api/weather') {
+    if (limited(ip, 'weather', 30, 60000)) {
+      return json(res, 429, { err: '查询太频繁' });
+    }
+    const lat = Number(query.get('lat'));
+    const lon = Number(query.get('lon'));
+    if (
+      !isFinite(lat) ||
+      !isFinite(lon) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lon) > 180
+    ) {
+      return json(res, 400, { err: '坐标无效' });
+    }
+    const cacheKey = lat.toFixed(3) + ',' + lon.toFixed(3);
+    const cached = weatherCacheGet(cacheKey);
+    if (cached) return json(res, 200, cached);
+    const wxPath =
+      '/v1/forecast?latitude=' +
+      lat.toFixed(4) +
+      '&longitude=' +
+      lon.toFixed(4) +
+      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
+      '&hourly=temperature_2m,weather_code,precipitation_probability' +
+      '&timezone=Asia%2FShanghai&forecast_days=7&forecast_hours=24';
+    try {
+      const data = await httpsGetJson('api.open-meteo.com', wxPath, 12000);
+      weatherCacheSet(cacheKey, data);
+      return json(res, 200, data);
+    } catch (e) {
+      return json(res, 502, { err: '天气服务暂不可用' });
+    }
+  }
+  if (req.method === 'GET' && url === '/api/weather/geocode') {
+    if (limited(ip, 'weather', 30, 60000)) {
+      return json(res, 429, { err: '查询太频繁' });
+    }
+    const q = String(query.get('q') || '').trim();
+    if (!q || q.length > 40) return json(res, 400, { err: '城市名无效' });
+    const geoPath =
+      '/v1/search?name=' +
+      encodeURIComponent(q) +
+      '&count=8&language=zh&format=json';
+    try {
+      const data = await httpsGetJson(
+        'geocoding-api.open-meteo.com',
+        geoPath,
+        10000
+      );
+      return json(res, 200, data);
+    } catch (e) {
+      return json(res, 502, { err: '城市查询暂不可用' });
+    }
+  }
 
   /* ===== Web AI：GLM-5.3-Flash 轻度思考代理（密钥仅在服务端） ===== */
   if (req.method === 'POST' && url === '/api/asr') {
@@ -3513,10 +3636,11 @@ const server = http.createServer(async function (req, res) {
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 300);
-    if (['post', 'comment', 'user'].indexOf(type) === -1) return json(res, 400, { err: '举报类型不正确' });
+    if (['post', 'comment', 'recipe', 'user'].indexOf(type) === -1) return json(res, 400, { err: '举报类型不正确' });
     if (REPORT_REASONS.indexOf(reason) === -1) return json(res, 400, { err: '请选择举报原因' });
     const postId = String((b && b.postId) || '').trim();
     const commentId = String((b && b.commentId) || '').trim();
+    const recipeId = String((b && b.recipeId) || '').trim().slice(0, 40);
     const suppliedNick = String((b && b.targetNick) || '')
       .trim()
       .slice(0, 40);
@@ -3545,6 +3669,17 @@ const server = http.createServer(async function (req, res) {
         targetNick = c.anon ? c.nick : c.uid;
         targetText = String(c.text || '').slice(0, 200);
       }
+    } else if (type === 'recipe') {
+      const rec = cookRecipes.find(function (x) {
+        return x.id === recipeId;
+      });
+      if (!rec || rec.visibility !== 'public') {
+        return json(res, 404, { err: '食谱不存在或已取消公开' });
+      }
+      if (rec.uid === me.name) return json(res, 400, { err: '不能举报自己的食谱' });
+      targetUid = rec.uid;
+      targetNick = rec.uid;
+      targetText = String((rec.name || '') + ' ' + (rec.note || '')).slice(0, 200);
     } else {
       if (!suppliedNick) return json(res, 400, { err: '缺少被举报用户' });
       if (suppliedNick === me.name) return json(res, 400, { err: '不能举报自己' });
@@ -3559,6 +3694,7 @@ const server = http.createServer(async function (req, res) {
         r.type === type &&
         r.postId === (postId || null) &&
         r.commentId === (commentId || null) &&
+        r.recipeId === (recipeId || null) &&
         r.targetNick === targetNick &&
         Date.now() - r.ts < 10 * 60000
       );
@@ -3571,6 +3707,7 @@ const server = http.createServer(async function (req, res) {
       detail: detail,
       postId: postId || null,
       commentId: commentId || null,
+      recipeId: recipeId || null,
       targetUid: targetUid,
       targetNick: targetNick,
       targetText: targetText,
@@ -4244,7 +4381,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'home-layout', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body()) || {};
+      const b = (await body(64 * 1024)) || {};
       const layout = b.layout;
       if (!layout || typeof layout !== 'object') {
         return json(res, 400, { err: '布局数据无效' });
@@ -4277,7 +4414,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'todo', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body()) || {};
+      const b = (await body(260 * 1024)) || {};
       const todo = b.todo;
       if (!todo || typeof todo !== 'object') {
         return json(res, 400, { err: '待办数据无效' });
@@ -4313,7 +4450,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'calendar', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body()) || {};
+      const b = (await body(260 * 1024)) || {};
       const calendar = b.calendar;
       if (!calendar || typeof calendar !== 'object') {
         return json(res, 400, { err: '日历数据无效' });
@@ -4346,7 +4483,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'ledger', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body()) || {};
+      const b = (await body(1100 * 1024)) || {};
       const ledger = b.ledger;
       if (!ledger || typeof ledger !== 'object') {
         return json(res, 400, { err: '账本数据无效' });

@@ -1,4 +1,7 @@
 {
-  "navigationBarTitleText": "玩法抽签",
-  "enablePullDownRefresh": true
+  "navigationBarTitleText": "玩法",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "login-gate": "/components/login-gate/login-gate"
+  }
 }

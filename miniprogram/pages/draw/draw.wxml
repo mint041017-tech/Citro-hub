@@ -1,10 +1,9 @@
 <view class="page">
   <view class="header">
-    <view class="title">无畏契约 · 玩法抽签</view>
-    <view class="subtitle">不知道这局怎么玩？抽一个，整活正式开始。</view>
-    <view class="me-line" wx:if="{{user && !authGate}}">
+    <view class="title">随机玩法</view>
+    <view class="subtitle">这一局怎么玩，交给随机。</view>
+    <view class="me-line" wx:if="{{user}}">
       <text class="me-name">{{user.name}}</text>
-      <text class="me-edit" bindtap="onLogout">退出</text>
     </view>
   </view>
 
@@ -14,7 +13,7 @@
 
   <view class="actions">
     <button class="btn primary" hover-class="btn-hover" bindtap="onDraw">
-      {{rolling ? '停止抽取' : '开始抽取'}}
+      {{rolling ? '停止抽取' : '随机抽取'}}
     </button>
     <button class="btn ghost" hover-class="btn-hover" bindtap="onRefresh">
       刷新
@@ -26,7 +25,7 @@
 
   <view class="card panel">
     <view class="panel-head">
-      <text class="panel-title">大家的抽签</text>
+      <text class="panel-title">大家的抽取</text>
       <view class="spinner" wx:if="{{loading}}"></view>
       <view class="link" wx:else bindtap="onRefresh">刷新</view>
     </view>
@@ -39,7 +38,7 @@
       <view class="hint-sub">暂时连不上云端，稍后再试</view>
     </view>
     <view class="hint" wx:elif="{{viewState === 'empty'}}">
-      还没有人抽，做第一个
+      还没有人抽取，做第一个
     </view>
     <view wx:else>
       <view class="record" wx:for="{{records}}" wx:key="key">
@@ -55,100 +54,20 @@
     </view>
   </view>
 
-  <view class="footer">玩法仅供参考，快乐第一。</view>
+  <view class="footer">玩法仅供娱乐，开心第一。</view>
+<view class="footer-sub">记录只展示昵称与抽取结果；如发现不当内容，可在「我的」找到联系方式反馈。</view>
 
-  <!-- 登录门禁：首次进入必须先登录，与 App 共用同一套账号。 -->
-  <scroll-view class="auth-gate" scroll-y wx:if="{{authGate}}">
-    <view class="auth-wrap">
-      <view class="card auth-card">
-        <view class="auth-title">
-          {{authMode === 'login' ? '登录 Citro' : '注册 Citro 账号'}}
-        </view>
-        <view class="auth-desc">与 App 共用同一套账号，登录后抽签记录跟账号走。</view>
+  <view class="legal-links">
+    <text class="legal-link" data-type="terms" bindtap="onOpenDoc">用户服务协议</text>
+    <text class="legal-sep">·</text>
+    <text class="legal-link" data-type="privacy" bindtap="onOpenDoc">隐私政策</text>
+  </view>
 
-        <view class="auth-tabs">
-          <view
-            class="auth-tab {{authMode === 'login' ? 'on' : ''}}"
-            data-mode="login"
-            bindtap="onAuthMode"
-          >
-            登录
-          </view>
-          <view
-            class="auth-tab {{authMode === 'register' ? 'on' : ''}}"
-            data-mode="register"
-            bindtap="onAuthMode"
-          >
-            注册
-          </view>
-        </view>
-
-        <view class="auth-field">
-          <input
-            class="auth-input"
-            type="text"
-            value="{{authAccount}}"
-            placeholder="手机号或邮箱"
-            placeholder-class="auth-placeholder"
-            bindinput="onAuthInput"
-            data-field="account"
-          />
-        </view>
-
-        <view class="auth-field" wx:if="{{authMode === 'register'}}">
-          <input
-            class="auth-input"
-            type="text"
-            maxlength="16"
-            value="{{authName}}"
-            placeholder="昵称（2–16 位中英文/数字/下划线）"
-            placeholder-class="auth-placeholder"
-            bindinput="onAuthInput"
-            data-field="name"
-          />
-        </view>
-
-        <view class="auth-field">
-          <input
-            class="auth-input"
-            password="{{true}}"
-            maxlength="32"
-            value="{{authPassword}}"
-            placeholder="{{authMode === 'register' ? '密码（6–32 位）' : '密码'}}"
-            placeholder-class="auth-placeholder"
-            bindinput="onAuthInput"
-            data-field="password"
-          />
-        </view>
-
-        <view class="auth-field" wx:if="{{authMode === 'register'}}">
-          <input
-            class="auth-input"
-            password="{{true}}"
-            maxlength="32"
-            value="{{authConfirm}}"
-            placeholder="再输一次密码"
-            placeholder-class="auth-placeholder"
-            confirm-type="done"
-            bindinput="onAuthInput"
-            data-field="confirm"
-            bindconfirm="onAuthSubmit"
-          />
-        </view>
-
-        <view class="auth-error" wx:if="{{authError}}">{{authError}}</view>
-
-        <button
-          class="btn primary auth-submit"
-          hover-class="btn-hover"
-          bindtap="onAuthSubmit"
-          disabled="{{authBusy}}"
-        >
-          {{authBusy ? '请稍候…' : (authMode === 'login' ? '登录' : '注册并登录')}}
-        </button>
-
-        <view class="auth-foot">首次使用请先注册；已有账号可直接登录。</view>
-      </view>
-    </view>
-  </scroll-view>
+  <!-- 全页门禁：协议同意 + 登录，四个 tab 共用。 -->
+  <login-gate
+    id="gate"
+    bind:ready="onGateReady"
+    bind:expired="onGateExpired"
+    bind:user="onGateUser"
+  />
 </view>

@@ -1,0 +1,356 @@
+/* 听隅：纸面声景列表 + 深墨色底部播放条，进度用薄荷色。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 20rpx 32rpx 360rpx;
+}
+
+/* ---------------- 顶部 ---------------- */
+
+.hero {
+  padding: 24rpx 8rpx 4rpx;
+}
+
+.hero-title {
+  font-size: 46rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.hero-sub {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.cat-scroll {
+  margin-top: 22rpx;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.cat-row {
+  display: inline-flex;
+  align-items: center;
+  padding: 2rpx 0 6rpx;
+}
+
+.cat-chip {
+  margin-right: 14rpx;
+  flex: none;
+  padding: 10rpx 24rpx;
+  font-size: 24rpx;
+}
+
+
+/* ---------------- 睡眠定时 ---------------- */
+
+.timer-card {
+  margin-top: 20rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 34rpx;
+}
+
+.timer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timer-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.timer-state {
+  font-size: 22rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-chips {
+  margin-top: 10rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.timer-chip {
+  margin-top: 12rpx;
+  margin-right: 14rpx;
+  padding: 8rpx 22rpx;
+}
+
+.timer-cancel {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ---------------- 分组列表 ---------------- */
+
+.group {
+  margin-top: 26rpx;
+  padding: 24rpx 28rpx 8rpx;
+  background: var(--surface);
+  border-radius: 38rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  padding-bottom: 6rpx;
+}
+
+.group-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-right: 12rpx;
+  border-radius: 50%;
+}
+
+.group-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.group-count {
+  margin-left: 12rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.sound-list {
+  margin-top: 4rpx;
+}
+
+.sound {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 8rpx;
+  border-radius: 24rpx;
+}
+
+.sound + .sound {
+  border-top: 2rpx solid var(--line);
+}
+
+.sound.on {
+  margin: 4rpx -8rpx;
+  padding: 18rpx 16rpx;
+  background: var(--mint-soft);
+  border-top-color: transparent;
+  border-radius: 24rpx;
+}
+
+.sound-tile {
+  width: 72rpx;
+  height: 72rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.sound-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: 18rpx;
+}
+
+.sound-name {
+  font-size: 29rpx;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sound.on .sound-name {
+  color: var(--mint-ink);
+}
+
+.sound-desc {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sound-state {
+  width: 64rpx;
+  height: 56rpx;
+  flex: none;
+  margin-left: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  color: var(--ink-soft);
+  font-size: 22rpx;
+}
+
+.sound-state.on {
+  width: 92rpx;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* ---------------- 提示 ---------------- */
+
+.hint-card {
+  margin-top: 26rpx;
+  padding: 22rpx 26rpx;
+  background: rgba(169, 201, 196, 0.18);
+  border-radius: 28rpx;
+  font-size: 23rpx;
+  line-height: 1.65;
+  color: var(--accent-ink);
+}
+
+.footer {
+  margin-top: 32rpx;
+  font-size: 22rpx;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 底部播放条 ---------------- */
+
+.player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 24rpx 30rpx 22rpx;
+  padding-bottom: calc(22rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(22rpx + env(safe-area-inset-bottom));
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 36rpx 36rpx 0 0;
+  box-shadow: 0 -16rpx 44rpx rgba(97, 74, 68, 0.28);
+}
+
+.player-head {
+  display: flex;
+  align-items: center;
+}
+
+.player-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 18rpx;
+}
+
+.player-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--bg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-sub {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: rgba(249, 237, 215, 0.66);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-btn {
+  width: 88rpx;
+  height: 88rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.player-btn.disabled {
+  background: rgba(249, 237, 215, 0.14);
+  color: rgba(249, 237, 215, 0.42);
+}
+
+.progress-row {
+  margin-top: 18rpx;
+  display: flex;
+  align-items: center;
+}
+
+.time {
+  width: 88rpx;
+  flex: none;
+  font-size: 20rpx;
+  color: rgba(249, 237, 215, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.time-right {
+  text-align: right;
+}
+
+.progress {
+  flex: 1;
+  height: 10rpx;
+  margin: 0 14rpx;
+  background: rgba(249, 237, 215, 0.18);
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999rpx;
+  transition: width 0.25s linear;
+}
+
+.volume-row {
+  margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+}
+
+.vol-label {
+  width: 56rpx;
+  flex: none;
+  font-size: 20rpx;
+  color: rgba(249, 237, 215, 0.6);
+}
+
+.vol-slider {
+  flex: 1;
+  margin: 0 8rpx;
+}
+
+.vol-value {
+  width: 70rpx;
+  flex: none;
+  text-align: right;
+  font-size: 20rpx;
+  color: rgba(249, 237, 215, 0.6);
+  font-variant-numeric: tabular-nums;
+}

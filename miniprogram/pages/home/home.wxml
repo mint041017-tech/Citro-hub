@@ -1,0 +1,221 @@
+<login-gate
+  id="gate"
+  bind:ready="onGateReady"
+  bind:expired="onGateExpired"
+  bind:user="onGateUser"
+/>
+
+<!-- 1. 自定义顶栏：透明叠在 hero 上，右侧避让微信胶囊 -->
+<view class="topbar" style="{{topbarStyle}}">
+  <view class="topbar-row" style="{{topbarRowStyle}}">
+    <text class="brand">Citro</text>
+    <view class="user-dot" hover-class="user-dot-hover" bindtap="onUserTap">
+      {{userInitial}}
+    </view>
+  </view>
+</view>
+
+<!-- 2. Hero：按时段选背景，双击切换下一时段 -->
+<view class="{{heroClass}}" style="{{heroStyle}}" bindtap="onHeroTap">
+  <image
+    wx:if="{{!heroImageFailed}}"
+    class="hero-img"
+    src="{{heroSrc}}"
+    mode="aspectFill"
+    binderror="onHeroImageError"
+  />
+  <view class="hero-scrim"></view>
+  <view class="hero-body">
+    <view class="hero-greet">{{greeting}}</view>
+    <view class="hero-date">{{todayText}}</view>
+    <view class="hero-copy">{{heroSub}}</view>
+  </view>
+</view>
+
+<view class="panel">
+  <!-- 3. 今日卡面 -->
+  <view class="c-card c-card-first">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">今日卡面</text>
+      <text class="c-note">{{cardsHint}}</text>
+    </view>
+
+    <view class="flip" bindtap="onFlipCard">
+      <view class="{{flipClass}}">
+        <view class="face face-back">
+          <view class="back-ring">Ci</view>
+          <view class="back-word">CITRO</view>
+        </view>
+        <view class="face face-front">
+          <image
+            wx:if="{{todayCardImage}}"
+            class="card-face-img"
+            src="{{todayCardImage}}"
+            mode="aspectFill"
+            binderror="onCardImageError"
+          />
+        </view>
+      </view>
+    </view>
+
+    <view class="today-line">{{cardsLine}}</view>
+    <view class="today-actions">
+      <button
+        class="mini-btn"
+        hover-class="mini-btn-hover"
+        catchtap="onOpenCards"
+      >
+        去卡面馆
+      </button>
+    </view>
+  </view>
+
+  <!-- 4. 今日打卡 -->
+  <view class="c-card">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">今日打卡</text>
+      <text class="{{checkinChipClass}} c-head-chip">{{checkinStatusText}}</text>
+    </view>
+    <view class="checkin-body">
+      <view class="streak">
+        <text class="streak-num">{{checkinStreakText}}</text>
+        <text class="streak-unit">{{checkinStreakUnit}}</text>
+      </view>
+      <view class="checkin-right">
+        <text class="checkin-sub">{{checkinSub}}</text>
+        <button
+          class="mini-btn"
+          hover-class="mini-btn-hover"
+          disabled="{{checkinButtonDisabled}}"
+          bindtap="onCheckin"
+        >
+          {{checkinButtonText}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 5. 摸鱼日历 -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenFish">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">摸鱼日历</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view class="card-main">{{fishMain}}</view>
+    <view class="card-sub">{{fishSub}}</view>
+    <view class="card-meta" wx:if="{{fishShowChip}}">
+      <text class="chip">{{fishRestText}}</text>
+    </view>
+  </view>
+
+  <!-- 6. 天气 -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenWeather">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">天气</text>
+      <text class="c-note" wx:if="{{weatherCity}}">{{weatherCity}}</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view class="weather-body" wx:if="{{weatherShowTemp}}">
+      <text class="weather-temp">{{weatherTempText}}</text>
+      <view class="weather-side">
+        <text class="weather-desc">{{weatherDesc}}</text>
+        <text class="weather-detail">{{weatherDetail}}</text>
+      </view>
+    </view>
+    <view wx:else>
+      <view class="card-main">{{weatherDesc}}</view>
+      <view class="card-sub">{{weatherDetail}}</view>
+    </view>
+  </view>
+
+  <!-- 7. 心情 -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenMood">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">心情</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view wx:if="{{moodHas}}">
+      <view class="mood-body">
+        <view class="mood-dot" style="{{moodDotStyle}}"></view>
+        <text class="mood-label">{{moodLabel}}</text>
+        <text class="mood-time">{{moodTime}}</text>
+      </view>
+      <view class="mood-note" wx:if="{{moodNote}}">{{moodNote}}</view>
+    </view>
+    <view wx:else>
+      <view class="card-main">记录今天的心情</view>
+      <view class="card-sub">给自己留一句话</view>
+    </view>
+  </view>
+
+  <!-- 8. 听隅：首页只做静态展示，不播放 -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenTingyu">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">听隅</text>
+      <text class="c-note">三段声音</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view class="sound-row" wx:for="{{tingyuSounds}}" wx:key="name">
+      <text class="sound-index">{{item.no}}</text>
+      <text class="sound-name">{{item.name}}</text>
+      <text class="sound-tag">{{item.tag}}</text>
+    </view>
+  </view>
+
+  <!-- 9. 食谱日记 -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenCook">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">食谱日记</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view class="cook-body">
+      <view class="cook-tile">食</view>
+      <view class="cook-text">
+        <view class="cook-title">{{cookTitleText}}</view>
+        <view class="cook-sub">{{cookSub}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 10. 卡面收藏（复用今日卡面的已收集数据） -->
+  <view class="c-card" hover-class="card-hover" bindtap="onOpenCards">
+    <view class="c-head">
+      <view class="c-dot"></view>
+      <text class="c-title">卡面收藏</text>
+      <text class="c-arrow">›</text>
+    </view>
+    <view class="collect-line">{{collectionLine}}</view>
+    <view class="progress collect-progress">
+      <view class="progress-bar" style="width:{{ownedPercent}}"></view>
+    </view>
+    <view class="collect-hint">抽取后就会点亮</view>
+  </view>
+
+  <!-- 11. 每日一言 -->
+  <view class="c-card quote-card">
+    <text class="quote-label">每日一言</text>
+    <text class="quote-text">{{quoteText}}</text>
+    <text class="quote-from">{{quoteFrom}}</text>
+  </view>
+
+  <!-- 12. 页脚 -->
+  <view class="footer">
+    <text class="footer-brand">Citro · 把日子过轻一点</text>
+    <view class="footer-links">
+      <text class="footer-link" data-type="terms" bindtap="onOpenDoc">
+        《用户服务协议》
+      </text>
+      <text class="footer-sep">·</text>
+      <text class="footer-link" data-type="privacy" bindtap="onOpenDoc">
+        《隐私政策》
+      </text>
+    </view>
+  </view>
+</view>

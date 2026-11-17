@@ -1,0 +1,135 @@
+<!-- 协议同意门禁 -->
+<view class="gate" wx:if="{{stage === 'consent'}}">
+  <view class="gate-wrap">
+    <view class="gate-card consent-card">
+      <view class="gate-title">使用前请阅读并同意</view>
+      <view class="gate-desc">
+        为了向你提供首页、计划、玩法与账号服务，我们需要处理你的账号信息。请阅读以下条款，确认后继续。
+      </view>
+
+      <view class="doc-links">
+        <text class="doc-link" data-type="terms" bindtap="onOpenDoc">
+          《用户服务协议》
+        </text>
+        <text class="doc-link" data-type="privacy" bindtap="onOpenDoc">
+          《隐私政策》
+        </text>
+      </view>
+
+      <view class="consent-check" bindtap="onToggleAgree">
+        <view class="consent-box {{agreeChecked ? 'on' : ''}}">
+          <text wx:if="{{agreeChecked}}">✓</text>
+        </view>
+        <view class="consent-text">
+          我已阅读并同意《用户服务协议》和《隐私政策》
+        </view>
+      </view>
+
+      <button
+        class="gate-btn primary"
+        hover-class="gate-btn-hover"
+        disabled="{{!agreeChecked}}"
+        bindtap="onAcceptAgree"
+      >
+        同意并继续
+      </button>
+      <view class="gate-hint">不同意将无法使用本小程序</view>
+    </view>
+  </view>
+</view>
+
+<!-- 登录 / 注册门禁 -->
+<view class="gate" wx:if="{{stage === 'auth'}}">
+  <scroll-view class="gate-scroll" scroll-y>
+    <view class="gate-wrap">
+      <view class="gate-card auth-card">
+        <view class="gate-title">
+          {{mode === 'login' ? '登录 Citro' : '注册 Citro 账号'}}
+        </view>
+        <view class="gate-desc">与 App 共用同一套账号，登录后数据跟账号走。</view>
+
+        <view class="auth-tabs">
+          <view
+            class="auth-tab {{mode === 'login' ? 'on' : ''}}"
+            data-mode="login"
+            bindtap="onMode"
+          >
+            登录
+          </view>
+          <view
+            class="auth-tab {{mode === 'register' ? 'on' : ''}}"
+            data-mode="register"
+            bindtap="onMode"
+          >
+            注册
+          </view>
+        </view>
+
+        <view class="gate-field">
+          <input
+            class="gate-input"
+            type="text"
+            value="{{account}}"
+            placeholder="手机号或邮箱"
+            placeholder-class="gate-placeholder"
+            bindinput="onInput"
+            data-field="account"
+          />
+        </view>
+
+        <view class="gate-field" wx:if="{{mode === 'register'}}">
+          <input
+            class="gate-input"
+            type="text"
+            maxlength="16"
+            value="{{name}}"
+            placeholder="昵称（2–16 位中英文/数字/下划线）"
+            placeholder-class="gate-placeholder"
+            bindinput="onInput"
+            data-field="name"
+          />
+        </view>
+
+        <view class="gate-field">
+          <input
+            class="gate-input"
+            password="{{true}}"
+            maxlength="32"
+            value="{{password}}"
+            placeholder="{{mode === 'register' ? '密码（6–32 位）' : '密码'}}"
+            placeholder-class="gate-placeholder"
+            bindinput="onInput"
+            data-field="password"
+          />
+        </view>
+
+        <view class="gate-field" wx:if="{{mode === 'register'}}">
+          <input
+            class="gate-input"
+            password="{{true}}"
+            maxlength="32"
+            value="{{confirm}}"
+            placeholder="再输一次密码"
+            placeholder-class="gate-placeholder"
+            data-field="confirm"
+            bindinput="onInput"
+            bindconfirm="onSubmit"
+          />
+        </view>
+
+        <view class="gate-error" wx:if="{{error}}">{{error}}</view>
+
+        <button
+          class="gate-btn primary"
+          hover-class="gate-btn-hover"
+          disabled="{{busy}}"
+          bindtap="onSubmit"
+        >
+          {{busy ? '请稍候…' : (mode === 'login' ? '登录' : '注册并登录')}}
+        </button>
+
+        <view class="gate-foot">首次使用请先注册；已有账号可直接登录。</view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

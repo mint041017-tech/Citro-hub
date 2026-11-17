@@ -1,0 +1,391 @@
+/* 任务编辑页：奶油底 + 墨色文字 + 薄荷/青绿点缀，圆角控制在 24–36rpx。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 16rpx 32rpx 280rpx;
+}
+
+.header {
+  padding: 24rpx 8rpx 8rpx;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.subtitle {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 面板 ---------------- */
+
+.panel {
+  margin-top: 24rpx;
+  padding: 28rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 32rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+/* ---------------- 标题与备注 ---------------- */
+
+.field {
+  height: 96rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 2rpx solid var(--line2);
+  border-radius: 24rpx;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 96rpx;
+  font-size: 30rpx;
+  color: var(--ink);
+}
+
+.title-input {
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.note-field {
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  display: flex;
+  align-items: flex-start;
+  background: var(--surface2);
+  border: 2rpx solid var(--line2);
+  border-radius: 24rpx;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 96rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.placeholder {
+  color: #B7A69E;
+}
+
+/* ---------------- 类型 ---------------- */
+
+.kind-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.kind {
+  width: calc(50% - 8rpx);
+  margin-bottom: 16rpx;
+  padding: 18rpx 24rpx;
+  background: var(--surface2);
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+}
+
+.kind-on {
+  background: var(--mint-soft);
+  border-color: var(--mint);
+}
+
+.kind-label {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.kind-on .kind-label {
+  color: var(--mint-ink);
+}
+
+.kind-desc {
+  margin-top: 2rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.kind-on .kind-desc {
+  color: var(--mint-ink);
+}
+
+/* ---------------- 表单行 ---------------- */
+
+.form-row {
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+}
+
+.line-top {
+  border-top: 2rpx solid var(--line);
+}
+
+.form-label {
+  width: 168rpx;
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: var(--ink2);
+}
+
+.form-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.picker-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 28rpx;
+  color: var(--ink);
+  text-align: right;
+}
+
+.chev {
+  margin-left: 10rpx;
+  color: var(--ink-soft);
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.form-row-chips {
+  align-items: flex-start;
+  padding: 22rpx 0;
+}
+
+/* ---------------- 多选项 ---------------- */
+
+.field-block {
+  padding: 24rpx 0 8rpx;
+}
+
+.field-label {
+  margin-bottom: 14rpx;
+  font-size: 28rpx;
+  color: var(--ink2);
+}
+
+.field-hint {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--ink-soft);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.choices-end {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.choice {
+  margin: 0 12rpx 12rpx 0;
+  padding: 12rpx 24rpx;
+  background: var(--surface2);
+  border: 2rpx solid transparent;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--ink2);
+}
+
+.choices-end .choice {
+  margin: 0 0 0 12rpx;
+}
+
+.choice-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.day {
+  width: 72rpx;
+  height: 72rpx;
+  margin: 0 16rpx 14rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  border: 2rpx solid transparent;
+  border-radius: 50%;
+  font-size: 28rpx;
+  color: var(--ink2);
+}
+
+.day-on {
+  background: var(--mint-soft);
+  border-color: var(--mint);
+  color: var(--mint-ink);
+  font-weight: 700;
+}
+
+/* ---------------- 子任务 ---------------- */
+
+.subtask {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.subtask + .subtask {
+  border-top: 2rpx solid var(--line);
+}
+
+.sub-check {
+  width: 40rpx;
+  height: 40rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  border: 2rpx solid var(--line2);
+  border-radius: 12rpx;
+  color: #FFF8EC;
+}
+
+.sub-check-on {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+.sub-tick {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.sub-title {
+  flex: 1;
+  min-width: 0;
+  margin-left: 18rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.sub-title-done {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.sub-del {
+  padding: 8rpx 0 8rpx 20rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.sub-empty {
+  padding: 20rpx 0 28rpx;
+  font-size: 24rpx;
+  color: var(--ink-soft);
+}
+
+.sub-add {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.sub-add-field {
+  flex: 1;
+  min-width: 0;
+  height: 80rpx;
+  padding: 0 20rpx;
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border-radius: 24rpx;
+}
+
+.sub-input {
+  flex: 1;
+  min-width: 0;
+  height: 80rpx;
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.add-btn {
+  width: 140rpx;
+  height: 80rpx;
+  margin-left: 12rpx;
+  padding: 0;
+  border-radius: 24rpx;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+/* ---------------- 底部操作 ---------------- */
+
+.footer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 16rpx 32rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 2rpx solid var(--line);
+}
+
+.footer-inner {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  display: flex;
+}
+
+.delete-btn {
+  width: 200rpx;
+  height: 92rpx;
+  margin-right: 16rpx;
+  padding: 0;
+  border-radius: 28rpx;
+  background: var(--surface);
+  border-color: var(--line2);
+  color: var(--danger);
+  font-size: 28rpx;
+}
+
+.save-btn {
+  flex: 1;
+  height: 92rpx;
+  border-radius: 28rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}

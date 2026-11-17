@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "日历",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#F9EDD7",
+  "backgroundTextStyle": "dark"
+}

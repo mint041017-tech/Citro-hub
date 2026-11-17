@@ -1,0 +1,86 @@
+<view class="page">
+  <!-- 今日概览 -->
+  <view class="hero">
+    <view class="hero-top">
+      <view class="hero-copy">
+        <view class="hero-title">今日进度</view>
+        <view class="hero-date">{{dateText}}</view>
+      </view>
+      <view class="hero-stat">
+        <view class="hero-count">
+          <text class="hero-done">{{overview.done}}</text>
+          <text class="hero-total">/{{overview.total}}</text>
+        </view>
+        <view class="hero-percent">{{overview.percent}}%</view>
+      </view>
+    </view>
+    <view class="hero-bar">
+      <view class="hero-fill" style="{{overview.progressStyle}}"></view>
+    </view>
+    <view class="hero-foot">
+      <text class="hero-left">还剩 {{overview.left}} 件</text>
+      <text class="{{overview.overdueClass}}">{{overview.overdueText}}</text>
+    </view>
+  </view>
+
+  <!-- 筛选：今天 / 全部 / 逾期 / 清单 -->
+  <scroll-view class="filters" scroll-x="true" show-scrollbar="{{false}}">
+    <view class="filter-row">
+      <view
+        wx:for="{{chips}}"
+        wx:key="key"
+        class="{{item.cls}}"
+        data-key="{{item.key}}"
+        bindtap="onFilterTap"
+      >{{item.text}}</view>
+    </view>
+  </scroll-view>
+
+  <!-- 任务列表 -->
+  <view class="task-list" wx:if="{{tasks.length > 0}}">
+    <view
+      wx:for="{{tasks}}"
+      wx:key="id"
+      class="{{item.cardClass}}"
+      data-id="{{item.id}}"
+      bindtap="onTaskTap"
+    >
+      <view class="check-hit" data-id="{{item.id}}" catchtap="onToggle">
+        <view class="{{item.checkClass}}">
+          <text wx:if="{{item.done}}" class="check-mark">✓</text>
+        </view>
+      </view>
+
+      <view class="task-body">
+        <view class="task-top">
+          <view class="cat-dot" style="background: {{item.categoryColor}};"></view>
+          <text class="{{item.titleClass}}">{{item.title}}</text>
+          <view wx:if="{{item.hasPriority}}" class="{{item.priorityClass}}"></view>
+        </view>
+
+        <view class="task-meta">
+          <text class="{{item.kindClass}}">{{item.kindLabel}}</text>
+          <text wx:if="{{item.timeText}}" class="meta-time">{{item.timeText}}</text>
+          <text wx:if="{{item.overdue}}" class="meta-overdue">已逾期</text>
+          <text wx:if="{{item.subtaskText}}" class="meta-sub">{{item.subtaskText}}</text>
+          <text class="meta-list">{{item.listName}}</text>
+        </view>
+      </view>
+
+      <view class="task-del" data-id="{{item.id}}" catchtap="onDelete">删除</view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:else>
+    <view class="empty-dot"></view>
+    <view class="empty-text">{{emptyText}}</view>
+  </view>
+</view>
+
+<!-- 底部固定新建入口（含安全区） -->
+<view class="footer">
+  <view class="footer-inner">
+    <button class="new-btn" hover-class="new-btn-hover" bindtap="onNew">新建任务</button>
+  </view>
+</view>

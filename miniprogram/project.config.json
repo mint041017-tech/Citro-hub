@@ -1,6 +1,6 @@
 {
   "appid": "wx4c6c70936e99fc1a",
-  "projectname": "citro-play-draw",
+  "projectname": "citro-miniprogram",
   "compileType": "miniprogram",
   "miniprogramRoot": "./",
   "libVersion": "3.4.10",

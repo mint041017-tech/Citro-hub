@@ -1,0 +1,531 @@
+/* 摸鱼日历：奶油纸底 + 圆角卡片，颜色沿用 app.wxss 的全局 token。 */
+
+.page {
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: 24rpx 32rpx 80rpx;
+}
+
+.hover-dim {
+  opacity: 0.72;
+}
+
+/* ---------------- 顶部 ---------------- */
+
+.top {
+  display: flex;
+  align-items: flex-end;
+  padding: 16rpx 8rpx 0;
+}
+
+.title {
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 1rpx;
+  color: var(--ink);
+}
+
+.subtitle {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-soft);
+}
+
+.set-btn {
+  margin-left: auto;
+  margin-bottom: 6rpx;
+  padding: 10rpx 28rpx;
+  border: 2rpx solid var(--line2);
+  border-radius: 999rpx;
+  background: var(--surface);
+  font-size: 26rpx;
+  color: var(--ink2);
+}
+
+.sync-note {
+  margin-top: 20rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 20rpx;
+  background: var(--surface2);
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 今日状态 ---------------- */
+
+.status-card {
+  margin-top: 28rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.status-top {
+  display: flex;
+  align-items: center;
+}
+
+.status-chip {
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.chip-work {
+  background: var(--surface2);
+  color: var(--ink2);
+}
+
+.chip-rest {
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+}
+
+.chip-holiday {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.chip-makeup {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.status-schedule {
+  margin-left: auto;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-title {
+  margin-top: 20rpx;
+  font-size: 46rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.status-sub {
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.count-row {
+  margin-top: 24rpx;
+  padding: 20rpx 24rpx;
+  display: flex;
+  align-items: baseline;
+  border-radius: 20rpx;
+  background: var(--mint-soft);
+}
+
+.count-label {
+  font-size: 23rpx;
+  color: var(--mint-ink);
+}
+
+.count-value {
+  margin-left: auto;
+  font-size: 42rpx;
+  font-weight: 700;
+  color: var(--mint-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 统计 ---------------- */
+
+.stats {
+  margin-top: 20rpx;
+  display: flex;
+}
+
+.stat {
+  flex: 1;
+  min-width: 0;
+  padding: 24rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.stat + .stat {
+  margin-left: 20rpx;
+}
+
+.stat-label {
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}
+
+.stat-value {
+  margin-top: 4rpx;
+  display: flex;
+  align-items: baseline;
+}
+
+.stat-num {
+  font-size: 46rpx;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-unit {
+  margin-left: 8rpx;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}
+
+.stat-sub {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 月历 ---------------- */
+
+.cal-card {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 4rpx 16rpx;
+}
+
+.cal-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cal-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.today-btn {
+  margin-right: 12rpx;
+  padding: 10rpx 20rpx;
+  border: 2rpx solid var(--line2);
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: var(--accent-ink);
+}
+
+.nav-btn {
+  width: 56rpx;
+  height: 56rpx;
+  margin-left: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--ink2);
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.nav-off {
+  opacity: 0.35;
+}
+
+.week-head {
+  display: flex;
+  padding: 0 2rpx 8rpx;
+}
+
+.week-cell {
+  width: 14.2857%;
+  text-align: center;
+  font-size: 21rpx;
+  color: var(--ink-soft);
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.cell {
+  width: 14.2857%;
+  height: 88rpx;
+  padding: 3rpx;
+}
+
+.cell-in {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  background: #f6e9d0;
+  color: var(--ink2);
+}
+
+.cell-day {
+  font-size: 26rpx;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-tag {
+  height: 20rpx;
+  margin-top: 2rpx;
+  font-size: 16rpx;
+  line-height: 20rpx;
+  opacity: 0.82;
+  white-space: nowrap;
+}
+
+.cell-blank {
+  background: transparent;
+}
+
+.cell-rest {
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+}
+
+.cell-holiday {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.cell-makeup {
+  background: var(--line);
+  color: var(--ink2);
+}
+
+.cell-today {
+  box-shadow: inset 0 0 0 3rpx var(--ink);
+  font-weight: 700;
+}
+
+.legend {
+  margin-top: 14rpx;
+  padding: 0 4rpx;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lg {
+  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
+  font-size: 20rpx;
+  color: var(--ink-soft);
+}
+
+.lg-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-right: 8rpx;
+  border-radius: 4rpx;
+}
+
+.lg-work {
+  background: #f6e9d0;
+}
+
+.lg-rest {
+  background: var(--mint-soft);
+}
+
+.lg-holiday {
+  background: var(--accent);
+}
+
+.lg-makeup {
+  background: var(--line);
+}
+
+/* ---------------- 作息摘要 ---------------- */
+
+.config-card {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.config-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.config-row + .config-row {
+  margin-top: 12rpx;
+}
+
+.config-key {
+  width: 150rpx;
+  flex-shrink: 0;
+  font-size: 23rpx;
+  color: var(--ink-soft);
+}
+
+.config-val {
+  flex: 1;
+  min-width: 0;
+  font-size: 25rpx;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-note {
+  margin-top: 32rpx;
+  font-size: 23rpx;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* ---------------- 设置浮层 ---------------- */
+
+.mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(97, 74, 68, 0.38);
+}
+
+.sheet {
+  width: 100%;
+  padding: 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-radius: 28rpx 28rpx 0 0;
+  box-shadow: var(--shadow-lg);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+}
+
+.sheet-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sheet-close {
+  margin-left: auto;
+  padding: 8rpx 4rpx;
+  font-size: 25rpx;
+  color: var(--ink-soft);
+}
+
+.sheet-body {
+  margin-top: 12rpx;
+}
+
+.field-row {
+  height: 92rpx;
+  display: flex;
+  align-items: center;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.field-label {
+  font-size: 27rpx;
+  color: var(--ink2);
+}
+
+.picker {
+  margin-left: auto;
+}
+
+.time-pill {
+  min-width: 150rpx;
+  padding: 10rpx 26rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  background: var(--surface2);
+  font-size: 28rpx;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.switch-wrap {
+  margin-left: auto;
+}
+
+.week-label {
+  margin-top: 22rpx;
+  font-size: 27rpx;
+  color: var(--ink2);
+}
+
+.week-chips {
+  margin-top: 14rpx;
+  display: flex;
+}
+
+.wchip {
+  flex: 1;
+  height: 72rpx;
+  margin-right: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--line);
+  border-radius: 18rpx;
+  background: var(--surface);
+  font-size: 25rpx;
+  color: var(--ink2);
+}
+
+.wchip:last-child {
+  margin-right: 0;
+}
+
+.wchip-on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.sheet-hint {
+  margin-top: 14rpx;
+  font-size: 21rpx;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.sheet-foot {
+  margin-top: 24rpx;
+}
+
+.sheet-save {
+  width: 100%;
+  margin: 0;
+  height: 88rpx;
+  border-radius: 999rpx;
+}

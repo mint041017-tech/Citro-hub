@@ -1,0 +1,221 @@
+<view class="page cards-page">
+  <view class="hero">
+    <view class="hero-title">卡面馆</view>
+    <view class="hero-sub">免费收藏，抽到才会点亮。</view>
+  </view>
+
+  <view class="card today-card loading-card" wx:if="{{loading && !todayView}}">
+    <view class="spinner"></view>
+    <view class="loading-text">正在整理卡面…</view>
+  </view>
+
+  <view class="card today-card" wx:elif="{{todayView}}">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">今日卡面</text>
+      </view>
+      <text class="today-chip">今日</text>
+    </view>
+
+    <view class="today-stage" bindtap="onOpenToday">
+      <view class="today-frame">
+        <image
+          wx:if="{{todayView.showImage}}"
+          class="card-img"
+          src="{{todayView.url}}"
+          mode="aspectFill"
+          binderror="onImageError"
+          data-id="{{todayView.id}}"
+        />
+        <view wx:else class="card-back">
+          <view class="back-inner">
+            <view class="back-mark">C</view>
+            <view class="back-word">CITRO</view>
+            <view class="back-label">{{todayView.backLabel}}</view>
+          </view>
+        </view>
+        <view class="face-shade"></view>
+        <view class="today-badge">今日</view>
+        <view class="face-meta">
+          <text class="face-name">{{todayView.categoryName}}</text>
+          <text class="face-no">#{{todayView.number}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="today-stats">
+      <view class="today-stat">
+        <text class="stat-value">{{ownedCount}}</text>
+        <text class="stat-label">已收集 / {{total}}</text>
+      </view>
+      <view class="stat-sep"></view>
+      <view class="today-stat">
+        <text class="stat-value">{{credits}}</text>
+        <text class="stat-label">剩余抽取次数</text>
+      </view>
+    </view>
+
+    <button
+      class="btn btn-primary draw-btn {{noCredit ? 'draw-empty' : ''}}"
+      hover-class="btn-hover"
+      loading="{{drawing}}"
+      bindtap="onDraw"
+    >{{drawLabel}}</button>
+    <view class="draw-hint">{{drawHint}}</view>
+  </view>
+
+  <view class="card today-card empty-today" wx:elif="{{catalogEmpty}}">
+    <view class="state-icon">□</view>
+    <view class="empty-title">卡面目录暂时为空</view>
+    <view class="state-text">联网后再来看看。</view>
+    <button class="btn btn-ghost empty-btn" bindtap="onRetry">重新加载</button>
+  </view>
+
+  <view class="card today-card empty-today" wx:else>
+    <view class="state-icon">□</view>
+    <view class="empty-title">今天还没有卡面</view>
+    <view class="state-text">翻开一张，收进自己的卡面馆。</view>
+    <button class="btn btn-primary empty-btn" hover-class="btn-hover" bindtap="onEnsureToday">抽一张</button>
+  </view>
+
+  <view class="error-banner" wx:if="{{error}}">
+    <text class="error-text">{{error}}</text>
+    <text class="error-action" bindtap="onRetry">重试</text>
+  </view>
+
+  <view class="card wall-card">
+    <view class="section-head">
+      <view class="row">
+        <view class="section-bar"></view>
+        <text class="section-title">收藏墙</text>
+      </view>
+      <text class="section-sub">{{collectedText}}</text>
+    </view>
+
+    <scroll-view class="cat-scroll" scroll-x show-scrollbar="{{false}}">
+      <view class="cat-row">
+        <view
+          class="chip cat-chip {{item.on ? 'chip-on' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onSelectCat"
+        >{{item.name}}</view>
+      </view>
+    </scroll-view>
+
+    <view class="wall" wx:if="{{!wallEmpty}}">
+      <block wx:for="{{wallGroups}}" wx:key="id" wx:for-item="group">
+        <view class="wall-group-head">
+          <text class="wall-group-name">{{group.name}}</text>
+          <text class="wall-group-count">{{group.countText}}</text>
+        </view>
+        <view class="wall-grid">
+          <view
+            class="wall-cell"
+            wx:for="{{group.tiles}}"
+            wx:key="id"
+            wx:for-item="tile"
+            data-id="{{tile.id}}"
+            bindtap="onTapTile"
+          >
+            <view class="{{tile.frameClass}}">
+              <image
+                wx:if="{{tile.showImage}}"
+                class="wall-img"
+                src="{{tile.url}}"
+                mode="aspectFill"
+                binderror="onImageError"
+                data-id="{{tile.id}}"
+              />
+              <view wx:else class="card-back small">
+                <view class="back-inner">
+                  <view class="back-mark">C</view>
+                  <view class="back-word">CITRO</view>
+                  <view class="back-label">{{tile.backLabel}}</view>
+                </view>
+              </view>
+              <view class="today-badge" wx:if="{{tile.isToday}}">今日</view>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view wx:else class="state">
+      <view class="state-icon">□</view>
+      <view class="state-text">还没有可展示的卡面。</view>
+    </view>
+  </view>
+
+  <view class="footer">卡面是免费收藏，不涉及付费。</view>
+</view>
+
+<!-- 已收集卡面的详情 -->
+<view class="overlay" wx:if="{{detail}}" bindtap="onCloseDetail">
+  <view class="overlay-inner">
+    <view class="detail-panel" catchtap="noop">
+      <view class="detail-frame">
+        <image
+          wx:if="{{detail.showImage}}"
+          class="card-img"
+          src="{{detail.url}}"
+          mode="aspectFill"
+          binderror="onImageError"
+          data-id="{{detail.id}}"
+        />
+        <view wx:else class="card-back">
+          <view class="back-inner">
+            <view class="back-mark">C</view>
+            <view class="back-word">CITRO</view>
+            <view class="back-label">图片暂时加载失败</view>
+          </view>
+        </view>
+        <view class="today-badge" wx:if="{{detail.isToday}}">今日</view>
+      </view>
+      <view class="detail-line">
+        <text class="detail-cat">{{detail.categoryName}}</text>
+        <text class="detail-no">#{{detail.number}}</text>
+      </view>
+      <view class="detail-sub">{{detail.subText}}</view>
+      <view class="detail-close" bindtap="onCloseDetail">关闭</view>
+    </view>
+  </view>
+</view>
+
+<!-- 抽到新卡面 -->
+<view class="overlay draw-overlay" wx:if="{{drawOverlay}}" bindtap="onCloseDraw">
+  <view class="overlay-inner">
+    <view class="draw-panel" catchtap="noop">
+      <view class="draw-badge">{{drawOverlay.badge}}</view>
+      <view class="draw-frame">
+        <image
+          wx:if="{{drawOverlay.showImage}}"
+          class="card-img"
+          src="{{drawOverlay.url}}"
+          mode="aspectFill"
+          binderror="onImageError"
+          data-id="{{drawOverlay.id}}"
+        />
+        <view wx:else class="card-back">
+          <view class="back-inner">
+            <view class="back-mark">C</view>
+            <view class="back-word">CITRO</view>
+            <view class="back-label">图片暂时加载失败</view>
+          </view>
+        </view>
+      </view>
+      <view class="draw-meta">{{drawOverlay.categoryName}} · #{{drawOverlay.number}}</view>
+      <view class="draw-caption">{{drawOverlay.caption}}</view>
+      <view class="draw-collected">{{drawOverlay.collectedText}}</view>
+      <button
+        class="btn btn-primary draw-again"
+        hover-class="btn-hover"
+        wx:if="{{drawOverlay.canAgain}}"
+        bindtap="onDrawAgain"
+      >{{drawOverlay.againLabel}}</button>
+      <button class="btn btn-ink draw-close" hover-class="btn-hover" bindtap="onCloseDraw">收下卡面</button>
+    </view>
+  </view>
+</view>

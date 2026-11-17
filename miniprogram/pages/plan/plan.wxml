@@ -1,0 +1,156 @@
+<!-- 计划：今天卡 + 待办卡 + 记账卡 + 今日小结。登录门禁放行前只显示占位。 -->
+<login-gate
+  id="gate"
+  bind:ready="onGateReady"
+  bind:expired="onGateExpired"
+  bind:user="onGateUser"
+/>
+
+<view class="page plan-page" wx:if="{{ready}}">
+  <view class="plan-head">
+    <view class="page-title">计划</view>
+    <view class="page-sub">把今天安排好，剩下的交给时间</view>
+  </view>
+
+  <!-- 今天：一周条 / 农历 / 节气 / 节日 / 最近的倒数日 -->
+  <view class="plan-card today-card" hover-class="card-hover" bindtap="openCalendar">
+    <view class="today-top">
+      <view class="today-heading">
+        <text class="today-date">{{dateText}}</text>
+        <text class="today-headline">{{headline}}</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+
+    <view class="week-row">
+      <view class="{{item.cellClass}}" wx:for="{{week}}" wx:key="key">
+        <text class="week-wd">{{item.wd}}</text>
+        <text class="week-day">{{item.day}}</text>
+        <text class="{{item.labelClass}}">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="today-meta">{{metaText}}</view>
+
+    <view class="countdown-line">
+      <view class="countdown-dot"></view>
+      <text class="countdown-label" wx:if="{{countdownHas}}">{{countdownLabel}}</text>
+      <text class="{{countdownClass}}">{{countdownText}}</text>
+    </view>
+  </view>
+
+  <!-- 待办：完成 / 总数 / 进度 / 逾期 / 最多 3 条 -->
+  <view class="plan-card todo-card" hover-class="card-hover" bindtap="openTodo">
+    <view class="card-head">
+      <view class="card-title-wrap">
+        <view class="card-dot"></view>
+        <text class="card-title">待办</text>
+      </view>
+      <text class="card-note">{{todoHeadText}}</text>
+      <text class="chevron">›</text>
+    </view>
+
+    <view class="todo-main">
+      <view class="todo-count">
+        <text class="todo-num">{{todoRemaining}}</text>
+        <text class="todo-unit">{{todoUnitText}}</text>
+      </view>
+      <text class="todo-percent">{{todoPercentText}}</text>
+    </view>
+
+    <view class="plan-progress">
+      <view class="plan-progress-fill" style="width:{{todoPercent}}%"></view>
+    </view>
+
+    <view class="todo-overdue" wx:if="{{todoHasOverdue}}">{{todoOverdueText}}</view>
+
+    <view class="todo-list" wx:if="{{todoHasItems}}">
+      <view class="{{item.rowClass}}" wx:for="{{todoItems}}" wx:key="id">
+        <view class="{{item.checkClass}}">
+          <text>{{item.checkText}}</text>
+        </view>
+        <text class="{{item.titleClass}}">{{item.title}}</text>
+        <text class="todo-kind" wx:if="{{item.kindLabel}}">{{item.kindLabel}}</text>
+        <text class="todo-due" wx:if="{{item.dueText}}">{{item.dueText}}</text>
+      </view>
+    </view>
+    <view class="empty-soft" wx:else>{{todoEmptyText}}</view>
+  </view>
+
+  <!-- 记账：本月支出 / 收入 / 结余 / 预算 / 近 7 天 -->
+  <view class="plan-card ledger-card" hover-class="card-hover" bindtap="openLedger">
+    <view class="card-head">
+      <view class="card-title-wrap">
+        <view class="card-dot mint"></view>
+        <text class="card-title">记账</text>
+      </view>
+      <text class="card-note">{{ledgerLabel}}</text>
+      <text class="chevron">›</text>
+    </view>
+
+    <view class="ledger-main">
+      <view class="ledger-amount-wrap">
+        <text class="ledger-amount">{{ledgerExpenseText}}</text>
+        <text class="ledger-amount-label">本月支出</text>
+      </view>
+      <view class="ledger-side">
+        <text class="{{ledgerIncomeClass}}">{{ledgerIncomeLine}}</text>
+        <text class="{{ledgerBalanceClass}}">{{ledgerBalanceLine}}</text>
+      </view>
+    </view>
+
+    <view class="ledger-budget" wx:if="{{ledgerHasBudget}}">
+      <view class="plan-progress">
+        <view class="{{ledgerProgressClass}}" style="width:{{ledgerPercent}}%"></view>
+      </view>
+      <view class="ledger-budget-row">
+        <text class="ledger-budget-label">预算 {{ledgerBudgetText}}</text>
+        <text class="{{ledgerBudgetNoteClass}}">{{ledgerBudgetSummary}}</text>
+      </view>
+    </view>
+    <view class="ledger-budget" wx:else>
+      <text class="ledger-budget-hint" wx:if="{{ledgerBudgetSummary}}">{{ledgerBudgetSummary}}</text>
+    </view>
+
+    <view class="bars-head" wx:if="{{ledgerOk}}">
+      <text class="bars-title">近 7 天</text>
+      <text class="bars-note">每日支出</text>
+    </view>
+    <view class="bars" wx:if="{{ledgerHasData}}">
+      <view class="bar-col" wx:for="{{ledgerDays}}" wx:key="key">
+        <view class="bar-track">
+          <view class="bar-fill" style="height:{{item.height}}rpx"></view>
+        </view>
+        <text class="bar-label">{{item.label}}</text>
+      </view>
+    </view>
+    <view class="empty-soft" wx:else>{{ledgerEmptyText}}</view>
+  </view>
+
+  <!-- 今天小结：完成率 / 待办数 / 本月支出 -->
+  <view class="plan-card today-foot">
+    <view class="foot-head">
+      <view class="section-bar"></view>
+      <text class="foot-title">今天</text>
+    </view>
+    <view class="foot-row">
+      <view class="foot-cell">
+        <text class="foot-value">{{summaryRateText}}</text>
+        <text class="foot-label">完成率</text>
+      </view>
+      <view class="foot-cell">
+        <text class="foot-value">{{summaryTodoText}}</text>
+        <text class="foot-label">待办</text>
+      </view>
+      <view class="foot-cell">
+        <text class="foot-value">{{summaryLedgerText}}</text>
+        <text class="foot-label">本月支出</text>
+      </view>
+    </view>
+    <view class="foot-note">{{summaryNote}}</view>
+  </view>
+</view>
+
+<view class="page plan-page" wx:else>
+  <view class="plan-card loading-card">正在准备今天…</view>
+</view>

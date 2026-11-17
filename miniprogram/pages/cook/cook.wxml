@@ -1,0 +1,697 @@
+<view class="page cook-page" wx:if="{{ready}}">
+  <view class="cook-head">
+    <view class="cook-title">食谱日记</view>
+    <view class="cook-sub">把常做的菜记下来，也看看大家最近在做什么。</view>
+  </view>
+
+  <view class="tabs">
+    <view
+      class="tab {{tab === 'mine' ? 'on' : ''}}"
+      data-tab="mine"
+      bindtap="onTab"
+    >
+      <text>我的食谱</text>
+      <text class="tab-count" wx:if="{{mineCount}}">{{mineCount}}</text>
+    </view>
+    <view
+      class="tab {{tab === 'square' ? 'on' : ''}}"
+      data-tab="square"
+      bindtap="onTab"
+    >
+      <text>食谱广场</text>
+      <text class="tab-count" wx:if="{{squareCount}}">{{squareCount}}</text>
+    </view>
+    <view
+      class="tab {{tab === 'shopping' ? 'on' : ''}}"
+      data-tab="shopping"
+      bindtap="onTab"
+    >
+      <text>购物清单</text>
+      <text class="tab-count" wx:if="{{shoppingTotal}}">{{shoppingTotal}}</text>
+    </view>
+  </view>
+
+  <view class="search" wx:if="{{showSearch}}">
+    <input
+      class="search-input"
+      value="{{search}}"
+      bindinput="onSearch"
+      placeholder="搜索标题或标签"
+      placeholder-class="placeholder"
+      confirm-type="search"
+    />
+    <view class="search-clear" wx:if="{{search}}" bindtap="onClearSearch">×</view>
+  </view>
+
+  <!-- 我的食谱 -->
+  <view wx:if="{{tab === 'mine'}}">
+    <view class="list-head">
+      <view class="list-title-wrap">
+        <view class="section-bar"></view>
+        <text class="section-title">我的食谱</text>
+        <text class="count-text" wx:if="{{mineCount}}">{{mineCount}} 份</text>
+      </view>
+      <button class="new-btn" hover-class="btn-hover" bindtap="openNew">
+        ＋ 新建食谱
+      </button>
+    </view>
+
+    <view class="state-card" wx:if="{{mineLoading && !mineCount}}">
+      <view class="loading-line">
+        <view class="spinner"></view>
+        <text>正在整理食谱…</text>
+      </view>
+    </view>
+
+    <view class="state-card" wx:elif="{{mineError && !mineCount}}">
+      <view class="state-mark">!</view>
+      <view class="state-title">暂时打不开食谱</view>
+      <view class="state-sub">{{mineError}}</view>
+      <button class="btn btn-primary state-btn" bindtap="loadAll">重新加载</button>
+    </view>
+
+    <view class="state-card" wx:elif="{{mineEmpty}}">
+      <view class="state-mark">食</view>
+      <view class="state-title">把常做的菜记下来</view>
+      <view class="state-sub">从第一道拿手菜开始，食材、步骤和封面都可以慢慢补。</view>
+      <button class="btn btn-primary state-btn" bindtap="openNew">
+        ＋ 新建第一个食谱
+      </button>
+    </view>
+
+    <view class="state-card" wx:elif="{{mineNoMatch}}">
+      <view class="state-mark">搜</view>
+      <view class="state-title">没有匹配的食谱</view>
+      <view class="state-sub">换个标题或标签关键词试试。</view>
+    </view>
+
+    <view class="recipe-list" wx:else>
+      <view
+        class="recipe-card"
+        wx:for="{{mineCards}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onOpenMine"
+      >
+        <view class="cover-wrap">
+          <image
+            wx:if="{{item.hasCover}}"
+            class="cover"
+            src="{{item.coverUrl}}"
+            mode="aspectFill"
+            lazy-load
+          />
+          <view wx:else class="cover-ph">食谱</view>
+          <view
+            wx:if="{{item.showVisibility}}"
+            class="vis {{item.visibilityClass}}"
+          >{{item.visibilityText}}</view>
+        </view>
+        <view class="recipe-info">
+          <view class="recipe-name">{{item.name}}</view>
+          <view class="recipe-note" wx:if="{{item.hasNote}}">{{item.note}}</view>
+          <view class="meta-row">
+            <text class="meta" wx:if="{{item.timeText}}">{{item.timeText}}</text>
+            <text class="meta" wx:if="{{item.servingsText}}">{{item.servingsText}}</text>
+          </view>
+          <view class="tag-row" wx:if="{{item.hasTags}}">
+            <text
+              class="tag"
+              wx:for="{{item.tags}}"
+              wx:for-item="tag"
+              wx:key="*this"
+            >{{tag}}</text>
+          </view>
+          <view class="recipe-foot">
+            <text class="author" wx:if="{{item.hasOwner}}">{{item.ownerText}}</text>
+            <text class="updated" wx:if="{{item.updatedText}}">{{item.updatedText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{tab === 'square'}}">
+    <view class="list-head">
+      <view class="list-title-wrap">
+        <view class="section-bar"></view>
+        <text class="section-title">食谱广场</text>
+        <text class="count-text" wx:if="{{squareCount}}">{{squareCount}} 份</text>
+      </view>
+    </view>
+
+    <view class="state-card" wx:if="{{squareLoading && !squareCount}}">
+      <view class="loading-line">
+        <view class="spinner"></view>
+        <text>正在看看大家在做什么…</text>
+      </view>
+    </view>
+
+    <view class="state-card" wx:elif="{{squareError && !squareCount}}">
+      <view class="state-mark">!</view>
+      <view class="state-title">广场暂时打不开</view>
+      <view class="state-sub">{{squareError}}</view>
+      <button class="btn btn-primary state-btn" bindtap="loadAll">重新加载</button>
+    </view>
+
+    <view class="state-card" wx:elif="{{squareEmpty}}">
+      <view class="state-mark">广</view>
+      <view class="state-title">广场上还没有公开食谱</view>
+      <view class="state-sub">等有人分享，也可以把你得意的食谱设为公开。</view>
+    </view>
+
+    <view class="state-card" wx:elif="{{squareNoMatch}}">
+      <view class="state-mark">搜</view>
+      <view class="state-title">没有匹配的食谱</view>
+      <view class="state-sub">换个标题或标签关键词试试。</view>
+    </view>
+
+    <view class="recipe-list" wx:else>
+      <view
+        class="recipe-card"
+        wx:for="{{squareCards}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onOpenSquare"
+      >
+        <view class="cover-wrap">
+          <image
+            wx:if="{{item.hasCover}}"
+            class="cover"
+            src="{{item.coverUrl}}"
+            mode="aspectFill"
+            lazy-load
+          />
+          <view wx:else class="cover-ph">食谱</view>
+        </view>
+        <view class="recipe-info">
+          <view class="recipe-name">{{item.name}}</view>
+          <view class="recipe-note" wx:if="{{item.hasNote}}">{{item.note}}</view>
+          <view class="meta-row">
+            <text class="meta" wx:if="{{item.timeText}}">{{item.timeText}}</text>
+            <text class="meta" wx:if="{{item.servingsText}}">{{item.servingsText}}</text>
+          </view>
+          <view class="tag-row" wx:if="{{item.hasTags}}">
+            <text
+              class="tag"
+              wx:for="{{item.tags}}"
+              wx:for-item="tag"
+              wx:key="*this"
+            >{{tag}}</text>
+          </view>
+          <view class="recipe-foot">
+            <text class="author" wx:if="{{item.hasOwner}}">{{item.ownerText}}</text>
+            <text class="updated" wx:if="{{item.updatedText}}">{{item.updatedText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="ugc-note">
+      食谱由用户发布。如发现不当内容，可打开详情点「举报」，我们会人工审核处理。
+    </view>
+  </view>
+
+  <view wx:else>
+    <view class="list-head">
+      <view class="list-title-wrap">
+        <view class="section-bar"></view>
+        <text class="section-title">买菜与冰箱</text>
+      </view>
+    </view>
+
+    <view class="seg">
+      <view
+        class="seg-item {{shopView === 'shopping' ? 'on' : ''}}"
+        data-view="shopping"
+        bindtap="onShopView"
+      >
+        购物清单
+        <text class="seg-count" wx:if="{{shoppingTotal}}">{{shoppingTotal}}</text>
+      </view>
+      <view
+        class="seg-item {{shopView === 'fridge' ? 'on' : ''}}"
+        data-view="fridge"
+        bindtap="onShopView"
+      >
+        我的冰箱
+        <text class="seg-count" wx:if="{{fridgeCount}}">{{fridgeCount}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{shopView === 'shopping'}}">
+      <view class="shop-head" wx:if="{{!shoppingEmpty}}">
+        <text class="shop-progress">已完成 {{shoppingDone}} / {{shoppingTotal}}</text>
+        <text class="shop-clear" wx:if="{{shoppingDone}}" bindtap="onClearDone">清空已完成</text>
+      </view>
+
+      <view class="state-card" wx:if="{{shoppingLoading && !shoppingTotal}}">
+        <view class="loading-line">
+          <view class="spinner"></view>
+          <text>正在同步清单…</text>
+        </view>
+      </view>
+
+      <view class="state-card" wx:elif="{{shopError && shoppingEmpty}}">
+        <view class="state-mark">!</view>
+        <view class="state-title">暂时打不开清单</view>
+        <view class="state-sub">{{shopError}}</view>
+        <button class="btn btn-primary state-btn" bindtap="loadAll">重新加载</button>
+      </view>
+
+      <view class="state-card" wx:elif="{{shoppingEmpty}}">
+        <view class="state-mark">单</view>
+        <view class="state-title">清单是空的</view>
+        <view class="state-sub">加一点要买的，做菜前不容易忘。</view>
+      </view>
+
+      <view class="shop-list" wx:else>
+        <view class="shop-row" wx:for="{{shopping}}" wx:key="id">
+          <view
+            class="check {{item.done ? 'on' : ''}}"
+            data-id="{{item.id}}"
+            bindtap="onToggleShop"
+          >
+            <text wx:if="{{item.done}}">✓</text>
+          </view>
+          <view class="shop-text {{item.done ? 'done' : ''}}">{{item.text}}</view>
+          <view class="shop-del" data-id="{{item.id}}" bindtap="onDeleteShop">×</view>
+        </view>
+      </view>
+
+      <view class="shop-add">
+        <view class="shop-add-field">
+          <input
+            class="shop-add-input"
+            value="{{shopInput}}"
+            bindinput="onShopInput"
+            bindconfirm="onAddShop"
+            placeholder="添加要买的东西"
+            placeholder-class="placeholder"
+            confirm-type="done"
+          />
+        </view>
+        <button class="add-btn" hover-class="btn-hover" bindtap="onAddShop">添加</button>
+      </view>
+    </view>
+
+    <view wx:else>
+      <view class="shop-head" wx:if="{{!fridgeEmpty}}">
+        <text class="shop-progress">冰箱里 {{fridgeCount}} 样</text>
+      </view>
+
+      <view class="state-card" wx:if="{{shoppingLoading && fridgeEmpty}}">
+        <view class="loading-line">
+          <view class="spinner"></view>
+          <text>正在同步冰箱…</text>
+        </view>
+      </view>
+
+      <view class="state-card" wx:elif="{{fridgeError && fridgeEmpty}}">
+        <view class="state-mark">!</view>
+        <view class="state-title">暂时打不开冰箱</view>
+        <view class="state-sub">{{fridgeError}}</view>
+        <button class="btn btn-primary state-btn" bindtap="loadAll">重新加载</button>
+      </view>
+
+      <view class="state-card" wx:elif="{{fridgeEmpty}}">
+        <view class="state-mark">冰</view>
+        <view class="state-title">冰箱还是空的</view>
+        <view class="state-sub">先加几样常用食材，数量写个大概就行。</view>
+      </view>
+
+      <view class="shop-list" wx:else>
+        <view class="fridge-row" wx:for="{{fridge}}" wx:key="id">
+          <view class="fridge-main">
+            <view class="fridge-name">{{item.name}}</view>
+            <view class="fridge-sub" wx:if="{{item.amountText}}">{{item.amountText}}</view>
+            <view class="fridge-exp {{item.expClass}}" wx:if="{{item.expText}}">{{item.expText}}</view>
+          </view>
+          <view class="shop-del" data-id="{{item.id}}" bindtap="onDeleteFridge">×</view>
+        </view>
+      </view>
+
+      <view class="fridge-add">
+        <view class="fridge-field fridge-name-field">
+          <input
+            class="fridge-input"
+            value="{{fridgeInputName}}"
+            bindinput="onFridgeName"
+            maxlength="40"
+            placeholder="食材名"
+            placeholder-class="placeholder"
+          />
+        </view>
+        <view class="fridge-field fridge-qty-field">
+          <input
+            class="fridge-input"
+            value="{{fridgeInputQty}}"
+            bindinput="onFridgeQty"
+            maxlength="20"
+            placeholder="数量"
+            placeholder-class="placeholder"
+          />
+        </view>
+        <view class="fridge-field fridge-unit-field">
+          <picker
+            mode="selector"
+            range="{{fridgeUnits}}"
+            value="{{fridgeUnitIndex}}"
+            bindchange="onFridgeUnit"
+          >
+            <view class="unit-pick">{{fridgeUnit}}</view>
+          </picker>
+        </view>
+        <button class="add-btn fridge-add-btn" hover-class="btn-hover" bindtap="onAddFridge">放入</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 食谱详情 -->
+<view class="overlay" wx:if="{{detail}}">
+  <scroll-view class="overlay-scroll" scroll-y>
+    <view class="detail-card">
+      <view class="detail-top">
+        <text class="detail-kicker">{{detail.kicker}}</text>
+        <view class="overlay-close" bindtap="onCloseDetail">×</view>
+      </view>
+
+      <view class="detail-cover-wrap">
+        <image
+          wx:if="{{detail.hasCover}}"
+          class="detail-cover"
+          src="{{detail.coverUrl}}"
+          mode="aspectFill"
+          binderror="onDetailCoverError"
+        />
+        <view wx:else class="detail-cover-ph">还没有封面</view>
+      </view>
+
+      <view class="detail-title">{{detail.name}}</view>
+
+      <view class="detail-tags" wx:if="{{detail.hasTags}}">
+        <text
+          class="tag"
+          wx:for="{{detail.tags}}"
+          wx:for-item="tag"
+          wx:key="*this"
+        >{{tag}}</text>
+      </view>
+
+      <view class="detail-meta">
+        <text class="meta-pill" wx:for="{{detail.pills}}" wx:key="key">{{item.text}}</text>
+      </view>
+
+      <view class="detail-author" wx:if="{{detail.hasAuthor}}">{{detail.authorText}}</view>
+      <view class="detail-updated" wx:if="{{detail.updatedText}}">{{detail.updatedText}}</view>
+      <view class="detail-note" wx:if="{{detail.hasNote}}">{{detail.note}}</view>
+      <view class="detail-source" wx:if="{{detail.hasSource}}">{{detail.sourceText}}</view>
+
+      <view class="detail-section">
+        <view class="detail-sec-head">
+          <view class="section-bar"></view>
+          <text class="section-title">食材</text>
+          <text class="sec-sub" wx:if="{{detail.hasIngredients}}">{{detail.ingredientCount}}</text>
+        </view>
+        <view class="ing-card" wx:if="{{detail.hasIngredients}}">
+          <view class="ing-row" wx:for="{{detail.ingredients}}" wx:key="key">
+            <text class="ing-name">{{item.name}}</text>
+            <text class="ing-amount" wx:if="{{item.hasAmount}}">{{item.amount}}</text>
+          </view>
+        </view>
+        <view class="empty-line" wx:else>还没有食材</view>
+      </view>
+
+      <view class="detail-section">
+        <view class="detail-sec-head">
+          <view class="section-bar"></view>
+          <text class="section-title">步骤</text>
+        </view>
+        <view class="step-row" wx:for="{{detail.steps}}" wx:key="key">
+          <view class="step-no">{{item.indexText}}</view>
+          <view class="step-body">
+            <view class="step-text" wx:if="{{item.hasText}}">{{item.text}}</view>
+            <image
+              wx:if="{{item.hasImg}}"
+              class="step-img"
+              src="{{item.imgUrl}}"
+              mode="aspectFill"
+            />
+            <view class="step-timer" wx:if="{{item.hasTimer}}">{{item.timerText}}</view>
+          </view>
+        </view>
+        <view class="empty-line" wx:if="{{detail.noSteps}}">还没有写步骤</view>
+      </view>
+
+      <view class="detail-actions">
+        <button
+          wx:if="{{detail.canEdit}}"
+          class="btn btn-ghost detail-btn"
+          hover-class="btn-hover"
+          bindtap="onEditDetail"
+        >编辑</button>
+        <button
+          wx:if="{{detail.canDelete}}"
+          class="btn btn-ghost detail-btn danger-btn"
+          hover-class="btn-hover"
+          bindtap="onDeleteDetail"
+          disabled="{{detailBusy}}"
+        >{{detailBusy ? '正在删除…' : '删除'}}</button>
+        <button
+          wx:if="{{detail.canJoinShopping}}"
+          class="btn btn-primary detail-btn"
+          hover-class="btn-hover"
+          bindtap="onAddToShopping"
+        >加入购物清单</button>
+        <button
+          wx:if="{{detail.canCollect}}"
+          class="btn btn-primary detail-btn"
+          hover-class="btn-hover"
+          bindtap="onCollectDetail"
+          disabled="{{collectBusy}}"
+        >{{collectBusy ? '正在复制…' : '复制到我的食谱'}}</button>
+        <button
+          wx:if="{{detail.canReport}}"
+          class="btn btn-ghost detail-btn danger-btn"
+          hover-class="btn-hover"
+          bindtap="onReportDetail"
+        >举报</button>
+      </view>
+
+      <view class="detail-foot-close" bindtap="onCloseDetail">关闭</view>
+    </view>
+  </scroll-view>
+</view>
+
+<!-- 新建 / 编辑向导 -->
+<view class="overlay wizard" wx:if="{{wizardOpen}}">
+  <scroll-view class="overlay-scroll" scroll-y scroll-into-view="{{wizardScrollTarget}}">
+    <view id="wizard-anchor-{{wizardStep}}"></view>
+    <view class="wizard-card">
+      <view class="wizard-head">
+        <text class="wizard-title">{{wizardTitle}}</text>
+        <view class="overlay-close" bindtap="onCloseWizard">×</view>
+      </view>
+
+      <view class="wizard-steps">
+        <view class="wstep {{item.cls}}" wx:for="{{wizardTabs}}" wx:key="n">
+          <view class="wstep-no">{{item.no}}</view>
+          <view class="wstep-label">{{item.label}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{wizardStep === 1}}" class="wizard-body">
+        <view class="f-label">标题</view>
+        <view class="wfield">
+          <input
+            class="winput"
+            maxlength="40"
+            value="{{form.name}}"
+            data-field="name"
+            bindinput="onFormInput"
+            placeholder="例如：番茄牛腩"
+            placeholder-class="placeholder"
+          />
+        </view>
+
+        <view class="f-label">简介</view>
+        <view class="wfield wfield-area">
+          <textarea
+            class="wtextarea"
+            maxlength="500"
+            value="{{form.note}}"
+            data-field="note"
+            bindinput="onFormInput"
+            placeholder="一句话介绍这道菜"
+            placeholder-class="placeholder"
+          ></textarea>
+        </view>
+
+        <view class="f-label">标签</view>
+        <view class="wfield">
+          <input
+            class="winput"
+            maxlength="200"
+            value="{{form.tags}}"
+            data-field="tags"
+            bindinput="onFormInput"
+            placeholder="用逗号分隔，最多 8 个"
+            placeholder-class="placeholder"
+          />
+        </view>
+
+        <view class="wrow">
+          <view class="wcol">
+            <view class="f-label">份数</view>
+            <view class="wfield">
+              <input
+                class="winput"
+                type="number"
+                maxlength="2"
+                value="{{form.servings}}"
+                data-field="servings"
+                bindinput="onFormInput"
+                placeholder="2"
+                placeholder-class="placeholder"
+              />
+            </view>
+          </view>
+          <view class="wcol">
+            <view class="f-label">用时（分钟）</view>
+            <view class="wfield">
+              <input
+                class="winput"
+                type="number"
+                maxlength="4"
+                value="{{form.minutes}}"
+                data-field="minutes"
+                bindinput="onFormInput"
+                placeholder="选填"
+                placeholder-class="placeholder"
+              />
+            </view>
+          </view>
+        </view>
+
+        <view class="f-label">可见范围</view>
+        <view class="vis-toggle">
+          <view
+            class="vis-opt {{form.visibility === 'private' ? 'on' : ''}}"
+            data-value="private"
+            bindtap="onVisibility"
+          >仅自己可见</view>
+          <view
+            class="vis-opt {{form.visibility === 'public' ? 'on' : ''}}"
+            data-value="public"
+            bindtap="onVisibility"
+          >公开到食谱广场</view>
+        </view>
+        <view class="vis-note">公开后会出现在「食谱广场」，其他人可以复制到自己的食谱里。</view>
+      </view>
+
+      <view wx:elif="{{wizardStep === 2}}" class="wizard-body">
+        <view class="wizard-hint">一行一样食材；空行保存时会自动跳过，用量和单位可以只填一项。</view>
+        <view class="ing-edit" wx:for="{{formIngList}}" wx:key="key">
+          <view class="ing-edit-main">
+            <input
+              class="edit-input ing-name-in"
+              maxlength="40"
+              value="{{item.name}}"
+              data-index="{{index}}"
+              data-field="name"
+              bindinput="onIngInput"
+              placeholder="食材"
+              placeholder-class="placeholder"
+            />
+            <input
+              class="edit-input ing-qty-in"
+              maxlength="20"
+              value="{{item.qty}}"
+              data-index="{{index}}"
+              data-field="qty"
+              bindinput="onIngInput"
+              placeholder="用量"
+              placeholder-class="placeholder"
+            />
+            <input
+              class="edit-input ing-unit-in"
+              maxlength="10"
+              value="{{item.unit}}"
+              data-index="{{index}}"
+              data-field="unit"
+              bindinput="onIngInput"
+              placeholder="单位"
+              placeholder-class="placeholder"
+            />
+            <view class="row-del" data-index="{{index}}" bindtap="onIngDelete">×</view>
+          </view>
+        </view>
+        <view class="add-row" bindtap="onIngAdd">＋ 添加食材</view>
+      </view>
+
+      <view wx:elif="{{wizardStep === 3}}" class="wizard-body">
+        <view class="wizard-hint">按顺序写下做法，保存时会自动编号。</view>
+        <view class="step-edit" wx:for="{{formStepList}}" wx:key="key">
+          <view class="step-edit-head">
+            <view class="step-edit-no">{{item.no}}</view>
+            <view class="row-del" data-index="{{index}}" bindtap="onStepDelete">×</view>
+          </view>
+          <textarea
+            class="wtextarea step-ta"
+            maxlength="1000"
+            value="{{item.text}}"
+            data-index="{{index}}"
+            data-field="text"
+            bindinput="onStepInput"
+            placeholder="这一步怎么做…"
+            placeholder-class="placeholder"
+          ></textarea>
+        </view>
+        <view class="add-row" bindtap="onStepAdd">＋ 添加步骤</view>
+      </view>
+
+      <view wx:elif="{{wizardStep === 4}}" class="wizard-body">
+        <view class="wizard-hint">封面可以跳过，保存之后也能在编辑里补上。</view>
+        <view class="cover-pick" bindtap="chooseCover">
+          <image
+            wx:if="{{form.coverPreview}}"
+            class="cover-pick-img"
+            src="{{form.coverPreview}}"
+            mode="aspectFill"
+            binderror="onCoverPreviewError"
+          />
+          <view wx:else class="cover-pick-empty">
+            <view class="cover-pick-plus">＋</view>
+            <view>选择封面图</view>
+          </view>
+          <view class="cover-busy" wx:if="{{coverBusy}}">正在处理图片…</view>
+        </view>
+        <view class="cover-actions">
+          <view class="cover-link" bindtap="chooseCover">{{form.coverPreview ? '重新选择' : '选择图片'}}</view>
+          <view class="cover-link danger-link" wx:if="{{form.coverPreview}}" bindtap="onRemoveCover">移除封面</view>
+        </view>
+        <view class="cover-tip">建议使用横向照片，显示效果更好。</view>
+      </view>
+
+      <view class="wizard-error" wx:if="{{wizardError}}">{{wizardError}}</view>
+
+      <view class="wizard-foot">
+        <button
+          class="btn btn-ghost back-btn"
+          wx:if="{{canBack}}"
+          hover-class="btn-hover"
+          bindtap="onWizardBack"
+          disabled="{{saving}}"
+        >上一步</button>
+        <button
+          class="btn btn-primary next-btn"
+          hover-class="btn-hover"
+          bindtap="onWizardNext"
+          disabled="{{saving}}"
+        >{{saving ? '正在保存…' : nextLabel}}</button>
+      </view>
+
+      <view class="wizard-cancel" bindtap="onCloseWizard">取消本次编辑</view>
+    </view>
+  </scroll-view>
+</view>

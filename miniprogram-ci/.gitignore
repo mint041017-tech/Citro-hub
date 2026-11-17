@@ -3,3 +3,7 @@ node_modules/
 *.key
 private.*.key
 *.log
+
+# CLI 每次预览都会重新生成，不入库
+preview-qr.png
+preview-info.json
