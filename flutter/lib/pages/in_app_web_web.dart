@@ -6,6 +6,7 @@ Future<void> openInAppPage(
   BuildContext context,
   String url, {
   String? title,
+  bool crispExit = false,
 }) async {
   await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 }

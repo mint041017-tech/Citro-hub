@@ -1303,6 +1303,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       rankInitial: _rankInitial,
       liveProgress: _progress,
       liveInScroll: true,
+      // 数独内容最长：操作行跟棋盘一起滚动，底部只留「正在玩」。
+      actionsInScroll: true,
       onBack: _backToModes,
       above: above,
       pills: [

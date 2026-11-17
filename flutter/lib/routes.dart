@@ -12,6 +12,7 @@ import 'pages/root_shell.dart';
 import 'pages/search_page.dart';
 import 'pages/sens_page.dart';
 import 'ledger/ledger_page.dart';
+import 'theme/crisp_page_route.dart';
 import 'theme/motion.dart';
 import 'tingyu/tingyu_page.dart';
 import 'todo/todo_focus.dart';
@@ -108,8 +109,19 @@ class CitroRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final route = normalize(settings.name);
+    final routeSettings = RouteSettings(
+      name: route,
+      arguments: settings.arguments,
+    );
+    // 工具页退场要干净：完整淡出，而不是全站转场那种 18% 淡出后瞬间移除。
+    if (route == sens || route == play) {
+      return CitroCrispPageRoute<dynamic>(
+        settings: routeSettings,
+        builder: (_) => pageFor(route, args: settings.arguments),
+      );
+    }
     return _CitroPageRoute<dynamic>(
-      settings: RouteSettings(name: route, arguments: settings.arguments),
+      settings: routeSettings,
       builder: (_) => pageFor(route, args: settings.arguments),
     );
   }

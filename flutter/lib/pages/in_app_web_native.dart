@@ -4,14 +4,24 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../theme/crisp_page_route.dart';
 import '../utils/links.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
-Future<void> openInAppPage(BuildContext context, String url, {String? title}) {
+Future<void> openInAppPage(
+  BuildContext context,
+  String url, {
+  String? title,
+  bool crispExit = false,
+}) {
   return Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => InAppWebPage(url: url, title: title),
-    ),
+    crispExit
+        ? CitroCrispPageRoute<void>(
+            builder: (_) => InAppWebPage(url: url, title: title),
+          )
+        : MaterialPageRoute<void>(
+            builder: (_) => InAppWebPage(url: url, title: title),
+          ),
   );
 }
 

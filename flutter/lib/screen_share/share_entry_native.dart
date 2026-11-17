@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/crisp_page_route.dart';
 import 'screen_share_page.dart';
 
 /// 原生端：直接开房间页。
@@ -10,7 +11,7 @@ Future<void> openScreenShare(
   String? roomCode,
 }) async {
   await Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    CitroCrispPageRoute<void>(
       builder: (_) => ScreenSharePage(initialCode: roomCode),
     ),
   );

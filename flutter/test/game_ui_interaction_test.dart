@@ -113,6 +113,94 @@ void main() {
     expect(find.text('最佳'), findsOneWidget);
   });
 
+  testWidgets('actionsInScroll 把操作行放进棋盘滚动区', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      _host(
+        GameScaffold(
+          gameKey: 'gsudoku',
+          title: '数独',
+          showLive: false,
+          showSidePanels: false,
+          actionsInScroll: true,
+          actions: [GameActionButton(label: '新游戏', onTap: () {})],
+          board: const SizedBox(width: 300, height: 900),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.ancestor(
+        of: find.text('新游戏'),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('actionsInScroll 只在手机竖屏生效，iPad 竖屏仍钉底', (tester) async {
+    tester.view.physicalSize = const Size(768, 1024);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      _host(
+        GameScaffold(
+          gameKey: 'gsudoku',
+          title: '数独',
+          showLive: false,
+          showSidePanels: false,
+          actionsInScroll: true,
+          actions: [GameActionButton(label: '新游戏', onTap: () {})],
+          board: const SizedBox(width: 300, height: 300),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.ancestor(
+        of: find.text('新游戏'),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('默认操作行不进入棋盘滚动区', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      _host(
+        GameScaffold(
+          gameKey: 'gsudoku',
+          title: '数独',
+          showLive: false,
+          showSidePanels: false,
+          actions: [GameActionButton(label: '新游戏', onTap: () {})],
+          board: const SizedBox(width: 300, height: 300),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.ancestor(
+        of: find.text('新游戏'),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('long title / wide values fall back below the title', (
     tester,
   ) async {

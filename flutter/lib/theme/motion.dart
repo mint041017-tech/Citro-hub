@@ -68,6 +68,11 @@ class CitroMotion {
   static const Duration pageTouch = Duration(milliseconds: 280);
   static const Duration pageTouchReverse = Duration(milliseconds: 200);
 
+  /// 工具页（灵敏度 / 玩法抽签 / 视野live / 一起看）退场：
+  /// 完整淡出，不再留 82% 的残影。
+  static const Duration pageCrispReverse = Duration(milliseconds: 150);
+  static const Duration pageCrispReverseDesktop = Duration(milliseconds: 120);
+
   /// 卡片打开 / 关闭（容器形变、卡片快照抬起）。
   ///
   /// 这是全 App 最常用的「打开」，必须一眼算完：300ms 进场、220ms 退场，

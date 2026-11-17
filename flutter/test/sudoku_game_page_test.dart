@@ -52,6 +52,15 @@ void main() {
     expect(find.text('错误'), findsOneWidget);
     expect(find.text('暂停'), findsOneWidget);
 
+    // 方案 A：操作行在棋盘滚动区里，不再钉在底部。
+    expect(
+      find.ancestor(
+        of: find.text('新游戏'),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsOneWidget,
+    );
+
     await tester.tap(find.text('1').first);
     await tester.pump();
     expect(tester.takeException(), isNull);

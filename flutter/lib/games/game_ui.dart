@@ -166,6 +166,13 @@ class GameScaffold extends StatefulWidget {
     /// 键盘弹出时隐藏操作行（成语接龙 / 飞花令这类有文字录入的游戏用）：
     /// 键盘抬起时操作行会被顶到首屏外，用户反而点不到。
     this.hideActionsOnKeyboard = false,
+
+    /// true = 操作行放进棋盘滚动内容末尾，不再钉在视口底部（仅手机竖屏）。
+    ///
+    /// 数独页内容最长，固定操作行会一直占住约一整行高度；放进滚动区后
+    /// 页面底部只剩「正在玩」，下滑就能看到按钮。平板竖屏与桌面仍钉在
+    /// 底部，版式不变。
+    this.actionsInScroll = false,
   });
 
   final String gameKey;
@@ -214,6 +221,9 @@ class GameScaffold extends StatefulWidget {
 
   /// 键盘弹出时是否隐藏操作行。
   final bool hideActionsOnKeyboard;
+
+  /// true = 操作行渲染在 [board] 之后的滚动内容里（仅手机竖屏生效）。
+  final bool actionsInScroll;
 
   /// 测试时关掉轮询（golden 渲染用）
   static bool liveEnabled = true;
@@ -336,6 +346,8 @@ class _GameScaffoldState extends State<GameScaffold> {
   Widget _portraitBody(BuildContext context) {
     final kbOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final compact = _compactChrome(context);
+    // 操作行随内容滚动只给手机竖屏；iPad 竖屏与桌面窗口保持钉底版式。
+    final actionsInScroll = widget.actionsInScroll && compact;
     // 只有真的拿到了读数才收起棋盘上方的 HUD 卡；自定义 hud 又没给
     // hudStats 的页面保持原样，避免统计凭空消失。
     final compactHud = compact && _compactStats.isNotEmpty;
@@ -353,8 +365,8 @@ class _GameScaffoldState extends State<GameScaffold> {
                 showHud: !compactHud,
                 belowGap: compactHud ? 16 : 0,
               ),
-              Expanded(child: _boardArea(context)),
-              _actionsStrip(context),
+              Expanded(child: _boardArea(context, actionsInScroll)),
+              if (!actionsInScroll) _actionsStrip(context),
               if (widget.showLive && !kbOpen)
                 SafeArea(top: false, child: GameLiveBar(list: _live)),
             ],
@@ -619,7 +631,7 @@ class _GameScaffoldState extends State<GameScaffold> {
   }
 
   /// 棋盘区：占掉 HUD 与操作行之外的全部高度，棋盘居中。
-  Widget _boardArea(BuildContext context) {
+  Widget _boardArea(BuildContext context, bool actionsInScroll) {
     final board = widget.board ?? const SizedBox.shrink();
     return LayoutBuilder(
       builder: (ctx, area) {
@@ -637,7 +649,12 @@ class _GameScaffoldState extends State<GameScaffold> {
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: widget.contentMaxWidth),
-                child: board,
+                child: actionsInScroll
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [board, _actionsStrip(context)],
+                      )
+                    : board,
               ),
             ),
           ),

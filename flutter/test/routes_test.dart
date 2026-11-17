@@ -7,6 +7,8 @@ import 'package:citro/pages/root_shell.dart';
 import 'package:citro/pages/search_page.dart';
 import 'package:citro/pages/sens_page.dart';
 import 'package:citro/routes.dart';
+import 'package:citro/theme/crisp_page_route.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -28,6 +30,21 @@ void main() {
       expect(page, isA<RootShell>());
       expect((page as RootShell).initialIndex, i);
     }
+  });
+
+  test('灵敏度 / 玩法抽签使用干净退场路由', () {
+    expect(
+      CitroRoutes.onGenerateRoute(const RouteSettings(name: '/sens')),
+      isA<CitroCrispPageRoute<dynamic>>(),
+    );
+    expect(
+      CitroRoutes.onGenerateRoute(const RouteSettings(name: '/play')),
+      isA<CitroCrispPageRoute<dynamic>>(),
+    );
+    expect(
+      CitroRoutes.onGenerateRoute(const RouteSettings(name: '/me')),
+      isNot(isA<CitroCrispPageRoute<dynamic>>()),
+    );
   });
 
   test('restores secondary pages from routes', () {

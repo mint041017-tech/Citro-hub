@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.2.0",
-    "build_number": "3200",
-    "build_id": "0dbfbe4b8a4b6d60acb32222bc82241a",
-    "file": "Citro-web-3.2.0.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.2.0.zip",
-    "size": 49116367,
-    "sha256": "0dbfbe4b8a4b6d60acb32222bc82241a53b3125334a5ab93932008bd87d04709",
-    "published_at": "2026-11-17T14:51:31Z",
-    "notes": "3.2.0:手机竖屏游戏顶栏改版,游戏名靠左,错误/用时/最佳等读数收进顶栏;放不下时读数自动折到标题下方,棋盘区域更大。"
+    "version": "3.2.1",
+    "build_number": "3201",
+    "build_id": "ee5d5c1efa4b47763c69da87a6a51fdf",
+    "file": "Citro-web-3.2.1.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.2.1.zip",
+    "size": 49117642,
+    "sha256": "ee5d5c1efa4b47763c69da87a6a51fdfb9f8ba2302251d2bfdaff46a79994859",
+    "published_at": "2026-11-17T17:03:37Z",
+    "notes": "3.2.1:数独页操作行在手机竖屏随棋盘滚动,灵敏度/视野live/玩法抽签/一起看的退场动画完整淡出;桌面端版式不变,版本 3.2.1。"
 }

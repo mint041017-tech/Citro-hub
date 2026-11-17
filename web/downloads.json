@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.2.0",
-    "build_number": "3200",
-    "file": "Citro-downloads-3.2.0.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.2.0.zip",
-    "size": 1088758,
-    "sha256": "0f46471fa0b612ba30323268ee4d12a0ed8cf0d9a89ef9a4fded0e34b307bba8",
-    "published_at": "2026-11-17T14:51:32Z",
-    "notes": "Citro downloads 静态站 3.2.0:Windows / Android 入口更新到 3.2.0,补充手机端游戏顶栏改版的更新日志。"
+    "version": "3.2.1",
+    "build_number": "3201",
+    "file": "Citro-downloads-3.2.1.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.2.1.zip",
+    "size": 1088723,
+    "sha256": "c25dc55639671b6246827f489f32b1ddb22dbb7d8a260a88f8ef0a605bd63977",
+    "published_at": "2026-11-17T17:03:37Z",
+    "notes": "Citro downloads 静态站 3.2.1:Windows / Android 入口更新到 3.2.1,补上数独操作行随滚动与退场动画优化;Web 入口同步。"
 }
