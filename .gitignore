@@ -173,6 +173,7 @@ screen-share/_*.json
 screen-share/_*.py
 screen-share/_*.txt
 screen-share/diag_*.json
+screen-share/diag_*.txt
 screen-share/diag_rt/
 screen-share/tmp_*.js
 screen-share/tmp_*.txt
