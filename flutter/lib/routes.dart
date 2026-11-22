@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'games/game_loader.dart';
 import 'calendar/calendar_page.dart';
+import 'mbti/mbti_page.dart';
 import 'services/platform.dart' as platform;
+import 'pages/checkin_scroll_page.dart';
 import 'pages/cook_page.dart';
 import 'pages/me_page.dart';
 import 'pages/play_page.dart';
@@ -34,6 +36,8 @@ class CitroRoutes {
   static const todoFocus = '/todo/focus';
   static const ledger = '/ledger';
   static const calendar = '/calendar';
+  static const mbti = '/mbti';
+  static const checkinScroll = '/checkin/scroll';
 
   // Tab 顺序与 RootShell._pageAt 一致：0 首页 / 1 计划 / 2 游戏 / 3 社区 / 4 资源库。
   // 资源库在 Windows 侧栏里是真 Tab，其他端 /res 仍开独立页。
@@ -73,6 +77,8 @@ class CitroRoutes {
         path == todoFocus ||
         path == ledger ||
         path == calendar ||
+        path == mbti ||
+        path == checkinScroll ||
         path == me ||
         path == play ||
         path == sens ||
@@ -94,6 +100,10 @@ class CitroRoutes {
       return LedgerPage(initialTab: args is int ? args : 0);
     }
     if (route == calendar) return const CalendarPage();
+    if (route == mbti) return const MbtiPage();
+    if (route == checkinScroll) {
+      return CheckinScrollPage(initialVolume: args is int ? args : null);
+    }
     if (route == cook) return const CookPage();
     if (route == me) return const MePage();
     // 资源库：非 Windows 直接开独立页；Windows 落进 RootShell 的第 5 个 Tab
@@ -114,7 +124,7 @@ class CitroRoutes {
       arguments: settings.arguments,
     );
     // 工具页退场要干净：完整淡出，而不是全站转场那种 18% 淡出后瞬间移除。
-    if (route == sens || route == play) {
+    if (route == sens || route == play || route == mbti) {
       return CitroCrispPageRoute<dynamic>(
         settings: routeSettings,
         builder: (_) => pageFor(route, args: settings.arguments),

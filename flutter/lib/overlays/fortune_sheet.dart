@@ -5,8 +5,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../checkin/checkin_models.dart';
+import '../checkin/checkin_store.dart';
+import '../checkin/daily_actions.dart';
 import '../data/cards.dart';
 import '../data/fortunes.dart';
+import '../fortune/ai_sign.dart';
+import '../pages/checkin_scroll_page.dart';
+import '../services/pomodoro.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
@@ -16,6 +22,9 @@ import '../widgets/browser_effects.dart';
 import '../widgets/paper.dart';
 import 'ai_chat.dart';
 import 'card_draw.dart';
+import 'fun_sign_sheet.dart';
+import 'notes_modal.dart';
+import 'reflection_sheet.dart';
 import '../widgets/modal.dart';
 
 Future<void> showFortuneOverlay(BuildContext context) async {
@@ -57,6 +66,12 @@ Future<void> showFortuneOverlay(BuildContext context) async {
       ],
     ),
   );
+  final completedVolume = CheckinStore.instance.takeJustCompletedVolume();
+  if (completedVolume != null &&
+      CheckinFlags.scrollEnabled &&
+      context.mounted) {
+    await showCheckinVolumeDone(context, volumeIndex: completedVolume);
+  }
 }
 
 class _FortuneDialog extends StatefulWidget {
@@ -67,7 +82,9 @@ class _FortuneDialog extends StatefulWidget {
 
 class _FortuneDialogState extends State<_FortuneDialog>
     with TickerProviderStateMixin {
-  static final _cardRadius = BorderRadius.all(Radius.circular(CitroColors.radii.card));
+  static final _cardRadius = BorderRadius.all(
+    Radius.circular(CitroColors.radii.card),
+  );
   // 翻面：压到 560ms（原 900ms 是「拖沓」的主因）。曲线用强 ease-out 起步，
   // 比 easeInOut 的起步更有「被弹起来」的仪式感。
   static const _flipDuration = Duration(milliseconds: 560);
@@ -88,6 +105,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
   static const Duration _atYiJi = Duration(milliseconds: 480);
 
   final GlobalKey _cardKey = GlobalKey();
+
+  /// 「今日一小步」那一行的位置：卡片本身的点击要避开这块，
+  /// 否则点勾选会同时把卡翻过去。
+  final GlobalKey _stepRowKey = GlobalKey();
   Offset? _downAt;
   int? idx;
   bool loading = true;
@@ -103,16 +124,20 @@ class _FortuneDialogState extends State<_FortuneDialog>
   bool _flipBusy = false;
   bool _transferBusy = false;
   bool _reduced = false;
+  int _phoneTab = 0;
+
+  /// 签房先生写出的「今日解」；失败时为 null，签面退回本地签文。
+  FortuneAiSign? _ai;
+  bool _aiLoading = false;
 
   @override
   void initState() {
     super.initState();
     _flip = AnimationController(vsync: this, duration: _flipDuration, value: 0);
-    _entrance = AnimationController(
-      vsync: this,
-      duration: _entranceDuration,
-    )..forward();
-    _aura = AnimationController(vsync: this, duration: _auraDuration)..forward();
+    _entrance = AnimationController(vsync: this, duration: _entranceDuration)
+      ..forward();
+    _aura = AnimationController(vsync: this, duration: _auraDuration)
+      ..forward();
     // 揭晓进度：t = 已进行的时间 / 总时长。星尘 / 逐行浮现 / 收尾共用一个
     // ticker，省掉多条 AnimatedBuilder 各算一遍时间。
     _reveal = AnimationController(
@@ -120,6 +145,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
       duration: _revealDuration,
       value: 1,
     );
+    CheckinStore.instance.addListener(_onCheckinChanged);
     _load();
     _loadCard();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -147,10 +173,12 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final card = await AppState.instance.ensureTodayCard();
     if (!mounted) return;
     setState(() => _card = card);
+    unawaited(_registerCheckin());
   }
 
   @override
   void dispose() {
+    CheckinStore.instance.removeListener(_onCheckinChanged);
     _introTimer?.cancel();
     _revealTimer?.cancel();
     _flip.dispose();
@@ -158,6 +186,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
     _aura.dispose();
     _reveal.dispose();
     super.dispose();
+  }
+
+  void _onCheckinChanged() {
+    if (mounted) setState(() {});
   }
 
   void _flipToFront({bool withReveal = true}) {
@@ -226,6 +258,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
         idx = existing;
         loading = false;
       });
+      _onFortuneReady();
       return;
     }
     try {
@@ -235,6 +268,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
           idx = i;
           loading = false;
         });
+        _onFortuneReady();
       }
     } catch (_) {
       if (mounted) {
@@ -242,8 +276,140 @@ class _FortuneDialogState extends State<_FortuneDialog>
           idx = 0;
           loading = false;
         });
+        _onFortuneReady();
       }
     }
+  }
+
+  /// 签已经定了：先读今天这支（本地 48 支签池按日期轮），再让签房先生写解。
+  void _onFortuneReady() {
+    unawaited(_registerCheckin());
+    unawaited(_loadAi());
+  }
+
+  Fortune _todayFortune() {
+    final day = DateTime.now();
+    final festId = festivalIdOf(day);
+    final fest = festId != null ? kFestivalFortunes[festId] : null;
+    if (fest != null) return fest;
+    final state = AppState.instance;
+    // 转运过就换个 salt，同一天同等级也能换到另一支签。
+    return fortuneForDay(
+      idx ?? 0,
+      day,
+      salt: state.fortuneTransferUsed ? 1 : 0,
+    );
+  }
+
+  Future<void> _loadAi() async {
+    final day = DateTime.now();
+    final fortune = _todayFortune();
+    if (mounted) setState(() => _aiLoading = true);
+    final sign = await FortuneAi.loadOrGenerate(
+      fortune: fortune,
+      day: day,
+      streak: AppState.instance.checkinStreak,
+      weekday: weekdayChinese(day),
+      lunar: lunarOf(day)?.name,
+      festival: festivalIdOf(day) != null
+          ? festivalName(festivalIdOf(day)!)
+          : null,
+      term: termToday(day),
+      cardLabel: _card?.categoryName,
+    );
+    if (!mounted) return;
+    setState(() {
+      _ai = sign;
+      _aiLoading = false;
+    });
+    unawaited(_registerCheckin());
+  }
+
+  /// 把今天的签、卡面与行动文案写成一条打卡记录。
+  ///
+  /// 同一天只建一条；AI 回得晚、卡面加载晚、转运换签都只是更新快照。
+  Future<void> _registerCheckin() async {
+    if (!mounted || idx == null) return;
+    final day = DateTime.now();
+    final f = _todayFortune();
+    final festival = festivalIdOf(day);
+    final ai = _ai;
+    final step = ai != null && ai.doText.trim().isNotEmpty
+        ? ai.doText
+        : (f.step ?? '');
+    await CheckinStore.instance.syncTodaySnapshot(
+      signId: f.signId ?? 'fest-${festival ?? 'day'}',
+      signTitle: f.name,
+      levelIndex: checkinLevelIndex(f),
+      kind: f.kind ?? 'tiny',
+      cardId: _card?.id,
+      transferUsed: AppState.instance.fortuneTransferUsed,
+      actionText: step,
+    );
+  }
+
+  Future<void> _openReflectionEntry() async {
+    if (!CheckinFlags.reflectionEnabled) return;
+    final saved = await showReflectionSheet(context);
+    if (!mounted) return;
+    if (saved == true) {
+      AppToast.show(context, '今天收好了');
+      setState(() {});
+    }
+  }
+
+  Future<void> _onActionPrimary(CheckinActionPlan plan) async {
+    final store = CheckinStore.instance;
+    if (store.today == null) await _registerCheckin();
+    if (store.today == null) return;
+    await store.markActionStarted();
+    try {
+      HapticFeedback.selectionClick();
+    } catch (_) {}
+    if (!mounted) return;
+    if (plan.opensReflection) {
+      await _openReflectionEntry();
+      return;
+    }
+    if (plan.opensNotes) {
+      if (!AppState.instance.loggedIn) {
+        await _openReflectionEntry();
+        return;
+      }
+      final nav = Navigator.of(context, rootNavigator: true);
+      nav.pop();
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      await showNotesModal(nav.context);
+      return;
+    }
+    final route = plan.route;
+    if (route == null) {
+      await store.completeAction(snapshot: store.today?.actionText);
+      return;
+    }
+    if (plan.type == CheckinActionType.focus) {
+      final pomo = PomodoroState.instance;
+      pomo.ensureInit();
+      if (!pomo.running) {
+        pomo.setDuration('focus', plan.thresholdMinutes.clamp(1, 90));
+      }
+    }
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop();
+    nav.pushNamed(route);
+  }
+
+  Future<void> _onActionManual() async {
+    final store = CheckinStore.instance;
+    if (store.today == null) await _registerCheckin();
+    if (store.today == null) return;
+    await store.markActionStarted();
+    await store.completeAction(snapshot: store.today?.actionText);
+    if (!mounted) return;
+    try {
+      HapticFeedback.selectionClick();
+    } catch (_) {}
+    AppToast.show(context, '已收进今天的打卡记录');
   }
 
   Future<void> _openDeedChat() async {
@@ -270,6 +436,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
         idx = next;
         if (card != null) _card = card;
       });
+      unawaited(_registerCheckin());
+      // 签换了，解也要重写一份。
+      unawaited(_loadAi());
       // 留一点时间让用户看到新卡背，再翻开新签。
       await Future<void>.delayed(const Duration(milliseconds: 120));
       if (!mounted) return;
@@ -396,14 +565,18 @@ class _FortuneDialogState extends State<_FortuneDialog>
                             : (ready ? c.onAccent : c.accentInk),
                       ),
                     const SizedBox(width: 5),
-                    Text(
-                      label,
-                      style: context.body(
-                        size: CitroType.small,
-                        weight: CitroType.medium,
-                        color: used
-                            ? c.inkSoft
-                            : (ready ? c.onAccent : c.accentInk),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.body(
+                          size: CitroType.small,
+                          weight: CitroType.medium,
+                          color: used
+                              ? c.inkSoft
+                              : (ready ? c.onAccent : c.accentInk),
+                        ),
                       ),
                     ),
                   ],
@@ -420,16 +593,30 @@ class _FortuneDialogState extends State<_FortuneDialog>
   Widget build(BuildContext context) {
     final c = context.c;
     final state = context.app;
+    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final cardWidth = wide ? 680.0 : 400.0;
     final today = DateTime.now();
-    final fortune = kFortunes[(idx ?? 0) % kFortunes.length];
-    final isBad = fortune.lv == '下签' || fortune.lv == '下下签';
     final festId = festivalIdOf(today);
+    final fortune = _todayFortune();
+    final ai = _ai;
+    final isBad = fortune.lv == '下签' || fortune.lv == '下下签';
+    final poem = ai != null && ai.poem.isNotEmpty ? ai.poem : fortune.poem;
+    final read = ai?.read ?? fortune.desc;
+    // 宜忌保留签池里的三项，信息更密；AI 的动作建议放进「今日一小步」，
+    // 避免同一句建议在签面上出现两遍。
+    final yiText = fortune.yi;
+    final jiText = fortune.ji;
+    final stepText = ai != null && ai.doText.isNotEmpty
+        ? ai.doText
+        : fortune.step;
     final term = termToday(today);
     final at = termAt(today);
     final lu = lunarOf(today);
-    final nt = nextTerm(today);
     final catIndex = _catIndex('${today.year}-${today.month}-${today.day}');
     final tags = <Widget>[];
+    if (fortune.kind != null) {
+      tags.add(_tag(context, fortuneKindLabel(fortune.kind), type: 'kind'));
+    }
     if (festId != null) {
       tags.add(_tag(context, festivalName(festId), type: 'fest'));
     }
@@ -452,9 +639,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final frontGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: c.dark
-          ? [c.surface2, c.bg2]
-          : [c.surface, c.tintYellow],
+      colors: c.dark ? [c.surface2, c.bg2] : [c.surface, c.tintYellow],
     );
 
     // 揭晓时的「星尘」粒子要能跑出卡片圆角，所以单独一层画在整张卡之上。
@@ -540,7 +725,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   Container(
                     key: _cardKey,
                     width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 400),
+                    constraints: BoxConstraints(maxWidth: cardWidth),
                     decoration: BoxDecoration(
                       borderRadius: _cardRadius,
                       boxShadow: [
@@ -565,7 +750,10 @@ class _FortuneDialogState extends State<_FortuneDialog>
                       children: [
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: _onCardTap,
+                          onTapUp: (d) {
+                            if (_hitStep(d.globalPosition)) return;
+                            _onCardTap();
+                          },
                           child: AnimatedBuilder(
                             animation: _flip,
                             child: ClipRRect(
@@ -617,504 +805,42 @@ class _FortuneDialogState extends State<_FortuneDialog>
                                         ),
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        22,
-                                        30,
-                                        22,
-                                        18,
+                                    if (wide)
+                                      _buildJournalFront(
+                                        context,
+                                        state,
+                                        compact: false,
+                                        today: today,
+                                        festId: festId,
+                                        fortune: fortune,
+                                        ai: ai,
+                                        isBad: isBad,
+                                        poem: poem,
+                                        read: read,
+                                        yiText: yiText,
+                                        jiText: jiText,
+                                        stepText: stepText,
+                                        tags: tags,
+                                        catIndex: catIndex,
+                                      )
+                                    else
+                                      _buildJournalFront(
+                                        context,
+                                        state,
+                                        compact: true,
+                                        today: today,
+                                        festId: festId,
+                                        fortune: fortune,
+                                        ai: ai,
+                                        isBad: isBad,
+                                        poem: poem,
+                                        read: read,
+                                        yiText: yiText,
+                                        jiText: jiText,
+                                        stepText: stepText,
+                                        tags: tags,
+                                        catIndex: catIndex,
                                       ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 6,
-                                                height: 6,
-                                                decoration: BoxDecoration(
-                                                  color: c.accent,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                festId != null
-                                                    ? '${festivalName(festId)}特别签'
-                                                    : '今日打卡',
-                                                style: context.heading(
-                                                  size: 14,
-                                                  color: c.accentInk,
-                                                  letterSpacing: .8,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Container(
-                                                  height: 1,
-                                                  color: c.accent.withAlpha(58),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Text(
-                                                'DAILY DRAW',
-                                                style: context.body(
-                                                  size: 9,
-                                                  weight: FontWeight.w700,
-                                                  color: c.inkSoft,
-                                                  letterSpacing: 1.7,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .end,
-                                                      children: [
-                                                        Text(
-                                                          '${today.day}',
-                                                          style: context
-                                                              .display(
-                                                                size: 56,
-                                                                color:
-                                                                    c.accentInk,
-                                                                height: .95,
-                                                              ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 10,
-                                                        ),
-                                                        Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                bottom: 8,
-                                                              ),
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              Text(
-                                                                '${today.year} / ${today.month.toString().padLeft(2, '0')}',
-                                                                style: context.body(
-                                                                  size: 11,
-                                                                  color:
-                                                                      c.inkSoft,
-                                                                  letterSpacing:
-                                                                      1.1,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                height: 2,
-                                                              ),
-                                                              Text(
-                                                                weekdayChinese(
-                                                                  today,
-                                                                ),
-                                                                style: context
-                                                                    .heading(
-                                                                      size: 15,
-                                                                      color: c
-                                                                          .ink2,
-                                                                    ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    Wrap(
-                                                      spacing: 6,
-                                                      runSpacing: 5,
-                                                      children: tags,
-                                                    ),
-                                                    if (nt != null) ...[
-                                                      const SizedBox(height: 6),
-                                                      Text(
-                                                        '距 ${_termName(nt)} ${dayDiff(today, nt)} 天',
-                                                        style: context.body(
-                                                          size: 10,
-                                                          color: c.inkSoft,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              _catSticker(context, catIndex),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 14),
-                                          _RevealItem(
-                                            controller: _reveal,
-                                            child: AnimatedOpacity(
-                                              opacity: loading ? 0 : 1,
-                                              duration: const Duration(
-                                                milliseconds: 220,
-                                              ),
-                                              child: AnimatedScale(
-                                                scale: loading ? .98 : 1,
-                                                duration: const Duration(
-                                                  milliseconds: 220,
-                                                ),
-                                                curve: Curves.easeOut,
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.fromLTRB(
-                                                        14,
-                                                        16,
-                                                        14,
-                                                        16,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: c.surface.withAlpha(
-                                                      c.dark ? 26 : 148,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          CitroColors.radii.inner,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: c.accent.withAlpha(
-                                                        c.dark ? 40 : 58,
-                                                      ),
-                                                    ),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: c.dark
-                                                            ? const Color(
-                                                                0x33000000,
-                                                              )
-                                                            : const Color(
-                                                                0x0F000000,
-                                                              ),
-                                                        blurRadius: 12,
-                                                        offset: const Offset(0, 5),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                child: loading
-                                                    ? const SizedBox(
-                                                        height: 168,
-                                                        child: Center(
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                              ),
-                                                        ),
-                                                      )
-                                                    : Column(
-                                                        children: [
-                                                          Row(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              _StampIn(
-                                                                controller:
-                                                                    _reveal,
-                                                                at: _atSeal,
-                                                                child:
-                                                                    _fortuneSeal(
-                                                                  context,
-                                                                  fortune.lv,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 14,
-                                                              ),
-                                                              Expanded(
-                                                                child: Column(
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .stretch,
-                                                                  children: [
-                                                                    // 签名用「从左往右写出来」的擦除式揭示，
-                                                                    // 比单纯淡入更像落笔。
-                                                                    _WritingReveal(
-                                                                      controller:
-                                                                          _reveal,
-                                                                      at: _atName,
-                                                                      color: c
-                                                                          .ink,
-                                                                      child:
-                                                                          Text(
-                                                                        fortune
-                                                                            .name,
-                                                                        textAlign:
-                                                                            TextAlign
-                                                                                .center,
-                                                                        maxLines:
-                                                                            1,
-                                                                        overflow:
-                                                                            TextOverflow
-                                                                                .ellipsis,
-                                                                        style: context.display(
-                                                                          size:
-                                                                              24,
-                                                                          weight:
-                                                                              FontWeight.w700,
-                                                                          color: c
-                                                                              .ink,
-                                                                          letterSpacing:
-                                                                              3.4,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                    const SizedBox(
-                                                                      height: 6,
-                                                                    ),
-                                                                    _RevealItem(
-                                                                      controller:
-                                                                          _reveal,
-                                                                      at: _atPoem,
-                                                                      child:
-                                                                          Container(
-                                                                        padding: const EdgeInsets.symmetric(
-                                                                          horizontal:
-                                                                              12,
-                                                                          vertical:
-                                                                              10,
-                                                                        ),
-                                                                        decoration: BoxDecoration(
-                                                                          color: c.accent.withAlpha(
-                                                                            c.dark
-                                                                                ? 14
-                                                                                : 18,
-                                                                          ),
-                                                                          borderRadius:
-                                                                              BorderRadius.circular(
-                                                                            CitroColors.radii.small,
-                                                                          ),
-                                                                          border: Border.all(
-                                                                            color: c
-                                                                                .accent
-                                                                                .withAlpha(
-                                                                              48,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                        child: Column(
-                                                                          children: [
-                                                                            for (var i = 0;
-                                                                                i < fortune.poem.length;
-                                                                                i++)
-                                                                              _RevealItem(
-                                                                                controller:
-                                                                                    _reveal,
-                                                                                at: _atPoem +
-                                                                                    _atPoemLine *
-                                                                                        i,
-                                                                                rise: 6,
-                                                                                child: Text(
-                                                                                  fortune
-                                                                                      .poem[i],
-                                                                                  textAlign:
-                                                                                      TextAlign.center,
-                                                                                  style: context.display(
-                                                                                    size: 14,
-                                                                                    weight: FontWeight.w700,
-                                                                                    color: c.ink,
-                                                                                    height: 1.75,
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                          ],
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 12,
-                                                          ),
-                                                          Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: Container(
-                                                                  height: 1,
-                                                                  color: c.line2
-                                                                      .withAlpha(
-                                                                        120,
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                              Padding(
-                                                                padding:
-                                                                    const EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          8,
-                                                                    ),
-                                                                child: Text(
-                                                                  '✦',
-                                                                  style: context
-                                                                      .body(
-                                                                        size: 9,
-                                                                        color: c
-                                                                            .accentInk,
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                              Expanded(
-                                                                child: Container(
-                                                                  height: 1,
-                                                                  color: c.line2
-                                                                      .withAlpha(
-                                                                        120,
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 10,
-                                                          ),
-                                                          _RevealItem(
-                                                            controller: _reveal,
-                                                            at: _atDesc,
-                                                            rise: 8,
-                                                            child: Text(
-                                                              fortune.desc,
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style: context.body(
-                                                                size: 13,
-                                                                color: c.ink2,
-                                                                height: 1.65,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 12,
-                                                          ),
-                                                          _RevealItem(
-                                                            controller: _reveal,
-                                                            at: _atYiJi,
-                                                            child: Row(
-                                                              children: [
-                                                                Expanded(
-                                                                  child: _yiJi(
-                                                                    context,
-                                                                    '宜',
-                                                                    fortune.yi,
-                                                                    good: true,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  width: 8,
-                                                                ),
-                                                                Expanded(
-                                                                  child: _yiJi(
-                                                                    context,
-                                                                    '忌',
-                                                                    fortune.ji,
-                                                                    good: false,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                              ),
-                                            ),
-                                          ),
-                                          ),
-                                          if (!loading &&
-                                              isBad &&
-                                              festId == null) ...[
-                                            const SizedBox(height: 12),
-                                            _transferBox(context, state),
-                                          ],
-                                          const SizedBox(height: 12),
-                                          Container(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              12,
-                                              8,
-                                              12,
-                                              8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: c.surface2,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    CitroColors.radii.small,
-                                                  ),
-                                              border: Border.all(
-                                                color: c.line2.withAlpha(90),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  width: 6,
-                                                  height: 6,
-                                                  decoration: BoxDecoration(
-                                                    color: c.accent,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Expanded(
-                                                  child: Text(
-                                                    state.checkinStreak > 0
-                                                        ? '连续打卡 ${state.checkinStreak} 天 · 明日再来'
-                                                        : '明天再来抽一签',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: context.body(
-                                                      size: 11,
-                                                      color: c.inkSoft,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Flexible(
-                                                  child: Text(
-                                                    _card == null
-                                                        ? '轻点翻看卡面'
-                                                        : '轻点翻看 · ${_card!.categoryName}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign: TextAlign.right,
-                                                    style: context.body(
-                                                      size: 10,
-                                                      color: c.inkSoft
-                                                          .withAlpha(170),
-                                                      letterSpacing: .2,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -1187,9 +913,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
                           ),
                         ),
                         // 星尘可以跑出圆角，所以放在 ClipRRect 之外。
-                        Positioned.fill(
-                          child: IgnorePointer(child: sparkles),
-                        ),
+                        Positioned.fill(child: IgnorePointer(child: sparkles)),
                         Positioned(
                           top: 6,
                           right: 6,
@@ -1253,65 +977,805 @@ class _FortuneDialogState extends State<_FortuneDialog>
     );
   }
 
-  Widget _fortuneSeal(BuildContext context, String level) {
+  Widget _fortuneSeal(
+    BuildContext context,
+    String level, {
+    bool compact = false,
+  }) {
     final c = context.c;
-    final stamp = c.stamp;
-    return Container(
-      width: 78,
-      height: 78,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [stamp, Color.lerp(stamp, c.ink, .16)!],
-        ),
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        boxShadow: CitroColors.shadows.sm(c),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(5),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.inner - 1),
-                  border: Border.all(color: Colors.white.withAlpha(180)),
+    final seal = c.danger;
+    final size = compact ? 96.0 : 84.0;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '今日签',
+              style: context.body(
+                size: compact ? 11 : 10,
+                weight: CitroType.medium,
+                color: seal,
+                letterSpacing: 4,
+              ),
+            ),
+            const SizedBox(height: 5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                level,
+                maxLines: 1,
+                style: context.heading(
+                  size: compact ? 38 : 34,
+                  weight: CitroType.strong,
+                  color: seal,
+                  letterSpacing: 1.5,
+                  height: 1,
                 ),
               ),
             ),
+            const SizedBox(height: 7),
+            Container(
+              width: compact ? 38 : 32,
+              height: 1.5,
+              color: seal.withAlpha(150),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 这一下是不是落在「今日一小步」上（全局坐标）。
+  bool _hitStep(Offset global) {
+    // 手机端签文页与今日页同时存在于 AnimatedCrossFade 的布局里，
+    // 未选中的「今日」页不能拦截签文页的翻面手势。
+    if (MediaQuery.sizeOf(context).width < 760 && _phoneTab != 1) return false;
+    final ctx = _stepRowKey.currentContext;
+    if (ctx == null) return false;
+    final box = ctx.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return false;
+    return (box.localToGlobal(Offset.zero) & box.size).contains(global);
+  }
+
+  /// 解签进行中的一行提示：不占大块空间，也不打断签面。
+  Widget _solveHint(BuildContext context) {
+    final c = context.c;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 10,
+          height: 10,
+          child: CircularProgressIndicator(strokeWidth: 1.6, color: c.accent),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '签房先生正在解这一签',
+          style: context.body(size: 10, color: c.inkSoft, letterSpacing: .4),
+        ),
+      ],
+    );
+  }
+
+  Widget _keywordChip(BuildContext context, String text) {
+    final c = context.c;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.accentLt.withAlpha(c.dark ? 40 : 130),
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: c.accent.withAlpha(80)),
+      ),
+      child: Text(
+        text,
+        style: context.body(size: 10, color: c.accentInk, letterSpacing: .6),
+      ),
+    );
+  }
+
+  /// 今日一小步 + 通用行动入口。
+  ///
+  /// 主按钮跳到对应模块，能自动验证的等它验证；验证不到或没有入口时，
+  /// 次按钮「我自己完成了」永远可以手动盖章。
+  Widget _actionBlock(
+    BuildContext context,
+    String step, {
+    bool embedded = false,
+  }) {
+    final c = context.c;
+    final store = CheckinStore.instance;
+    final entry = store.today;
+    final done = entry?.actionDone ?? false;
+    final kind = entry?.kind ?? _todayFortune().kind;
+    final text = entry != null && entry.actionText.isNotEmpty
+        ? entry.actionText
+        : step;
+    final plan = checkinPlanForKind(kind, stepText: text);
+    final canUsePrimary =
+        CheckinFlags.linkedActionEnabled &&
+        plan.hasPrimary &&
+        !(plan.opensReflection && !CheckinFlags.reflectionEnabled);
+    final statusText = done
+        ? '已完成'
+        : (canUsePrimary && plan.isAuto ? '自动盖章' : '待完成');
+    return Container(
+      key: _stepRowKey,
+      padding: embedded
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: embedded
+          ? null
+          : BoxDecoration(
+              color: done ? c.mintSoft : c.surface2,
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              border: Border.all(
+                color: done ? c.mintLine : c.line2.withAlpha(120),
+              ),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: done ? c.mintSoft : c.accentLt,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  done ? Icons.check_rounded : Icons.flag_outlined,
+                  size: 15,
+                  color: done ? c.mintInk : c.accentInk,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '今日一小步',
+                style: context.heading(
+                  size: 13,
+                  color: done ? c.mintInk : c.accentInk,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: done ? c.mintSoft : c.accentLt,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: done ? c.mintLine : c.accent.withAlpha(55),
+                  ),
+                ),
+                child: Text(
+                  statusText,
+                  style: context.body(
+                    size: 9.5,
+                    weight: FontWeight.w600,
+                    color: done ? c.mintInk : c.accentInk,
+                  ),
+                ),
+              ),
+            ],
           ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+          const SizedBox(height: 10),
+          Text(
+            text,
+            style: context
+                .body(
+                  size: embedded ? 14.5 : 15,
+                  weight: FontWeight.w600,
+                  color: done ? c.mintInk : c.ink,
+                  height: 1.45,
+                )
+                .copyWith(
+                  decoration: done
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                  decorationColor: c.mintInk,
+                ),
+          ),
+          if (!done) ...[
+            const SizedBox(height: 12),
+            if (canUsePrimary)
+              Row(
                 children: [
-                  Text(
-                    '今日签',
-                    style: context.body(
-                      size: CitroType.micro,
-                      weight: CitroType.medium,
-                      // 棕底配白字，深青在棕上几乎看不见。
-                      color: Colors.white.withAlpha(230),
-                      letterSpacing: 2,
+                  Expanded(
+                    child: CitroButton(
+                      label: plan.primaryLabel,
+                      height: 42,
+                      onPressed: () => _onActionPrimary(plan),
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      level,
+                  SizedBox(width: embedded ? 6 : 8),
+                  TextButton(
+                    onPressed: _onActionManual,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 42),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      foregroundColor: c.ink2,
+                      textStyle: context.body(size: 10),
+                    ),
+                    child: Text(plan.manualLabel),
+                  ),
+                ],
+              )
+            else
+              CitroButton(
+                label: '标记为完成',
+                height: 42,
+                expanded: true,
+                onPressed: _onActionManual,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 晚间回签入口：选落点、写一句；已回签时同样可以再改。
+  Widget _reflectionRow(BuildContext context, {bool embedded = false}) {
+    if (!CheckinFlags.reflectionEnabled) return const SizedBox.shrink();
+    final c = context.c;
+    final entry = CheckinStore.instance.today;
+    if (entry == null) return const SizedBox.shrink();
+    final reflected = entry.hasReflection;
+    final preview = entry.reflectionText.trim();
+    final subtitle = reflected
+        ? '${CheckinMood.label(entry.reflectionMood)} · ${preview.isEmpty ? '只留了落点' : preview}'
+        : '选一个落点，写一句可留可不留的话';
+    final inner = embedded
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: reflected ? c.accentInk : c.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '晚间回签',
+                    style: context.body(
+                      size: 9,
+                      color: c.inkSoft,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios, size: 9, color: c.inkSoft),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                reflected ? '今天收好了 · 改一改' : '给今天收个尾',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.body(
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: reflected ? c.accentInk : c.ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.body(size: 9, color: c.inkSoft, height: 1.35),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              AppIcon(
+                strokeSvg(AppIcons.edit, width: 2),
+                size: 15,
+                color: reflected ? c.accentInk : c.ink2,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      reflected ? '今天收好了 · 改一改' : '给今天收个尾',
+                      style: context.body(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: reflected ? c.accentInk : c.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
                       maxLines: 1,
-                      style: context.heading(
-                        size: CitroType.titleLg,
-                        color: Colors.white,
-                        letterSpacing: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.body(size: 9, color: c.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 10, color: c.inkSoft),
+            ],
+          );
+    if (embedded) {
+      return Pressable(onTap: _openReflectionEntry, child: inner);
+    }
+    return Pressable(
+      onTap: _openReflectionEntry,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
+        decoration: BoxDecoration(
+          color: reflected
+              ? c.accentLt.withAlpha(c.dark ? 44 : 150)
+              : c.surface,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          border: Border.all(
+            color: reflected ? c.accent.withAlpha(80) : c.line,
+          ),
+        ),
+        child: inner,
+      ),
+    );
+  }
+
+  Widget _buildJournalFront(
+    BuildContext context,
+    AppState state, {
+    required bool compact,
+    required DateTime today,
+    required String? festId,
+    required Fortune fortune,
+    required FortuneAiSign? ai,
+    required bool isBad,
+    required List<String> poem,
+    required String read,
+    required String yiText,
+    required String jiText,
+    required String? stepText,
+    required List<Widget> tags,
+    required int catIndex,
+  }) {
+    final c = context.c;
+    final title = ai?.title ?? fortune.name;
+    final step = stepText ?? checkinActionTextFor(fortune.kind);
+    final nt = nextTerm(today);
+    final reflected = CheckinStore.instance.today?.hasReflection == true;
+    final canReflect =
+        CheckinFlags.reflectionEnabled && CheckinStore.instance.today != null;
+    final status = fortune.signIndex > 0
+        ? '第 ${fortune.signIndex} / $kFortunePoolSize 签 · 连续 ${state.checkinStreak} 天'
+        : (state.checkinStreak > 0
+              ? '连续打卡 ${state.checkinStreak} 天 · 明日再来'
+              : '明天再来抽一签');
+
+    final signPage = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StampIn(
+              controller: _reveal,
+              at: _atSeal,
+              child: _fortuneSeal(context, fortune.lv, compact: compact),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _WritingReveal(
+                    controller: _reveal,
+                    at: _atName,
+                    color: c.ink,
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.display(
+                        size: 23,
+                        weight: FontWeight.w700,
+                        color: c.ink,
+                        letterSpacing: 2.4,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _RevealItem(
+                    controller: _reveal,
+                    at: _atPoem,
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: c.accent.withAlpha(130),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0; i < poem.length; i++)
+                            _RevealItem(
+                              controller: _reveal,
+                              at: _atPoem + _atPoemLine * i,
+                              rise: 6,
+                              child: Text(
+                                poem[i],
+                                style: context.display(
+                                  size: 14,
+                                  weight: FontWeight.w600,
+                                  color: c.ink2,
+                                  height: 1.7,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        if (_aiLoading) ...[_solveHint(context), const SizedBox(height: 10)],
+        _RevealItem(
+          controller: _reveal,
+          at: _atDesc,
+          rise: 8,
+          child: Text(
+            read,
+            style: context.body(size: 12, color: c.ink2, height: 1.75),
+          ),
+        ),
+        if (ai != null && ai.keywords.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _RevealItem(
+            controller: _reveal,
+            at: _atDesc,
+            rise: 8,
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [for (final k in ai.keywords) _keywordChip(context, k)],
+            ),
+          ),
+        ],
+        const SizedBox(height: 18),
+        _RevealItem(
+          controller: _reveal,
+          at: _atYiJi,
+          child: _yiJiLine(context, '宜', yiText, good: true),
+        ),
+        const SizedBox(height: 9),
+        _RevealItem(
+          controller: _reveal,
+          at: _atYiJi,
+          child: _yiJiLine(context, '忌', jiText, good: false),
+        ),
+      ],
+    );
+
+    final todayPage = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!compact) ...[
+          Row(
+            children: [
+              Text('今日小事', style: context.heading(size: 13, color: c.ink)),
+              const Spacer(),
+              Text(
+                'TODAY',
+                style: context.body(
+                  size: 8,
+                  weight: FontWeight.w700,
+                  color: c.inkSoft,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        _RevealItem(
+          controller: _reveal,
+          at: _atDesc,
+          rise: 8,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+            decoration: BoxDecoration(
+              color: c.tintYellow.withAlpha(c.dark ? 36 : 150),
+              borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+              border: Border.all(color: c.accent.withAlpha(55)),
+            ),
+            child: _actionBlock(context, step, embedded: true),
+          ),
+        ),
+        if (canReflect) ...[
+          const SizedBox(height: 12),
+          _RevealItem(
+            controller: _reveal,
+            at: _atDesc,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: c.surface.withAlpha(c.dark ? 40 : 180),
+                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                border: Border.all(color: c.line2.withAlpha(120)),
+              ),
+              child: _reflectionRow(context, embedded: true),
+            ),
+          ),
+        ],
+        if (!loading && isBad && festId == null) ...[
+          const SizedBox(height: 12),
+          _transferBox(context, state),
+        ],
+      ],
+    );
+
+    return Padding(
+      padding: compact
+          ? const EdgeInsets.fromLTRB(20, 22, 20, 16)
+          : const EdgeInsets.fromLTRB(28, 24, 28, 18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: c.accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                festId != null
+                    ? '${festivalName(festId)}特别签'
+                    : (compact ? '今日一签' : '今日打卡'),
+                style: context.heading(
+                  size: compact ? 15 : 13,
+                  color: c.accentInk,
+                  letterSpacing: .8,
+                ),
+              ),
+              const Spacer(),
+              if (compact)
+                Text(
+                  '${today.month}月${today.day}日 · ${weekdayChinese(today)}',
+                  style: context.body(
+                    size: 10,
+                    weight: FontWeight.w500,
+                    color: c.inkSoft,
+                  ),
+                )
+              else if (reflected && CheckinFlags.reflectionEnabled)
+                const _ReflectedStamp()
+              else
+                Text(
+                  'DAILY DRAW',
+                  style: context.body(
+                    size: 8,
+                    weight: FontWeight.w700,
+                    color: c.inkSoft,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: compact ? 12 : 16),
+          if (compact)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 5,
+                        children: tags.take(3).toList(),
+                      ),
+                      if (nt != null) ...[
+                        const SizedBox(height: 7),
+                        Text(
+                          '距 ${_termName(nt)} ${dayDiff(today, nt)} 天',
+                          style: context.body(size: 10, color: c.inkSoft),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _catSticker(context, catIndex),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${today.day}',
+                            style: context.display(
+                              size: 48,
+                              color: c.accentInk,
+                              height: .95,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${today.year} / ${today.month.toString().padLeft(2, '0')}',
+                                  style: context.body(
+                                    size: 10,
+                                    color: c.inkSoft,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  weekdayChinese(today),
+                                  style: context.heading(
+                                    size: 14,
+                                    color: c.ink2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(spacing: 6, runSpacing: 5, children: tags),
+                      if (nt != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '距 ${_termName(nt)} ${dayDiff(today, nt)} 天',
+                          style: context.body(size: 9, color: c.inkSoft),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _catSticker(context, catIndex),
+              ],
+            ),
+          SizedBox(height: compact ? 14 : 20),
+          if (compact) ...[
+            _buildPhoneTabs(context),
+            const SizedBox(height: 14),
+            AnimatedCrossFade(
+              duration: _reduced
+                  ? Duration.zero
+                  : const Duration(milliseconds: 280),
+              firstChild: signPage,
+              secondChild: todayPage,
+              crossFadeState: _phoneTab == 0
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              sizeCurve: Curves.easeOutCubic,
+              firstCurve: const Interval(0, .55, curve: Curves.easeOutCubic),
+              secondCurve: const Interval(.45, 1, curve: Curves.easeInCubic),
+            ),
+          ] else
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(flex: 3, child: signPage),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(width: 1, color: c.line2.withAlpha(120)),
+                  ),
+                  Expanded(flex: 2, child: todayPage),
+                ],
+              ),
+            ),
+          const SizedBox(height: 18),
+          Container(height: 1, color: c.line2.withAlpha(110)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  status,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: compact ? 10.5 : 10,
+                    color: c.inkSoft,
+                  ),
+                ),
+              ),
+              if (!compact) ...[
+                Text(
+                  _card == null ? '轻点翻看卡面' : '轻点翻看 · ${_card!.categoryName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(size: 9, color: c.inkSoft.withAlpha(180)),
+                ),
+                const SizedBox(width: 12),
+              ],
+              const SizedBox(width: 10),
+              CitroButton(
+                label: '趣签筒',
+                icon: Icon(
+                  Icons.casino_outlined,
+                  size: compact ? 16 : 14,
+                  color: c.accentInk,
+                ),
+                width: compact ? 118 : 108,
+                height: compact ? 40 : 32,
+                style: CitroButtonStyle.outline,
+                onPressed: () => showFunSignSheet(context),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneTabs(BuildContext context) {
+    final c = context.c;
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        border: Border.all(color: c.line2.withAlpha(90)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _phoneTabButton(
+              context,
+              '签文',
+              0,
+              Icons.auto_awesome_rounded,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _phoneTabButton(
+              context,
+              '今日小事',
+              1,
+              Icons.check_circle_outline_rounded,
             ),
           ),
         ],
@@ -1319,7 +1783,64 @@ class _FortuneDialogState extends State<_FortuneDialog>
     );
   }
 
-  Widget _yiJi(
+  Widget _phoneTabButton(
+    BuildContext context,
+    String label,
+    int index,
+    IconData icon,
+  ) {
+    final c = context.c;
+    final selected = _phoneTab == index;
+    return Pressable(
+      onTap: () {
+        if (_phoneTab == index) return;
+        setState(() => _phoneTab = index);
+      },
+      child: AnimatedContainer(
+        duration: _reduced ? Duration.zero : const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? c.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+          border: Border.all(
+            color: selected ? c.accent.withAlpha(70) : Colors.transparent,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: c.ink.withAlpha(10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: selected ? c.accentInk : c.inkSoft),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.body(
+                    size: 12,
+                    weight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? c.accentInk : c.inkSoft,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _yiJiLine(
     BuildContext context,
     String mark,
     String text, {
@@ -1328,47 +1849,37 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final c = context.c;
     final tone = good ? c.mintInk : c.stamp;
     final bg = good ? c.mintSoft : c.dangerSoft;
-    final border = good ? c.mintLine : c.danger.withAlpha(90);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(CitroColors.radii.small),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: good ? c.surface : c.dangerSoft,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              mark,
-              style: context.body(
-                size: CitroType.micro,
-                weight: CitroType.medium,
-                color: tone,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+          ),
+          child: Text(
+            mark,
+            style: context.body(
+              size: CitroType.micro,
+              weight: CitroType.medium,
+              color: tone,
             ),
           ),
-          const SizedBox(width: AppSpacing.x1),
-          Expanded(
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               text,
-              style: context.body(
-                size: CitroType.small,
-                color: tone,
-                height: 1.4,
-              ),
+              style: context.body(size: 11, color: tone, height: 1.5),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1418,7 +1929,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
               padding: const EdgeInsets.all(10),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(CitroColors.radii.card - 1),
+                  borderRadius: BorderRadius.circular(
+                    CitroColors.radii.card - 1,
+                  ),
                   border: Border.all(color: c.accentLt, width: 1),
                 ),
               ),
@@ -1485,6 +1998,11 @@ class _FortuneDialogState extends State<_FortuneDialog>
         bg = c.accentLt.withAlpha(c.dark ? 60 : 140);
         fg = c.accentInk;
         border = c.accent.withAlpha(120);
+        break;
+      case 'kind':
+        bg = c.tintYellow;
+        fg = c.ink2;
+        border = c.accent.withAlpha(70);
         break;
       case 'term':
         bg = c.mintSoft;
@@ -1713,10 +2231,7 @@ class _RevealItem extends StatelessWidget {
             offset: Offset(0, rise * (1 - e)),
             child: scale == 1
                 ? child
-                : Transform.scale(
-                    scale: scale + (1 - scale) * e,
-                    child: child,
-                  ),
+                : Transform.scale(scale: scale + (1 - scale) * e, child: child),
           ),
         );
       },
@@ -1816,7 +2331,10 @@ class _StampIn extends StatelessWidget {
                 opacity: math.min(1.0, t * 2.4),
                 child: Transform.rotate(
                   angle: .07 * (1 - e),
-                  child: Transform.scale(scale: 1.3 - .3 * settle, child: child),
+                  child: Transform.scale(
+                    scale: 1.3 - .3 * settle,
+                    child: child,
+                  ),
                 ),
               ),
             ],
@@ -1918,8 +2436,7 @@ class _SparklePainter extends CustomPainter {
       final angle = i * 2.39996 + .35;
       final dist = maxR * (.3 + .7 * ((i * 37) % 100) / 100);
       final ease = Curves.easeOutCubic.transform(window);
-      final p = center +
-          Offset(math.cos(angle), math.sin(angle)) * dist * ease;
+      final p = center + Offset(math.cos(angle), math.sin(angle)) * dist * ease;
       // 错峰闪烁：每颗粒子在自己那段时间里亮起再暗下去。
       final local = ((window - (i % 5) * .06) / .62).clamp(0.0, 1.0);
       final twinkle = math.sin(math.pi * local);
@@ -1937,16 +2454,8 @@ class _SparklePainter extends CustomPainter {
           ..color = color.withAlpha((150 * twinkle).round())
           ..strokeWidth = 1.1
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(
-          p - Offset(ray, 0),
-          p + Offset(ray, 0),
-          paint,
-        );
-        canvas.drawLine(
-          p - Offset(0, ray),
-          p + Offset(0, ray),
-          paint,
-        );
+        canvas.drawLine(p - Offset(ray, 0), p + Offset(ray, 0), paint);
+        canvas.drawLine(p - Offset(0, ray), p + Offset(0, ray), paint);
       }
     }
     // 卡心一闪而过的亮斑，把视线先聚到签名上。
@@ -1957,10 +2466,7 @@ class _SparklePainter extends CustomPainter {
         maxR * .34 * core,
         Paint()
           ..shader = RadialGradient(
-            colors: [
-              color.withAlpha((70 * core).round()),
-              color.withAlpha(0),
-            ],
+            colors: [color.withAlpha((70 * core).round()), color.withAlpha(0)],
           ).createShader(Rect.fromCircle(center: center, radius: maxR * .34)),
       );
     }
@@ -1969,4 +2475,33 @@ class _SparklePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SparklePainter old) =>
       old.progress != progress || old.color != color;
+}
+
+/// 卡面右上角的「已回签」小印章。
+class _ReflectedStamp extends StatelessWidget {
+  const _ReflectedStamp();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Transform.rotate(
+      angle: -.055,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(color: c.accent.withAlpha(170), width: 1.2),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          '已回签',
+          style: context.body(
+            size: 8,
+            weight: FontWeight.w700,
+            color: c.accent,
+            letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
 }

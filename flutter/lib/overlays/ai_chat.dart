@@ -52,6 +52,8 @@ Future<void> showAiChat(
   bool goodDeed = false,
   VoidCallback? onGoodDeed,
 }) async {
+  // 每次打开分享好事都是一次新的对话，不把上一次的结果带进来。
+  if (goodDeed) _deedHistory.clear();
   await showCitroSheet<void>(
     context: context,
     isScrollControlled: true,

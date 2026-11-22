@@ -28,6 +28,7 @@ enum HomeCardId {
   zodiac,
   quote,
   cardCollection,
+  mbti,
   game,
   res,
 }
@@ -99,6 +100,7 @@ const Map<HomeCardId, HomeCardInfo> kHomeCardInfo = {
   HomeCardId.zodiac: HomeCardInfo('今日星象', '本命星座与今日运势'),
   HomeCardId.quote: HomeCardInfo('每日一言', '每天一句，随手可复制'),
   HomeCardId.cardCollection: HomeCardInfo('卡面收藏', '已收集的卡面与抽卡入口'),
+  HomeCardId.mbti: HomeCardInfo('人格测试', '16 型人格，四个维度看懂自己'),
   HomeCardId.game: HomeCardInfo('小游戏', '把常玩的小游戏放到首页'),
   HomeCardId.res: HomeCardInfo('资源', '工具与驱动，随手打开'),
 };
@@ -266,6 +268,7 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
       minH: 2,
       maxH: 3,
     ),
+    HomeCardId.mbti => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 3),
     HomeCardId.game => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 5),
     HomeCardId.res => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
   };
@@ -276,8 +279,9 @@ HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
 /// 2. 天气 + 心情（原样）
 /// 3. 听隅 + 食谱日记（方形卡）
 /// 4. 星象（整宽大卡）
-/// 5. 卡面收藏（整宽）
-/// 6. 每日一言（整宽）
+/// 5. 人格测试（整宽）
+/// 6. 卡面收藏（整宽）
+/// 7. 每日一言（整宽）
 List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
   if (key.form == HomeForm.wide) {
     return const [
@@ -288,8 +292,9 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
       HomeSlot(HomeCardId.tingyu, col: 0, row: 3, w: 6, h: 3),
       HomeSlot(HomeCardId.cook, col: 6, row: 3, w: 6, h: 3),
       HomeSlot(HomeCardId.zodiac, col: 0, row: 6, w: 12, h: 5),
-      HomeSlot(HomeCardId.cardCollection, col: 0, row: 11, w: 12, h: 3),
-      HomeSlot(HomeCardId.quote, col: 0, row: 14, w: 12, h: 2),
+      HomeSlot(HomeCardId.mbti, col: 0, row: 11, w: 12, h: 2),
+      HomeSlot(HomeCardId.cardCollection, col: 0, row: 13, w: 12, h: 3),
+      HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 12, h: 2),
     ];
   }
   // 窄屏：每排两卡或整宽，行距按 8pt 栅格。
@@ -301,8 +306,9 @@ List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
     HomeSlot(HomeCardId.tingyu, col: 0, row: 5, w: 3, h: 3),
     HomeSlot(HomeCardId.cook, col: 3, row: 5, w: 3, h: 3),
     HomeSlot(HomeCardId.zodiac, col: 0, row: 8, w: 6, h: 5),
-    HomeSlot(HomeCardId.cardCollection, col: 0, row: 13, w: 6, h: 3),
-    HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 6, h: 2),
+    HomeSlot(HomeCardId.mbti, col: 0, row: 13, w: 6, h: 2),
+    HomeSlot(HomeCardId.cardCollection, col: 0, row: 15, w: 6, h: 3),
+    HomeSlot(HomeCardId.quote, col: 0, row: 18, w: 6, h: 2),
   ];
 }
 
@@ -654,6 +660,7 @@ class HomeLayoutStore extends ChangeNotifier {
       HomeCardId.zodiac,
       HomeCardId.quote,
       HomeCardId.cardCollection,
+      HomeCardId.mbti,
     ]) {
       if (planOnly.contains(id) || taken(id)) continue;
       final info = kHomeCardInfo[id]!;

@@ -4,9 +4,10 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
+import '../checkin/checkin_store.dart';
 import '../data/cards.dart';
+import '../mbti/store.dart';
 import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/location.dart';
@@ -14,6 +15,7 @@ import '../services/models.dart';
 import '../services/prefs.dart';
 import '../services/notifications.dart';
 import '../services/push_notifications.dart';
+import '../services/weather_api.dart';
 import 'custom_tab.dart';
 
 class AppState extends ChangeNotifier {
@@ -38,6 +40,8 @@ class AppState extends ChangeNotifier {
   double _weatherLon = 109.1193;
   String _weatherCity = '北海';
   Future<void>? _weatherRequest;
+  String _weatherInFlightKey = '';
+  int _weatherEpoch = 0;
   bool _locationAsked = false;
 
   /// 用户手动选过城市：启动时的自动定位不再覆盖，只有点「定位并刷新」才重新定位。
@@ -45,6 +49,7 @@ class AppState extends ChangeNotifier {
   int unread = 0;
   bool notificationsEnabled = true;
   bool _pushBindingBlocked = false;
+
   /// 登录态代数：登出清理是异步的，期间可能已经重新登录。
   /// 每次登录 / 登出自增，旧的清理流程发现代数变了就停手，
   /// 避免把新会话的 token / 卡面缓存又清掉。
@@ -135,6 +140,8 @@ class AppState extends ChangeNotifier {
         double.tryParse(Prefs.getString(PrefKeys.weatherLon) ?? '') ?? 109.1193;
     _weatherCity = Prefs.getString(PrefKeys.weatherCity) ?? '北海';
     _weatherCityManual = Prefs.getBool(PrefKeys.weatherCityManual);
+    // 上次选的 / 定位到的城市先显示出来，别让卡片一直停在默认城市上等接口。
+    weather = weather.copyWith(city: _weatherCity);
     zodiacSign = Prefs.getString(PrefKeys.zodiacSign);
     final token = Prefs.getString(PrefKeys.token);
     if (token != null && token.isNotEmpty) {
@@ -151,6 +158,7 @@ class AppState extends ChangeNotifier {
       // 原版网站以 httpOnly Cookie 会话为主；即使没有本地 token 也向后端确认一次。
       unawaited(_restoreUser());
     }
+    await CheckinStore.instance.ensureInit(account: user?.name);
     booting = false;
     notifyListeners();
     unawaited(refreshWeather());
@@ -165,6 +173,7 @@ class AppState extends ChangeNotifier {
       if (token.isNotEmpty) Api.token = token;
       final u = User.fromJson(j['user']);
       if (u == null) {
+        await MbtiStore.clearLocal();
         await _clearAuth();
       } else {
         user = u;
@@ -175,9 +184,11 @@ class AppState extends ChangeNotifier {
         }
         await _persistAuth();
         notifyListeners();
+        unawaited(CheckinStore.instance.onAccountChanged(u.name));
         _startNotifyPolling();
         unawaited(syncZodiac());
         unawaited(syncCardsFromCloud());
+        unawaited(MbtiStore.syncFromAccount(account: u.name, force: true));
       }
     } catch (_) {
       // 离线时保留本地登录态，网络恢复后再校验。
@@ -215,6 +226,7 @@ class AppState extends ChangeNotifier {
     _cloudCheckedToday = false;
     user = null;
     Api.token = null;
+    unawaited(CheckinStore.instance.onAccountChanged(null));
     // 先通知，让 SplashGate 立刻切登录页。Push 解绑和 8 个 Prefs 写入
     // 都放到通知之后 —— 弱网时它们可能要几十秒，不能把登出 UI 卡住。
     notifyListeners();
@@ -238,10 +250,12 @@ class AppState extends ChangeNotifier {
     _authEpoch++;
     await _persistAuth();
     notifyListeners();
+    unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
     unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
+    unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   /// 扫码登录成功：桌面端轮询拿到 token 与用户信息后落到本地会话。
@@ -252,10 +266,12 @@ class AppState extends ChangeNotifier {
     _authEpoch++;
     await _persistAuth();
     notifyListeners();
+    unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
     unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
+    unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   Future<void> register({
@@ -276,32 +292,37 @@ class AppState extends ChangeNotifier {
     _authEpoch++;
     await _persistAuth();
     notifyListeners();
+    unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
     unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
+    unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   Future<void> logout() async {
     _pushBindingBlocked = true;
     final account = user?.name;
     final authToken = Api.token;
+    await MbtiStore.clearLocal();
     // 服务端退登要清 Cookie / 推送绑定，但绝不能挡登录页：先把 token
     // 抓在手里，后台拿 Push token 再发请求；UI 走本地优先的 _clearAuth。
     final serverLogout = () async {
       String? pushToken;
       try {
-        pushToken = (await PushNotifications.currentToken()
-                .timeout(const Duration(seconds: 2)))
-            ?.token;
+        pushToken = (await PushNotifications.currentToken().timeout(
+          const Duration(seconds: 2),
+        ))?.token;
       } catch (_) {}
       try {
         await Api.logoutWithToken(authToken, pushToken);
       } catch (_) {}
     }();
     unawaited(
-      PushNotifications.setActive(account: account, enabled: false)
-          .catchError((_) {}),
+      PushNotifications.setActive(
+        account: account,
+        enabled: false,
+      ).catchError((_) {}),
     );
     await _clearAuth();
     unawaited(serverLogout);
@@ -311,6 +332,8 @@ class AppState extends ChangeNotifier {
   Future<void> deleteAccount(String password) async {
     await Api.deleteAccount(password);
     _zodiacRequestId++;
+    await CheckinStore.instance.clearLocalForDeletedAccount();
+    await MbtiStore.clearLocal();
     await _clearAuth();
     try {
       await Prefs.clearAccountData();
@@ -445,10 +468,11 @@ class AppState extends ChangeNotifier {
         if (grew && notificationsEnabled) {
           // 本地通知不要只说「你有 N 条新消息」：从同一份响应里取最新
           // 一条未读，带上类型、昵称和正文，锁屏上就能直接看懂发生了什么。
-          final items = (j['notifications'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<Map>()
-              .map((e) => InboxItem.fromJson(Map<String, dynamic>.from(e)))
-              .toList();
+          final items =
+              (j['notifications'] as List<dynamic>? ?? const <dynamic>[])
+                  .whereType<Map>()
+                  .map((e) => InboxItem.fromJson(Map<String, dynamic>.from(e)))
+                  .toList();
           InboxItem? latest;
           for (final item in items) {
             if (item.unread) {
@@ -575,32 +599,37 @@ class AppState extends ChangeNotifier {
   /// 定位并刷新天气。
   ///
   /// [fromUser] 区分两种触发：用户点「定位并刷新」传 true，启动时的自动定位不传。
-  /// 用户手动选过城市后，自动定位不再覆盖它（[_weatherCityManual]）。
+  /// 只有自动定位才会被「已经问过定位」「用户手动选过城市」拦住；用户主动点时
+  /// 必须真的去定位，否则那次点击永远只会弹「定位失败」。
   Future<bool> refreshWeatherWithLocation({
     bool force = false,
     bool fromUser = false,
   }) async {
-    if (!fromUser && _weatherCityManual) return false;
-    if (!force && _locationAsked) return false;
+    if (!fromUser && (_weatherCityManual || _locationAsked)) return false;
     _locationAsked = true;
     final loc = await LocationService.current();
     if (loc == null) return false;
+    // 定位期间用户手动选了城市：以用户的选择为准，别让自动定位把它盖掉。
+    if (!fromUser && _weatherCityManual) return false;
     _weatherLat = loc.latitude;
     _weatherLon = loc.longitude;
     _weatherCity = loc.city.isNotEmpty ? loc.city : '当前位置';
     _weatherCityManual = false;
+    // 先让界面换上新的城市名，再去拉天气：数据源慢的时候也不会看起来「没反应」。
+    weather = weather.copyWith(city: _weatherCity);
+    notifyListeners();
     await Prefs.setString(PrefKeys.weatherLat, '$_weatherLat');
     await Prefs.setString(PrefKeys.weatherLon, '$_weatherLon');
     await Prefs.setString(PrefKeys.weatherCity, _weatherCity);
     await Prefs.setBool(PrefKeys.weatherCityManual, false);
-    await refreshWeather();
+    unawaited(refreshWeather());
     return true;
   }
 
   /// 手动选择城市：写经纬度与城市名并立即刷新。
   ///
   /// 选过一次之后，启动时的自动定位会被 [_weatherCityManual] 拦住，
-  /// 除非用户再点「定位并刷新」重新授权。
+  /// 除非用户再点「定位并刷新」重新授权。城市名立刻生效，不再等网络。
   Future<void> setWeatherCity({
     required String city,
     required double lat,
@@ -611,96 +640,65 @@ class AppState extends ChangeNotifier {
     _weatherCity = city;
     _weatherCityManual = true;
     _locationAsked = true;
+    weather = weather.copyWith(city: city);
+    notifyListeners();
     await Prefs.setString(PrefKeys.weatherLat, '$lat');
     await Prefs.setString(PrefKeys.weatherLon, '$lon');
     await Prefs.setString(PrefKeys.weatherCity, city);
     await Prefs.setBool(PrefKeys.weatherCityManual, true);
-    await refreshWeather();
+    unawaited(refreshWeather());
   }
 
+  /// 当前天气对应的城市名（定位 / 选城市后立即更新）。
+  String get weatherCity => _weatherCity;
+
+  String get _weatherKey =>
+      '${_weatherLat.toStringAsFixed(3)},${_weatherLon.toStringAsFixed(3)}';
+
   Future<void> refreshWeather() {
+    final key = _weatherKey;
     final ongoing = _weatherRequest;
-    if (ongoing != null) return ongoing;
-    final future = _doRefreshWeather();
+    // 同坐标的在途请求直接复用；坐标变了（切城市 / 重新定位）必须重新发，
+    // 否则切完城市拿回来的还是旧城市的天气。
+    if (ongoing != null && _weatherInFlightKey == key) return ongoing;
+    final epoch = ++_weatherEpoch;
+    // 放到下一轮微任务再改状态：调用方有可能在 build 期间触发（例如打开天气
+    // 弹窗时发现还没数据，顺手补一次），同步 notifyListeners 会撞上 build。
+    final future = Future.microtask(() => _doRefreshWeather(epoch));
     _weatherRequest = future;
+    _weatherInFlightKey = key;
     future.whenComplete(() {
-      if (identical(_weatherRequest, future)) _weatherRequest = null;
+      if (identical(_weatherRequest, future)) {
+        _weatherRequest = null;
+        _weatherInFlightKey = '';
+      }
     });
     return future;
   }
 
-  Future<void> _doRefreshWeather() async {
+  Future<void> _doRefreshWeather(int epoch) async {
     weatherLoading = true;
     weatherError = null;
     notifyListeners();
     try {
-      final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
-        'latitude': '$_weatherLat',
-        'longitude': '$_weatherLon',
-        'current': 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m',
-        'daily': 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
-        'hourly': 'temperature_2m,weather_code,precipitation_probability',
-        'timezone': 'Asia/Shanghai',
-        'forecast_days': '7',
-        'forecast_hours': '24',
-      });
-      final res = await http.get(uri).timeout(const Duration(seconds: 12));
-      final j = jsonDecode(res.body) as Map<String, dynamic>;
-      final cur = Map<String, dynamic>.from(j['current'] as Map);
-      final daily = Map<String, dynamic>.from(j['daily'] as Map);
-      final hourlyRaw = j['hourly'] is Map
-          ? Map<String, dynamic>.from(j['hourly'] as Map)
-          : <String, dynamic>{};
-      final hourlyTimes = (hourlyRaw['time'] as List?) ?? [];
-      final hourly = <HourlyWeather>[];
-      for (var i = 0; i < hourlyTimes.length; i++) {
-        final time = DateTime.tryParse('${hourlyTimes[i]}');
-        if (time == null) continue;
-        hourly.add(
-          HourlyWeather(
-            time: time,
-            code: _i((hourlyRaw['weather_code'] as List?)?[i]),
-            temp: _d((hourlyRaw['temperature_2m'] as List?)?[i]),
-            rain: _i((hourlyRaw['precipitation_probability'] as List?)?[i]),
-          ),
-        );
-      }
-      final dates = (daily['time'] as List?) ?? [];
-      final days = <DailyWeather>[];
-      for (var i = 0; i < dates.length; i++) {
-        days.add(
-          DailyWeather(
-            date: DateTime.tryParse('${dates[i]}') ?? DateTime.now(),
-            code: _i((daily['weather_code'] as List)[i]),
-            max: _d((daily['temperature_2m_max'] as List)[i]),
-            min: _d((daily['temperature_2m_min'] as List)[i]),
-            rain: _i((daily['precipitation_probability_max'] as List?)?[i]),
-            sunrise: DateTime.tryParse('${(daily['sunrise'] as List)[i]}'),
-            sunset: DateTime.tryParse('${(daily['sunset'] as List)[i]}'),
-          ),
-        );
-      }
-      final now = DateTime.now();
-      weather = WeatherNow(
-        temp: _d(cur['temperature_2m']),
-        feels: _d(cur['apparent_temperature']),
-        humidity: _i(cur['relative_humidity_2m']),
-        wind: _d(cur['wind_speed_10m']),
-        windDir: _d(cur['wind_direction_10m']),
-        code: _i(cur['weather_code']),
+      final result = await WeatherApi.fetch(
+        lat: _weatherLat,
+        lon: _weatherLon,
         city: _weatherCity,
-        updated:
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-        daily: days,
-        hourly: hourly,
       );
+      // 期间用户又换了城市：这次结果已经过期，丢弃。
+      if (epoch != _weatherEpoch) return;
+      weather = result.copyWith(city: _weatherCity);
+      weatherError = null;
       online = true;
     } catch (e) {
-      online = false;
+      if (epoch != _weatherEpoch) return;
       weatherError = '天气加载失败';
     } finally {
-      weatherLoading = false;
-      notifyListeners();
+      if (epoch == _weatherEpoch) {
+        weatherLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -1417,12 +1415,6 @@ class AppState extends ChangeNotifier {
     if (v == null) return 0;
     if (v is num) return v.round();
     return int.tryParse('$v') ?? 0;
-  }
-
-  static double _d(dynamic v) {
-    if (v == null) return 0;
-    if (v is num) return v.toDouble();
-    return double.tryParse('$v') ?? 0;
   }
 }
 

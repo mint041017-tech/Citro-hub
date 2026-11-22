@@ -86,6 +86,16 @@ const List<ModItem> kMods = [
 
 const List<ToolItem> kTools = [
   ToolItem(
+    name: "人格测试",
+    desc: "16 型人格 · 四个维度看懂自己",
+    section: "实用工具",
+    icon: "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4 3.6-7 8-7s8 3 8 7\"/>",
+    hash: "#/mbti",
+    url: null,
+    warn: null,
+    versions: [],
+  ),
+  ToolItem(
     name: "灵敏度",
     desc: "跨游戏灵敏度精确换算",
     section: "游戏工具",

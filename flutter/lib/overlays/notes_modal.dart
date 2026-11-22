@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../checkin/checkin_store.dart';
 import '../services/api.dart';
 import '../services/models.dart';
 import '../state/app_state.dart';
@@ -93,6 +94,7 @@ class _NotesDialogState extends State<_NotesDialog> {
         notes.insert(0, n);
         editing = false;
       });
+      CheckinStore.instance.noteSaved(n.id);
       if (mounted) AppToast.show(context, '已保存');
     } on Exception catch (e) {
       if (mounted) AppToast.show(context, e.toString());

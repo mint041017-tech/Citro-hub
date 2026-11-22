@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>手机端数独 · 底部操作行不再固定</title>
+<link rel="stylesheet" href="../hud-top/fonts.css">
+<style>
+  :root {
+    --paper: #FFFDF8;
+    --canvas: #FAF3E8;
+    --canvas2: #F6EEE2;
+    --ink: #4A3B32;
+    --ink2: #7D655E;
+    --inkSoft: #A08B7E;
+    --line: #D9C9B8;
+    --lineThick: #8A6F63;
+    --cellA: #FBF5E9;
+    --cellB: #EDF4F0;
+    --blue: #4C6FA8;
+    --blueInk: #F4F1EA;
+    --teal: #B8D4D0;
+    --tealSoft: #DCEAE7;
+    --red: #C2543F;
+    --green: #3E7A66;
+    --sheetInk: #4A3B32;
+    --sheetInk2: #8A7668;
+  }
+  * { box-sizing: border-box; }
+  figure { margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #EFE7D8;
+    color: var(--sheetInk);
+    font-family: 'RoundedCN', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { width: 1338px; padding: 42px 44px 38px; }
+  .sheet-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px; }
+  .sheet-head h1 { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: .2px; }
+  .sheet-head p { margin: 8px 0 0; font-size: 13px; color: var(--sheetInk2); font-weight: 500; }
+  .legend { display: flex; gap: 9px; align-items: center; font-size: 12.5px; color: var(--sheetInk2); font-weight: 500; }
+  .legend .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: rgba(74,59,50,.07); border: 1px solid rgba(74,59,50,.13); }
+  .legend .dot { width: 7px; height: 7px; border-radius: 999px; }
+  .frames { display: flex; gap: 28px; align-items: flex-start; }
+  .shot { width: 390px; }
+  .shot figcaption { margin-bottom: 12px; }
+  .tag { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .3px; }
+  .tag.a { background: #DCEAE7; color: #2F5E52; }
+  .tag.b { background: #E4E9F2; color: #3C5277; }
+  .tag.c { background: #F1E5D8; color: #7A5B3C; }
+  .shot h2 { margin: 8px 0 0; font-size: 16px; font-weight: 700; }
+  .shot h2 small { font-size: 12.5px; font-weight: 500; color: var(--sheetInk2); margin-left: 7px; }
+  .note { margin: 12px 2px 0; font-size: 12.5px; line-height: 1.65; color: var(--sheetInk2); font-weight: 500; min-height: 58px; }
+  .note b { color: var(--sheetInk); }
+  .phone {
+    width: 390px; height: 844px; border-radius: 42px; overflow: hidden; position: relative;
+    background: linear-gradient(180deg, #FBF5EA 0%, #F7EFE2 100%);
+    box-shadow: 0 24px 56px rgba(0,0,0,.20), 0 0 0 1px rgba(74,59,50,.10) inset;
+  }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 118px; height: 26px; border-radius: 16px; background: #17110D; z-index: 9; }
+  .statusbar { height: 46px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 5px 30px; position: relative; z-index: 6; }
+  .time { font-family: 'XiaolaiMono', monospace; font-size: 14px; font-weight: 700; color: #2E2620; letter-spacing: .2px; }
+  .sysicons { display: flex; align-items: center; gap: 6px; color: #2E2620; }
+  .sysicons svg { display: block; }
+  .batt { display: flex; align-items: center; gap: 3px; }
+  .batt-num { font-family: 'XiaolaiMono', monospace; font-size: 11px; font-weight: 700; }
+
+  /* ── app chrome ── */
+  .header { height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 10px; }
+  .round { width: 40px; height: 40px; border-radius: 999px; background: rgba(255,253,248,.85); border: 1px solid rgba(122,92,72,.16); display: grid; place-items: center; flex: none; box-shadow: 0 2px 8px rgba(74,59,50,.06); }
+  .round svg { display: block; }
+  .title { display: flex; align-items: center; gap: 8px; margin-left: 2px; }
+  .idot { width: 8px; height: 8px; border-radius: 999px; background: #4C6FA8; }
+  .title b { font-size: 18px; font-weight: 700; letter-spacing: .2px; color: #3D2F28; }
+  .stats { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .stats.compact { gap: 10px; }
+  .stats.compact .stat:last-child { display: none; }
+  .stats.compact .stat + .stat { padding-left: 10px; }
+  .stat { text-align: center; }
+  .stat i { display: block; font-style: normal; font-size: 11px; font-weight: 600; color: #9A8476; letter-spacing: .4px; }
+  .stat b { display: block; margin-top: 2px; font-family: 'XiaolaiMono', monospace; font-size: 13.5px; font-weight: 700; color: #3D2F28; }
+  .stat + .stat { padding-left: 14px; border-left: 1px solid rgba(122,92,72,.16); }
+
+  .modebar { padding: 2px 16px 8px; display: flex; align-items: center; gap: 8px; }
+  .seg { background: rgba(255,253,248,.72); border: 1px solid rgba(122,92,72,.14); border-radius: 999px; padding: 5px; display: flex; align-items: center; gap: 4px; }
+  .seg.mode { padding-right: 12px; }
+  .seg.mode b { font-size: 13px; font-weight: 700; color: #3D2F28; padding: 0 4px 0 8px; }
+  .seg.mode .swap { font-size: 11px; font-weight: 600; color: #8A7668; }
+  .chip { padding: 7px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #6B5648; }
+  .chip.on { background: var(--teal); color: #274C45; box-shadow: 0 1px 0 rgba(255,255,255,.5) inset; }
+
+  /* ── scroll area ── */
+  .scroller { position: absolute; left: 0; right: 0; top: 152px; bottom: 66px; overflow: hidden; }
+  .scroller.faded::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: linear-gradient(180deg, rgba(247,239,226,0), #F7EFE2); pointer-events: none; }
+  .content { padding: 0 16px; display: flex; flex-direction: column; align-items: center; }
+  .board { width: 358px; height: 358px; display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); border: 3px solid var(--lineThick); border-radius: 2px; overflow: hidden; background: var(--cellA); }
+  .cell { position: relative; display: grid; place-items: center; font-family: 'XiaolaiMono', monospace; font-size: 18px; font-weight: 700; color: #4A3B32; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cell.b { background: var(--cellB); }
+  .cell.br { border-right: 3px solid var(--lineThick); }
+  .cell.bb { border-bottom: 3px solid var(--lineThick); }
+  .cell.lastc { border-right: 0; }
+  .cell.lastr { border-bottom: 0; }
+  .cell.sel { background: #D8E8E4; box-shadow: 0 0 0 2px #9FC4BD inset; }
+  .cell.note { color: #8FA39D; font-size: 11px; }
+
+  .pad { width: 358px; margin-top: 10px; display: flex; flex-direction: column; gap: 9px; align-items: center; }
+  .pad-row { display: flex; gap: 9px; }
+  .key { width: 64px; height: 60px; border-radius: 16px; background: rgba(255,253,248,.92); border: 1px solid rgba(122,92,72,.15); box-shadow: 0 2px 6px rgba(74,59,50,.05); position: relative; display: grid; place-items: center; }
+  .key b { font-family: 'XiaolaiMono', monospace; font-size: 24px; font-weight: 700; color: #47372E; }
+  .key i { position: absolute; right: 7px; bottom: 5px; font-style: normal; font-family: 'XiaolaiMono', monospace; font-size: 11px; font-weight: 600; color: #B29C8D; }
+
+  .tools { width: 358px; margin-top: 10px; display: flex; justify-content: center; gap: 9px; }
+  .tool { height: 40px; padding: 0 16px; border-radius: 999px; background: rgba(255,253,248,.9); border: 1px solid rgba(122,92,72,.15); display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: #5A463A; box-shadow: 0 2px 6px rgba(74,59,50,.05); }
+  .tool svg { display: block; }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 12px; position: relative; }
+  .abtn { height: 48px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 700; letter-spacing: .2px; }
+  .abtn.primary { width: 196px; background: var(--blue); color: var(--blueInk); box-shadow: 0 6px 16px rgba(74,59,50,.16); }
+  .abtn.ghost { width: 124px; background: rgba(255,253,248,.92); color: #5A463A; border: 1.5px solid rgba(122,92,72,.28); }
+  .abtn svg { display: block; }
+  .actions.pinned { position: absolute; left: 0; right: 0; bottom: 66px; margin: 0; padding: 0 16px; }
+  .dash { position: absolute; z-index: 6; border: 1.6px dashed; border-radius: 18px; pointer-events: none; }
+  .dash.red { border-color: #C2543F; }
+  .dash.green { border-color: #3E7A66; }
+  .dash.blue { border-color: #4C6FA8; }
+
+  .livebar { position: absolute; left: 16px; right: 16px; bottom: 10px; height: 48px; border-radius: 999px; background: #FFFDF8; border: 1px solid rgba(122,92,72,.14); box-shadow: 0 4px 14px rgba(74,59,50,.10); display: flex; align-items: center; gap: 7px; padding: 0 14px; overflow: hidden; }
+  .livedot { width: 7px; height: 7px; border-radius: 999px; background: #4C6FA8; flex: none; }
+  .livetext { font-size: 11px; font-weight: 600; color: #6B5648; white-space: nowrap; }
+  .avatar { width: 24px; height: 24px; border-radius: 999px; background: #CDE6D8; border: 1.5px solid #7FA894; display: grid; place-items: center; font-size: 11px; flex: none; margin: 0 2px; }
+  .you { font-size: 11px; font-weight: 700; color: #3C6B5C; background: #E2F0E9; border-radius: 999px; padding: 2px 5px; margin: 0 3px; }
+  .live-more { margin-left: auto; font-size: 11px; color: #B29C8D; white-space: nowrap; }
+
+  .foot { margin-top: 26px; display: flex; gap: 26px; padding-top: 18px; border-top: 1px solid rgba(74,59,50,.14); font-size: 12.5px; line-height: 1.7; color: var(--sheetInk2); font-weight: 500; }
+  .foot b { color: var(--sheetInk); }
+  .foot .col { flex: 1; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="sheet-head">
+    <div>
+      <h1>手机端数独 · 底部操作行不再固定</h1>
+      <p>iPhone 13 标准版 · 390 × 844 · 仅数独页，其他游戏与横屏版式不变</p>
+    </div>
+    <div class="legend">
+      <span class="chip"><span class="dot" style="background:#3E7A66"></span>虚线框 = 该方案按钮的新位置</span>
+    </div>
+  </div>
+
+  <div class="frames">
+    <figure class="shot">
+      <figcaption><span class="tag a">方案 A · 推荐</span></figcaption>
+      <h2>随内容滚动<small>操作行并入棋盘滚动区</small></h2>
+      <div class="phone" id="frame-a"></div>
+      <p class="note"><b>新游戏 / 暂停</b> 紧接「撤销 / 擦除 / 笔记」之后，跟棋盘一起滚动；底部只留「正在玩」。短屏或大字号时下滑才出现，不再常驻占位。</p>
+    </figure>
+
+    <figure class="shot">
+      <figcaption><span class="tag b">方案 B</span></figcaption>
+      <h2>移到模式条下方<small>顶部常驻，底部不再占位</small></h2>
+      <div class="phone" id="frame-b"></div>
+      <p class="note"><b>新游戏 / 暂停</b> 放到「经典九宫 · 难度」这一行下面，始终可见；棋盘整体下移约 60dp，顶部会更满一些。</p>
+    </figure>
+
+    <figure class="shot">
+      <figcaption><span class="tag c">方案 C</span></figcaption>
+      <h2>收进顶栏<small>两个圆形图标，底部整行移除</small></h2>
+      <div class="phone" id="frame-c"></div>
+      <p class="note"><b>新游戏 / 暂停</b> 变成顶栏圆形按钮（与排行榜同排），最省垂直空间；按钮目标变小，误触「新游戏」的风险也更高。</p>
+    </figure>
+  </div>
+
+  <div class="foot">
+    <div class="col"><b>实施范围</b>：仅数独页手机竖屏（<code>GameScaffold</code> 增加开关），其他游戏、桌面端与横屏左栏保持现状。</div>
+    <div class="col"><b>布局影响</b>：滚动区多出整行高度；「正在玩」状态条仍在底部常驻，不参与滚动。</div>
+    <div class="col"><b>游戏逻辑</b>：三个方案都不改棋盘、计时、暂停与存档行为，只调整按钮位置。</div>
+  </div>
+</div>
+
+<script>
+const givens = [
+  [0,0,3,0,6,8,0,4,9],
+  [8,0,0,0,0,0,0,2,0],
+  [4,0,1,5,0,0,6,8,0],
+  [0,0,5,0,0,0,9,0,8],
+  [6,0,9,0,0,0,7,0,0],
+  [3,2,7,0,0,6,5,0,0],
+  [9,0,4,0,0,0,8,0,3],
+  [7,0,0,0,0,0,0,2,0],
+  [5,1,0,0,8,7,0,0,9],
+];
+const counts = [7,6,6,6,5,5,5,3,4];
+
+function boardHTML() {
+  let out = '';
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const boxOdd = (Math.floor(r / 3) + Math.floor(c / 3)) % 2 === 1;
+      const cls = ['cell'];
+      if (boxOdd) cls.push('b');
+      if (c % 3 === 2 && c !== 8) cls.push('br');
+      if (r % 3 === 2 && r !== 8) cls.push('bb');
+      if (c === 8) cls.push('lastc');
+      if (r === 8) cls.push('lastr');
+      if (r === 0 && c === 1) cls.push('sel');
+      const n = givens[r][c];
+      out += `<div class="${cls.join(' ')}">${n || ''}</div>`;
+    }
+  }
+  return `<div class="board">${out}</div>`;
+}
+
+function padHTML() {
+  const keys = (arr) => arr.map(n => `<div class="key"><b>${n}</b><i>${counts[n-1]}</i></div>`).join('');
+  return `<div class="pad"><div class="pad-row">${keys([1,2,3,4,5])}</div><div class="pad-row">${keys([6,7,8,9])}</div></div>`;
+}
+
+function toolsHTML() {
+  return `<div class="tools">
+    <div class="tool"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B5648" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>撤销</div>
+    <div class="tool"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B5648" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>擦除</div>
+    <div class="tool"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B5648" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M14.5 4.5a2.1 2.1 0 0 1 3 3L8 17l-4 1 1-4Z"/></svg>笔记</div>
+  </div>`;
+}
+
+function actionsHTML() {
+  return `<div class="actions">
+    <div class="abtn primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F4F1EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>新游戏</div>
+    <div class="abtn ghost"><svg width="13" height="13" viewBox="0 0 24 24" fill="#5A463A"><rect x="5" y="4" width="4.6" height="16" rx="1.4"/><rect x="14.4" y="4" width="4.6" height="16" rx="1.4"/></svg>暂停</div>
+  </div>`;
+}
+
+function statsHTML(option) {
+  return `<div class="stats ${option === 'C' ? 'compact' : ''}">
+    <div class="stat"><i>错误</i><b>0/5</b></div>
+    <div class="stat"><i>用时</i><b>0:10</b></div>
+    <div class="stat"><i>最佳</i><b>13:54</b></div>
+  </div>`;
+}
+
+function headerHTML(option) {
+  const extra = option === 'C' ? `
+    <div class="round" style="width:34px;height:34px" title="新游戏"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4A3B32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></div>
+    <div class="round" style="width:34px;height:34px" title="暂停"><svg width="15" height="15" viewBox="0 0 24 24" fill="#4A3B32"><rect x="5" y="4" width="4.6" height="16" rx="1.4"/><rect x="14.4" y="4" width="4.6" height="16" rx="1.4"/></svg></div>` : '';
+  return `<div class="header">
+    <div class="round"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5A463A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg></div>
+    <div class="title"><span class="idot"></span><b>数独</b></div>
+    ${statsHTML(option)}
+    ${extra}
+    <div class="round"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A6F63" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v3a5 5 0 0 1-10 0Z"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 12v4"/><path d="M9 20h6"/><path d="M10 16h4l.7 4H9.3Z"/></svg></div>
+  </div>`;
+}
+
+function modebarHTML() {
+  return `<div class="modebar">
+    <div class="seg mode"><b>经典九宫</b><span class="swap">← 换</span></div>
+    <div class="seg">
+      <span class="chip">简单</span><span class="chip on">中等</span><span class="chip">困难</span><span class="chip">专家</span>
+    </div>
+  </div>`;
+}
+
+function livebarHTML() {
+  return `<div class="livebar">
+    <span class="livedot"></span>
+    <span class="livetext">正在玩</span>
+    <span class="avatar">🌿</span>
+    <span class="livetext" style="font-weight:700;color:#3D2F28">小葵</span>
+    <span class="you">你</span>
+    <span class="livetext">经典九宫 · 中等 · 0:08 · 已填 3</span>
+    <span class="live-more">···</span>
+  </div>`;
+}
+
+function statusbarHTML() {
+  return `<div class="statusbar">
+    <span class="time">23:44</span>
+    <span class="sysicons">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="#2E2620"><rect x="0" y="7" width="2.6" height="4" rx="1"/><rect x="4.2" y="5" width="2.6" height="6" rx="1"/><rect x="8.4" y="2.8" width="2.6" height="8.2" rx="1"/><rect x="12.6" y="0.6" width="2.6" height="10.4" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 16 12" fill="none" stroke="#2E2620" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><path d="M6.5 9.6a2.6 2.6 0 0 1 3 0"/></svg>
+      <span class="batt"><svg width="23" height="11" viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="21" height="10.6" rx="3" stroke="#2E2620" stroke-opacity=".45"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.8" fill="#2E2620"/><path d="M23 4v4a2.2 2.2 0 0 0 0-4Z" fill="#2E2620" fill-opacity=".45"/></svg><span class="batt-num">38</span></span>
+    </span>
+  </div>`;
+}
+
+function frameHTML(option) {
+  const content = `${boardHTML()}${padHTML()}${toolsHTML()}`;
+  let scrollInner = content;
+  let extras = '';
+  if (option === 'A') {
+    scrollInner = content + actionsHTML();
+    extras = `<div class="dash green" style="left:14px;right:14px;top:auto;bottom:62px;height:62px"></div>`;
+  } else if (option === 'B') {
+    extras = `<div class="dash blue" style="left:14px;right:14px;top:158px;height:58px"></div>`;
+  } else {
+    extras = `<div class="dash red" style="left:246px;right:60px;top:56px;height:48px;border-radius:24px"></div>`;
+  }
+  const bStrip = option === 'B' ? `<div style="position:absolute;left:0;right:0;top:152px;height:62px">${actionsHTML().replace('class="actions"','class="actions" style="margin-top:2px"')}</div>` : '';
+  return `${statusbarHTML()}${headerHTML(option)}${modebarHTML()}
+    ${option === 'B' ? '' : ''}
+    <div class="scroller ${option === 'A' ? 'faded' : ''}" style="${option === 'B' ? 'top:214px' : ''}">${option === 'B' ? boardHTML() + padHTML() + toolsHTML() : `<div class="content">${scrollInner}</div>`}</div>
+    ${bStrip}
+    ${option === 'C' ? '' : ''}
+    ${extras}
+    ${livebarHTML()}`;
+}
+
+document.getElementById('frame-a').innerHTML = frameHTML('A');
+document.getElementById('frame-b').innerHTML = frameHTML('B');
+document.getElementById('frame-c').innerHTML = frameHTML('C');
+</script>
+</body>
+</html>

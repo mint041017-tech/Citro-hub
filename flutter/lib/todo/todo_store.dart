@@ -472,6 +472,10 @@ class TodoStore extends ChangeNotifier {
 
   List<TodoTask> get todayTasks => tasksOn(DateTime.now());
 
+  /// 全部任务（含已完成）。打卡行动联动要在完成后回查，不能让已完成
+  /// 的任务从今日列表里消失。
+  List<TodoTask> get allTasks => List.unmodifiable(_tasks);
+
   List<TodoTask> get openTasks => _tasks.where((t) => !t.done).toList();
 
   /// 从 [day] 往后 14 天里每天的任务数，用于日程日历。

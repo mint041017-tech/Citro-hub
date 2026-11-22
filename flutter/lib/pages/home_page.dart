@@ -33,6 +33,7 @@ import '../widgets/home_background.dart';
 import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
+import '../mbti/home_card.dart';
 import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
@@ -648,6 +649,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     HomeCardId.zodiac => const ZodiacCard(),
     HomeCardId.quote => const QuoteCard(),
     HomeCardId.cardCollection => const CardCollectionEntry(compact: true),
+    HomeCardId.mbti => const MbtiHomeCard(),
     HomeCardId.game => HomeGameCard(gameKey: slot.item ?? ''),
     HomeCardId.res => HomeResCard(item: slot.item ?? ''),
   };

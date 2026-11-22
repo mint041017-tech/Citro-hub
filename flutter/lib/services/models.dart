@@ -544,6 +544,20 @@ class WeatherNow {
 
   String get windDirection => weatherWindDirection(windDir);
 
+  /// 只换城市名（切换城市 / 定位成功时立刻反映到界面），其余数据保持不变。
+  WeatherNow copyWith({String? city, String? updated}) => WeatherNow(
+    temp: temp,
+    feels: feels,
+    humidity: humidity,
+    wind: wind,
+    windDir: windDir,
+    code: code,
+    city: city ?? this.city,
+    updated: updated ?? this.updated,
+    daily: daily,
+    hourly: hourly,
+  );
+
   static const fallback = WeatherNow(
     temp: 26,
     feels: 28,

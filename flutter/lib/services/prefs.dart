@@ -55,12 +55,22 @@ class Prefs {
       PrefKeys.cardChatDay,
       PrefKeys.cardOwner,
       PrefKeys.ledger,
+      'citro_mbti_history_v1',
+      'citro_mbti_owner_v1',
     ];
     for (final key in keys) {
       await _sp.remove(key);
     }
     for (final key in _sp.getKeys().toList()) {
-      if (key.startsWith('citro_zodiac_ai_')) await _sp.remove(key);
+      if (key.startsWith('citro_zodiac_ai_') ||
+          key.startsWith('citro_checkin_days_v1_') ||
+          key.startsWith('citro_checkin_outbox_v1_') ||
+          key.startsWith('citro_checkin_ui_v1_') ||
+          key.startsWith('citro_checkin_guest_merge_v1_') ||
+          key.startsWith('citro_checkin_listen_v1_') ||
+          key.startsWith('citro_fortune_step_')) {
+        await _sp.remove(key);
+      }
     }
   }
 

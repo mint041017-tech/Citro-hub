@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>手机端游戏页 · 顶部 HUD 收敛方案</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --bg: #1E1A18;
+    --bg2: #171312;
+    --surface: #282220;
+    --surface2: #322A27;
+    --ink: #F2EDE4;
+    --ink2: #CFC5B8;
+    --inkSoft: #A39A8E;
+    --line: rgba(255,255,255,.102);
+    --line2: rgba(255,255,255,.161);
+    --blue: #4C6FA8;
+    --blueDeep: #2E4A7C;
+    --blueSoft: #DCE4F4;
+    --accent: #B8D4D0;
+    --accentInk: #D8E8E5;
+    --paper: #FFFDF8;
+    --canvas: #EFE7D8;
+    --canvasInk: #614A44;
+    --canvasInk2: #7D655E;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--canvas);
+    color: var(--canvasInk);
+    font-family: 'RoundedCN', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { width: 1338px; padding: 44px 48px 40px; }
+  .sheet-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 34px; }
+  .sheet-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: .2px; }
+  .sheet-head p { margin: 7px 0 0; font-size: 13px; color: var(--canvasInk2); font-weight: 500; }
+  .legend { display: flex; gap: 10px; align-items: center; font-size: 11.5px; color: var(--canvasInk2); font-weight: 500; }
+  .legend b { font-weight: 700; color: var(--canvasInk); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: rgba(97,74,68,.07); border: 1px solid rgba(97,74,68,.13); }
+  .legend .saved { color: #3E5A55; background: #DCEAE7; border-color: #C7DBD7; }
+  .frames { display: flex; gap: 32px; align-items: flex-start; }
+  .shot { width: 390px; }
+  .phone {
+    width: 390px; height: 844px; border-radius: 42px; overflow: hidden; position: relative;
+    background: #000;
+    box-shadow: 0 26px 60px rgba(58,39,27,.28), 0 2px 0 rgba(255,255,255,.55) inset;
+  }
+  .statusbar {
+    height: 47px; padding: 0 24px 0 26px; display: flex; align-items: center; justify-content: space-between;
+    position: relative; z-index: 5;
+  }
+  .time { font-size: 14.5px; font-weight: 600; letter-spacing: .1px; color: var(--ink); }
+  .sysicons { display: flex; align-items: center; gap: 6px; }
+  .sysicons .g { font-size: 11px; font-weight: 700; letter-spacing: .3px; color: var(--ink); }
+  .sysicons svg { display: block; }
+  .batt { display: flex; align-items: center; gap: 4px; }
+  .batt-num { font-family: 'XiaolaiMono'; font-size: 10px; font-weight: 700; color: #7ED957; }
+  .app {
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+    background:
+      linear-gradient(180deg, rgba(76,111,168,.133) 0%, rgba(30,26,24,0) 62%),
+      var(--bg);
+  }
+  .app > * { position: relative; }
+
+  /* ---------- 通用顶栏 ---------- */
+  .hdr { height: 52px; padding: 6px 14px; display: flex; align-items: center; }
+  .rbtn {
+    width: 40px; height: 40px; border-radius: 50%; flex: 0 0 40px;
+    background: var(--surface2); border: 1px solid rgba(76,111,168,.235);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rbtn svg { display: block; }
+  .titlewrap { display: flex; align-items: center; gap: 6px; margin-left: 10px; min-width: 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 6px rgba(76,111,168,.47); flex: 0 0 7px; }
+  .gtitle { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.2; white-space: nowrap; letter-spacing: .2px; }
+  .grow { flex: 1 1 auto; }
+
+  /* ---------- 方案 A：统计并进顶栏 ---------- */
+  .statsA { display: flex; align-items: center; margin-left: auto; margin-right: 10px; }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 2px; white-space: nowrap; }
+  .slabel { font-size: 9px; font-weight: 500; letter-spacing: .5px; color: var(--inkSoft); line-height: 1; }
+  .svalue { font-family: 'XiaolaiMono'; font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.08; }
+  .sdiv { width: 1px; height: 18px; background: var(--line2); margin: 0 10px; }
+
+  /* ---------- 方案 B：标题下潜行 ---------- */
+  .hdrB { height: 56px; padding: 3px 14px 5px; }
+  .hdrB + .modebar { margin-top: 2px; }
+  .tcol { display: flex; flex-direction: column; justify-content: center; margin-left: 10px; min-width: 0; }
+  .tline { display: flex; align-items: center; gap: 6px; }
+  .statline { display: flex; align-items: center; margin-left: 13px; margin-top: 3px; white-space: nowrap; }
+  .statline .lb { font-size: 10px; font-weight: 500; letter-spacing: .3px; color: var(--inkSoft); }
+  .statline .vl { font-family: 'XiaolaiMono'; font-size: 11px; font-weight: 700; color: var(--ink2); margin-left: 3px; }
+  .statline .sep { color: rgba(163,154,142,.55); font-size: 10px; margin: 0 7px; }
+
+  /* ---------- 模式 / 难度 ---------- */
+  .modebar { height: 36px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 9px; }
+  .modepill {
+    height: 36px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 4px;
+    background: var(--surface2); border: 1px solid var(--line2);
+  }
+  .modepill .m { font-size: 12px; font-weight: 700; color: var(--ink2); line-height: 1.2; }
+  .modepill .huan { font-size: 10px; color: var(--inkSoft); line-height: 1.2; }
+  .diff { display: flex; align-items: center; gap: 3px; padding: 4px; border-radius: 999px; background: var(--bg2); border: 1px solid var(--line); }
+  .diff span {
+    height: 28px; min-width: 44px; padding: 0 10px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--ink2);
+  }
+  .diff span.on { background: var(--accent); color: #1E1A18; box-shadow: 0 3px 10px rgba(0,0,0,.38); }
+
+  /* ---------- 数独 ---------- */
+  .board-wrap { margin: 24px auto 0; width: 358px; position: relative; }
+  .board-wrap svg { display: block; }
+  .pad { width: 358px; margin: 10px auto 0; display: flex; flex-direction: column; align-items: center; }
+  .padrow { display: flex; justify-content: center; gap: 8px; }
+  .padrow + .padrow { margin-top: 10px; }
+  .key {
+    width: 56px; height: 56px; border-radius: 12px; position: relative;
+    background: var(--surface2); border: 1px solid var(--line2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .key .n { font-family: 'XiaolaiMono'; font-size: 23.5px; font-weight: 700; color: var(--ink); line-height: 1; }
+  .key .rest { position: absolute; right: 6px; bottom: 4px; font-family: 'XiaolaiMono'; font-size: 10px; font-weight: 700; color: var(--inkSoft); }
+  .tools { margin-top: 10px; display: flex; justify-content: center; gap: 8px; }
+  .tool {
+    height: 42px; padding: 0 16px; border-radius: 999px; display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: 0 3px 10px rgba(0,0,0,.07);
+    font-size: 13px; font-weight: 700; color: var(--ink2); white-space: nowrap;
+  }
+  .tool svg { display: block; }
+
+  /* ---------- 动作行 / 状态条 ---------- */
+  .actions { margin-top: 18px; display: flex; justify-content: center; gap: 8px; }
+  .abtn {
+    height: 44px; padding: 0 20px; border-radius: 999px; display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 700; white-space: nowrap;
+  }
+  .abtn.primary { background: var(--blue); color: var(--paper); box-shadow: 0 8px 18px rgba(0,0,0,.38); }
+  .abtn.plain { background: var(--surface); color: var(--ink2); border: 1px solid var(--line2); box-shadow: 0 3px 10px rgba(0,0,0,.07); }
+  .abtn.disabled { opacity: .34; }
+  .abtn.orange { background: #E08A2E; color: var(--paper); box-shadow: 0 8px 18px rgba(0,0,0,.38); }
+  .live {
+    position: absolute; left: 16px; right: 16px; bottom: 12px; margin: 0;
+    height: 48px; padding: 8px 12px; border-radius: 16px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.45);
+    display: flex; align-items: center; overflow: hidden;
+  }
+  .live .ldot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex: 0 0 7px; }
+  .live .ltext { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--ink2); white-space: nowrap; flex: 0 0 auto; }
+  .chip {
+    margin-left: 10px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--surface2);
+    border: 1px solid var(--line); display: flex; align-items: center; min-width: 0; max-width: 100%;
+  }
+  .chip .av { width: 24px; height: 24px; border-radius: 50%; flex: 0 0 24px; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 35% 30%, #FFC978, #E08A2E 70%); color: #3A1D05; font-size: 11px; font-weight: 700; }
+  .chip .nm { margin-left: 5px; font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .chip .you { margin-left: 5px; padding: 1px 5px; border-radius: 999px; background: var(--blue); color: var(--paper);
+    font-size: 9px; font-weight: 700; line-height: 1.4; white-space: nowrap; }
+  .chip .pg { margin-left: 5px; font-size: 11px; color: var(--inkSoft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- 2048 ---------- */
+  .b2048-wrap { position: relative; margin: 0 auto; }
+  .b2048 {
+    position: relative; border-radius: 24px; background: var(--surface);
+    border: 1px solid rgba(224,138,46,.235); box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  }
+  .cell2048 { position: absolute; border-radius: 12px; background: #8A7D6D; }
+  .tile2048 {
+    position: absolute; border-radius: 12px; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'XiaolaiMono'; font-weight: 700; color: #A96417;
+  }
+  .cap { margin-top: 18px; display: flex; align-items: flex-start; gap: 10px; }
+  .cap .tag { padding: 3px 9px; border-radius: 999px; background: rgba(76,111,168,.14); color: #2E4A7C;
+    font-size: 11px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+  .cap .txt { font-size: 12.5px; line-height: 1.45; color: var(--canvasInk2); font-weight: 500; }
+  .cap .txt b { display: block; font-size: 13.5px; color: var(--canvasInk); font-weight: 700; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="sheet-head">
+    <div>
+      <h1>手机端游戏页 · HUD 收敛效果预览</h1>
+      <p>只读统计缩成顶部小读数，游戏名左靠；所有按钮保持原样与原有触控尺寸。</p>
+    </div>
+    <div class="legend">
+      <span class="chip">现状 HUD 卡 <b>≈ 70dp</b></span>
+      <span class="chip saved">顶栏读数 <b>13–18dp</b></span>
+      <span class="chip">棋盘多出 <b>≈ 60dp</b> 高度</span>
+    </div>
+  </div>
+
+  <div class="frames">
+    <!-- ============ 方案 A · 数独 ============ -->
+    <div class="shot">
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar">
+            <div class="time">20:44</div>
+            <div class="sysicons">
+              <span class="g">5G</span>
+              <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                <path d="M1 4.6a11 11 0 0 1 15 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M4.5 7.6a6.2 6.2 0 0 1 8 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <circle cx="8.5" cy="10.4" r="1.4" fill="#F2EDE4"/>
+              </svg>
+              <span class="batt">
+                <span class="batt-num">73</span>
+                <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+                  <rect x=".7" y=".7" width="22" height="11.6" rx="3.2" stroke="#F2EDE4" stroke-opacity=".55"/>
+                  <rect x="2.3" y="2.3" width="15.4" height="8.4" rx="1.9" fill="#7ED957"/>
+                  <path d="M24.6 4.2v4.6" stroke="#F2EDE4" stroke-opacity=".55" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M11.3 2.3 8.1 7.2h2.7l-.9 3.5 3.4-5h-2.6z" fill="#173B12"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <header class="hdr">
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+            </div>
+            <div class="titlewrap"><span class="dot"></span><span class="gtitle">数独</span></div>
+            <div class="statsA">
+              <div class="stat"><span class="slabel">错误</span><span class="svalue">0/5</span></div>
+              <span class="sdiv"></span>
+              <div class="stat"><span class="slabel">用时</span><span class="svalue">0:06</span></div>
+              <span class="sdiv"></span>
+              <div class="stat"><span class="slabel">最佳</span><span class="svalue">--</span></div>
+            </div>
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12v6a6 6 0 0 1-12 0z"/><path d="M18 5h2a2 2 0 0 1 0 6h-2"/><path d="M6 5H4a2 2 0 0 0 0 6h2"/></svg>
+            </div>
+          </header>
+
+          <div class="modebar">
+            <div class="modepill">
+              <span class="m">经典九宫</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#A39A8E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+              <span class="huan">换</span>
+            </div>
+            <div class="diff"><span>简单</span><span class="on">中等</span><span>困难</span><span>专家</span></div>
+          </div>
+
+          <div class="board-wrap" id="sudoku-a"></div>
+          <div class="pad" id="pad-a"></div>
+          <div class="actions">
+            <div class="abtn primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              <span>新游戏</span>
+            </div>
+            <div class="abtn plain">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+              <span>暂停</span>
+            </div>
+          </div>
+          <div class="live">
+            <span class="ldot"></span><span class="ltext">正在玩</span>
+            <div class="chip">
+              <span class="av">禾</span><span class="nm">岁禾</span><span class="you">你</span>
+              <span class="pg">经典九宫 · 中等 · 0:04 · 已填 34/81</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">
+        <span class="tag">方案 A</span>
+        <div class="txt"><b>单行贴顶 · 数独</b>统计并进顶栏右侧，标题左靠；棋盘上移约 60dp。</div>
+      </div>
+    </div>
+
+    <!-- ============ 方案 B · 数独 ============ -->
+    <div class="shot">
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar">
+            <div class="time">20:44</div>
+            <div class="sysicons">
+              <span class="g">5G</span>
+              <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                <path d="M1 4.6a11 11 0 0 1 15 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M4.5 7.6a6.2 6.2 0 0 1 8 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <circle cx="8.5" cy="10.4" r="1.4" fill="#F2EDE4"/>
+              </svg>
+              <span class="batt">
+                <span class="batt-num">73</span>
+                <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+                  <rect x=".7" y=".7" width="22" height="11.6" rx="3.2" stroke="#F2EDE4" stroke-opacity=".55"/>
+                  <rect x="2.3" y="2.3" width="15.4" height="8.4" rx="1.9" fill="#7ED957"/>
+                  <path d="M24.6 4.2v4.6" stroke="#F2EDE4" stroke-opacity=".55" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M11.3 2.3 8.1 7.2h2.7l-.9 3.5 3.4-5h-2.6z" fill="#173B12"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <header class="hdr hdrB">
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+            </div>
+            <div class="tcol">
+              <div class="tline"><span class="dot"></span><span class="gtitle">数独</span></div>
+              <div class="statline">
+                <span class="lb">错误</span><span class="vl">0/5</span><span class="sep">·</span>
+                <span class="lb">用时</span><span class="vl">0:06</span><span class="sep">·</span>
+                <span class="lb">最佳</span><span class="vl">--</span>
+              </div>
+            </div>
+            <div class="grow"></div>
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12v6a6 6 0 0 1-12 0z"/><path d="M18 5h2a2 2 0 0 1 0 6h-2"/><path d="M6 5H4a2 2 0 0 0 0 6h2"/></svg>
+            </div>
+          </header>
+
+          <div class="modebar">
+            <div class="modepill">
+              <span class="m">经典九宫</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#A39A8E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+              <span class="huan">换</span>
+            </div>
+            <div class="diff"><span>简单</span><span class="on">中等</span><span>困难</span><span>专家</span></div>
+          </div>
+
+          <div class="board-wrap" id="sudoku-b"></div>
+          <div class="pad" id="pad-b"></div>
+          <div class="actions">
+            <div class="abtn primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              <span>新游戏</span>
+            </div>
+            <div class="abtn plain">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+              <span>暂停</span>
+            </div>
+          </div>
+          <div class="live">
+            <span class="ldot"></span><span class="ltext">正在玩</span>
+            <div class="chip">
+              <span class="av">禾</span><span class="nm">岁禾</span><span class="you">你</span>
+              <span class="pg">经典九宫 · 中等 · 0:04 · 已填 34/81</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">
+        <span class="tag">方案 B</span>
+        <div class="txt"><b>标题下潜行 · 数独</b>标题左侧、统计一行小字；360dp 窄屏与长标题也不挤。</div>
+      </div>
+    </div>
+
+    <!-- ============ 方案 A · 2048 ============ -->
+    <div class="shot">
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar">
+            <div class="time">20:44</div>
+            <div class="sysicons">
+              <span class="g">5G</span>
+              <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                <path d="M1 4.6a11 11 0 0 1 15 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M4.5 7.6a6.2 6.2 0 0 1 8 0" stroke="#F2EDE4" stroke-width="1.7" stroke-linecap="round"/>
+                <circle cx="8.5" cy="10.4" r="1.4" fill="#F2EDE4"/>
+              </svg>
+              <span class="batt">
+                <span class="batt-num">73</span>
+                <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+                  <rect x=".7" y=".7" width="22" height="11.6" rx="3.2" stroke="#F2EDE4" stroke-opacity=".55"/>
+                  <rect x="2.3" y="2.3" width="15.4" height="8.4" rx="1.9" fill="#7ED957"/>
+                  <path d="M24.6 4.2v4.6" stroke="#F2EDE4" stroke-opacity=".55" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M11.3 2.3 8.1 7.2h2.7l-.9 3.5 3.4-5h-2.6z" fill="#173B12"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <header class="hdr">
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+            </div>
+            <div class="titlewrap"><span class="dot" style="background:#E08A2E;box-shadow:0 0 6px rgba(224,138,46,.47)"></span><span class="gtitle">2048</span></div>
+            <div class="statsA">
+              <div class="stat"><span class="slabel">分数</span><span class="svalue">5,128</span></div>
+              <span class="sdiv"></span>
+              <div class="stat"><span class="slabel">最高分</span><span class="svalue">12,048</span></div>
+            </div>
+            <div class="rbtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12v6a6 6 0 0 1-12 0z"/><path d="M18 5h2a2 2 0 0 1 0 6h-2"/><path d="M6 5H4a2 2 0 0 0 0 6h2"/></svg>
+            </div>
+          </header>
+
+          <div id="b2048" class="b2048-wrap" style="margin-top:141px"></div>
+
+          <div class="actions" style="position:absolute;left:0;right:0;bottom:72px;margin:0">
+            <div class="abtn plain disabled">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              <span>撤销</span>
+            </div>
+            <div class="abtn orange">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              <span>新游戏</span>
+            </div>
+          </div>
+          <div class="live">
+            <span class="ldot" style="background:#E08A2E"></span><span class="ltext">正在玩</span>
+            <div class="chip">
+              <span class="av">禾</span><span class="nm">岁禾</span><span class="you" style="background:#E08A2E;color:#2A1608">你</span>
+              <span class="pg">分数 5,128</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">
+        <span class="tag">方案 A</span>
+        <div class="txt"><b>同一套顶栏 · 2048</b>两个统计自然排开；无难度条时棋盘在剩余空间居中。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GIVENS = [
+  6,0,1, 9,7,0, 3,0,4,
+  4,0,0, 0,1,0, 0,0,9,
+  7,0,0, 5,0,0, 6,0,0,
+  9,0,5, 0,0,0, 0,0,0,
+  8,0,6, 0,4,0, 7,5,0,
+  3,4,0, 1,0,0, 0,0,6,
+  0,3,9, 8,6,7, 0,4,0,
+  1,0,4, 0,5,0, 0,6,0,
+  5,0,0, 0,0,0, 2,0,0,
+];
+
+function sudokuSvg() {
+  const S = 358, n = 9, cell = S / n;
+  let s = `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" xmlns="http://www.w3.org/2000/svg">`;
+  s += `<rect width="${S}" height="${S}" fill="#171312"/>`;
+  for (let i = 0; i < 81; i++) {
+    const r = Math.floor(i / 9), c = i % 9;
+    s += `<rect x="${(c*cell).toFixed(2)}" y="${(r*cell).toFixed(2)}" width="${cell.toFixed(2)}" height="${cell.toFixed(2)}" fill="#322A27"/>`;
+  }
+  for (let i = 1; i <= 8; i++) {
+    const p = (i * cell).toFixed(2);
+    if (i % 3 === 0) continue;
+    s += `<line x1="${p}" y1="0" x2="${p}" y2="${S}" stroke="rgba(255,255,255,.161)" stroke-width="1"/>`;
+    s += `<line x1="0" y1="${p}" x2="${S}" y2="${p}" stroke="rgba(255,255,255,.161)" stroke-width="1"/>`;
+  }
+  for (const i of [3, 6]) {
+    const p = (i * cell).toFixed(2);
+    s += `<line x1="${p}" y1="0" x2="${p}" y2="${S}" stroke="#A39A8E" stroke-width="2"/>`;
+    s += `<line x1="0" y1="${p}" x2="${S}" y2="${p}" stroke="#A39A8E" stroke-width="2"/>`;
+  }
+  s += `<rect x="1.1" y="1.1" width="${S-2.2}" height="${S-2.2}" fill="none" stroke="rgba(242,237,228,.8)" stroke-width="2.2"/>`;
+  for (let i = 0; i < 81; i++) {
+    const v = GIVENS[i]; if (!v) continue;
+    const r = Math.floor(i / 9), c = i % 9;
+    const x = (c * cell + cell / 2).toFixed(2), y = (r * cell + cell / 2 + 1).toFixed(2);
+    s += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="XiaolaiMono" font-size="20.7" font-weight="700" fill="#F2EDE4">${v}</text>`;
+  }
+  s += `</svg>`;
+  return s;
+}
+
+const PAD_COUNTS = [4,5,8,5,8,5,5,3,4];
+function padHtml() {
+  const row = (digits) => `<div class="padrow">${digits.map(n => `
+      <div class="key"><span class="n">${n}</span><span class="rest">${PAD_COUNTS[n-1]}</span></div>`).join('')}</div>`;
+  const tools = [
+    ['撤销', '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'],
+    ['擦除', '<path d="M20 20H7L3 16a2 2 0 0 1 0-2.8l9-9a2 2 0 0 1 2.8 0l5 5a2 2 0 0 1 0 2.8L13 20"/><path d="M9 11l4 4"/>'],
+    ['笔记', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'],
+    ['提示', '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>'],
+  ];
+  const toolHtml = tools.map(([label, icon], i) => `
+    <div class="tool">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#CFC5B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
+      <span>${label}</span>${i === 3 ? '<span style="font-size:11px;color:rgba(207,197,184,.7)">3</span>' : ''}
+    </div>`).join('');
+  return `${row([1,2,3,4,5])}${row([6,7,8,9])}<div class="tools">${toolHtml}</div>`;
+}
+
+function build2048() {
+  const W = 337, pad = 8, gap = 7;
+  const cell = (W - 2 - pad * 2 - gap * 3) / 4;
+  const wrap = document.getElementById('b2048');
+  wrap.style.width = W + 'px';
+  wrap.style.height = W + 'px';
+  const board = document.createElement('div');
+  board.className = 'b2048';
+  board.style.width = W + 'px'; board.style.height = W + 'px';
+  wrap.appendChild(board);
+  for (let i = 0; i < 16; i++) {
+    const c = i % 4, r = Math.floor(i / 4);
+    const d = document.createElement('div');
+    d.className = 'cell2048';
+    d.style.left = (1 + pad + c * (cell + gap)) + 'px';
+    d.style.top = (1 + pad + r * (cell + gap)) + 'px';
+    d.style.width = cell + 'px'; d.style.height = cell + 'px';
+    board.appendChild(d);
+  }
+  const tiles = [
+    [0, 2], [2, 4], [5, 8], [7, 16],
+    [8, 32], [10, 64], [13, 128], [15, 256],
+  ];
+  const centered = (v) => {
+    const l = v / 255;
+    const mix = (a, b, t) => Math.round(a + (b - a) * t);
+    return `rgb(${mix(248,224,l)},${mix(227,138,l)},${mix(196,46,l)})`;
+  };
+  for (const [idx, v] of tiles) {
+    const c = idx % 4, r = Math.floor(idx / 4);
+    const t = document.createElement('div');
+    t.className = 'tile2048';
+    t.style.left = (1 + pad + c * (cell + gap)) + 'px';
+    t.style.top = (1 + pad + r * (cell + gap)) + 'px';
+    t.style.width = cell + 'px'; t.style.height = cell + 'px';
+    const fs = v >= 512 ? cell * 0.32 : v >= 128 ? cell * 0.34 : cell * 0.42;
+    t.style.fontSize = fs + 'px';
+    if (v === 2) { t.style.background = '#F8E3C4'; t.style.color = '#A96417'; }
+    else if (v <= 16) { t.style.background = centered(v === 4 ? 76 : 128); t.style.color = '#A96417'; }
+    else if (v <= 64) { t.style.background = '#E08A2E'; t.style.color = '#A96417'; t.style.boxShadow = '0 3px 10px rgba(0,0,0,.12)'; }
+    else if (v <= 256) { t.style.background = '#CD7D26'; t.style.color = '#FFFDF8'; t.style.boxShadow = '0 3px 10px rgba(0,0,0,.12)'; }
+    else { t.style.background = '#A96417'; t.style.color = '#FFFDF8'; }
+    t.textContent = v;
+    board.appendChild(t);
+  }
+}
+
+document.getElementById('sudoku-a').innerHTML = sudokuSvg();
+document.getElementById('sudoku-b').innerHTML = sudokuSvg();
+document.getElementById('pad-a').innerHTML = padHtml();
+document.getElementById('pad-b').innerHTML = padHtml();
+build2048();
+</script>
+</body>
+</html>

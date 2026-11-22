@@ -230,6 +230,124 @@ const NOTE_TITLE_MAX = 50;
 const NOTE_CONTENT_MAX = 5000;
 const NOTE_MAX_PER_USER = 50;
 
+/* ---------------- 每日打卡：行动 / 回签 / 七日成卷 ----------------
+   按 `u:昵称|YYYY-MM-DD` 一条记录，单文件存储。
+   只记匿名聚合计数（创建 / 盖章 / 回签 / 成卷），不记回签正文到日志。 */
+const checkinFile = path.join(DATA_DIR, 'checkin-days.json');
+const checkinRaw = readJson(checkinFile, { days: {} });
+let checkinDays =
+  checkinRaw && checkinRaw.days && typeof checkinRaw.days === 'object' ? checkinRaw.days : {};
+function saveCheckinDays() {
+  writeAtomic(checkinFile, { days: checkinDays });
+}
+const checkinMetrics = { creates: 0, actions: 0, reflections: 0, volumes: 0 };
+
+const CHECKIN_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const CHECKIN_KINDS = new Set([
+  'career',
+  'study',
+  'heart',
+  'social',
+  'body',
+  'action',
+  'money',
+  'rest',
+  'idea',
+  'tiny',
+]);
+const CHECKIN_ACTION_TYPES = new Set([
+  'task',
+  'focus',
+  'listen',
+  'ledger',
+  'note',
+  'community',
+  'manual',
+]);
+/* 老客户端只带 kind 时不至于把行动类型写成 manual：按签的类型补默认动作。 */
+const CHECKIN_ACTION_BY_KIND = {
+  career: 'task',
+  study: 'focus',
+  action: 'focus',
+  rest: 'listen',
+  body: 'listen',
+  money: 'ledger',
+  social: 'community',
+  heart: 'note',
+  idea: 'note',
+  tiny: 'manual',
+};
+const CHECKIN_MOODS = new Set(['same', 'different', 'unrated']);
+const CHECKIN_REFLECTION_MAX = 120;
+const CHECKIN_ACTION_TEXT_MAX = 60;
+const CHECKIN_SIGN_ID_RE = /^[A-Za-z0-9_-]{2,40}$/;
+const CHECKIN_CARD_ID_RE = /^[^\s/]{1,12}\/\d{1,4}$/u;
+
+function checkinKeyOf(name, date) {
+  return 'u:' + name + '|' + date;
+}
+function checkinValidDate(s) {
+  if (typeof s !== 'string' || !CHECKIN_DATE_RE.test(s)) return false;
+  const ms = Date.parse(s + 'T00:00:00+08:00');
+  if (!Number.isFinite(ms)) return false;
+  return new Date(ms + 8 * 3600 * 1000).toISOString().slice(0, 10) === s;
+}
+function checkinText(v, max) {
+  return String(v == null ? '' : v)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+function checkinInt(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+function checkinRecordOf(name, date) {
+  return checkinDays[checkinKeyOf(name, date)] || null;
+}
+function checkinTodayOf(name) {
+  return checkinRecordOf(name, dayStr());
+}
+/* 创建当天的快照。缺 signId 视为老客户端，不建记录。 */
+function checkinSnapshot(b) {
+  if (!b || typeof b !== 'object') return null;
+  const signId = checkinText(b.signId, 40);
+  if (!CHECKIN_SIGN_ID_RE.test(signId)) return null;
+  const signTitle = checkinText(b.signTitle, 24);
+  if (!signTitle) return null;
+  let kind = checkinText(b.kind, 12);
+  if (!CHECKIN_KINDS.has(kind)) kind = 'tiny';
+  let cardId = checkinText(b.cardId, 20);
+  if (cardId && !CHECKIN_CARD_ID_RE.test(cardId)) cardId = '';
+  let actionType = checkinText(b.actionType, 12);
+  if (!CHECKIN_ACTION_TYPES.has(actionType)) {
+    actionType = CHECKIN_ACTION_BY_KIND[kind] || 'manual';
+  }
+  return {
+    signId: signId,
+    signTitle: signTitle,
+    levelIndex: checkinInt(b.levelIndex, 0, 7, 0),
+    kind: kind,
+    cardId: cardId || null,
+    transferUsed: b.transferUsed === true,
+    actionText: checkinText(b.actionText, CHECKIN_ACTION_TEXT_MAX),
+    actionType: actionType,
+  };
+}
+function checkinPublic(rec) {
+  if (!rec) return null;
+  return rec;
+}
+function checkinCountOf(name) {
+  const prefix = 'u:' + name + '|';
+  let n = 0;
+  Object.keys(checkinDays).forEach(function (k) {
+    if (k.indexOf(prefix) === 0) n++;
+  });
+  return n;
+}
+
 /* ---------------- ★食谱日记（按用户隔离，单文件存储） ----------------
    前端「食谱日记」：我的食谱库 + 食谱广场 + 购物清单。
    结构：{ recipes: [ {id,uid,name,…} ], shopping: { "昵称": [ {id,text,done} ] } }
@@ -2222,6 +2340,17 @@ function migrateAuxUserData(oldName, name) {
   });
   if (drawsDirty) saveZodiacDraws();
 
+  /* 每日打卡：记录键里带昵称，改名时整段过户 */
+  let checkinDirty = false;
+  Object.keys(checkinDays).forEach(function (key) {
+    if (key.indexOf(oldPrefix) === 0) {
+      checkinDays[newPrefix + key.slice(oldPrefix.length)] = checkinDays[key];
+      delete checkinDays[key];
+      checkinDirty = true;
+    }
+  });
+  if (checkinDirty) saveCheckinDays();
+
   /* 玩法抽签：昵称是身份键，改名一并过户（记录 + 冷却） */
   let playDirty = false;
   playRecords.forEach(function (r) {
@@ -3221,6 +3350,19 @@ const server = http.createServer(async function (req, res) {
     if (reportsDirty) {
       reports = keptReports;
       saveReports();
+    }
+
+    /* 每日打卡：记录键带昵称，整段删除 */
+    let checkinDeleted = 0;
+    Object.keys(checkinDays).forEach(function (key) {
+      if (key.indexOf('u:' + name + '|') === 0) {
+        delete checkinDays[key];
+        checkinDeleted++;
+      }
+    });
+    if (checkinDeleted) {
+      saveCheckinDays();
+      deleted.checkins = checkinDeleted;
     }
 
     /* 账号与会话 */
@@ -4335,19 +4477,88 @@ const server = http.createServer(async function (req, res) {
     return json(res, 200, { ok: true, idx: idx, transfer: true, prevIdx: hit.idx });
   }
 
-  /* ===== 打卡：连续天数跨端同步 ===== */
+  /* ===== 每日打卡：连续天数跨端同步 ===== */
   if (req.method === 'GET' && url === '/api/checkin/stats') {
     if (needAuth(res, me)) return;
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    return json(res, 200, checkinStatus(bu));
+    const rec = checkinTodayOf(bu.name);
+    return json(res, 200, Object.assign(checkinStatus(bu), {
+      date: dayStr(),
+      today: checkinPublic(rec),
+      rev: rec ? rec.rev || 0 : 0,
+    }));
+  }
+  if (req.method === 'GET' && url === '/api/checkin/bootstrap') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'checkin-bootstrap', 60, 60000)) {
+      return json(res, 429, { err: '请求太频繁' });
+    }
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const count = Math.max(7, Math.min(62, parseInt(query.get('days'), 10) || 35));
+    const d = dayStr();
+    const prefix = 'u:' + bu.name + '|';
+    const list = Object.keys(checkinDays)
+      .filter(function (k) {
+        return k.indexOf(prefix) === 0;
+      })
+      .map(function (k) {
+        return checkinDays[k];
+      })
+      .filter(function (r) {
+        return r && checkinValidDate(r.date) && r.date <= d;
+      })
+      .sort(function (a, b) {
+        return a.date.localeCompare(b.date);
+      })
+      .slice(-count);
+    return json(
+      res,
+      200,
+      Object.assign(checkinStatus(bu), { date: d, days: list, today: checkinPublic(checkinTodayOf(bu.name)) })
+    );
+  }
+  if (req.method === 'GET' && url === '/api/checkin/history') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'checkin-history', 40, 60000)) {
+      return json(res, 429, { err: '请求太频繁' });
+    }
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const before = String(query.get('before') || '');
+    if (before && !checkinValidDate(before)) {
+      return json(res, 400, { err: '日期无效' });
+    }
+    const count = Math.max(1, Math.min(62, parseInt(query.get('limit'), 10) || 35));
+    const prefix = 'u:' + bu.name + '|';
+    const list = Object.keys(checkinDays)
+      .filter(function (k) {
+        return k.indexOf(prefix) === 0;
+      })
+      .map(function (k) {
+        return checkinDays[k];
+      })
+      .filter(function (r) {
+        if (!r || !checkinValidDate(r.date)) return false;
+        if (r.date > dayStr()) return false;
+        return !before || r.date < before;
+      })
+      .sort(function (a, b) {
+        return b.date.localeCompare(a.date);
+      });
+    return json(res, 200, {
+      days: list.slice(0, count),
+      hasMore: list.length > count,
+    });
   }
   if (req.method === 'POST' && url === '/api/checkin') {
     if (needAuth(res, me)) return;
-    if (limited(ip, 'checkin', 20, 60000)) return json(res, 429, { err: '操作太频繁' });
+    if (limited(ip, 'checkin', 30, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = await body();
+    const b = await body(16 * 1024);
+    if (b == null) return json(res, 413, { err: '请求太大' });
     let dirty = false;
     /* 首次上云：用客户端已有的本地连续天数做迁移，避免老用户被清零 */
     if (!bu.checkinLast && b && b.last) {
@@ -4365,7 +4576,169 @@ const server = http.createServer(async function (req, res) {
       dirty = true;
     }
     if (dirty) saveUsers();
-    return json(res, 200, checkinStatus(bu));
+
+    /* 当天记录快照：同一天重复请求只更新快照，不重复创建 */
+    const snap = checkinSnapshot(b);
+    let rec = checkinRecordOf(bu.name, d);
+    if (snap) {
+      const now = Date.now();
+      if (!rec) {
+        rec = Object.assign(
+          {
+            date: d,
+            actionStatus: 'pending',
+            linkedId: null,
+            completedActionText: null,
+            completedAt: null,
+            reflectionMood: null,
+            reflectionText: '',
+            reflectionUpdatedAt: null,
+            createdAt: now,
+            updatedAt: now,
+            rev: 1,
+          },
+          snap
+        );
+        checkinDays[checkinKeyOf(bu.name, d)] = rec;
+        checkinMetrics.creates++;
+        if (checkinCountOf(bu.name) % 7 === 0) checkinMetrics.volumes++;
+        saveCheckinDays();
+      } else {
+        let changed = false;
+        ['signId', 'signTitle', 'levelIndex', 'kind', 'cardId', 'transferUsed'].forEach(
+          function (key) {
+            if (snap[key] !== rec[key] && snap[key] != null && snap[key] !== '' && snap[key] !== false) {
+              rec[key] = snap[key];
+              changed = true;
+            }
+          }
+        );
+        /* 行动一旦完成，快照不能覆盖当时的行动文案 */
+        if (rec.actionStatus !== 'done') {
+          if (snap.actionText && snap.actionText !== rec.actionText) {
+            rec.actionText = snap.actionText;
+            changed = true;
+          }
+          if (snap.actionType && snap.actionType !== rec.actionType) {
+            rec.actionType = snap.actionType;
+            changed = true;
+          }
+        }
+        if (changed) {
+          rec.updatedAt = now;
+          rec.rev = (parseInt(rec.rev, 10) || 0) + 1;
+          saveCheckinDays();
+        }
+      }
+    }
+    return json(
+      res,
+      200,
+      Object.assign(checkinStatus(bu), {
+        date: d,
+        today: checkinPublic(rec),
+        rev: rec ? rec.rev || 0 : 0,
+      })
+    );
+  }
+  if (req.method === 'PUT' && url === '/api/checkin/action') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'checkin-action', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = await body(16 * 1024);
+    if (b == null) return json(res, 413, { err: '请求太大' });
+    const date = String((b && b.date) || '');
+    if (!checkinValidDate(date)) return json(res, 400, { err: '日期无效' });
+    const rec = checkinRecordOf(bu.name, date);
+    if (!rec) return json(res, 404, { err: '这一天没有打卡记录' });
+    if (Number.isInteger(b.rev) && b.rev !== (parseInt(rec.rev, 10) || 0)) {
+      return json(res, 409, { err: '记录已在别处更新', day: rec, rev: rec.rev || 0 });
+    }
+    if (typeof b.done !== 'boolean') return json(res, 400, { err: '缺少完成状态' });
+    const now = Date.now();
+    let changed = false;
+    if (b.actionText != null) {
+      const actionText = checkinText(b.actionText, CHECKIN_ACTION_TEXT_MAX);
+      if (actionText !== rec.actionText) {
+        rec.actionText = actionText;
+        changed = true;
+      }
+    }
+    if (b.actionType != null) {
+      const actionType = checkinText(b.actionType, 12);
+      if (CHECKIN_ACTION_TYPES.has(actionType) && actionType !== rec.actionType) {
+        rec.actionType = actionType;
+        changed = true;
+      }
+    }
+    if (b.linkedId != null) {
+      const linkedId = checkinText(b.linkedId, 64) || null;
+      if (linkedId !== rec.linkedId) {
+        rec.linkedId = linkedId;
+        changed = true;
+      }
+    }
+    if (b.done) {
+      if (rec.actionStatus !== 'done') {
+        rec.actionStatus = 'done';
+        rec.completedAt = now;
+        rec.completedActionText = b.actionText != null
+          ? checkinText(b.actionText, CHECKIN_ACTION_TEXT_MAX)
+          : rec.actionText;
+        checkinMetrics.actions++;
+        changed = true;
+      }
+    } else if (rec.actionStatus !== 'pending') {
+      rec.actionStatus = 'pending';
+      rec.completedAt = null;
+      rec.completedActionText = null;
+      changed = true;
+    }
+    if (changed) {
+      rec.updatedAt = now;
+      rec.rev = (parseInt(rec.rev, 10) || 0) + 1;
+      saveCheckinDays();
+    }
+    return json(res, 200, {
+      ok: true,
+      day: rec,
+      rev: rec.rev || 0,
+      stats: checkinStatus(bu),
+    });
+  }
+  if (req.method === 'PUT' && url === '/api/checkin/reflection') {
+    if (needAuth(res, me)) return;
+    if (limited(ip, 'checkin-reflection', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    const b = await body(16 * 1024);
+    if (b == null) return json(res, 413, { err: '请求太大' });
+    const date = String((b && b.date) || '');
+    if (!checkinValidDate(date)) return json(res, 400, { err: '日期无效' });
+    const rec = checkinRecordOf(bu.name, date);
+    if (!rec) return json(res, 404, { err: '这一天没有打卡记录' });
+    if (Number.isInteger(b.rev) && b.rev !== (parseInt(rec.rev, 10) || 0)) {
+      return json(res, 409, { err: '记录已在别处更新', day: rec, rev: rec.rev || 0 });
+    }
+    let mood = String((b && b.mood) || '');
+    if (!CHECKIN_MOODS.has(mood)) mood = 'unrated';
+    const text = checkinText(b && b.text, CHECKIN_REFLECTION_MAX);
+    const now = Date.now();
+    const first = !rec.reflectionUpdatedAt;
+    rec.reflectionMood = mood;
+    rec.reflectionText = text;
+    rec.reflectionUpdatedAt = now;
+    rec.updatedAt = now;
+    rec.rev = (parseInt(rec.rev, 10) || 0) + 1;
+    if (first) checkinMetrics.reflections++;
+    saveCheckinDays();
+    return json(res, 200, {
+      ok: true,
+      day: rec,
+      rev: rec.rev || 0,
+      stats: checkinStatus(bu),
+    });
   }
 
   /* ===== 卡面收藏：账号级同步 / 抽卡 / 今日卡 ===== */
@@ -4502,6 +4875,44 @@ const server = http.createServer(async function (req, res) {
       bu.ledgerAt = Date.now();
       saveUsers();
       return json(res, 200, { ok: true, at: bu.ledgerAt });
+    }
+  }
+
+  /* ===== MBTI：测试历史按账号同步，最多保留 30 条 ===== */
+  if (url === '/api/mbti') {
+    if (needAuth(res, me)) return;
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    if (req.method === 'GET') {
+      return json(res, 200, {
+        history: Array.isArray(bu.mbtiHistory) ? bu.mbtiHistory : [],
+        at: bu.mbtiAt || 0,
+      });
+    }
+    if (req.method === 'POST') {
+      if (limited(ip, 'mbti', 60, 60000)) {
+        return json(res, 429, { err: '操作太频繁' });
+      }
+      const b = (await body(240 * 1024)) || {};
+      if (!Array.isArray(b.history)) {
+        return json(res, 400, { err: '测试历史数据无效' });
+      }
+      const history = b.history
+        .filter((row) => row && typeof row === 'object' && !Array.isArray(row))
+        .slice(0, 30);
+      let serialized = '';
+      try {
+        serialized = JSON.stringify(history);
+      } catch (e) {
+        return json(res, 400, { err: '测试历史数据无效' });
+      }
+      if (serialized.length > 200000) {
+        return json(res, 400, { err: '测试历史数据过大' });
+      }
+      bu.mbtiHistory = history;
+      bu.mbtiAt = Date.now();
+      saveUsers();
+      return json(res, 200, { ok: true, at: bu.mbtiAt });
     }
   }
 

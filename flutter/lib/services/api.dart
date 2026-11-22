@@ -58,8 +58,11 @@ class Api {
     final uri = Uri.parse('$base$path');
     http.Response res;
     try {
-      final headers =
-          _headers(json: body != null, auth: auth, tokenOverride: tokenOverride);
+      final headers = _headers(
+        json: body != null,
+        auth: auth,
+        tokenOverride: tokenOverride,
+      );
       final encoded = body == null ? null : jsonEncode(body);
       res = await switch (method) {
         'GET' => _client.get(uri, headers: headers),
@@ -119,6 +122,15 @@ class Api {
     bool auth = true,
   ]) async {
     final r = await _request('POST', path, body: body, auth: auth);
+    return r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> put(
+    String path, [
+    Object? body,
+    bool auth = true,
+  ]) async {
+    final r = await _request('PUT', path, body: body, auth: auth);
     return r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
   }
 
@@ -183,6 +195,13 @@ class Api {
 
   static Future<Map<String, dynamic>> ledgerSave(Map<String, Object?> ledger) =>
       post('/api/ledger', {'ledger': ledger});
+
+  /// MBTI 历史按账号同步：整包读写，客户端按记录 updatedAt 合并。
+  static Future<Map<String, dynamic>> mbtiGet() => get('/api/mbti');
+
+  static Future<Map<String, dynamic>> mbtiSave(
+    List<Map<String, dynamic>> history,
+  ) => post('/api/mbti', {'history': history});
 
   static Future<Map<String, dynamic>> login(String account, String password) =>
       post('/api/auth/login', {
@@ -487,9 +506,52 @@ class Api {
     String? deviceId,
     String? last,
     int? streak,
+    Map<String, Object?>? snapshot,
   }) => post('/api/checkin', {
     if (deviceId != null) 'deviceId': deviceId,
     if (last != null) 'last': last,
     if (streak != null) 'streak': streak,
+    if (snapshot != null) ...snapshot,
+  });
+
+  /// 每日打卡：一次拉回统计与最近记录，减少启动时的并发请求。
+  static Future<Map<String, dynamic>> checkinBootstrap({int days = 35}) =>
+      get('/api/checkin/bootstrap', query: {'days': '$days'}, auth: true);
+
+  static Future<Map<String, dynamic>> checkinHistory({
+    String? before,
+    int limit = 35,
+  }) => get(
+    '/api/checkin/history',
+    query: {if (before != null) 'before': before, 'limit': '$limit'},
+    auth: true,
+  );
+
+  static Future<Map<String, dynamic>> checkinAction({
+    required String date,
+    required bool done,
+    String? actionText,
+    String? actionType,
+    String? linkedId,
+    int? rev,
+  }) => put('/api/checkin/action', {
+    'date': date,
+    'done': done,
+    if (actionText != null) 'actionText': actionText,
+    if (actionType != null) 'actionType': actionType,
+    if (linkedId != null) 'linkedId': linkedId,
+    if (rev != null) 'rev': rev,
+  });
+
+  static Future<Map<String, dynamic>> checkinReflection({
+    required String date,
+    required String mood,
+    required String text,
+    int? rev,
+  }) => put('/api/checkin/reflection', {
+    'date': date,
+    'mood': mood,
+    'text': text,
+    if (rev != null) 'rev': rev,
   });
 }

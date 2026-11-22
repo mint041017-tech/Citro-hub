@@ -1501,6 +1501,7 @@ String _homeCardIcon(HomeCardId id) => switch (id) {
   HomeCardId.zodiac => AppIcons.star,
   HomeCardId.quote => AppIcons.book,
   HomeCardId.cardCollection => AppIcons.sparkle,
+  HomeCardId.mbti => '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
   HomeCardId.game => AppIcons.games,
   HomeCardId.res => AppIcons.download,
 };

@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+
+import 'location_geo.dart';
 
 class GeoLocation {
   final double latitude;
@@ -14,11 +14,15 @@ class GeoLocation {
   final double accuracy;
   final String city;
 
+  /// 系统定位不可用时用 IP 兜底得到的位置：只保证城市级精度。
+  final bool approximate;
+
   const GeoLocation({
     required this.latitude,
     required this.longitude,
     this.accuracy = 0,
     this.city = '',
+    this.approximate = false,
   });
 }
 
@@ -27,33 +31,64 @@ class LocationService {
     'com.chimu.crew/location',
   );
 
+  /// 先取系统定位，失败（无权限 / 服务关闭 / 超时）时退回 IP 定位。
+  ///
+  /// 桌面端经常拿不到系统定位（Windows 需要在系统设置里允许桌面应用访问位置），
+  /// 以前直接返回 null，界面只能提示「定位失败」。IP 定位精度到城市级，
+  /// 对天气场景足够。
   static Future<GeoLocation?> current() async {
-    if (Platform.isIOS) {
-      try {
-        return await _currentIos().timeout(const Duration(seconds: 20));
-      } catch (_) {
-        return null;
-      }
-    }
-    if (Platform.isWindows) {
-      try {
-        return await _currentWindows().timeout(const Duration(seconds: 20));
-      } catch (_) {
-        return null;
-      }
-    }
+    final device = await _fromDevice();
+    if (device != null) return device;
+    return _fromIp();
+  }
+
+  static Future<GeoLocation?> _fromDevice() async {
     try {
-      final map = await _channel
-          .invokeMapMethod<String, dynamic>('getLocation')
-          .timeout(const Duration(seconds: 30));
+      if (Platform.isIOS) {
+        return await _currentIos().timeout(const Duration(seconds: 20));
+      }
+      if (Platform.isWindows) {
+        return await _currentWindows().timeout(const Duration(seconds: 20));
+      }
+      return await _currentAndroid().timeout(const Duration(seconds: 30));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<GeoLocation?> _fromIp() async {
+    try {
+      final ip = await GeoLookup.fromIp().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => null,
+      );
+      if (ip == null) return null;
+      return GeoLocation(
+        latitude: ip.latitude,
+        longitude: ip.longitude,
+        city: ip.city,
+        approximate: true,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Android 走原生通道：系统权限框也由原生侧处理，只回坐标。
+  static Future<GeoLocation?> _currentAndroid() async {
+    try {
+      final map = await _channel.invokeMapMethod<String, dynamic>(
+        'getLocation',
+      );
       if (map == null) return null;
       final lat = (map['latitude'] as num?)?.toDouble();
       final lon = (map['longitude'] as num?)?.toDouble();
       if (lat == null || lon == null) return null;
-      // 原生只回坐标（Geocoder 在部分机型/模拟器上会一直阻塞，把定位拖到超时）。
-      // 城市名统一在这里走 HTTP 逆地理，失败就是空串，不影响天气拉取。
-      final nativeCity = (map['city'] as String?)?.trim() ?? '';
-      final city = nativeCity.isNotEmpty ? nativeCity : await _reverseCity(lat, lon);
+      // Geocoder 在部分机型/模拟器上会一直阻塞，城市名统一走 HTTP 逆地理。
+      final nativeCity = GeoLookup.normalizeCity('${map['city'] ?? ''}');
+      final city = nativeCity.isNotEmpty
+          ? nativeCity
+          : await GeoLookup.cityFromCoords(lat, lon);
       return GeoLocation(
         latitude: lat,
         longitude: lon,
@@ -85,26 +120,40 @@ class LocationService {
     required bool useHttpGeocode,
   }) async {
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      LocationPermission permission;
+      try {
+        permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+      } catch (_) {
+        // 位置服务没运行时 checkPermission 可能直接抛错，走下面的定位尝试。
+        permission = LocationPermission.denied;
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever ||
           permission == LocationPermission.unableToDetermine) {
         return null;
       }
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
-          timeLimit: Duration(seconds: 12),
-        ),
-      );
+
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.low,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+      } catch (_) {
+        pos = null;
+      }
+      // 室内 / 桌面端经常定位超时，退回系统缓存的上一次位置。
+      pos ??= await Geolocator.getLastKnownPosition();
+      if (pos == null) return null;
+
       var city = '';
       if (useHttpGeocode) {
-        city = await _reverseCity(pos.latitude, pos.longitude);
+        city = await GeoLookup.cityFromCoords(pos.latitude, pos.longitude);
       } else {
         try {
           final places = await Geocoding(locale: const Locale('zh', 'CN'))
@@ -118,38 +167,18 @@ class LocationService {
                       : (p.administrativeArea?.trim() ?? ''));
           }
         } catch (_) {}
+        if (city.isEmpty) {
+          city = await GeoLookup.cityFromCoords(pos.latitude, pos.longitude);
+        }
       }
       return GeoLocation(
         latitude: pos.latitude,
         longitude: pos.longitude,
         accuracy: pos.accuracy,
-        city: city,
+        city: GeoLookup.normalizeCity(city),
       );
     } catch (_) {
       return null;
     }
-  }
-
-  static Future<String> _reverseCity(double lat, double lon) async {
-    try {
-      final uri = Uri.https(
-        'api.bigdatacloud.net',
-        '/data/reverse-geocode-client',
-        {
-          'latitude': lat.toString(),
-          'longitude': lon.toString(),
-          'localityLanguage': 'zh',
-        },
-      );
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (res.statusCode != 200) return '';
-      final j = jsonDecode(utf8.decode(res.bodyBytes));
-      if (j is! Map) return '';
-      for (final key in const ['city', 'locality', 'principalSubdivision']) {
-        final value = j[key]?.toString().trim() ?? '';
-        if (value.isNotEmpty) return value;
-      }
-    } catch (_) {}
-    return '';
   }
 }

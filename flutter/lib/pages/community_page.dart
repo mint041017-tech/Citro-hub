@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import '../checkin/checkin_store.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/composer_sheet.dart';
 import '../overlays/report_sheet.dart';
@@ -483,6 +484,7 @@ class _CommunityPageState extends State<CommunityPage>
           );
         });
       }
+      CheckinStore.instance.commentCreated(c.id);
       return true;
     } catch (e) {
       if (mounted) AppToast.show(context, e.toString());
@@ -2402,6 +2404,7 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
         });
       }
       widget.onChanged();
+      CheckinStore.instance.commentCreated(c.id);
       return true;
     } catch (e) {
       if (mounted) AppToast.show(context, e.toString());

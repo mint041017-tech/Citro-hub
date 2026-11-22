@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.2.1",
-    "build_number": "3201",
-    "file": "Citro-downloads-3.2.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.2.1.zip",
-    "size": 1088723,
-    "sha256": "c25dc55639671b6246827f489f32b1ddb22dbb7d8a260a88f8ef0a605bd63977",
-    "published_at": "2026-11-17T17:03:37Z",
-    "notes": "Citro downloads 静态站 3.2.1:Windows / Android 入口更新到 3.2.1,补上数独操作行随滚动与退场动画优化;Web 入口同步。"
+    "version": "3.3.0",
+    "build_number": "3300",
+    "file": "Citro-downloads-3.3.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.3.0.zip",
+    "size": 1088818,
+    "sha256": "978324e1fafeaa578c3f7814116321ea6011f474d5f3056c575c3c2b1de64461",
+    "published_at": "2026-11-22T10:53:50Z",
+    "notes": "Citro downloads 静态站 3.3.0:Windows / Android 入口更新到 3.3.0，新增 MBTI 人格测试与每日打卡更新日志；Web 入口同步。"
 }

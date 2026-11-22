@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.2.1",
-    "build_number": "3201",
-    "build_id": "ee5d5c1efa4b47763c69da87a6a51fdf",
-    "file": "Citro-web-3.2.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.2.1.zip",
-    "size": 49117642,
-    "sha256": "ee5d5c1efa4b47763c69da87a6a51fdfb9f8ba2302251d2bfdaff46a79994859",
-    "published_at": "2026-11-17T17:03:37Z",
-    "notes": "3.2.1:数独页操作行在手机竖屏随棋盘滚动,灵敏度/视野live/玩法抽签/一起看的退场动画完整淡出;桌面端版式不变,版本 3.2.1。"
+    "version": "3.3.0",
+    "build_number": "3300",
+    "build_id": "14ba905719145da8d3fefcc4a99eb369",
+    "file": "Citro-web-3.3.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.3.0.zip",
+    "size": 49322101,
+    "sha256": "14ba905719145da8d3fefcc4a99eb3691b1380a38703057d47142203006cb0be",
+    "published_at": "2026-11-22T10:53:47Z",
+    "notes": "3.3.0:MBTI 96 题测试、人格切片、二维码结果分享与账号历史；每日打卡加入趣签筒、晚间回签与七日成卷，今日签改为独立朱砂色印记；图鉴与历史返回转场更快，Windows / Android / Web / 下载站同步发布。"
 }

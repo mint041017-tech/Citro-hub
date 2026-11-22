@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:citro/checkin/checkin_store.dart';
 import 'package:citro/overlays/fortune_sheet.dart';
 import 'package:citro/services/ai.dart';
 import 'package:citro/services/prefs.dart';
@@ -36,6 +37,7 @@ void main() {
   tearDown(() {
     HttpOverrides.global = null;
     AiService.goodDeedReviewer = null;
+    CheckinStore.instance.resetForTest();
   });
 
   testWidgets('bad fortune grants a transfer via CiCi and rerolls once', (
@@ -103,6 +105,7 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    CheckinStore.instance.resetForTest();
   });
 
   testWidgets('vague good deed is rejected without a transfer', (tester) async {
@@ -154,5 +157,6 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    CheckinStore.instance.resetForTest();
   });
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
+import '../checkin/checkin_models.dart';
+import '../checkin/checkin_store.dart';
 import '../games/game_loader.dart';
 import '../games/game_registry.dart';
 import '../overlays/extra_sheets.dart';
@@ -34,119 +36,155 @@ class CheckinCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.app;
     final c = context.c;
-    final streak = state.checkinStreak;
-    final done = state.checkedInToday;
-    if (compact) {
-      return CitroCard(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        onTap: () => showCheckinOverlay(context),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: c.tintYellow,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(AppIcons.calendar, width: 2),
-                  size: 19,
-                  color: c.accentInk,
+    final store = CheckinStore.instance;
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final view = store.homeViewFor(state.checkinStreak);
+        final streak = state.checkinStreak;
+        if (compact) {
+          return CitroCard(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            onTap: () => showCheckinOverlay(context),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: c.tintYellow,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: AppIcon(
+                      strokeSvg(AppIcons.calendar, width: 2),
+                      size: 19,
+                      color: c.accentInk,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '打卡',
+                        style: context.heading(
+                          size: CitroType.label,
+                          color: c.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        view.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x1),
+                _StatePill(text: view.pill, phase: view.phase),
+              ],
             ),
-            const SizedBox(width: AppSpacing.x2),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+          );
+        }
+        return CitroCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          onTap: () => showCheckinOverlay(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
+                  AppIcon(
+                    strokeSvg(AppIcons.calendar, width: 2),
+                    size: 18,
+                    color: c.accent,
+                  ),
+                  const SizedBox(width: 6),
                   Text(
                     '打卡',
-                    style: context.heading(size: CitroType.label, color: c.ink),
+                    style: context.heading(
+                      size: CitroType.label,
+                      color: c.ink,
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const Spacer(),
+                  _StatePill(text: view.pill, phase: view.phase),
+                ],
+              ),
+              const Spacer(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
                   Text(
-                    done ? '今天已完成 · 连续 $streak 天' : '连续 $streak 天 · 轻轻一点记录今天',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: CitroType.small, color: c.inkSoft),
+                    '$streak',
+                    style: context.hand(
+                      size: CitroType.display,
+                      weight: CitroType.strong,
+                      color: c.ink,
+                      height: .9,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      '天',
+                      style: context.body(
+                        size: CitroType.small,
+                        weight: CitroType.medium,
+                        color: c.inkSoft,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  _ArrowBadge(
+                    icon: AppIcons.arrowUpRight,
+                    tint: c.tintYellow,
+                    ink: c.accentInk,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.x1),
-            _StatePill(done: done),
-          ],
-        ),
-      );
-    }
-    return CitroCard(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      onTap: () => showCheckinOverlay(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AppIcon(
-                strokeSvg(AppIcons.calendar, width: 2),
-                size: 18,
-                color: c.accent,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '打卡',
-                style: context.heading(size: CitroType.label, color: c.ink),
-              ),
-              const Spacer(),
-              _StatePill(done: done),
-            ],
-          ),
-          const Spacer(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$streak',
-                style: context.hand(
-                  size: CitroType.display,
-                  weight: CitroType.strong,
-                  color: c.ink,
-                  height: .9,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  '天',
-                  style: context.body(
-                    size: CitroType.small,
-                    weight: CitroType.medium,
-                    color: c.inkSoft,
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      view.syncFailed ? '已存本机，联网后再同步' : view.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.body(
+                        size: CitroType.small,
+                        color: view.syncFailed ? c.accentInk : c.inkSoft,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const Spacer(),
-              _ArrowBadge(
-                icon: AppIcons.arrowUpRight,
-                tint: c.tintYellow,
-                ink: c.accentInk,
+                  if (view.syncing)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            done ? '今天已完成，明天继续' : '轻轻一点，记录今天',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.body(size: CitroType.small, color: c.inkSoft),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -297,15 +335,20 @@ class _NookToggleButton extends StatelessWidget {
 }
 
 class _StatePill extends StatelessWidget {
-  final bool done;
+  final String text;
+  final CheckinHomePhase phase;
 
-  const _StatePill({required this.done});
+  const _StatePill({required this.text, required this.phase});
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final bg = done ? c.mintSoft : c.surface2;
-    final fg = done ? c.mintInk : c.inkSoft;
+    final (bg, fg) = switch (phase) {
+      CheckinHomePhase.notChecked => (c.surface2, c.inkSoft),
+      CheckinHomePhase.pendingReflection => (c.accentLt, c.accentInk),
+      _ => (c.mintSoft, c.mintInk),
+    };
+    final checked = phase != CheckinHomePhase.notChecked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -315,9 +358,9 @@ class _StatePill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (done)
+          if (checked)
             Text(
-              '✓',
+              phase == CheckinHomePhase.pendingReflection ? '·' : '✓',
               style: context.body(
                 size: CitroType.micro,
                 weight: CitroType.strong,
@@ -325,9 +368,9 @@ class _StatePill extends StatelessWidget {
                 height: 1,
               ),
             ),
-          if (done) const SizedBox(width: 3),
+          if (checked) const SizedBox(width: 3),
           Text(
-            done ? '已完成' : '待打卡',
+            text,
             style: context.body(
               size: CitroType.small,
               weight: CitroType.medium,
@@ -676,6 +719,10 @@ class HomeResCard extends StatelessWidget {
     DriverItem? driver,
   ) async {
     if (tool != null) {
+      if (tool.name == '人格测试') {
+        Navigator.of(context).pushNamed('/mbti');
+        return;
+      }
       if (tool.name == '灵敏度') {
         Navigator.of(context).pushNamed('/sens');
         return;
