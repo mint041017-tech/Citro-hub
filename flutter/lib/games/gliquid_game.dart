@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'game_random.dart';
 import 'gliquid_physics.dart';
 
 const double _tau = math.pi * 2;
@@ -339,7 +340,7 @@ class LiquidGhost {
 
 class LiquidGame {
   LiquidGame({required this.layout, math.Random? random})
-    : rnd = random ?? math.Random() {
+    : rnd = random ?? GameRandom.create() {
     _createWorld();
     reset();
   }

@@ -3,7 +3,7 @@
 > 代码、工程文件、权限文案、图标、启动屏、隐私清单、通知/定位 Dart 适配已经完成。
 > 下面这些步骤依赖 macOS、Xcode、Apple 签名与真机，Windows 无法代替。
 >
-> 截至 2026-11-22：当前版本为 **3.3.0+3300**（pubspec 为唯一版本源，Runner/TimerWidget 均用
+> 截至 2026-11-23：当前版本为 **3.3.1+3301**（pubspec 为唯一版本源，Runner/TimerWidget 均用
 > `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`）。版本状态、端侧改动历史与预打包核对项统一见
 > [`ios-预打包清单.md`](ios-预打包清单.md)；本文件只保留必须在 macOS 上完成的 Xcode 签名、
 > 构建与真机验证步骤。
@@ -68,7 +68,7 @@ build/ios/ipa/
 flutter pub get
 cd ios && pod install --repo-update && cd ..
 flutter build ipa --release --export-method app-store \
-  --dart-define=APP_VERSION=3.3.0
+  --dart-define=APP_VERSION=3.3.1
 ```
 
 手动构建时将 `APP_VERSION` 与 `pubspec.yaml` 的版本号保持一致。

@@ -346,33 +346,6 @@ function festivalOfParts(p, lunar) {
 
 /* ---------------- 对外接口 ---------------- */
 
-function lunarText(date) {
-  try {
-    const lunar = lunarParts(partsOf(date));
-    return lunar ? lunar.text : "";
-  } catch (e) {
-    return "";
-  }
-}
-
-function solarTerm(date) {
-  try {
-    return termOfParts(partsOf(date)) || "";
-  } catch (e) {
-    return "";
-  }
-}
-
-function festival(date) {
-  try {
-    const p = partsOf(date);
-    if (!p) return "";
-    return festivalOfParts(p, lunarParts(p)) || "";
-  } catch (e) {
-    return "";
-  }
-}
-
 function todayInfo(date) {
   try {
     const p = partsOf(date);
@@ -394,8 +367,5 @@ function todayInfo(date) {
 }
 
 module.exports = {
-  lunarText: lunarText,
-  solarTerm: solarTerm,
-  festival: festival,
   todayInfo: todayInfo,
 };

@@ -2,6 +2,8 @@
 ///
 /// 这里只放纯数据与纯函数，便于单测；读写 Prefs、网络同步在
 /// `checkin_store.dart` 与 `checkin_sync.dart` 里。
+library;
+
 import 'dart:math' as math;
 
 import '../data/fortunes.dart';
@@ -160,25 +162,9 @@ class CheckinDayEntry {
 
   bool get actionDone => actionStatus == CheckinActionStatus.done;
 
-  /// 自动验证还是手动盖章：行动类型已经能表达，不必再存一份。
-  String get verifyMode =>
-      actionType == CheckinActionType.manual ? 'manual' : 'auto';
   bool get hasReflection => reflectionUpdatedAt != null;
   bool get hasText => reflectionText.trim().isNotEmpty;
   String get kindLabel => fortuneKindLabel(kind);
-
-  /// 长卷格子的状态。
-  CheckinCellState get cellState {
-    if (hasReflection) return CheckinCellState.reflected;
-    if (actionDone) return CheckinCellState.actionDone;
-    return CheckinCellState.checked;
-  }
-
-  /// 一句话签文摘要：只取首句，避免长卷被大段解签淹没。
-  String get shortReading {
-    final desc = signTitle.isEmpty ? '' : signTitle;
-    return desc;
-  }
 
   CheckinDayEntry copyWith({
     String? signId,
@@ -267,9 +253,6 @@ class CheckinDayEntry {
     }
     return map;
   }
-
-  /// 上传给服务端的快照，绝不带本地字段。
-  Map<String, Object?> toServerJson() => toJson(includeLocal: false);
 
   /// 创建记录时提交的字段子集。
   Map<String, Object?> creationPayload() => {
@@ -374,9 +357,6 @@ class CheckinDayEntry {
   }
 }
 
-/// 长卷格子状态。
-enum CheckinCellState { future, checked, actionDone, reflected }
-
 /// 一卷：七个打卡日期为一卷（不要求连续）。
 class CheckinVolume {
   final int index;
@@ -407,9 +387,6 @@ class CheckinVolume {
     (i) => i < entries.length ? entries[i] : null,
     growable: false,
   );
-
-  int get reflectedCount =>
-      entries.where((e) => e.hasReflection).length;
 
   static String _shortDate(String raw) {
     final parts = raw.split('-');
@@ -545,10 +522,6 @@ DateTime? checkinParseDate(String s) {
   if (parsed.month != m || parsed.day != d) return null;
   return parsed;
 }
-
-/// 把 UTC 毫秒转成本地时间；服务端时间戳统一用 long。
-DateTime? checkinTimeOf(int? ms) =>
-    ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
 
 /// 日期短标签：`11 月 21 日 · 周六`。
 String checkinDateLabel(String date, {bool withWeekday = true}) {

@@ -14,8 +14,6 @@ enum LedgerKind { expense, income }
 extension LedgerKindX on LedgerKind {
   String get label => this == LedgerKind.expense ? '支出' : '收入';
 
-  String get actionLabel => this == LedgerKind.expense ? '记支出' : '记收入';
-
   static LedgerKind fromName(String? raw) => LedgerKind.values.firstWhere(
     (k) => k.name == raw,
     orElse: () => LedgerKind.expense,
@@ -130,8 +128,6 @@ class LedgerEntry {
   String get dayKey => LedgerDates.dayKey(occurredAt);
 
   String get monthKey => LedgerDates.monthKey(occurredAt);
-
-  double get amountYuan => amountCents / 100.0;
 
   LedgerEntry copyWith({
     LedgerKind? kind,
@@ -376,15 +372,7 @@ class LedgerDates {
     return LedgerDates.monthKey(DateTime(start.year, start.month + offset));
   }
 
-  static bool isSameMonth(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month;
-
   static int daysInMonth(String monthKey) => monthEnd(monthKey).day;
-
-  static String weekLabel(DateTime d) {
-    const week = ['一', '二', '三', '四', '五', '六', '日'];
-    return '周${week[d.weekday - 1]}';
-  }
 
   static String timeLabel(DateTime d) =>
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';

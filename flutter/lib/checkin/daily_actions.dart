@@ -2,6 +2,8 @@
 ///
 /// 这里只描述「该做什么、主按钮叫什么、怎么自动验证」，不直接跳页面；
 /// 页面跳转与验证器在 `checkin_store.dart` / `fortune_sheet.dart` 里。
+library;
+
 import 'checkin_models.dart';
 
 class CheckinActionPlan {
@@ -36,28 +38,13 @@ class CheckinActionPlan {
     required this.hint,
   });
 
-  bool get hasPrimary =>
-      route != null || opensReflection || opensNotes;
+  bool get hasPrimary => route != null || opensReflection || opensNotes;
 
   bool get isAuto => type != CheckinActionType.manual;
 
   /// 次按钮永远可用。
   String get manualLabel => '我自己完成了';
 }
-
-/// 十类签的兜底行动文案：AI 还没回来或离线时使用。
-const Map<String, String> kCheckinFallbackActions = {
-  'career': '把今天最想推进的那件事往前挪一步',
-  'study': '专注十分钟，学完一小段',
-  'heart': '写一句今天的心情',
-  'social': '问候一个人，或认真回应一条动态',
-  'body': '起身、喝水，或听一会儿声音',
-  'action': '先做五分钟，不求做完',
-  'money': '记一笔，或核对一笔旧账',
-  'rest': '给自己十分钟，把声音打开',
-  'idea': '记下此刻冒出的一个念头',
-  'tiny': '完成签面上的那一小步',
-};
 
 /// 按签类取行动方案。
 CheckinActionPlan checkinPlanForKind(
@@ -140,13 +127,6 @@ CheckinActionPlan checkinPlanForKind(
         hint: '这一签没有固定入口，做完就点一下',
       );
   }
-}
-
-/// 行动文案：优先用签面/AI 给的那一句，空则用签类兜底。
-String checkinActionTextFor(String? kind, {String? stepText}) {
-  final text = (stepText ?? '').trim();
-  if (text.isNotEmpty) return text;
-  return kCheckinFallbackActions[kind] ?? kCheckinFallbackActions['tiny']!;
 }
 
 /// 是否允许在行动开始前更新行动文案（AI 回来后可以改）。

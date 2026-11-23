@@ -150,9 +150,7 @@
 
 ## 8. 打包提醒
 
-仓库里若存在 APK / 离线包副本（例如 `kotlin/app/src/main/assets/www/`，此前还有 `capacitor/www/`），
-本轮只改根目录的 `index.html` 与新增 `styles/citro-glass.css`；打 APK / 离线包前需要：
-1. 把 `styles/citro-glass.css` 同步进对应 www 的 `styles/`；
-2. 确认 `index.html` 里新增的那行 `<link rel="stylesheet" href="styles/citro-glass.css">` 已随 `index.html` 一起同步；
-3. 沿用现有同步流程（如 `kotlin/sync-www.js` / `capacitor/sync-www.js`，以仓库当前实际存在的脚本为准），
-   否则原生端仍是旧视觉。
+当前各端都由 `flutter/` 构建，仓库内已无 WebView 离线包副本。若日后另建离线包，本轮改动的根目录 `index.html` 与 `styles/citro-glass.css` 需要同步：
+1. 把 `styles/citro-glass.css` 放进离线包副本的 `styles/`；
+2. 确认 `index.html` 里新增的 `<link rel="stylesheet" href="styles/citro-glass.css">` 一并同步；
+3. 按离线包自己的同步脚本执行，否则原生端仍是旧视觉。

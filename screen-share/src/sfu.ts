@@ -22,18 +22,11 @@ import { ERR, type IceServer, type PublicTrack, type SessionDescriptionPayload }
 
 const SFU_HOST = 'https://rtc.live.cloudflare.com';
 
-export interface SfuSession {
+interface SfuSession {
   sessionId: string;
 }
 
-export interface SubscribeResult {
-  sessionDescription: SessionDescriptionPayload;
-  /** SFU 在我们 session 里分配的 mid，客户端用它匹配 onTrack。 */
-  mid: string;
-  trackName: string;
-}
-
-export interface SubscribeTracksResult {
+interface SubscribeTracksResult {
   sessionDescription: SessionDescriptionPayload;
   /** 每一路在订阅侧 session 里的 mid，客户端按 trackName 匹配 onTrack。 */
   tracks: Array<{ trackName: string; mid: string }>;
@@ -154,31 +147,6 @@ export async function publishTracks(
 }
 
 /**
- * 订阅：让 SFU 把发布者的某一路 track 推到我们的 session 上。
- * SFU 返回 offer，同时告诉我们它分配的 mid —— 客户端据此匹配 onTrack。
- */
-export async function subscribeTrack(
-  env: SfuEnv,
-  sessionId: string,
-  publisherSessionId: string,
-  trackName: string,
-): Promise<SubscribeResult> {
-  const res = await sfuFetch(env, `/sessions/${sessionId}/tracks/new`, {
-    method: 'POST',
-    body: JSON.stringify({
-      tracks: [{ location: 'remote', sessionId: publisherSessionId, trackName }],
-    }),
-  });
-  assertTracksOk(res.tracks, '订阅');
-  const assigned = res.tracks?.find((t) => t.trackName === trackName);
-  return {
-    sessionDescription: toSessionDescription(res),
-    mid: assigned?.mid ?? '',
-    trackName,
-  };
-}
-
-/**
  * 批量订阅：一次 `tracks/new` 带上同一个发布者的多路 remote track。
  *
  * Cloudflare 明确支持一个请求里放多条 remote 条目，并只返回一个含全部
@@ -190,7 +158,6 @@ export async function subscribeTracks(
   sessionId: string,
   publisherSessionId: string,
   trackNames: string[],
-  opts?: { tolerateErrors?: boolean },
 ): Promise<SubscribeTracksResult> {
   const res = await sfuFetch(env, `/sessions/${sessionId}/tracks/new`, {
     method: 'POST',
@@ -202,23 +169,14 @@ export async function subscribeTracks(
       })),
     }),
   });
-  if (opts?.tolerateErrors) {
-    // 容错模式：SFU 对不存在的轨在对应条目里给 errorCode（幽灵轨，
-    // 例如发布端声明了 mic 但 SFU 上从未挂流）。剔掉失败轨，其余照订；
-    // 全军覆没才抛错。正常情况逐条无错，行为与严格模式一致。
-    const ok = (res.tracks ?? []).filter((t) => !t.errorCode && t.mid);
-    if (ok.length === 0) assertTracksOk(res.tracks, '订阅');
-    return {
-      sessionDescription: toSessionDescription(res),
-      tracks: ok.map((t) => ({ trackName: t.trackName ?? '', mid: t.mid ?? '' })),
-    };
-  }
-  assertTracksOk(res.tracks, '订阅');
-  const tracks = trackNames.map((trackName) => {
-    const assigned = res.tracks?.find((t) => t.trackName === trackName);
-    return { trackName, mid: assigned?.mid ?? '' };
-  });
-  return { sessionDescription: toSessionDescription(res), tracks };
+  // 幽灵轨容错：SFU 对不存在的轨在对应条目里给 errorCode（例如发布端
+  // 声明了 mic 但 SFU 上从未挂流）。剔掉失败轨，其余照订；全军覆没才抛错。
+  const ok = (res.tracks ?? []).filter((t) => !t.errorCode && t.mid);
+  if (ok.length === 0) assertTracksOk(res.tracks, '订阅');
+  return {
+    sessionDescription: toSessionDescription(res),
+    tracks: ok.map((t) => ({ trackName: t.trackName ?? '', mid: t.mid ?? '' })),
+  };
 }
 
 /** 提交订阅侧的 answer，完成 renegotiation。 */
@@ -235,21 +193,8 @@ export async function renegotiate(
   });
 }
 
-/** 关闭一路 track。`force: true` 表示不需要再走一次 offer/answer。 */
-export async function closeTrack(
-  env: SfuEnv,
-  sessionId: string,
-  mid: string,
-  force = true,
-): Promise<void> {
-  await sfuFetch(env, `/sessions/${sessionId}/tracks/close`, {
-    method: 'PUT',
-    body: JSON.stringify({ tracks: [{ mid }], force }),
-  });
-}
-
 /** 查询 session 状态（排查用，也用来拿 mid 列表以便拆 session）。 */
-export async function getSession(env: SfuEnv, sessionId: string): Promise<SfuResponse> {
+async function getSession(env: SfuEnv, sessionId: string): Promise<SfuResponse> {
   return sfuFetch(env, `/sessions/${sessionId}`, { method: 'GET' });
 }
 

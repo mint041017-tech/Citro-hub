@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/game_sfx.dart';
+import '../services/clock.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
 
 // ---------------------------------------------------------------------------
 // 羊了个羊 —— 复刻 web 原版 #gsheepPage（index.html 内联脚本 gsheep* 系列）。
@@ -129,6 +132,9 @@ class SheepGeom {
     return false;
   }
 }
+
+/// 底部卡槽数量（玩法固定 7 格）。
+const int _slotCount = 7;
 
 class _SheepLayerSpec {
   const _SheepLayerSpec(this.cols, this.rows);
@@ -429,10 +435,9 @@ class GameSheepPage extends StatefulWidget {
 }
 
 class _GameSheepPageState extends State<GameSheepPage> {
-  static const int _slotCount = 7;
   static const int _base = 99999;
 
-  final math.Random _rnd = math.Random();
+  final math.Random _rnd = GameRandom.create();
   final ValueNotifier<String> _timeText = ValueNotifier<String>('0.0s');
 
   /// 「正在玩」心跳进度（web gamesLiveProgress：第 N 关 · 剩 X 张）。
@@ -466,7 +471,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
 
   Timer? _ticker;
   Timer? _levelTimer;
-  DateTime _start = DateTime.now();
+  DateTime _start = CitroClock.now();
   final List<double> _levelTimes = <double>[];
 
   @override
@@ -493,7 +498,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
     super.dispose();
   }
 
-  double _secs() => DateTime.now().difference(_start).inMilliseconds / 1000.0;
+  double _secs() => CitroClock.now().difference(_start).inMilliseconds / 1000.0;
 
   void _startTicker() {
     _ticker?.cancel();
@@ -529,7 +534,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
     _roundCounted = false;
     _levelTimes.clear();
     _history.clear();
-    _start = DateTime.now();
+    _start = CitroClock.now();
     _startLevel();
     _hideOverlay();
     _startTicker();
@@ -828,7 +833,7 @@ class _GameSheepPageState extends State<GameSheepPage> {
       onPickRemoved: (tile) => setState(() => _pickRemoved(tile)),
       onNewGame: () => setState(_newGame),
       onRetry: () => setState(_newGame),
-      onRank: () => showGameRank(context, game: 'sheep', title: '羊了个羊'),
+      onRank: () => showGameLeaderboard(context, game: 'sheep', title: '羊了个羊'),
       onShuffle: () => setState(_shuffle),
       onUndo: () => setState(_undo),
       onRemove: () => setState(_remove),
@@ -1050,8 +1055,6 @@ class GameSheepView extends StatelessWidget {
   final VoidCallback? onUndo;
   final VoidCallback? onRemove;
   final VoidCallback? onRevive;
-
-  static const int _slotCount = 7;
 
   @override
   Widget build(BuildContext context) {
@@ -1532,10 +1535,12 @@ class GameSheepView extends StatelessWidget {
   }
 }
 
+int _sheepIconIndex(int type) => type < 0
+    ? 0
+    : (type >= _sheepIconBodies.length ? _sheepIconBodies.length - 1 : type);
+
 String _sheepSvg(int type) {
-  final i = type < 0
-      ? 0
-      : (type >= _sheepIconBodies.length ? _sheepIconBodies.length - 1 : type);
+  final i = _sheepIconIndex(type);
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
       '${_sheepIconBodies[i]}</svg>';
 }
@@ -1544,9 +1549,7 @@ String _sheepSvg(int type) {
 final Map<int, Widget> _sheepIconWidgets = <int, Widget>{};
 
 Widget _sheepIcon(int type) {
-  final i = type < 0
-      ? 0
-      : (type >= _sheepIconBodies.length ? _sheepIconBodies.length - 1 : type);
+  final i = _sheepIconIndex(type);
   return _sheepIconWidgets.putIfAbsent(
     i,
     () => SvgPicture.string(_sheepSvg(i), fit: BoxFit.contain),

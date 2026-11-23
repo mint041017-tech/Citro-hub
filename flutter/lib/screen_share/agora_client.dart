@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 
 import '../services/platform.dart' as platform;
 import 'room_api.dart';
@@ -451,19 +450,6 @@ class AgoraClient {
     }
   }
 
-  /// 主持人自己的录音音量（0–1，1 = 原声），备用调节口。
-  Future<void> setRecordingVolume(double v) async {
-    final engine = _engine;
-    if (engine == null) return;
-    try {
-      await engine.adjustRecordingSignalVolume(
-        (v.clamp(0.0, 1.0) * 100).round(),
-      );
-    } catch (e) {
-      debugPrint('Agora 录音音量设置失败：$e');
-    }
-  }
-
   // ── 观众音量 ───────────────────────────────────────────────────────────
 
   double _remoteVolume = 1;
@@ -511,4 +497,3 @@ class AgoraClient {
 
 /// 兼容保留：旧引用已全部移除，占位避免外部 import 报错。
 /// （flutter_webrtc 的 MediaStream 类型还在控制器签名里出现。）
-typedef WebRtcMediaStream = webrtc.MediaStream;

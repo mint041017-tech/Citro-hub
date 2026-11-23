@@ -16,7 +16,13 @@ import '../services/prefs.dart';
 import '../services/notifications.dart';
 import '../services/push_notifications.dart';
 import '../services/weather_api.dart';
-import 'custom_tab.dart';
+
+/// 服务端抽好的具体签位置，必须是 0..5；旧响应没有这个字段时返回 null。
+int? _fortuneSlotValue(Object? raw) {
+  final slot = int.tryParse('${raw ?? ''}');
+  if (slot == null || slot < 0 || slot >= 6) return null;
+  return slot;
+}
 
 class AppState extends ChangeNotifier {
   static final AppState instance = AppState._();
@@ -109,12 +115,6 @@ class AppState extends ChangeNotifier {
       gid = _randomId(20);
       unawaited(Prefs.setString(PrefKeys.gid, gid));
     }
-    // 第 4 格「自定义」Tab 当前展示的模块（默认待办）。
-    final savedTab = Prefs.getString(PrefKeys.customTab);
-    customTabModule = CustomTabModule.values.firstWhere(
-      (m) => m.name == savedTab,
-      orElse: () => CustomTabModule.todo,
-    );
     guestName = Prefs.getString(PrefKeys.guestName) ?? '';
     if (guestName.isEmpty) {
       const names = [
@@ -584,16 +584,6 @@ class AppState extends ChangeNotifier {
     themeMode = mode;
     Prefs.setString(PrefKeys.theme, themeModeKey);
     notifyListeners();
-  }
-
-  /// Tab 栏第 4 格展示的模块。
-  CustomTabModule customTabModule = CustomTabModule.todo;
-
-  Future<void> setCustomTabModule(CustomTabModule module) async {
-    if (module == customTabModule) return;
-    customTabModule = module;
-    notifyListeners();
-    await Prefs.setString(PrefKeys.customTab, module.name);
   }
 
   /// 定位并刷新天气。
@@ -1191,18 +1181,58 @@ class AppState extends ChangeNotifier {
     return next;
   }
 
-  Future<bool> checkIn() async {
-    await drawFortuneIdx();
-    return checkedInToday;
-  }
+  /// 今天的签存在本机，但必须按账号区分：同一台设备换账号时，
+  /// 不能把上一个账号抽到的签（常常就是那支「上上签」）接着发给下一个人。
+  /// 游客记 guest，登录用户记昵称。
+  String get _fortuneOwner => user?.name ?? 'guest';
 
-  int? get todayFortuneIdx {
+  String get _todayKey => _dayKey(DateTime.now());
+
+  /// 缓存格式 `日期:档位:账号`（旧）或 `日期:档位:位置:账号`（新）。
+  /// 旧的两段格式没有账号标记，一律当作过期——当天重新向服务端取一次，
+  /// 各端也就对齐了。
+  List<String>? get _fortuneCacheParts {
     final raw = Prefs.getString(PrefKeys.checkinFortune);
     if (raw == null) return null;
     final parts = raw.split(':');
-    if (parts.length != 2) return null;
-    if (parts[0] != _dayKey(DateTime.now())) return null;
+    if (parts.length == 4 && parts[3] == _fortuneOwner) return parts;
+    if (parts.length == 3 && parts[2] == _fortuneOwner) return parts;
+    return null;
+  }
+
+  int? get todayFortuneIdx {
+    final parts = _fortuneCacheParts;
+    if (parts == null || parts[0] != _todayKey) return null;
     return int.tryParse(parts[1]);
+  }
+
+  /// 当天服务端随机抽好的同等级内位置；旧缓存没有这一项时返回 null，
+  /// 由 `fortuneForDay` 用日期散列兜底。
+  int? get todayFortuneSlot {
+    final parts = _fortuneCacheParts;
+    if (parts == null || parts.length != 4 || parts[0] != _todayKey) {
+      return null;
+    }
+    return _fortuneSlotValue(parts[2]);
+  }
+
+  Future<void> _saveTodayFortune(int idx, int slot) => Prefs.setString(
+    PrefKeys.checkinFortune,
+    '$_todayKey:$idx:$slot:$_fortuneOwner',
+  );
+
+  /// 抽签身份：服务端按 deviceId + 日期 记一次，同一台设备换个人登录时
+  /// 会直接拿回上一个账号的签。所以抽签类请求按账号派生一个 id，
+  /// 云端打卡统计仍用 gid，不受影响。
+  String get _drawId {
+    final owner = _fortuneOwner;
+    if (owner.isEmpty || owner == 'guest') return gid;
+    var h = 0x811c9dc5;
+    for (final u in owner.codeUnits) {
+      h ^= u;
+      h = (h * 0x01000193) & 0x7fffffff;
+    }
+    return '$gid-${h.toRadixString(36)}';
   }
 
   Future<int> drawFortuneIdx() async {
@@ -1212,36 +1242,48 @@ class AppState extends ChangeNotifier {
       await _syncCloudCheckin(migrate: true);
       // 另一台设备做过「转运」时，把服务端结果同步回来。
       try {
-        final j = await Api.draw(deviceId: gid);
+        final j = await Api.draw(deviceId: _drawId);
         final remoteIdx = int.tryParse('${j['idx']}');
-        final today = _dayKey(DateTime.now());
-        if (remoteIdx != null && remoteIdx != cached) {
-          await Prefs.setString(PrefKeys.checkinFortune, '$today:$remoteIdx');
+        final remoteSlot = _fortuneSlotValue(j['slot']);
+        final slotChanged =
+            remoteSlot != null && remoteSlot != todayFortuneSlot;
+        if (remoteIdx != null && (remoteIdx != cached || slotChanged)) {
+          await _saveTodayFortune(
+            remoteIdx,
+            remoteSlot ?? todayFortuneSlot ?? Random().nextInt(6),
+          );
           if (j['transfer'] == true) {
-            await Prefs.setString(PrefKeys.checkinTransferUsed, today);
+            await Prefs.setString(PrefKeys.checkinTransferUsed, _transferStamp);
           }
           notifyListeners();
           return remoteIdx;
         }
       } catch (_) {}
+      if (todayFortuneSlot == null) {
+        // 旧三段缓存没有具体签位置：补随机一次并升级成四段，避免继续用
+        // 日期轮换的旧规则。
+        await _saveTodayFortune(cached, Random().nextInt(6));
+      }
       return cached;
     }
     int? idx;
+    int? slot;
     try {
-      final j = await Api.drawTake(deviceId: gid);
+      final j = await Api.drawTake(deviceId: _drawId);
       idx = int.tryParse('${j['idx']}');
+      slot = _fortuneSlotValue(j['slot']);
     } catch (_) {}
     idx ??= Random().nextInt(8);
-    final today = _dayKey(DateTime.now());
-    await Prefs.setString(PrefKeys.checkinFortune, '$today:$idx');
+    slot ??= Random().nextInt(6);
+    await _saveTodayFortune(idx, slot);
     final last = Prefs.getString(PrefKeys.checkinLast) ?? '';
-    if (last != today) {
+    if (last != _todayKey) {
       final streak = Prefs.getInt(PrefKeys.checkinStreak, 0);
       final yesterday = _dayKey(
         DateTime.now().subtract(const Duration(days: 1)),
       );
       final newStreak = last == yesterday ? streak + 1 : 1;
-      await Prefs.setString(PrefKeys.checkinLast, today);
+      await Prefs.setString(PrefKeys.checkinLast, _todayKey);
       await Prefs.setInt(PrefKeys.checkinStreak, newStreak);
     }
     await _syncCloudCheckin(migrate: true);
@@ -1255,76 +1297,42 @@ class AppState extends ChangeNotifier {
     return idx == 6 || idx == 7;
   }
 
+  /// 转运机会同样按账号记，否则换个人登录会白拿上一个账号的机会。
+  String get _transferStamp => '$_todayKey:$_fortuneOwner';
+
   bool get fortuneTransferUsed =>
-      Prefs.getString(PrefKeys.checkinTransferUsed) == _dayKey(DateTime.now());
+      Prefs.getString(PrefKeys.checkinTransferUsed) == _transferStamp;
 
   /// 跟 CiCi 分享好事后到账的转运机会（当天有效，用一次）。
   bool get fortuneTransferReady {
     if (fortuneTransferUsed || !fortuneIsBad) return false;
-    return Prefs.getString(PrefKeys.checkinTransfer) == _dayKey(DateTime.now());
+    return Prefs.getString(PrefKeys.checkinTransfer) == _transferStamp;
   }
 
   Future<void> grantFortuneTransfer() async {
     if (!fortuneIsBad || fortuneTransferUsed) return;
-    await Prefs.setString(PrefKeys.checkinTransfer, _dayKey(DateTime.now()));
+    await Prefs.setString(PrefKeys.checkinTransfer, _transferStamp);
     notifyListeners();
-  }
-
-  /// 把跟 CiCi 分享的好事收进「好事记录」笔记（仅登录用户）。
-  /// 只保留一份笔记、新内容放最上面；超过服务端 5000 字上限时裁掉最旧的。
-  Future<bool> recordGoodDeed(String text) async {
-    final body = text.trim();
-    if (!loggedIn || body.isEmpty) return false;
-    final now = DateTime.now();
-    final stamp =
-        '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} '
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final entry = '$body\n$stamp';
-    try {
-      final list = await Api.notes();
-      final existing = list.where((n) => n.title == '好事记录').toList();
-      if (existing.isEmpty) {
-        await Api.saveNote(title: '好事记录', content: entry);
-        return true;
-      }
-      final note = existing.first;
-      var content = note.content.trim();
-      content = content.isEmpty ? entry : '$entry\n\n$content';
-      if (content.length > 4800) {
-        final parts = content.split('\n\n');
-        final kept = <String>[];
-        var length = 0;
-        for (final part in parts) {
-          final add = part.length + (kept.isEmpty ? 0 : 2);
-          if (length + add > 4800) break;
-          kept.add(part);
-          length += add;
-        }
-        content = kept.join('\n\n');
-      }
-      await Api.saveNote(id: note.id, title: '好事记录', content: content);
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 
   /// 消耗转运机会重抽一签：服务端只允许下签重抽一次，且只给 0..5 的签。
   Future<int?> useFortuneTransfer() async {
     if (!fortuneTransferReady) return null;
-    final today = _dayKey(DateTime.now());
     int? idx;
+    int? slot;
     var offline = false;
     var rejected = false;
     try {
-      final j = await Api.drawReroll(deviceId: gid);
+      final j = await Api.drawReroll(deviceId: _drawId);
       idx = int.tryParse('${j['idx']}');
+      slot = _fortuneSlotValue(j['slot']);
     } on ApiException catch (e) {
       if (e.code == 409) {
         // 服务端已经转运过（比如另一台设备）：取回当前结果，不再本地重抽。
         try {
-          final j = await Api.draw(deviceId: gid);
+          final j = await Api.draw(deviceId: _drawId);
           idx = int.tryParse('${j['idx']}');
+          slot = _fortuneSlotValue(j['slot']);
         } catch (_) {}
         if (idx == null) rejected = true;
       } else if (e.code == 404 || e.code == 405 || e.code == 501) {
@@ -1341,8 +1349,9 @@ class AppState extends ChangeNotifier {
     if (rejected) return null;
     if (idx == null && !offline) return null;
     idx ??= Random().nextInt(6);
-    await Prefs.setString(PrefKeys.checkinFortune, '$today:$idx');
-    await Prefs.setString(PrefKeys.checkinTransferUsed, today);
+    slot ??= Random().nextInt(6);
+    await _saveTodayFortune(idx, slot);
+    await Prefs.setString(PrefKeys.checkinTransferUsed, _transferStamp);
     await Prefs.setString(PrefKeys.checkinTransfer, null);
     notifyListeners();
     return idx;

@@ -95,7 +95,6 @@ class RoomWs {
   int _attempt = 0;
   bool _closedByUser = false;
   bool _connected = false;
-  bool get isConnected => _connected;
 
   static RoomWs start({
     required String roomId,

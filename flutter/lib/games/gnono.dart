@@ -16,7 +16,9 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import 'game_identity.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard, fmtDuration;
 
 class GameNonoPage extends StatefulWidget {
   const GameNonoPage({super.key});
@@ -63,7 +65,7 @@ class _GameNonoPageState extends State<GameNonoPage> {
   void _newGame() {
     timer?.cancel();
     size = _meta.$2;
-    final rnd = math.Random();
+    final rnd = GameRandom.create();
     solution = List.generate(
       size,
       (_) => List.generate(size, (_) => rnd.nextDouble() < .45 ? 1 : 0),
@@ -104,7 +106,7 @@ class _GameNonoPageState extends State<GameNonoPage> {
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || over) return;
       setState(() => seconds++);
-      _progress.value = '${_meta.$1} · 用时 ${gameFmtDuration(seconds)}';
+      _progress.value = '${_meta.$1} · 用时 ${fmtDuration(seconds)}';
     });
   }
 
@@ -152,7 +154,7 @@ class _GameNonoPageState extends State<GameNonoPage> {
   }
 
   void _openRank() {
-    showGameRank(
+    showGameLeaderboard(
       context,
       game: 'nono',
       title: '数织',
@@ -295,11 +297,11 @@ class _GameNonoViewState extends State<GameNonoView> {
         ),
       ],
       pills: [
-        GameScorePill(label: '用时', value: gameFmtDuration(widget.seconds)),
+        GameScorePill(label: '用时', value: fmtDuration(widget.seconds)),
         GameScorePill(
           label: '最佳',
           value: widget.bestSeconds > 0
-              ? gameFmtDuration(widget.bestSeconds)
+              ? fmtDuration(widget.bestSeconds)
               : '--',
         ),
       ],
@@ -821,26 +823,15 @@ class _NonoOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '用时 ${gameFmtDuration(seconds)} · 得分 $score',
+                '用时 ${fmtDuration(seconds)} · 得分 $score',
                 style: context.body(size: CitroType.meta, color: c.ink2),
               ),
               const SizedBox(height: 10),
-              _NonoRetryButton(onTap: onRetry),
+              GameActionButton(label: '再来一局', primary: true, onTap: onRetry),
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-class _NonoRetryButton extends StatelessWidget {
-  const _NonoRetryButton({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GameActionButton(label: '再来一局', primary: true, onTap: onTap);
   }
 }

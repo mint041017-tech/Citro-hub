@@ -3342,16 +3342,6 @@ class PrefsCook {
         : raw.split(',').where((e) => e.isNotEmpty).toList();
   }
 
-  static void togglePin(String id) {
-    final list = pinned;
-    if (list.contains(id)) {
-      list.remove(id);
-    } else {
-      list.insert(0, id);
-    }
-    Prefs.setString('citro_cook_pinned', list.join(','));
-  }
-
   static void forget(String id) {
     final list = pinned..remove(id);
     Prefs.setString('citro_cook_pinned', list.join(','));

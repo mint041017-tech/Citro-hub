@@ -473,6 +473,10 @@ class CitroAmbientBackground extends StatefulWidget {
     this.ratio3x4 = false,
   });
 
+  /// 测试播种：非空时强制使用该时段背景资源（覆盖空卡面时的进程内随机抽图），
+  /// 让整页 golden 确定性复现。生产环境保持 null，行为不受影响。
+  static String? debugTimeAsset;
+
   /// 浅色主题罩面：压白，深色文字读得清。
   static const Widget scrimLight = DecoratedBox(
     decoration: BoxDecoration(
@@ -692,10 +696,11 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     _listReady = true;
     if (owned.isEmpty) {
       // 没有卡面时显示随机背景图；固定下来，预载和首帧才是同一张。
+      // 测试可用 [debugTimeAsset] 钉死一张时段图，避免 golden 随进程随机漂移。
       _cachedFace = null;
       _index = -1;
       _userPickedTime = false;
-      _timeAsset ??= _randomTimeAsset();
+      _timeAsset = CitroAmbientBackground.debugTimeAsset ?? _randomTimeAsset();
       return;
     }
     if (_userPickedTime && _timeAsset != null) {

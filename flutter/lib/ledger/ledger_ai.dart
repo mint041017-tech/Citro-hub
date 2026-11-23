@@ -259,37 +259,6 @@ class LedgerAi {
   }
 
   // -------------------------------------------------------------------------
-  // 自然语言记账
-  // -------------------------------------------------------------------------
-
-  static Future<List<LedgerDraft>> parseText(
-    String text, {
-    required List<LedgerCategory> categories,
-    DateTime? now,
-  }) async {
-    final names = categories
-        .where((c) => c.active)
-        .map((c) => '${c.name}(${c.kind.label})')
-        .join('、');
-    final prompt =
-        '''
-把用户这句话里的收支整理成账单。只输出严格 JSON：
-{"entries":[{"kind":"expense","amount":18.5,"category":"餐饮","note":"咖啡","at":"2026-11-09 08:30","confidence":1}]}
-规则：amount 用元；kind 只能是 expense / income；category 从 $names 里选，判断不了用「其他」；
-at 用 yyyy-MM-dd HH:mm，用户没说时间就用今天；没有明确金额时输出 {"entries":[]}。
-用户原话：$text
-''';
-    const system = '你是记账解析器。只提取用户明确说出的金额，不编造。只输出严格 JSON。';
-    final raw = await _complete(
-      prompt,
-      system,
-      maxTokens: 900,
-      temperature: .1,
-    );
-    return parseDrafts(raw, categories: categories, now: now);
-  }
-
-  // -------------------------------------------------------------------------
   // 解析纯函数
   // -------------------------------------------------------------------------
 

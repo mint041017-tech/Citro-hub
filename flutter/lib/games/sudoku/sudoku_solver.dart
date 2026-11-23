@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'sudoku_constraints.dart';
 import 'sudoku_generator.dart';
 import 'sudoku_modes.dart';
@@ -14,12 +12,6 @@ class SudokuEngine {
     SudokuDifficulty difficulty, {
     int? seed,
   }) => SudokuGenerator.generate(mode, difficulty, seed: seed);
-
-  static Future<SudokuPuzzle> generateAsync(
-    SudokuModeSpec mode,
-    SudokuDifficulty difficulty, {
-    int? seed,
-  }) async => generate(mode, difficulty, seed: seed);
 
   static bool isSolved(SudokuPuzzle puzzle, List<int> board) {
     if (board.length != puzzle.cellCount) return false;
@@ -130,12 +122,4 @@ class SudokuEngine {
     final result = SudokuSearch(index).countSolutions(dom, limit: limit);
     return result < 0 ? limit : result;
   }
-
-  static int? solutionValue(SudokuPuzzle puzzle, int index) =>
-      index >= 0 && index < puzzle.solution.length
-      ? puzzle.solution[index]
-      : null;
-
-  static int randomSeed([math.Random? rnd]) =>
-      (rnd ?? math.Random()).nextInt(1 << 31);
 }

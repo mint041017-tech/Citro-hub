@@ -66,29 +66,6 @@ class SolveStats {
   int backtracks = 0;
   int propagationSteps = 0;
 
-  void merge(SolveStats other) {
-    nakedSingles += other.nakedSingles;
-    hiddenSingles += other.hiddenSingles;
-    lockedCandidates += other.lockedCandidates;
-    nakedPairs += other.nakedPairs;
-    hiddenPairs += other.hiddenPairs;
-    xWings += other.xWings;
-    cageSteps += other.cageSteps;
-    edgeSteps += other.edgeSteps;
-    guesses += other.guesses;
-    branches += other.branches;
-    backtracks += other.backtracks;
-    propagationSteps += other.propagationSteps;
-  }
-
-  int get advancedSteps =>
-      lockedCandidates +
-      nakedPairs +
-      hiddenPairs +
-      xWings +
-      cageSteps +
-      guesses;
-
   /// 技巧层级：0 裸单，1 隐单，2 锁定/笼和，3 数对，4 X-Wing，5 猜测。
   int get techniqueLevel {
     if (guesses > 0) return 5;
@@ -119,12 +96,8 @@ class SudokuConstraintIndex {
   SudokuConstraintIndex(this.puzzle) {
     final count = puzzle.cellCount;
     final activeList = <int>[];
-    active = Int32List(count);
     for (var i = 0; i < count; i++) {
-      if (puzzle.active[i]) {
-        active[i] = 1;
-        activeList.add(i);
-      }
+      if (puzzle.active[i]) activeList.add(i);
     }
     activeCells = Int32List.fromList(activeList);
 
@@ -141,16 +114,6 @@ class SudokuConstraintIndex {
     }
     units = List<Int32List>.unmodifiable(rawUnits);
     unitInfos = List<SudokuUnitInfo>.unmodifiable(rawMeta);
-
-    final cellUnitsRaw = List<List<int>>.generate(count, (_) => <int>[]);
-    for (var u = 0; u < units.length; u++) {
-      for (final cell in units[u]) {
-        cellUnitsRaw[cell].add(u);
-      }
-    }
-    cellUnits = List<List<int>>.unmodifiable(
-      cellUnitsRaw.map((e) => List<int>.unmodifiable(e)),
-    );
 
     cages = List<CageConstraint>.unmodifiable([
       for (final cage in puzzle.cages)
@@ -231,11 +194,9 @@ class SudokuConstraintIndex {
       (1 << 0) | (1 << 2) | (1 << 4) | (1 << 6) | (1 << 8); // 1,3,5,7,9
 
   final SudokuPuzzle puzzle;
-  late final Int32List active;
   late final Int32List activeCells;
   late final List<Int32List> units;
   late final List<SudokuUnitInfo> unitInfos;
-  late final List<List<int>> cellUnits;
   late final List<CageConstraint> cages;
   late final List<(int, int)> edges;
   late final Int32List parity;
@@ -585,13 +546,6 @@ class SudokuConstraintIndex {
           if (countTechniques) stats?.edgeSteps++;
         }
       }
-    }
-    return true;
-  }
-
-  bool boardHasNoConflict(Int32List dom) {
-    for (final i in activeCells) {
-      if (dom[i] == 0) return false;
     }
     return true;
   }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -126,9 +125,11 @@ class _FortuneDialogState extends State<_FortuneDialog>
   bool _reduced = false;
   int _phoneTab = 0;
 
-  /// 签房先生写出的「今日解」；失败时为 null，签面退回本地签文。
+  /// 签房先生写出的「今日解」。签面上的签题 / 诗句 / 解签 / 今日一小步
+  /// 只用它——没回来就显示占位，不再拿本地签池的文案顶上去。
   FortuneAiSign? _ai;
-  bool _aiLoading = false;
+  bool _aiFailed = false;
+  StreamSubscription<FortuneAiSign>? _aiSub;
 
   @override
   void initState() {
@@ -178,6 +179,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
 
   @override
   void dispose() {
+    _aiSub?.cancel();
     CheckinStore.instance.removeListener(_onCheckinChanged);
     _introTimer?.cancel();
     _revealTimer?.cancel();
@@ -298,31 +300,50 @@ class _FortuneDialogState extends State<_FortuneDialog>
       idx ?? 0,
       day,
       salt: state.fortuneTransferUsed ? 1 : 0,
+      slot: state.todayFortuneSlot,
+      owner: state.user?.name ?? 'guest',
     );
   }
 
   Future<void> _loadAi() async {
+    // 换签、重试都会重新开一条流：先把上一条停掉，避免旧签的尾巴盖到新签。
+    await _aiSub?.cancel();
+    _aiSub = null;
+    if (!mounted) return;
     final day = DateTime.now();
     final fortune = _todayFortune();
-    if (mounted) setState(() => _aiLoading = true);
-    final sign = await FortuneAi.loadOrGenerate(
-      fortune: fortune,
-      day: day,
-      streak: AppState.instance.checkinStreak,
-      weekday: weekdayChinese(day),
-      lunar: lunarOf(day)?.name,
-      festival: festivalIdOf(day) != null
-          ? festivalName(festivalIdOf(day)!)
-          : null,
-      term: termToday(day),
-      cardLabel: _card?.categoryName,
-    );
-    if (!mounted) return;
     setState(() {
-      _ai = sign;
-      _aiLoading = false;
+      _ai = null;
+      _aiFailed = false;
     });
-    unawaited(_registerCheckin());
+    _aiSub =
+        FortuneAi.streamOrGenerate(
+          fortune: fortune,
+          day: day,
+          streak: AppState.instance.checkinStreak,
+          weekday: weekdayChinese(day),
+          lunar: lunarOf(day)?.name,
+          festival: festivalIdOf(day) != null
+              ? festivalName(festivalIdOf(day)!)
+              : null,
+          term: termToday(day),
+          cardLabel: _card?.categoryName,
+          owner: AppState.instance.user?.name ?? 'guest',
+        ).listen(
+          (sign) {
+            if (!mounted) return;
+            setState(() => _ai = sign);
+          },
+          onError: (Object _) {
+            if (!mounted) return;
+            setState(() => _aiFailed = true);
+          },
+          onDone: () {
+            if (!mounted) return;
+            setState(() => _aiFailed = _ai == null || !_ai!.finished);
+            if (_ai?.finished == true) unawaited(_registerCheckin());
+          },
+        );
   }
 
   /// 把今天的签、卡面与行动文案写成一条打卡记录。
@@ -334,12 +355,12 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final f = _todayFortune();
     final festival = festivalIdOf(day);
     final ai = _ai;
-    final step = ai != null && ai.doText.trim().isNotEmpty
-        ? ai.doText
-        : (f.step ?? '');
+    // 只存 AI 写完的那句；没回来就先空着，等它回来再补一遍快照。
+    final step = ai == null ? '' : ai.doText.trim();
+    final aiTitle = (ai?.title ?? '').trim();
     await CheckinStore.instance.syncTodaySnapshot(
       signId: f.signId ?? 'fest-${festival ?? 'day'}',
-      signTitle: f.name,
+      signTitle: aiTitle.isEmpty ? f.name : aiTitle,
       levelIndex: checkinLevelIndex(f),
       kind: f.kind ?? 'tiny',
       cardId: _card?.id,
@@ -600,15 +621,15 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final fortune = _todayFortune();
     final ai = _ai;
     final isBad = fortune.lv == '下签' || fortune.lv == '下下签';
-    final poem = ai != null && ai.poem.isNotEmpty ? ai.poem : fortune.poem;
-    final read = ai?.read ?? fortune.desc;
+    // 签题 / 诗句 / 解签 / 今日一小步全部只用签房先生写出来的；
+    // 没回来之前签面是占位，不拿签池文案冒充。
+    final poem = ai?.poem ?? const <String>[];
+    final read = ai?.read ?? '';
     // 宜忌保留签池里的三项，信息更密；AI 的动作建议放进「今日一小步」，
     // 避免同一句建议在签面上出现两遍。
     final yiText = fortune.yi;
     final jiText = fortune.ji;
-    final stepText = ai != null && ai.doText.isNotEmpty
-        ? ai.doText
-        : fortune.step;
+    final stepText = ai == null ? null : ai.doText.trim();
     final term = termToday(today);
     final at = termAt(today);
     final lu = lunarOf(today);
@@ -914,30 +935,6 @@ class _FortuneDialogState extends State<_FortuneDialog>
                         ),
                         // 星尘可以跑出圆角，所以放在 ClipRRect 之外。
                         Positioned.fill(child: IgnorePointer(child: sparkles)),
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: Pressable(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: c.surface,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: c.line),
-                                boxShadow: CitroColors.shadows.sm(c),
-                              ),
-                              child: Center(
-                                child: AppIcon(
-                                  strokeSvg(AppIcons.close, width: 2),
-                                  size: 14,
-                                  color: c.ink2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -1060,6 +1057,32 @@ class _FortuneDialogState extends State<_FortuneDialog>
     );
   }
 
+  /// 解签没回来（断网 / 接口出错）：只提示和给一次重试，不退回签池文案。
+  Widget _solveFailed(BuildContext context) {
+    final c = context.c;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.cloud_off_rounded, size: 12, color: c.inkSoft),
+        const SizedBox(width: 5),
+        Text(
+          '这一签还没解出来',
+          style: context.body(size: 10, color: c.inkSoft, letterSpacing: .4),
+        ),
+        TextButton(
+          onPressed: () => unawaited(_loadAi()),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(0, 26),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            foregroundColor: c.accentInk,
+            textStyle: context.body(size: 10, weight: FontWeight.w600),
+          ),
+          child: const Text('重试'),
+        ),
+      ],
+    );
+  }
+
   Widget _keywordChip(BuildContext context, String text) {
     final c = context.c;
     return Container(
@@ -1093,12 +1116,16 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final text = entry != null && entry.actionText.isNotEmpty
         ? entry.actionText
         : step;
+    // 解签没回来时，这一步还没写出来：只占位，不给按钮，也不拿签池文案充数。
+    final hasText = text.trim().isNotEmpty;
     final plan = checkinPlanForKind(kind, stepText: text);
     final canUsePrimary =
         CheckinFlags.linkedActionEnabled &&
         plan.hasPrimary &&
         !(plan.opensReflection && !CheckinFlags.reflectionEnabled);
-    final statusText = done
+    final statusText = !hasText
+        ? '解签中'
+        : done
         ? '已完成'
         : (canUsePrimary && plan.isAuto ? '自动盖章' : '待完成');
     return Container(
@@ -1163,51 +1190,61 @@ class _FortuneDialogState extends State<_FortuneDialog>
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            text,
-            style: context
-                .body(
-                  size: embedded ? 14.5 : 15,
-                  weight: FontWeight.w600,
-                  color: done ? c.mintInk : c.ink,
-                  height: 1.45,
-                )
-                .copyWith(
-                  decoration: done
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
-                  decorationColor: c.mintInk,
-                ),
-          ),
-          if (!done) ...[
+          if (hasText)
+            Text(
+              text,
+              style: context
+                  .body(
+                    size: embedded ? 14.5 : 15,
+                    weight: FontWeight.w600,
+                    color: done ? c.mintInk : c.ink,
+                    height: 1.45,
+                  )
+                  .copyWith(
+                    decoration: done
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    decorationColor: c.mintInk,
+                  ),
+            )
+          else
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SignSkeleton(height: 14, widthFactor: .78),
+                SizedBox(height: 6),
+                _SignSkeleton(height: 9, widthFactor: .5),
+              ],
+            ),
+          if (!done && hasText) ...[
             const SizedBox(height: 12),
             if (canUsePrimary)
               Row(
                 children: [
                   Expanded(
+                    flex: 5,
                     child: CitroButton(
                       label: plan.primaryLabel,
-                      height: 42,
+                      height: 36,
                       onPressed: () => _onActionPrimary(plan),
                     ),
                   ),
-                  SizedBox(width: embedded ? 6 : 8),
-                  TextButton(
-                    onPressed: _onActionManual,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 42),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      foregroundColor: c.ink2,
-                      textStyle: context.body(size: 10),
+                  SizedBox(width: embedded ? 8 : 10),
+                  Expanded(
+                    flex: 6,
+                    child: CitroButton(
+                      label: plan.manualLabel,
+                      height: 36,
+                      style: CitroButtonStyle.outline,
+                      onPressed: _onActionManual,
                     ),
-                    child: Text(plan.manualLabel),
                   ),
                 ],
               )
             else
               CitroButton(
                 label: '标记为完成',
-                height: 42,
+                height: 36,
                 expanded: true,
                 onPressed: _onActionManual,
               ),
@@ -1329,6 +1366,71 @@ class _FortuneDialogState extends State<_FortuneDialog>
     );
   }
 
+  /// 今日小事里的长卷入口：七天一卷，收起每一格来过的日子。
+  ///
+  /// 原来放在「我的」里，打卡的人很难找到；现在跟着今日小事走，
+  /// 点开先关掉签面，再进长卷，不会把两层浮层叠在一起。
+  Widget _scrollEntry(BuildContext context) {
+    final c = context.c;
+    final store = CheckinStore.instance;
+    final volumes = store.volumes;
+    final filled = volumes.fold<int>(0, (sum, v) => sum + v.filled);
+    final subtitle = filled == 0
+        ? '七天一卷，把来过的日子收起来'
+        : '七天一卷 · 已收 $filled 天 · 共 ${volumes.length} 卷';
+    return Pressable(
+      onTap: () {
+        final nav = Navigator.of(context);
+        nav.pop();
+        openCheckinScroll(nav.context);
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: c.surface.withAlpha(c.dark ? 44 : 190),
+          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+          border: Border.all(color: c.line2.withAlpha(120)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: c.accentLt,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Center(
+                child: AppIcon(
+                  strokeSvg(AppIcons.book, width: 2),
+                  size: 14,
+                  color: c.accentInk,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('我的长卷', style: context.heading(size: 12, color: c.ink)),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(size: 9, color: c.inkSoft),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 10, color: c.inkSoft),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildJournalFront(
     BuildContext context,
     AppState state, {
@@ -1347,8 +1449,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
     required int catIndex,
   }) {
     final c = context.c;
-    final title = ai?.title ?? fortune.name;
-    final step = stepText ?? checkinActionTextFor(fortune.kind);
+    final aiReady = ai != null;
+    final title = aiReady ? ai.title : '';
+    final step = (stepText ?? '').trim();
     final nt = nextTerm(today);
     final reflected = CheckinStore.instance.today?.hasReflection == true;
     final canReflect =
@@ -1362,88 +1465,119 @@ class _FortuneDialogState extends State<_FortuneDialog>
     final signPage = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _StampIn(
-              controller: _reveal,
-              at: _atSeal,
-              child: _fortuneSeal(context, fortune.lv, compact: compact),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _WritingReveal(
-                    controller: _reveal,
-                    at: _atName,
-                    color: c.ink,
-                    child: Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.display(
-                        size: 23,
-                        weight: FontWeight.w700,
-                        color: c.ink,
-                        letterSpacing: 2.4,
-                        height: 1.25,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _RevealItem(
-                    controller: _reveal,
-                    at: _atPoem,
-                    child: Container(
-                      padding: const EdgeInsets.only(left: 12),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(
-                            color: c.accent.withAlpha(130),
-                            width: 2,
+        // 今日签这一块（印章 + 签题 + 两句）在签面里居中，不再贴左边留一大块空白。
+        // 用 mainAxisSize.min + Center：宽度够时整块居中，窄屏时签题列照旧占满。
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StampIn(
+                controller: _reveal,
+                at: _atSeal,
+                child: _fortuneSeal(context, fortune.lv, compact: compact),
+              ),
+              const SizedBox(width: 14),
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (aiReady)
+                        _WritingReveal(
+                          controller: _reveal,
+                          at: _atName,
+                          color: c.ink,
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.display(
+                              size: 23,
+                              weight: FontWeight.w700,
+                              color: c.ink,
+                              letterSpacing: 2.4,
+                              height: 1.25,
+                            ),
+                          ),
+                        )
+                      else
+                        const _SignSkeleton(width: 104, height: 26),
+                      const SizedBox(height: 10),
+                      _RevealItem(
+                        controller: _reveal,
+                        at: _atPoem,
+                        child: Container(
+                          padding: const EdgeInsets.only(left: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: c.accent.withAlpha(130),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (poem.isEmpty) ...[
+                                const _SignSkeleton(width: 150, height: 12),
+                                const SizedBox(height: 12),
+                                const _SignSkeleton(width: 128, height: 12),
+                              ] else
+                                for (var i = 0; i < poem.length; i++)
+                                  _RevealItem(
+                                    controller: _reveal,
+                                    at: _atPoem + _atPoemLine * i,
+                                    rise: 6,
+                                    child: Text(
+                                      poem[i],
+                                      style: context.display(
+                                        size: 14,
+                                        weight: FontWeight.w600,
+                                        color: c.ink2,
+                                        height: 1.7,
+                                      ),
+                                    ),
+                                  ),
+                            ],
                           ),
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (var i = 0; i < poem.length; i++)
-                            _RevealItem(
-                              controller: _reveal,
-                              at: _atPoem + _atPoemLine * i,
-                              rise: 6,
-                              child: Text(
-                                poem[i],
-                                style: context.display(
-                                  size: 14,
-                                  weight: FontWeight.w600,
-                                  color: c.ink2,
-                                  height: 1.7,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        if (_aiLoading) ...[_solveHint(context), const SizedBox(height: 10)],
-        _RevealItem(
-          controller: _reveal,
-          at: _atDesc,
-          rise: 8,
-          child: Text(
-            read,
-            style: context.body(size: 12, color: c.ink2, height: 1.75),
+            ],
           ),
         ),
+        const SizedBox(height: 18),
+        if (!aiReady) ...[
+          _aiFailed ? _solveFailed(context) : _solveHint(context),
+          const SizedBox(height: 10),
+        ],
+        if (aiReady)
+          _RevealItem(
+            controller: _reveal,
+            at: _atDesc,
+            rise: 8,
+            child: Text(
+              read,
+              style: context.body(size: 12, color: c.ink2, height: 1.75),
+            ),
+          )
+        else
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SignSkeleton(height: 10, wide: true),
+              SizedBox(height: 9),
+              _SignSkeleton(height: 10, wide: true),
+              SizedBox(height: 9),
+              _SignSkeleton(height: 10, widthFactor: .62),
+            ],
+          ),
         if (ai != null && ai.keywords.isNotEmpty) ...[
           const SizedBox(height: 12),
           _RevealItem(
@@ -1521,6 +1655,14 @@ class _FortuneDialogState extends State<_FortuneDialog>
               ),
               child: _reflectionRow(context, embedded: true),
             ),
+          ),
+        ],
+        if (CheckinFlags.scrollEnabled) ...[
+          const SizedBox(height: 12),
+          _RevealItem(
+            controller: _reveal,
+            at: _atDesc,
+            child: _scrollEntry(context),
           ),
         ],
         if (!loading && isBad && festId == null) ...[
@@ -2198,7 +2340,41 @@ double _revealLocal(
       .clamp(0.0, 1.0);
 }
 
-/// 揭晓序列的基本单位：在 [at] 处淡入 + 上浮（可选缩放）。
+/// 解签没回来时的灰线占位：只画几条空线，不拿签池文案充数。
+class _SignSkeleton extends StatelessWidget {
+  const _SignSkeleton({
+    this.width,
+    this.widthFactor,
+    required this.height,
+    this.wide = false,
+  });
+
+  final double? width;
+  final double? widthFactor;
+  final double height;
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final bar = Container(
+      width: wide ? double.infinity : width,
+      height: height,
+      decoration: BoxDecoration(
+        color: c.line2.withAlpha(c.dark ? 60 : 110),
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+    if (wide || widthFactor == null) return bar;
+    return FractionallySizedBox(
+      alignment: Alignment.centerLeft,
+      widthFactor: widthFactor,
+      child: bar,
+    );
+  }
+}
+
+/// 揭晓序列的基本单位：在 [at] 处淡入 + 上浮。
 ///
 /// 动画结束后直接返回原 child，不再包一层 Opacity/Transform，
 /// 静止时不产生额外的合成层。
@@ -2208,14 +2384,12 @@ class _RevealItem extends StatelessWidget {
     required this.child,
     this.at = Duration.zero,
     this.rise = 10,
-    this.scale = 1,
   });
 
   final AnimationController controller;
   final Widget child;
   final Duration at;
   final double rise;
-  final double scale;
 
   @override
   Widget build(BuildContext context) {
@@ -2229,9 +2403,7 @@ class _RevealItem extends StatelessWidget {
           opacity: e,
           child: Transform.translate(
             offset: Offset(0, rise * (1 - e)),
-            child: scale == 1
-                ? child
-                : Transform.scale(scale: scale + (1 - scale) * e, child: child),
+            child: child,
           ),
         );
       },

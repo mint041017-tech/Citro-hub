@@ -138,10 +138,6 @@ class _ComposerState extends State<_Composer> {
       setState(() => error = '内容不能为空');
       return;
     }
-    if (text.text.length > 200) {
-      setState(() => error = '最多 200 字');
-      return;
-    }
     setState(() {
       loading = true;
       error = null;
@@ -181,7 +177,9 @@ class _ComposerState extends State<_Composer> {
         height: h * .82,
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(CitroColors.radii.card),
+          ),
           border: Border.all(color: c.line),
           boxShadow: CitroColors.shadows.lg(c),
         ),
@@ -228,17 +226,21 @@ class _ComposerState extends State<_Composer> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: c.surface2,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.small,
+                          ),
                           border: Border.all(color: c.line),
                         ),
                         child: TextField(
                           controller: text,
                           autofocus: true,
-                          maxLength: 200,
                           maxLines: 6,
                           onChanged: (_) => setState(() {}),
                           onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                          style: context.body(size: CitroType.body, height: 1.7),
+                          style: context.body(
+                            size: CitroType.body,
+                            height: 1.7,
+                          ),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             counterText: '',
@@ -247,7 +249,10 @@ class _ComposerState extends State<_Composer> {
                               color: c.inkSoft,
                             ),
                             hintText: '说点什么，和队友们聊聊…',
-                            hintStyle: context.body(size: CitroType.body, color: c.inkSoft),
+                            hintStyle: context.body(
+                              size: CitroType.body,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ),
                       ),
@@ -264,7 +269,9 @@ class _ComposerState extends State<_Composer> {
                               return Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                                    borderRadius: BorderRadius.circular(
+                                      CitroColors.radii.small,
+                                    ),
                                     child: Image(
                                       image: images[i].provider,
                                       width: 82,
@@ -309,7 +316,9 @@ class _ComposerState extends State<_Composer> {
                           ),
                           decoration: BoxDecoration(
                             color: c.dangerSoft,
-                            borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.small,
+                            ),
                             border: Border.all(color: c.stamp.withAlpha(80)),
                           ),
                           child: Row(
@@ -325,7 +334,10 @@ class _ComposerState extends State<_Composer> {
                               const SizedBox(width: 8),
                               Text(
                                 '录音中 ${recordSeconds}s / 60s',
-                                style: context.body(size: CitroType.caption, color: c.stamp),
+                                style: context.body(
+                                  size: CitroType.caption,
+                                  color: c.stamp,
+                                ),
                               ),
                               const Spacer(),
                               GestureDetector(
@@ -338,7 +350,9 @@ class _ComposerState extends State<_Composer> {
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     color: c.surface2,
-                                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                    borderRadius: BorderRadius.circular(
+                                      CitroColors.radii.chip,
+                                    ),
                                     border: Border.all(
                                       color: c.stamp.withAlpha(90),
                                     ),
@@ -369,7 +383,10 @@ class _ComposerState extends State<_Composer> {
                             const SizedBox(width: 8),
                             Text(
                               '点击试听',
-                              style: context.body(size: CitroType.small, color: c.inkSoft),
+                              style: context.body(
+                                size: CitroType.small,
+                                color: c.inkSoft,
+                              ),
                             ),
                             const Spacer(),
                             GestureDetector(
@@ -382,7 +399,9 @@ class _ComposerState extends State<_Composer> {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: c.surface2,
-                                  borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                  borderRadius: BorderRadius.circular(
+                                    CitroColors.radii.chip,
+                                  ),
                                   border: Border.all(
                                     color: c.stamp.withAlpha(90),
                                   ),
@@ -404,15 +423,21 @@ class _ComposerState extends State<_Composer> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text(
-                          '${text.text.length}/200',
-                          style: context.body(size: CitroType.micro, color: c.inkSoft),
+                          '${text.text.length} 字',
+                          style: context.body(
+                            size: CitroType.micro,
+                            color: c.inkSoft,
+                          ),
                         ),
                       ),
                       if (error != null) ...[
                         const SizedBox(height: 8),
                         Text(
                           error!,
-                          style: context.body(size: CitroType.caption, color: c.stamp),
+                          style: context.body(
+                            size: CitroType.caption,
+                            color: c.stamp,
+                          ),
                         ),
                       ],
                     ],
@@ -439,7 +464,9 @@ class _ComposerState extends State<_Composer> {
                         padding: const EdgeInsets.symmetric(horizontal: 22),
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
                           boxShadow: CitroColors.shadows.sm(c),
                         ),
                         child: Center(

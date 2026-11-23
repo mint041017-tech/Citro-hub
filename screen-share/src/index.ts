@@ -22,9 +22,14 @@ import {
 } from './sfu';
 import { verifyTrashToken } from './trash';
 import { extractBearer, signRoomToken, verifyRoomToken } from './token';
+import { errorFrom } from './http';
 import {
   ApiError,
   ERR,
+  TRACK_KINDS,
+  TRACK_NAMES,
+  ROOM_TYPES,
+  tracksHaveScreen,
   type AnswerRequest,
   type ChatMessage,
   type CreateRoomRequest,
@@ -96,12 +101,8 @@ export default {
       }
       return json(result, 200, CORS);
     } catch (e) {
-      if (e instanceof Error && 'status' in e) {
-        const err = e as Error & { status: number; code?: string };
-        return json({ err: err.message, code: err.code }, err.status, CORS);
-      }
-      const msg = e instanceof Error ? e.message : String(e);
-      return json({ err: msg }, 500, CORS);
+      const { status, body } = errorFrom(e);
+      return json(body, status, CORS);
     }
   },
 } satisfies ExportedHandler<Env>;
@@ -196,13 +197,18 @@ function doKey(roomIdOrCode: string): string {
 }
 
 /** 取房间状态（带 DO 反查）。 */
-async function loadRoom(env: Env, roomId: string): Promise<{ room: PublicRoom; members: PublicMember[] }> {
+async function loadRoom(env: Env, roomId: string): Promise<{ room: PublicRoom; members: PublicMember[]; chatHistory: ChatMessage[] }> {
   const res = await doCall(env, roomId, '/internal/state');
   const data = (await res.json().catch(() => null)) as
-    | { room?: PublicRoom; members?: PublicMember[]; err?: string }
+    | { room?: PublicRoom; members?: PublicMember[]; chatHistory?: ChatMessage[]; err?: string }
     | null;
   if (!data?.room) throw ERR.notFound();
-  return { room: data.room, members: data.members ?? [] };
+  return { room: data.room, members: data.members ?? [], chatHistory: data.chatHistory ?? [] };
+}
+
+/** 给 REST 响应里的成员列表标出自己（客户端靠 self 认自己）。 */
+function markSelf(members: PublicMember[], selfUid: string): PublicMember[] {
+  return members.map((m) => ({ ...m, self: m.uid === selfUid }));
 }
 
 function requireToken(env: Env, request: Request, url: URL): Promise<
@@ -324,7 +330,7 @@ async function createRoom(
   const user = await verifyTrashToken(env, trashToken);
   const body = (await request.json().catch(() => ({}))) as CreateRoomRequest;
   const roomType: RoomType = body.roomType ?? 'one_to_many';
-  if (!['one_to_many', 'one_to_one', 'multi_party'].includes(roomType)) {
+  if (!ROOM_TYPES.includes(roomType)) {
     throw ERR.badRequest('房间模式不正确');
   }
   const quality = sanitizeQuality(body.quality);
@@ -375,7 +381,7 @@ async function createRoom(
     room,
     agora: { enabled: agoraConfigured(env) },
     // 和 getRoom 保持一致：把创建者自己标出来，客户端不用猜 uid。
-    members: members.map((m) => ({ ...m, self: m.uid === user.name })),
+    members: markSelf(members, user.name),
   };
 }
 
@@ -389,7 +395,7 @@ async function getRoom(
   const { room, members } = await loadRoom(env, payload.roomId);
   return {
     room,
-    members: members.map((m) => ({ ...m, self: m.uid === payload.uid })),
+    members: markSelf(members, payload.uid),
   };
 }
 
@@ -421,7 +427,7 @@ async function joinRoom(
   await doCall(env, roomId, '/internal/member-join', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uid: user.name, name, role: 'viewer', connId: '' }),
+    body: JSON.stringify({ uid: user.name, name, role: 'viewer' }),
   });
 
   const tokenTtl = (Number(env.ROOM_TOKEN_TTL_HOURS) || 2) * 3600;
@@ -443,7 +449,7 @@ async function joinRoom(
 
   const iceServers = await generateIceServers(env);
   const state = await loadRoom(env, roomId);
-  const chatHistory = (await getChatHistory(env, roomId)).slice(-50);
+  const chatHistory = state.chatHistory.slice(-50);
 
   return {
     roomToken,
@@ -452,15 +458,9 @@ async function joinRoom(
     agora: { enabled: agoraConfigured(env) },
     // 必须标 self：客户端拿 members 里的 self 认自己，缺了会退化成
     // members.first（房主），观众会被误判成主持人。
-    members: state.members.map((m) => ({ ...m, self: m.uid === user!.name })),
+    members: markSelf(state.members, user.name),
     chatHistory,
   };
-}
-
-async function getChatHistory(env: Env, roomId: string): Promise<ChatMessage[]> {
-  const res = await doCall(env, roomId, '/internal/state');
-  const data = (await res.json().catch(() => null)) as { chatHistory?: ChatMessage[] } | null;
-  return data?.chatHistory ?? [];
 }
 
 async function publish(
@@ -486,15 +486,15 @@ async function publish(
       }))
     : [{ name: 'screen', kind: 'video' }];
   for (const t of tracks) {
-    if (!['screen', 'mic', 'system'].includes(t.name)) throw ERR.badRequest('不支持的 track');
-    if (!['video', 'audio'].includes(t.kind)) throw ERR.badRequest('track 类型不正确');
+    if (!TRACK_NAMES.includes(t.name)) throw ERR.badRequest('不支持的 track');
+    if (!TRACK_KINDS.includes(t.kind)) throw ERR.badRequest('track 类型不正确');
   }
 
   // 1 对多：**画面**只有主持人或被授权的成员能发。
   // 麦克风不受模式限制 —— 多人实时语音是房间的通用能力，观众开麦
   // 不该被绑在「有人正在共享画面」上。
   const member = members.find((m) => m.uid === payload.uid);
-  const publishesScreen = tracks.some((t) => t.name === 'screen');
+  const publishesScreen = tracksHaveScreen(tracks);
   // 注意这里判的是「手上已经有一条 screen 轨」，而不是「有任意 track」：
   // 观众先开麦时 member.tracks 里已经有 mic，拿 length > 0 当门槛
   // 会把这个观众的画面权限一并放出去（旧实现的提权口子）。
@@ -502,7 +502,7 @@ async function publish(
     payload.role === 'host' ||
     payload.role === 'publisher' ||
     room.roomType !== 'one_to_many' ||
-    (member?.tracks.some((t) => t.name === 'screen') ?? false);
+    (member ? tracksHaveScreen(member.tracks) : false);
   if (publishesScreen && !canPublishScreen) {
     throw ERR.forbidden('当前只有主持人可以开始一起看');
   }
@@ -572,7 +572,7 @@ async function subscribe(
   }
   if (trackNames.length > 8) throw ERR.badRequest('一次订阅的路数过多');
   for (const name of trackNames) {
-    if (!['screen', 'mic', 'system'].includes(name)) throw ERR.badRequest('不支持的 track');
+    if (!TRACK_NAMES.includes(name)) throw ERR.badRequest('不支持的 track');
   }
   const publisher = members.find((m) => m.sfuSessionId === body.publisherSessionId);
   if (!publisher) throw ERR.notFound('该路共享已结束');
@@ -588,14 +588,11 @@ async function subscribe(
 
   // 一次 tracks/new 批量加多路 remote：SFU 只回一个 offer，
   // 客户端也只做一次 renegotiation。旧客户端仍然可以传单路 trackName。
-  // 幽灵轨容错（tolerateErrors）：发布端可能声明了某路（publish_state
-  // 只是声明）但 SFU 上没有真实流（例如主持人麦克风归声网、SFU 从未
-  // 挂 mic）——SFU 对不存在的轨返回逐轨 errorCode，旧实现整批抛错把
-  // screen 一起拖死（Web 观众全黑的根因）。容错模式下失败轨被剔除、
-  // 其余照订；全军覆没才抛错。
-  const batch = await subscribeTracks(env, sessionId, body.publisherSessionId, trackNames, {
-    tolerateErrors: true,
-  });
+  // 幽灵轨容错：发布端可能声明了某路（publish_state 只是声明）但 SFU
+  // 上没有真实流（例如主持人麦克风归声网、SFU 从未挂 mic）——SFU 对不
+  // 存在的轨返回逐轨 errorCode，旧实现整批抛错把 screen 一起拖死（Web
+  // 观众全黑的根因）。失败轨被剔除、其余照订；全军覆没才抛错。
+  const batch = await subscribeTracks(env, sessionId, body.publisherSessionId, trackNames);
   if (batch.tracks.length < trackNames.length) {
     const got = new Set(batch.tracks.map((t) => t.trackName));
     console.info(

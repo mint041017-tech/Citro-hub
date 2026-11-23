@@ -75,9 +75,6 @@ extension HomeLayoutKeyX on HomeLayoutKey {
   bool get landscape =>
       this == HomeLayoutKey.compactLandscape ||
       this == HomeLayoutKey.wideLandscape;
-
-  HomeLayoutKey get portraitEquivalent => homeLayoutKeyFor(form, false);
-  HomeLayoutKey get landscapeEquivalent => homeLayoutKeyFor(form, true);
 }
 
 class HomeCardInfo {
@@ -542,18 +539,6 @@ class HomeLayoutStore extends ChangeNotifier {
     return true;
   }
 
-  /// 0=小、1=标准、2=大。返回 false 表示当前空位放不下。
-  bool applyPreset(
-    HomeLayoutKey key,
-    HomeCardId id,
-    int level, {
-    String? item,
-  }) {
-    final size = presetSize(key, id, level, item: item);
-    if (size == null) return false;
-    return resize(key, id, size.$1, size.$2, item: item);
-  }
-
   (int, int)? presetSize(
     HomeLayoutKey key,
     HomeCardId id,
@@ -581,16 +566,6 @@ class HomeLayoutStore extends ChangeNotifier {
         (base.h + 1).clamp(spec.minH, spec.maxH),
       ),
     };
-  }
-
-  int presetLevel(HomeLayoutKey key, HomeSlot slot) {
-    for (var level = 0; level < 3; level++) {
-      final size = presetSize(key, slot.id, level, item: slot.item);
-      if (size != null && size.$1 == slot.w && size.$2 == slot.h) {
-        return level;
-      }
-    }
-    return -1;
   }
 
   void setVisible(

@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../services/game_sfx.dart';
 import '../services/platform.dart' as platform;
@@ -12,7 +11,10 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_identity.dart';
+import 'game_jump_common.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
 
 /// 跳一跳 —— 1:1 复刻 web `#gjumpPage`（index.html 8509-8555 / 19749-20529）。
 ///
@@ -306,13 +308,10 @@ class _JumpFrameData {
 
 class _GameJumpPageState extends State<GameJumpPage>
     with SingleTickerProviderStateMixin {
-  final math.Random _rnd = math.Random();
+  final math.Random _rnd = GameRandom.create();
   final Stopwatch _clock = Stopwatch()..start();
   final ValueNotifier<String> _progress = ValueNotifier<String>('分数 0');
-  late final Ticker _ticker;
-  bool _tickerReady = false;
-  Duration _lastElapsed = Duration.zero;
-  final ValueNotifier<int> _frame = ValueNotifier<int>(0);
+  final GameFrameTicker _frameTicker = GameFrameTicker();
   final _JumpFrameData _scene = _JumpFrameData();
 
   List<_JumpBlock> _blocks = [];
@@ -365,8 +364,7 @@ class _GameJumpPageState extends State<GameJumpPage>
     _newGame();
     // 用 Choreographer 驱动的 Ticker 取代 16ms 定时器：60Hz 设备跑 60fps，
     // 120Hz 设备直接跑 120fps，且与屏幕 vsync 对齐，不会出现半帧抖动。
-    _ticker = createTicker(_onFrame)..start();
-    _tickerReady = true;
+    _frameTicker.bind(this, _onFrame);
     if (_keyboardEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _keyFocus.requestFocus();
@@ -395,11 +393,10 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _frameTicker.dispose();
     unawaited(GameSfx.jumpChargeStop());
     GameSfx.soundsEnabled = false;
     _progress.dispose();
-    _frame.dispose();
     _keyFocus.dispose();
     super.dispose();
   }
@@ -473,10 +470,7 @@ class _GameJumpPageState extends State<GameJumpPage>
     _genNext();
     _progress.value = '分数 0';
     if (mounted) setState(() {});
-    if (_tickerReady && !_ticker.isActive) {
-      _lastElapsed = Duration.zero;
-      _ticker.start();
-    }
+    _frameTicker.restartIfNeeded();
   }
 
   bool _hit(_JumpBlock b) {
@@ -559,8 +553,8 @@ class _GameJumpPageState extends State<GameJumpPage>
     _improved = _score > _best;
     if (_improved) _best = _score;
     _save();
-    _ticker.stop();
-    _lastElapsed = Duration.zero;
+    _frameTicker.ticker.stop();
+    _frameTicker.resetElapsed();
     if (mounted) setState(() {});
   }
 
@@ -673,10 +667,7 @@ class _GameJumpPageState extends State<GameJumpPage>
 
   void _onFrame(Duration elapsed) {
     if (!mounted) return;
-    var dt = (elapsed - _lastElapsed).inMicroseconds / 1000.0;
-    _lastElapsed = elapsed;
-    if (dt <= 0) dt = 16;
-    dt = dt.clamp(1.0, 50.0);
+    var dt = _frameTicker.dtMs(elapsed, 50.0);
     final now = _now;
     if (_cur > 4) {
       final cut = _cur - 4;
@@ -744,10 +735,10 @@ class _GameJumpPageState extends State<GameJumpPage>
       if (f.life <= 0) _parts.removeAt(i);
     }
     _syncScene(now);
-    _frame.value++;
+    _frameTicker.frame.value++;
   }
 
-  /// 把当前物理/动画参数写入画布快照。只推进 [_frame]，不重建整页。
+  /// 把当前物理/动画参数写入画布快照。只推进 [GameFrameTicker.frame]，不重建整页。
   void _syncScene(double now) {
     final b = _blocks.isEmpty ? null : _blocks[_cur];
     var sx = 1.0;
@@ -761,7 +752,11 @@ class _GameJumpPageState extends State<GameJumpPage>
       sy = 1 - .16 * lk;
       sx = 1 + .11 * lk;
     } else if (_state == 'ready') {
-      z += 1.5 + math.sin(now * .004) * 1.5;
+      // 待机悬浮：生产随墙钟相位上下浮动；播种（golden 预览）模式下冻结在中位，
+      // 避免首帧像素随 Stopwatch 流逝相位漂移。
+      final idleBob =
+          GameRandom.debugSeed == null ? math.sin(now * .004) * 1.5 : 0.0;
+      z += 1.5 + idleBob;
     }
     var groundH = b?.h ?? 0;
     if (_state == 'fly' && _fly != null) {
@@ -810,7 +805,7 @@ class _GameJumpPageState extends State<GameJumpPage>
       score: _score,
       best: best,
       frameData: _scene,
-      sceneRepaint: _frame,
+      sceneRepaint: _frameTicker.frame,
       hintOn: _hintOn,
       overlayVisible: _over,
       overlayScore: _score,
@@ -820,7 +815,7 @@ class _GameJumpPageState extends State<GameJumpPage>
       onPressDown: _pressDown,
       onPressUp: _pressUp,
       onNew: _newGame,
-      onRank: () => showGameRank(context, game: 'jump', title: '跳一跳'),
+      onRank: () => showGameLeaderboard(context, game: 'jump', title: '跳一跳'),
       onRetry: _newGame,
       onBoardSize: (size) => _boardSize = size,
     );
@@ -1030,12 +1025,24 @@ class GameJumpView extends StatelessWidget {
                         ),
                         if (overlayVisible)
                           Positioned.fill(
-                            child: _JumpOverlay(
-                              score: overlayScore,
-                              maxCombo: overlayMaxCombo,
-                              improved: overlayImproved,
+                            child: GameEndOverlay(
+                              title: '游戏结束',
                               identity: id,
                               onRetry: onRetry,
+                              body: [
+                                const TextSpan(text: '本局得分 '),
+                                TextSpan(
+                                  text: '$overlayScore',
+                                  style: TextStyle(
+                                    color: gameEndOverlayInk(context, id),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text:
+                                      ' · 最高连击 ×$overlayMaxCombo${overlayImproved ? '· 新纪录诞生！' : ''}',
+                                ),
+                              ],
                             ),
                           ),
                       ],
@@ -1047,7 +1054,14 @@ class GameJumpView extends StatelessWidget {
               // 提示移到棋盘外常驻：不再跟随首次蓄力消失。
               IgnorePointer(
                 child: Center(
-                  child: _JumpHint(identity: id, active: hintOn, height: hintH),
+                  child: GameHintPill(
+                    identity: id,
+                    active: hintOn,
+                    height: hintH,
+                    text: (platform.isWindows || kIsWeb)
+                        ? '按住蓄力 · 松手起跳 · 空格'
+                        : '按住蓄力 · 松手起跳',
+                  ),
                 ),
               ),
             ],
@@ -1076,130 +1090,6 @@ class GameJumpView extends StatelessWidget {
       boardGap: 18,
       board: board,
       liveProgress: liveProgress,
-    );
-  }
-}
-
-/// 提示胶囊：纸底 + 身份色描边 + 前置圆点，移到棋盘外常驻。
-class _JumpHint extends StatelessWidget {
-  const _JumpHint({
-    required this.identity,
-    required this.active,
-    this.height = 34,
-  });
-
-  final GameIdentity identity;
-  final bool active;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border.all(color: identity.primary.withAlpha(70)),
-        borderRadius: BorderRadius.circular(CitroColors.radii.button),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: active ? identity.primary : identity.deep.withAlpha(120),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                (platform.isWindows || kIsWeb)
-                    ? '按住蓄力 · 松手起跳 · 空格'
-                    : '按住蓄力 · 松手起跳',
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: context.body(
-                  size: CitroType.caption,
-                  weight: CitroType.strong,
-                  color: c.ink2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-  }
-}
-
-/// `.gjump-overlay`：360×566 rgba(246,239,223,.93) + r22 + 竖向居中 gap10
-class _JumpOverlay extends StatelessWidget {
-  const _JumpOverlay({
-    required this.score,
-    required this.maxCombo,
-    required this.improved,
-    required this.identity,
-    this.onRetry,
-  });
-
-  final int score;
-  final int maxCombo;
-  final bool improved;
-  final GameIdentity identity;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final id = identity;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface.withValues(alpha: 0.96),
-        border: Border.all(color: id.primary.withAlpha(70)),
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '游戏结束',
-            style: context.heading(size: CitroType.subtitle, color: c.ink),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: '本局得分 '),
-                  TextSpan(
-                    text: '$score',
-                    style: TextStyle(
-                      // 浮层是 c.surface（暗色下深面）：primaryInk 只有约 2.4:1，
-                      // 暗色主题改用 onDark()。
-                      color: c.dark ? id.onDark() : id.primaryInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  TextSpan(
-                    text:
-                        ' · 最高连击 ×$maxCombo${improved ? '· 新纪录诞生！' : ''}',
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-              style: context.body(size: CitroType.meta, color: c.ink2),
-            ),
-          ),
-          const SizedBox(height: 10),
-          GameActionButton(label: '再来一局', primary: true, onTap: onRetry),
-        ],
-      ),
     );
   }
 }

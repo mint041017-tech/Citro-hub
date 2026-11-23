@@ -63,8 +63,8 @@ python devtools\font_coverage_check.py        # 项目文案逐一核对
 
 ## 注意事项
 
-- `flutter/test/preview/**` 与 `test/duo_*_preview.dart` 的 golden 基线基于旧字体，
+- `flutter/test/preview/**` 与 `test/duo_*_preview_test.dart` 的 golden 基线基于旧字体，
   字体变更后会失配；等当前视觉改动定稿后统一执行
-  `flutter test --update-goldens test/preview test/duo_cook_preview.dart …` 刷新一次即可。
+  `flutter test --update-goldens test/preview test/duo_cook_preview_test.dart …` 刷新一次即可。
 - 新增字体文件是 TTF，不要再改回 `--no-hinting` 或 woff2 输出，否则小字清晰度会退回去。
 - 已核对 `runner.exe.manifest` 为 `PerMonitorV2`，Windows 高 DPI 不是这次的诱因。

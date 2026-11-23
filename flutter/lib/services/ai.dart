@@ -116,11 +116,13 @@ class AiService {
     return buffer.toString();
   }
 
-  /// 流式返回正文；推理内容不展示，保证尽快开始出字。
-  static Stream<String> streamChat(
+  /// 通用流式接口：调用方可以直接给 system，不经过 CiCi 身份包装。
+  /// 签文这类有独立人设的场景用它；推理内容不展示，保证尽快开始出字。
+  static Stream<String> stream(
     List<Map<String, dynamic>> messages, {
-    String? extraSystem,
-    String? persona,
+    String? system,
+    int maxTokens = 1024,
+    double temperature = 0.6,
   }) async* {
     final client = http.Client();
     try {
@@ -128,7 +130,9 @@ class AiService {
         _payload(
           messages,
           stream: true,
-          system: systemFor(persona: persona, extraSystem: extraSystem),
+          maxTokens: maxTokens,
+          temperature: temperature,
+          system: system,
         ),
       );
       req.headers['Accept'] = 'text/event-stream';
@@ -143,9 +147,10 @@ class AiService {
       const idle = Duration(seconds: 40);
       final iterator = StreamIterator<String>(lines);
       try {
-        while (
-          await iterator.moveNext().timeout(idle, onTimeout: () => false)
-        ) {
+        while (await iterator.moveNext().timeout(
+          idle,
+          onTimeout: () => false,
+        )) {
           final line = iterator.current;
           if (!line.startsWith('data:')) continue;
           final data = line.substring(5).trim();
@@ -175,6 +180,16 @@ class AiService {
       client.close();
     }
   }
+
+  /// CiCi 聊天沿用固定身份与性格；签名不变，内部走通用流。
+  static Stream<String> streamChat(
+    List<Map<String, dynamic>> messages, {
+    String? extraSystem,
+    String? persona,
+  }) => stream(
+    messages,
+    system: systemFor(persona: persona, extraSystem: extraSystem),
+  );
 
   static Future<bool?> verifyIdiom(String word) async {
     try {

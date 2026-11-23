@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.3.0",
-    "build_number": "3300",
-    "build_id": "14ba905719145da8d3fefcc4a99eb369",
-    "file": "Citro-web-3.3.0.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.3.0.zip",
-    "size": 49322101,
-    "sha256": "14ba905719145da8d3fefcc4a99eb3691b1380a38703057d47142203006cb0be",
-    "published_at": "2026-11-22T10:53:47Z",
-    "notes": "3.3.0:MBTI 96 题测试、人格切片、二维码结果分享与账号历史；每日打卡加入趣签筒、晚间回签与七日成卷，今日签改为独立朱砂色印记；图鉴与历史返回转场更快，Windows / Android / Web / 下载站同步发布。"
+    "version": "3.3.1",
+    "build_number": "3301",
+    "build_id": "9df40e85108c382275740a8d6cdb095b",
+    "file": "Citro-web-3.3.1.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.3.1.zip",
+    "size": 49154056,
+    "sha256": "9df40e85108c382275740a8d6cdb095bce3ecc17131573820a83af5af13d37ea",
+    "published_at": "2026-11-22T23:58:47Z",
+    "notes": "3.3.1:每日一签改为完全随机，取消同级日期轮换；签文七段流式输出，今日一小步增加动作校验与兜底；社区取消 200 字限制，长文五行折叠；Windows / Android / Web / 下载站同步发布。"
 }

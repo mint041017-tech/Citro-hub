@@ -132,14 +132,12 @@ class _CardMorphTransition extends StatelessWidget {
     required this.animation,
     required this.child,
     this.target,
-    this.snapshot,
   });
 
   final Rect source;
   final Animation<double> animation;
   final Widget child;
   final Rect? target;
-  final ui.Image? snapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -203,14 +201,6 @@ class _CardMorphTransition extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: snapshot == null
-                        ? null
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              radius.evaluate(curved),
-                            ),
-                            child: RawImage(image: snapshot, fit: BoxFit.cover),
-                          ),
                   ),
                 ),
               ),

@@ -28,10 +28,8 @@ void main() {
     AppState.instance
       ..gid = 'fortune-transfer-test'
       ..guestName = '游客·转运';
-    AiService.goodDeedReviewer = ({required text, image}) async => (
-      pass: true,
-      reply: '嗯，这件事确实帮到了别人，转运机会给你。',
-    );
+    AiService.goodDeedReviewer = ({required text, image}) async =>
+        (pass: true, reply: '嗯，这件事确实帮到了别人，转运机会给你。');
   });
 
   tearDown(() {
@@ -44,7 +42,7 @@ void main() {
     tester,
   ) async {
     final today = _dayKey(DateTime.now());
-    await Prefs.setString(PrefKeys.checkinFortune, '$today:7');
+    await Prefs.setString(PrefKeys.checkinFortune, '$today:7:guest');
     await Prefs.setString(PrefKeys.checkinTransfer, null);
     await Prefs.setString(PrefKeys.checkinTransferUsed, null);
 
@@ -100,7 +98,11 @@ void main() {
 
     expect(AppState.instance.fortuneTransferUsed, isTrue);
     final raw = Prefs.getString(PrefKeys.checkinFortune) ?? '';
-    expect(raw.endsWith(':6') || raw.endsWith(':7'), isFalse);
+    final parts = raw.split(':');
+    expect(parts.length, 4, reason: raw);
+    expect(parts[1], isNot(anyOf('6', '7')));
+    expect(int.tryParse(parts[2]), isNotNull);
+    expect(int.parse(parts[2]), inInclusiveRange(0, 5));
     expect(find.text('抽到下签了？还有一次转运机会'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -110,13 +112,11 @@ void main() {
 
   testWidgets('vague good deed is rejected without a transfer', (tester) async {
     final today = _dayKey(DateTime.now());
-    await Prefs.setString(PrefKeys.checkinFortune, '$today:7');
+    await Prefs.setString(PrefKeys.checkinFortune, '$today:7:guest');
     await Prefs.setString(PrefKeys.checkinTransfer, null);
     await Prefs.setString(PrefKeys.checkinTransferUsed, null);
-    AiService.goodDeedReviewer = ({required text, image}) async => (
-      pass: false,
-      reply: '这件事还没看出实际帮到别人，再想想有没有具体的小事？',
-    );
+    AiService.goodDeedReviewer = ({required text, image}) async =>
+        (pass: false, reply: '这件事还没看出实际帮到别人，再想想有没有具体的小事？');
 
     await tester.pumpWidget(
       AppScope(

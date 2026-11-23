@@ -1024,17 +1024,6 @@ String formatDayLabel(DateTime at) {
   return '${at.month} 月 ${at.day} 日';
 }
 
-String formatDateTime(DateTime at) {
-  final now = DateTime.now();
-  final sameDay = dayOf(at) == dayOf(now);
-  final tomorrow = dayOf(at) == dayOf(now).add(const Duration(days: 1));
-  final hm =
-      '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
-  if (sameDay) return '今天 $hm';
-  if (tomorrow) return '明天 $hm';
-  return '${at.month} 月 ${at.day} 日 $hm';
-}
-
 /// 提前提醒的多选弹层：列表式选项 + 明确的「可多选」提示。
 class _LeadPicker extends StatefulWidget {
   final List<int> initial;

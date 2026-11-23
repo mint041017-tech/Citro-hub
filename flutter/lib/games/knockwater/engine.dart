@@ -319,8 +319,6 @@ class Engine {
 
   int get petalsInBay => petals.where((p) => p.inBay && !p.stranded).length;
 
-  bool get hasWon => status == GameStatus.won;
-
   double get chargeRatio => (chargeT / 0.8).clamp(0.0, 1.0).toDouble();
 
   double get previewRadius => 7 + 4 * chargeRatio;

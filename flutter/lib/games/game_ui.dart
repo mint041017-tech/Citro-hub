@@ -31,7 +31,10 @@ import '../widgets/desktop_shell.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
 import 'game_common.dart'
-    show GameTabletRankRail, sameLiveList, showGameAccount, showGameLeaderboard;
+    show
+        GameTabletRankRail,
+        sameLiveList,
+        showGameAccount;
 import 'game_identity.dart';
 
 /// 游戏身份作用域。
@@ -112,8 +115,6 @@ class GameIcons {
       '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
   static const lightbulb =
       '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>';
-  static const trash =
-      '<path d="M4 7h16"/><path d="M9 7v-3h6v3"/><path d="M6 7l1 13h10l1-13"/>';
   static const arrowUp = '<path d="M12 5l8 10H4z"/>';
   static const arrowLeftSolid = '<path d="M5 12l10-8v16z"/>';
   static const arrowRightSolid = '<path d="M19 12l-10-8v16z"/>';
@@ -1003,7 +1004,7 @@ class _GameScaffoldState extends State<GameScaffold> {
                     : ListView.separated(
                         padding: EdgeInsets.zero,
                         itemCount: _live.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 6),
+                        separatorBuilder: (_, _) => const SizedBox(height: 6),
                         itemBuilder: (_, i) =>
                             _tabletLiveRow(context, _live[i]),
                       ),
@@ -1883,30 +1884,6 @@ class _LiveChip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 排行榜入口（复用旧实现）
-Future<void> showGameRank(
-  BuildContext context, {
-  required String game,
-  required String title,
-  List<(String, String)> difficulties = const [],
-  String initial = '',
-  bool aiSplit = false,
-}) => showGameLeaderboard(
-  context,
-  game: game,
-  title: title,
-  difficulties: difficulties,
-  initial: initial,
-  aiSplit: aiSplit,
-);
-
-/// 时长格式 m:ss
-String gameFmtDuration(int seconds) {
-  final m = seconds ~/ 60;
-  final s = (seconds % 60).toString().padLeft(2, '0');
-  return '$m:$s';
 }
 
 /// 一条 CSS `box-shadow` 描述（外阴影语义：绘制在圆角矩形之外）

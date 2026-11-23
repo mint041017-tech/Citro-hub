@@ -42,7 +42,7 @@ void main() {
     final today = DateTime.now();
     final day =
         '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    await Prefs.setString(PrefKeys.checkinFortune, '$day:7');
+    await Prefs.setString(PrefKeys.checkinFortune, '$day:7:guest');
 
     await tester.pumpWidget(
       AppScope(
@@ -90,7 +90,7 @@ void main() {
     final today = DateTime.now();
     final day =
         '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    await Prefs.setString(PrefKeys.checkinFortune, '$day:7');
+    await Prefs.setString(PrefKeys.checkinFortune, '$day:7:guest');
 
     await tester.pumpWidget(
       AppScope(

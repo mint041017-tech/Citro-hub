@@ -41,23 +41,12 @@ class SudokuCubeFaceView extends StatelessWidget {
     return null;
   }
 
-  Set<int> _peers() {
-    final result = <int>{};
-    if (selected < 0) return result;
-    for (final unit in puzzle.units) {
-      if (!unit.contains(selected)) continue;
-      result.addAll(unit);
-    }
-    result.remove(selected);
-    return result;
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final map = _map;
     if (map == null) return const SizedBox.shrink();
-    final peers = _peers();
+    final peers = puzzle.peersOf(selected);
     final selectedValue = selected >= 0 && selected < board.length
         ? board[selected]
         : 0;
@@ -204,10 +193,10 @@ class _FaceCell extends StatelessWidget {
                 child: Text(
                   '$value',
                   style: TextStyle(
-                    fontFamily: AppFonts.noto,
+                    fontFamily: AppFonts.rounded,
                     fontFamilyFallback: AppFonts.fallback,
                     fontSize: fontSize,
-                    fontWeight: isGiven ? FontWeight.w700 : FontWeight.w700,
+                    fontWeight: FontWeight.w700,
                     color: conflict ? c.stamp : (isGiven ? c.ink : c.accentInk),
                     height: 1,
                   ),
@@ -232,7 +221,7 @@ class _FaceCell extends StatelessWidget {
                                           ? Text(
                                               '${r * 3 + q + 1}',
                                               style: TextStyle(
-                                                fontFamily: AppFonts.noto,
+                                                fontFamily: AppFonts.rounded,
                                                 fontSize: noteSize,
                                                 fontWeight: FontWeight.w700,
                                                 color: c.ink2,

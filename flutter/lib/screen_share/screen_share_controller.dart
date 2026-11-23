@@ -193,9 +193,6 @@ class ScreenShareController extends ChangeNotifier {
   /// 从「声网」翻回「Cloudflare」）。连接成功即作废。
   Timer? _agoraWaitTimer;
 
-  /// 观众端视角：当前媒体链路（用于 UI 角标）。
-  bool get viaAgora => _viaAgora;
-
   /// 订阅同步的单飞锁 + 重跑标记。
   ///
   /// 进房、WebSocket hello、房间刷新都会各触发一次同步；并发跑会在
@@ -204,10 +201,8 @@ class ScreenShareController extends ChangeNotifier {
   Future<void>? _syncRunning;
   bool _syncQueued = false;
 
+  /// 最近 3 个房间的持久化键。
   static const String _recentKey = 'citro_share_recent_rooms';
-
-  /// 最近 3 个房间，格式 `房间码:roomId`。
-  List<String> get recentRooms => Prefs.getStringList(_recentKey);
 
   void _notify() {
     if (_disposed) return;
@@ -1102,12 +1097,6 @@ class ScreenShareController extends ChangeNotifier {
     // 音频路由归声网引擎管，引擎已随 close() 释放，App 其他声音的
     // 路由不受影响；这里不再碰 flutter_webrtc 的 Helper（会抢
     // audio focus）。
-    _notify();
-  }
-
-  void clearError() {
-    if (_error == null) return;
-    _error = null;
     _notify();
   }
 

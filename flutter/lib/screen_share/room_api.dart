@@ -317,15 +317,4 @@ class RoomApi {
     );
   }
 
-  /// 取短期 ICE（TURN）凭证。
-  Future<List<Map<String, dynamic>>> getIceServers(
-    String roomId, {
-    required String roomToken,
-  }) async {
-    final data = await _request('GET', '/api/ice', roomToken: roomToken);
-    return (data['iceServers'] as List<dynamic>? ?? [])
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-  }
 }

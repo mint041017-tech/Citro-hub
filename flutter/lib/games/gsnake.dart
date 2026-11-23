@@ -13,6 +13,7 @@ import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'game_common.dart';
 import 'game_identity.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
 
 class GameSnakePage extends StatefulWidget {
@@ -22,10 +23,10 @@ class GameSnakePage extends StatefulWidget {
 }
 
 class _GameSnakePageState extends State<GameSnakePage> {
-  static const _diffs = {
-    'easy': ('简单', 160),
-    'std': ('标准', 110),
-    'hard': ('困难', 70),
+  static const _diffs = <String, int>{
+    'easy': 160,
+    'std': 110,
+    'hard': 70,
   };
   static const gridSize = 17;
 
@@ -88,7 +89,7 @@ class _GameSnakePageState extends State<GameSnakePage> {
   }
 
   void _spawnFood() {
-    final rnd = math.Random();
+    final rnd = GameRandom.create();
     do {
       food = Point(rnd.nextInt(gridSize), rnd.nextInt(gridSize));
     } while (snake.contains(food));
@@ -104,7 +105,7 @@ class _GameSnakePageState extends State<GameSnakePage> {
   void _runTimer() {
     timer?.cancel();
     timer = Timer.periodic(
-      Duration(milliseconds: _diffs[diff]!.$2),
+      Duration(milliseconds: _diffs[diff]!),
       (_) => _tick(),
     );
   }
@@ -268,7 +269,7 @@ class GameSnakeView extends StatelessWidget {
       // v1.6.2：恢复「正在玩」组件（此前误关，web 端 #gsnakePage 有该条）。
       showLive: true,
       liveProgress: liveProgress,
-      rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
+      rankDifficulties: _diffItems,
       rankInitial: diff,
       above: [
         GameSegTabs<String>(
@@ -405,7 +406,7 @@ class GameSnakeView extends StatelessWidget {
                   ),
                 ),
               ),
-              if (over) Positioned.fill(child: _overlay(context, boardW)),
+              if (over) Positioned.fill(child: _overlay(context)),
             ],
           ),
         ),
@@ -415,7 +416,7 @@ class GameSnakeView extends StatelessWidget {
 
   /// 结算浮层 —— v1.6.1 起与淘气小球结算卡同一套样式
   /// （半透明纸面 / 圆角 22 / Kalam 标题 / 灰描述金棕数字 / 主按钮垂直居中）。
-  Widget _overlay(BuildContext context, double size) {
+  Widget _overlay(BuildContext context) {
     final c = context.c;
     final identity = GameIdentityScope.of(context);
     return Container(

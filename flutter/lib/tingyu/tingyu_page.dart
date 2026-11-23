@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/semantics.dart';
 
 import '../overlays/pomodoro_sheet.dart';
 import '../services/chime.dart';
@@ -564,7 +563,7 @@ ThemeData buildNookTheme(bool dark) {
       );
   return ThemeData(
     useMaterial3: true,
-    fontFamily: AppFonts.noto,
+    fontFamily: AppFonts.rounded,
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
     textTheme: TextTheme(
@@ -589,7 +588,7 @@ ThemeData buildNookTheme(bool dark) {
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         ),
         textStyle: const TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontSize: CitroType.bodyLg,
           fontWeight: FontWeight.w700,
         ),
@@ -605,7 +604,7 @@ ThemeData buildNookTheme(bool dark) {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         textStyle: const TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontSize: CitroType.body,
           fontWeight: FontWeight.w400,
         ),
@@ -616,7 +615,7 @@ ThemeData buildNookTheme(bool dark) {
         minimumSize: const Size(48, 48),
         foregroundColor: p.accent,
         textStyle: const TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontSize: CitroType.body,
           fontWeight: FontWeight.w400,
         ),
@@ -663,7 +662,7 @@ ThemeData buildNookTheme(bool dark) {
       ),
       textStyle: TextStyle(
         color: p.bg,
-        fontFamily: AppFonts.noto,
+        fontFamily: AppFonts.rounded,
         fontSize: CitroType.caption,
       ),
     ),
@@ -676,7 +675,7 @@ ThemeData buildNookTheme(bool dark) {
       ),
       textStyle: TextStyle(
         color: p.text,
-        fontFamily: AppFonts.noto,
+        fontFamily: AppFonts.rounded,
         fontSize: CitroType.body,
       ),
     ),
@@ -685,7 +684,7 @@ ThemeData buildNookTheme(bool dark) {
       backgroundColor: p.text,
       contentTextStyle: TextStyle(
         color: p.bg,
-        fontFamily: AppFonts.noto,
+        fontFamily: AppFonts.rounded,
         fontSize: CitroType.label,
       ),
       shape: RoundedRectangleBorder(

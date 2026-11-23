@@ -17,8 +17,6 @@ import 'tokens.dart';
 class CitroNative {
   const CitroNative._();
 
-  static bool get isWeb => kIsWeb;
-
   static bool get isApple =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.iOS ||
@@ -29,13 +27,6 @@ class CitroNative {
 
   static bool get isWindows =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-
-  /// 指针型设备（桌面 / 网页）使用悬停与轻位移，触屏不使用。
-  static bool get pointerLike =>
-      kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.linux;
 
   /// 是否启用真实背景模糊。
   ///
@@ -50,15 +41,6 @@ class CitroNative {
     if (ratio <= 1) return 1;
     return (1 / ratio).clamp(0.25, 0.5);
   }
-
-  /// UI 文字使用的系统字体族。缺省返回系统默认字体。
-  static String? get uiFontFamily => switch (defaultTargetPlatform) {
-    TargetPlatform.iOS || TargetPlatform.macOS => '.SF UI Text',
-    TargetPlatform.android => 'Roboto',
-    TargetPlatform.windows => 'Segoe UI',
-    TargetPlatform.linux => 'Noto Sans',
-    _ => null,
-  };
 
   /// 中文回退：应用内置圆体优先，其次本机系统中文字体。
   static List<String> get uiFontFallback => const [
@@ -121,9 +103,6 @@ extension CitroMaterialColors on CitroColors {
   /// 玻璃投影：中性黑，不再用暖棕。
   Color get glassShadow =>
       dark ? const Color(0x59000000) : const Color(0x14000000);
-
-  /// Android / 非玻璃端使用的 tonal 表面。
-  Color get tonalSurface => surface2;
 }
 
 /// 平台自适应的材质表面。

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:math' as math;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
@@ -8,9 +7,9 @@ import 'package:web/web.dart' as web;
 
 import '../services/api.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
-import '../theme/tokens.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
+import 'game_web_shell.dart';
 
 Future<void> prewarmBrakeBundle() async {}
 
@@ -97,7 +96,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
         );
       case 'citroRank':
         if (mounted) {
-          showGameRank(context, game: 'brake', title: '极限刹车');
+          showGameLeaderboard(context, game: 'brake', title: '极限刹车');
         }
         return null;
       default:
@@ -110,23 +109,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
     final body = raw == null
         ? const <String, Object?>{}
         : Map<String, Object?>.from(raw);
-    final v0 = (body['v0'] as num?)?.toDouble() ?? 0;
-    final stop = (body['stopTime'] as num?)?.toDouble() ?? 0;
-    final reported = (body['score'] as num?)?.toInt() ?? 0;
-    final computed = stop > 0 ? (v0 * v0 / stop).round() : 0;
-    final score = reported > 0 ? reported : computed;
-    if (body['failed'] == true) {
-      await AppState.instance.noteGameRound();
-      return {'ok': false, 'failed': true};
-    }
-    if (score <= 0) return {'ok': false, 'err': 'empty score'};
-    final res = await AppState.instance.submitScore('brake', score);
-    return {
-      'ok': res['ok'] != false,
-      'score': score,
-      'best': res['best'] ?? score,
-      'rank': res['rank'] ?? 0,
-    };
+    return submitBrakeScore(body);
   }
 
   Future<Map<String, Object?>> _leaderboard(List<Object?> args) async {
@@ -135,21 +118,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
         : 50;
     final res = await AppState.instance.fetchBoard('brake');
     final raw = res['list'] ?? res['entries'] ?? res['board'] ?? res['data'];
-    final entries = <Map<String, Object?>>[];
-    if (raw is List) {
-      for (final item in raw.take(limit)) {
-        if (item is! Map) continue;
-        entries.add({
-          'nickname': '${item['name'] ?? item['nickname'] ?? '游客'}',
-          'score':
-              ((item['score'] ?? item['best'] ?? item['value'] ?? 0) as num)
-                  .toInt(),
-          'v0': item['v0'] ?? 0,
-          'stopTime': item['stopTime'] ?? 0,
-        });
-      }
-    }
-    return {'entries': entries};
+    return {'entries': brakeBoardEntries(raw, limit)};
   }
 
   @override
@@ -163,8 +132,8 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
       board: LayoutBuilder(
         builder: (context, cons) {
           // GameScaffold 的 board 区在滚动视图里：宽度有界、高度无界，
-          // 高度按宽度折算（见 _brakeBoardSize）。
-          final board = _brakeBoardSize(cons.maxWidth);
+          // 高度按宽度折算（见 BrakeBoardMetrics.boardSize）。
+          final board = BrakeBoardMetrics.boardSize(cons.maxWidth);
           return SizedBox(
             width: board.width,
             height: board.height,
@@ -173,84 +142,16 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                 Positioned.fill(child: HtmlElementView(viewType: _viewType)),
                 if (_loading)
                   const Positioned.fill(
-                    child: _BrakeLoading(key: ValueKey('brake-loading')),
+                    child: GameWebLinearBoot(
+                      key: ValueKey('brake-loading'),
+                      label: '正在进入刹车场…',
+                      subtitle: '极限刹车 · 原版赛道',
+                    ),
                   ),
               ],
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-/// 刹车棋盘（内嵌网页视口）按内容区约束推导。
-///
-/// 内容区宽度有界、高度无界，所以高度按宽度折算：窄内容区（手机）给竖屏
-/// 比例，宽内容区（桌面横屏）给接近 16:10 的驾驶视角。两个比例在阈值附近
-/// 平滑过渡，避免内容宽跨过阈值时高度突变。
-const double _kBrakeMaxWidth = 900;
-const double _kBrakeMaxHeight = 640;
-const double _kBrakeCompactRatio = 1.35;
-const double _kBrakeWideRatio = 0.62;
-const double _kBrakeCompactMaxWidth = 560;
-
-/// 比例过渡带半宽：在阈值前后各 90px 内从竖屏比例平滑插值到宽屏比例。
-const double _kBrakeRatioBlend = 90;
-
-Size _brakeBoardSize(double maxWidth) {
-  final w = math.min(maxWidth, _kBrakeMaxWidth);
-  // 阈值附近用 smoothstep 插值比例，高度随宽度连续变化（559 与 560 同高）。
-  final t = ((w - _kBrakeCompactMaxWidth) / _kBrakeRatioBlend)
-      .clamp(0.0, 1.0)
-      .toDouble();
-  final ratio = _kBrakeCompactRatio +
-      (_kBrakeWideRatio - _kBrakeCompactRatio) * (t * t * (3 - 2 * t));
-  final h = (w * ratio).clamp(240.0, _kBrakeMaxHeight).toDouble();
-  return Size(w, h);
-}
-
-/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字）。
-class _BrakeLoading extends StatelessWidget {
-  const _BrakeLoading({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return ColoredBox(
-      color: identity.soft,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 132,
-              height: 4,
-              child: LinearProgressIndicator(
-                minHeight: 4,
-                color: identity.primary,
-                backgroundColor: identity.primary.withAlpha(40),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '正在进入刹车场…',
-              style: context.body(
-                size: CitroType.body,
-                weight: CitroType.strong,
-                color: identity.deep,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '极限刹车 · 原版赛道',
-              style: context.body(
-                size: CitroType.small,
-                color: identity.primaryInk,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

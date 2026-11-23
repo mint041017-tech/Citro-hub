@@ -441,10 +441,8 @@ function copyForSave(raw) {
 }
 
 module.exports = {
-  BASE,
   imageUrl,
   newId,
-  dateText,
   todayKey,
   splitTags,
   parseAmount,

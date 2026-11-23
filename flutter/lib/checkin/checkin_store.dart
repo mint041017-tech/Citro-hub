@@ -71,8 +71,6 @@ class CheckinStore extends ChangeNotifier {
     return List.unmodifiable(list);
   }
 
-  bool get hasToday => today != null;
-
   int get totalDays => _days.length;
 
   CheckinDayEntry? entryFor(String date) => _days[date];
@@ -82,10 +80,6 @@ class CheckinStore extends ChangeNotifier {
   CheckinVolume get currentVolume => volumes.isEmpty
       ? const CheckinVolume(index: 1, entries: [])
       : volumes.last;
-
-  /// 上一卷集满后，下一卷的预览（还没有任何记录）。
-  CheckinVolume get nextVolume =>
-      CheckinVolume(index: volumes.length + 1, entries: const []);
 
   int get streak {
     final parsed = checkinParseDate(todayKey);
@@ -176,9 +170,7 @@ class CheckinStore extends ChangeNotifier {
         }
       } catch (_) {}
     }
-    _pendingDates = CheckinSync.load(_accountKey)
-        .map((e) => e.date)
-        .toSet();
+    _pendingDates = CheckinSync.load(_accountKey).map((e) => e.date).toSet();
     for (final date in _pendingDates) {
       final entry = _days[date];
       if (entry != null) {
@@ -196,17 +188,21 @@ class CheckinStore extends ChangeNotifier {
 
   Future<void> _persist() async {
     try {
-      final list = _days.values
-          .map(
-            (e) => e.copyWith(
-              pendingSync: _pendingDates.contains(e.date),
-            ).toJson(),
-          )
-          .toList()
-        ..sort((a, b) => '${a['date']}'.compareTo('${b['date']}'));
+      final list =
+          _days.values
+              .map(
+                (e) => e
+                    .copyWith(pendingSync: _pendingDates.contains(e.date))
+                    .toJson(),
+              )
+              .toList()
+            ..sort((a, b) => '${a['date']}'.compareTo('${b['date']}'));
       await Prefs.setString(
         _daysKey,
-        jsonEncode({'days': list, 'updatedAt': DateTime.now().toUtc().toIso8601String()}),
+        jsonEncode({
+          'days': list,
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+        }),
       );
     } catch (_) {}
   }
@@ -217,8 +213,8 @@ class CheckinStore extends ChangeNotifier {
 
   /// 打卡页抽到签后调用。同一天重复调用只更新快照，不重开一条记录。
   ///
-  /// [actionText] 是签面 / AI 给的那句小步；[cardId] 是卡面 id。
-  /// 转运后再次调用会换签，但已开始的行动与回签不会被清掉。
+  /// [actionText] 只用签房先生写出来的那句；还没写好就传空，
+  /// 不再用签类兜底文案占位（AI 回来后会再调一次补上）。
   Future<CheckinDayEntry?> syncTodaySnapshot({
     required String signId,
     required String signTitle,
@@ -233,7 +229,7 @@ class CheckinStore extends ChangeNotifier {
     final now = DateTime.now().millisecondsSinceEpoch;
     final plan = checkinPlanForKind(kind);
     final text = checkinClampText(
-      checkinActionTextFor(kind, stepText: actionText),
+      (actionText ?? '').trim(),
       kCheckinActionTextMax,
     );
 
@@ -486,9 +482,7 @@ class CheckinStore extends ChangeNotifier {
   void _onTodoChanged() {
     if (!_eligible(CheckinActionType.task)) return;
     final entry = _days[todayKey]!;
-    final start = DateTime.fromMillisecondsSinceEpoch(
-      entry.actionStartedAt!,
-    );
+    final start = DateTime.fromMillisecondsSinceEpoch(entry.actionStartedAt!);
     final candidate = TodoStore.instance.allTasks.where((t) {
       if (!t.done || t.doneAt == null) return false;
       if (t.doneAt!.isBefore(start)) return false;
@@ -502,9 +496,7 @@ class CheckinStore extends ChangeNotifier {
   void _onPomodoroChanged() {
     if (!_eligible(CheckinActionType.focus)) return;
     final entry = _days[todayKey]!;
-    final start = DateTime.fromMillisecondsSinceEpoch(
-      entry.actionStartedAt!,
-    );
+    final start = DateTime.fromMillisecondsSinceEpoch(entry.actionStartedAt!);
     final need = _threshold(CheckinActionType.focus, entry.kind);
     final hit = PomodoroState.instance.sessions.any(
       (s) => !s.at.isBefore(start) && s.minutes >= need,
@@ -515,9 +507,7 @@ class CheckinStore extends ChangeNotifier {
   void _onLedgerChanged() {
     if (!_eligible(CheckinActionType.ledger)) return;
     final entry = _days[todayKey]!;
-    final start = DateTime.fromMillisecondsSinceEpoch(
-      entry.actionStartedAt!,
-    );
+    final start = DateTime.fromMillisecondsSinceEpoch(entry.actionStartedAt!);
     final hit = LedgerStore.instance.entries.where((e) {
       if (e.createdAt.isBefore(start)) return false;
       if (entry.linkedId != null) return e.id == entry.linkedId;
@@ -635,9 +625,7 @@ class CheckinStore extends ChangeNotifier {
           if (remote != null) _mergeRemote(remote);
         }
       }
-      _pendingDates = CheckinSync.load(_accountKey)
-          .map((e) => e.date)
-          .toSet();
+      _pendingDates = CheckinSync.load(_accountKey).map((e) => e.date).toSet();
       syncFailed = false;
       syncNote = null;
       await _persist();
@@ -678,14 +666,9 @@ class CheckinStore extends ChangeNotifier {
         },
       );
     } catch (_) {
-      run = const CheckinSyncRun(
-        message: '已存本机，联网后再同步',
-        remaining: 1,
-      );
+      run = const CheckinSyncRun(message: '已存本机，联网后再同步', remaining: 1);
     }
-    _pendingDates = CheckinSync.load(_accountKey)
-        .map((e) => e.date)
-        .toSet();
+    _pendingDates = CheckinSync.load(_accountKey).map((e) => e.date).toSet();
     await _persist();
     _busySync = false;
     syncing = false;

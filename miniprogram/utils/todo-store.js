@@ -5,13 +5,13 @@
 // at 更新则覆盖本地，否则把本地整包推上去（last writer wins）。
 const api = require("./api");
 const session = require("./session");
+const kit = require("./storage");
+const synckit = require("./sync");
 
 const STORAGE_KEY = "citro_todo_v1";
 const AT_KEY = "citro_todo_v1_at";
 const KINDS = ["reminder", "task", "habit", "quick"];
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-let idSeq = 0;
 
 function isObj(v) {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -45,11 +45,6 @@ function parseDate(v) {
 function dayStart(value) {
   const d = value instanceof Date ? value : new Date(Number(value) || 0);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function newId(prefix) {
-  idSeq += 1;
-  return prefix + Date.now() + "_" + idSeq;
 }
 
 /* ------------------------------------------------------------------ *
@@ -246,18 +241,7 @@ function normalizeSnapshot(raw) {
  * ------------------------------------------------------------------ */
 
 function persist(snap, at) {
-  let ok = true;
-  try {
-    wx.setStorageSync(STORAGE_KEY, snap);
-  } catch (e) {
-    ok = false;
-  }
-  try {
-    wx.setStorageSync(AT_KEY, at);
-  } catch (e) {
-    // 时间戳写失败不影响主数据，下次 save 会再次更新。
-  }
-  return ok;
+  return kit.writePair(STORAGE_KEY, AT_KEY, snap, at);
 }
 
 function readAt(snap) {
@@ -299,16 +283,8 @@ function load() {
 function pushRemote(snap) {
   const token = session.token();
   if (!token) return;
-  try {
-    const pending = api.todoSave(token, snap);
-    if (pending && typeof pending.catch === "function") {
-      pending.catch(function () {
-        // 离线时静默失败，下次保存会整包重试。
-      });
-    }
-  } catch (e) {
-    // 同步异常同样静默。
-  }
+  // 离线 / 同步异常时静默失败，下次保存会整包重试。
+  synckit.pushSilent(api.todoSave(token, snap));
 }
 
 // 返回 false 表示本地写失败（编辑页据此提示保存失败）；其余情况返回快照。
@@ -331,28 +307,20 @@ function save(snap) {
  * ------------------------------------------------------------------ */
 
 function sync(token) {
-  const tok = token || session.token();
+  const tok = synckit.resolveToken(token);
   if (!tok) return Promise.resolve(load());
 
   return api
     .todoGet(tok)
     .then(function (body) {
-      let remote = body && body.todo;
-      if (typeof remote === "string") {
-        try {
-          remote = JSON.parse(remote);
-        } catch (e) {
-          remote = null;
-        }
-      }
-      const at = toInt(body && body.at, 0);
+      const u = synckit.unwrapRemote(body, "todo", toInt);
       const local = load();
       const localAt = readAt(local);
 
-      if (isObj(remote) && at > localAt) {
-        const next = normalizeSnapshot(remote);
-        next.updatedAt = at;
-        persist(next, at);
+      if (isObj(u.remote) && u.at > localAt) {
+        const next = normalizeSnapshot(u.remote);
+        next.updatedAt = u.at;
+        persist(next, u.at);
         return load();
       }
 
@@ -536,32 +504,6 @@ function summary(snap) {
  * 任务级便捷写入（编辑页 / 勾选）
  * ------------------------------------------------------------------ */
 
-function upsertTask(task) {
-  const data = load();
-  const source = isObj(task) ? task : {};
-  const id = str(source.id);
-  let index = -1;
-  for (let i = 0; i < data.tasks.length; i += 1) {
-    if (data.tasks[i].id === id) {
-      index = i;
-      break;
-    }
-  }
-
-  if (index >= 0) {
-    data.tasks[index] = normalizeTask(
-      Object.assign({}, data.tasks[index], source)
-    );
-  } else {
-    const fresh = Object.assign({}, source);
-    fresh.id = str(fresh.id) || newId("t_");
-    if (fresh.createdAt == null) fresh.createdAt = Date.now();
-    data.tasks.push(normalizeTask(fresh));
-  }
-
-  return save(data) || load();
-}
-
 function deleteTask(id) {
   const data = load();
   const target = str(id);
@@ -574,11 +516,9 @@ function deleteTask(id) {
 }
 
 module.exports = {
-  STORAGE_KEY: STORAGE_KEY,
   load: load,
   save: save,
   sync: sync,
   summary: summary,
-  upsertTask: upsertTask,
   deleteTask: deleteTask,
 };

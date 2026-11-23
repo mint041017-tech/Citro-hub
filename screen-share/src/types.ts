@@ -160,10 +160,6 @@ export interface SessionDescriptionPayload {
   type: string;
 }
 
-export interface IceResponse {
-  iceServers: IceServer[];
-}
-
 export interface PublicTrack {
   name: string;
   kind: 'video' | 'audio';
@@ -269,6 +265,22 @@ export const ERR = {
   rateLimit: (msg = '操作太频繁') => new ApiError(429, 'rate_limited', msg),
 };
 
+// ── 运行时常量 / 共享判断 ───────────────────────────────────────────────
+
+/** 允许创建的房间模式（与 RoomType 联合类型对齐）。 */
+export const ROOM_TYPES: readonly RoomType[] = ['one_to_many', 'one_to_one', 'multi_party'];
+
+/** 允许发布 / 订阅的 track 名。 */
+export const TRACK_NAMES: readonly string[] = ['screen', 'mic', 'system'];
+
+/** 允许的 track 种类。 */
+export const TRACK_KINDS: readonly string[] = ['video', 'audio'];
+
+/** 是否有画面轨（只开麦不算「正在共享画面」）。 */
+export function tracksHaveScreen(tracks: { name: string }[]): boolean {
+  return tracks.some((t) => t.name === 'screen');
+}
+
 // ── 环境绑定 ────────────────────────────────────────────────────────────
 
 export interface Env {
@@ -295,9 +307,4 @@ export interface Env {
   ROOM_TOKEN_TTL_HOURS: string;
   HOST_GRACE_MINUTES: string;
   CHAT_HISTORY_LIMIT: string;
-}
-
-/** Durable Object 的构造参数（wrangler 注入）。 */
-export interface RoomDurableObjectState {
-  storage: DurableObjectStorage;
 }

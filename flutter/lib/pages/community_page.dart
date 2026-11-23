@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -22,6 +21,7 @@ import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_image.dart';
+import '../widgets/foldable_text.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
@@ -1402,8 +1402,8 @@ class _PostCardState extends State<_PostCard> {
           ),
           if (p.text.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
-              p.text,
+            FoldableText(
+              text: p.text,
               style: context.body(
                 size: CitroType.body,
                 color: c.ink,

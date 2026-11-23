@@ -144,9 +144,6 @@ class CitroMotion {
   static bool get desktopLike =>
       kIsWeb || defaultTargetPlatform == TargetPlatform.windows;
 
-  /// Tab 页切换时长。
-  static Duration get tabLength => desktopLike ? tabDesktop : tab;
-
   /// 共享指示器滑动时长。
   static Duration get indicatorLength =>
       desktopLike ? indicatorDesktop : indicator;

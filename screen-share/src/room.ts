@@ -10,8 +10,8 @@
  * 这个 DO 只搬几 KB 的信令。
  */
 
+import { errorFrom } from './http';
 import {
-  ApiError,
   ERR,
   type ChatMessage,
   type ClientEvent,
@@ -23,6 +23,7 @@ import {
   type Quality,
   type RoomState,
   type ServerEvent,
+  tracksHaveScreen,
 } from './types';
 
 const PERSIST_KEY = 'room';
@@ -32,7 +33,6 @@ interface ConnectionMeta {
   uid: string;
   role: MemberRole;
   name: string;
-  joinedAt: number;
 }
 
 const DEFAULT_QUALITY: Quality = { width: 1280, height: 720, frameRate: 30 };
@@ -162,11 +162,8 @@ export class Room implements DurableObject {
     } catch (e) {
       // ApiError 自带 status / code（满员 409、房间已结束 409、参数错 400…），
       // 必须原样带回去。统一压成 500 会让 Worker 无法把「房间已满」透传给客户端。
-      if (e instanceof ApiError) {
-        return json({ err: e.message, code: e.code }, e.status);
-      }
-      const msg = e instanceof Error ? e.message : String(e);
-      return json({ err: msg }, 500);
+      const { status, body } = errorFrom(e);
+      return json(body, status);
     }
   }
 
@@ -216,7 +213,6 @@ export class Room implements DurableObject {
       uid: string;
       name: string;
       role: MemberRole;
-      connId: string;
     };
     if (this.state.status === 'ended') throw ERR.roomEnded();
     if (!body.uid) throw ERR.badRequest('缺少 uid');
@@ -249,7 +245,7 @@ export class Room implements DurableObject {
   }
 
   private async onMemberLeave(request: Request): Promise<Response> {
-    const body = (await request.json()) as { uid: string; connId?: string };
+    const body = (await request.json()) as { uid: string };
     const m = this.state.members[body.uid];
     if (m) {
       m.online = false;
@@ -289,8 +285,8 @@ export class Room implements DurableObject {
     // 有多路共享的成员，角色提升为 publisher（主持人保持 host）。
     // 只开麦不算 —— 语音是独立能力，观众开麦后仍然是观众，
     // 否则成员列表会把人标成「共享者」，publisherCount 也会虚高。
-    if (this.hasScreen(m.tracks) && m.role === 'viewer') m.role = 'publisher';
-    if (!this.hasScreen(m.tracks) && m.role === 'publisher') m.role = 'viewer';
+    if (tracksHaveScreen(m.tracks) && m.role === 'viewer') m.role = 'publisher';
+    if (!tracksHaveScreen(m.tracks) && m.role === 'publisher') m.role = 'viewer';
     await this.persist();
 
     if (hadNoSession && m.tracks.length > 0) {
@@ -374,9 +370,14 @@ export class Room implements DurableObject {
 
   // ── 画质 / 角色 / 踢人 / 结束 ─────────────────────────────────────────
 
+  /** 校验调用者是主持人；action 用于报错文案（调整画质 / 变更角色 / 踢人）。 */
+  private assertHost(actor: string, action: string): void {
+    if (actor !== this.state.hostUid) throw ERR.forbidden(`只有主持人可以${action}`);
+  }
+
   private async onQuality(request: Request): Promise<Response> {
     const body = (await request.json()) as { uid: string; quality: Quality };
-    if (body.uid !== this.state.hostUid) throw ERR.forbidden('只有主持人可以调整画质');
+    this.assertHost(body.uid, '调整画质');
     const q = sanitizeQuality(body.quality);
     this.state.quality = q;
     await this.persist();
@@ -386,7 +387,7 @@ export class Room implements DurableObject {
 
   private async onRole(request: Request): Promise<Response> {
     const body = (await request.json()) as { actor: string; uid: string; role: MemberRole };
-    if (body.actor !== this.state.hostUid) throw ERR.forbidden('只有主持人可以变更角色');
+    this.assertHost(body.actor, '变更角色');
     const m = this.state.members[body.uid];
     if (!m) throw ERR.badRequest('成员不存在');
     m.role = body.role;
@@ -398,7 +399,7 @@ export class Room implements DurableObject {
 
   private async onKick(request: Request): Promise<Response> {
     const body = (await request.json()) as { actor: string; uid: string };
-    if (body.actor !== this.state.hostUid) throw ERR.forbidden('只有主持人可以踢人');
+    this.assertHost(body.actor, '踢人');
     if (body.uid === this.state.hostUid) throw ERR.badRequest('不能踢出主持人');
     await this.broadcast({ type: 'member_left', uid: body.uid });
     this.closeConnectionsFor(body.uid);
@@ -444,7 +445,6 @@ export class Room implements DurableObject {
       uid: payload.uid,
       role: payload.role,
       name: payload.name,
-      joinedAt: Date.now(),
     };
     server.serializeAttachment(meta as unknown as string);
     this.conns.set(meta.connId, meta);
@@ -615,8 +615,8 @@ export class Room implements DurableObject {
       kind: t.kind,
       ...(t.mid ? { mid: t.mid } : prevMid.get(t.name) ? { mid: prevMid.get(t.name) } : {}),
     }));
-    if (this.hasScreen(m.tracks) && m.role === 'viewer') m.role = 'publisher';
-    if (!this.hasScreen(m.tracks) && m.role === 'publisher') m.role = 'viewer';
+    if (tracksHaveScreen(m.tracks) && m.role === 'viewer') m.role = 'publisher';
+    if (!tracksHaveScreen(m.tracks) && m.role === 'publisher') m.role = 'viewer';
     await this.persist();
 
     // 必须广播 diff：客户端的「停止共享 / 开麦 / 关共享留麦」都只走
@@ -714,11 +714,7 @@ export class Room implements DurableObject {
 
   /** 只算正在发画面的成员。只开麦的观众不算「有人在共享」。 */
   private publisherCount(): number {
-    return Object.values(this.state.members).filter((m) => this.hasScreen(m.tracks)).length;
-  }
-
-  private hasScreen(tracks: PublicTrack[]): boolean {
-    return tracks.some((t) => t.name === 'screen');
+    return Object.values(this.state.members).filter((m) => tracksHaveScreen(m.tracks)).length;
   }
 
   private publicMember(uid: string, self = false): PublicMember | null {
@@ -817,6 +813,3 @@ function clampInt(v: number | undefined, fallback: number, allowed: number[]): n
   const n = typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : fallback;
   return allowed.includes(n) ? n : fallback;
 }
-
-/** 给 Worker 用的类型补充（避免循环 import 的类型断裂）。 */
-export type { IceServer, Member, Quality, RoomType } from './types';

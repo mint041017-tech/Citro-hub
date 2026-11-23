@@ -10,8 +10,6 @@ class SudokuRating {
   const SudokuRating({
     required this.techniqueLevel,
     required this.guesses,
-    required this.branches,
-    required this.backtracks,
     required this.clues,
     required this.tier,
     required this.score,
@@ -19,17 +17,11 @@ class SudokuRating {
 
   final int techniqueLevel;
   final int guesses;
-  final int branches;
-  final int backtracks;
   final int clues;
 
   /// 0 简单 / 1 中等 / 2 困难 / 3 专家。
   final int tier;
   final int score;
-
-  bool atLeast(SudokuDifficulty difficulty) => tier >= difficulty.tier;
-
-  SudokuDifficulty get difficulty => SudokuDifficulty.values[tier];
 
   @override
   String toString() =>
@@ -55,8 +47,6 @@ class SudokuGrader {
       return const SudokuRating(
         techniqueLevel: 6,
         guesses: 0,
-        branches: 0,
-        backtracks: 0,
         clues: 0,
         tier: 3,
         score: 99999,
@@ -76,8 +66,6 @@ class SudokuGrader {
     return SudokuRating(
       techniqueLevel: level,
       guesses: stats.guesses,
-      branches: stats.branches,
-      backtracks: stats.backtracks,
       clues: clues,
       tier: _tierFor(puzzle, score, level, clues),
       score: score,

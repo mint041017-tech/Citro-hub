@@ -39,7 +39,6 @@ class GamePageShell extends StatefulWidget {
   final String note;
   final ValueNotifier<String>? liveProgress;
   final List<Widget> extraHud;
-  final VoidCallback? onNew;
 
   const GamePageShell({
     super.key,
@@ -50,7 +49,6 @@ class GamePageShell extends StatefulWidget {
     required this.note,
     this.liveProgress,
     this.extraHud = const [],
-    this.onNew,
   });
 
   @override
@@ -342,110 +340,6 @@ Future<void> showGameAccount(BuildContext context) async {
       ),
     ),
   );
-}
-
-class GamePill extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? color;
-  const GamePill({
-    super.key,
-    required this.label,
-    required this.value,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.sm(c),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: context.hand(
-              size: CitroType.titleLg,
-              weight: CitroType.strong,
-              color: color ?? c.ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class GameButton extends StatelessWidget {
-  final String label;
-  final String? icon;
-  final VoidCallback? onTap;
-  final bool primary;
-  final bool small;
-
-  const GameButton({
-    super.key,
-    required this.label,
-    this.icon,
-    this.onTap,
-    this.primary = false,
-    this.small = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final fg = primary ? c.accentText : c.ink2;
-    return Pressable(
-      onTap: onTap,
-      scale: .97,
-      borderRadius: BorderRadius.circular(CitroColors.radii.button),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: small ? 12 : 16,
-          vertical: small ? 8 : 10,
-        ),
-        decoration: BoxDecoration(
-          color: primary ? c.accent : c.surface,
-          borderRadius: BorderRadius.circular(CitroColors.radii.button),
-          border: Border.all(color: primary ? c.accent : c.line),
-          boxShadow: primary
-              ? CitroColors.shadows.float(c)
-              : CitroColors.shadows.sm(c),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              AppIcon(
-                strokeSvg(icon!, width: 2.2),
-                size: small ? 13 : 15,
-                color: fg,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: context.body(
-                size: small ? CitroType.small : CitroType.caption,
-                weight: CitroType.strong,
-                color: fg,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class LivePanel extends StatelessWidget {

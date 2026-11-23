@@ -15,6 +15,8 @@ import '../utils/navigation.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard, fmtDuration;
+import 'game_random.dart';
 import 'sudoku/sudoku_board_view.dart';
 import 'sudoku/sudoku_cube_face_view.dart';
 import 'sudoku/sudoku_cube_view.dart';
@@ -135,10 +137,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     super.dispose();
   }
 
-  bool get _isLargeBoard =>
-      _mode?.variant == SudokuVariant.overlap ||
-      _mode?.variant == SudokuVariant.cube3d;
-
   bool _isPhone(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     if (size.shortestSide >= 600) return false;
@@ -248,8 +246,8 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       for (var attempt = 0; attempt < 3; attempt++) {
         final seed = widget.initialSeed != null
             ? widget.initialSeed! + attempt
-            : math.Random().nextInt(1 << 31);
-        puzzle = await SudokuEngine.generateAsync(mode, difficulty, seed: seed);
+            : GameRandom.create().nextInt(1 << 31);
+        puzzle = SudokuEngine.generate(mode, difficulty, seed: seed);
         if (!mounted || _mode != mode || _difficulty != difficulty) return;
         usedSeed = seed;
         if (puzzle.difficultyMet) break;
@@ -959,7 +957,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
     _progress.value = '${mode.title} · ${resume.difficultyLabel} · 正在恢复对局…';
     await Future<void>.delayed(const Duration(milliseconds: 16));
     try {
-      final puzzle = await SudokuEngine.generateAsync(
+      final puzzle = SudokuEngine.generate(
         mode,
         resume.difficulty,
         seed: resume.seed,
@@ -1055,7 +1053,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         : '';
     _progress.value =
         '${mode.title} · ${_difficulty.label}$layerText · '
-        '${gameFmtDuration(_seconds)} · 已填 $filled/$total';
+        '${fmtDuration(_seconds)} · 已填 $filled/$total';
   }
 
   int? _digitFor(LogicalKeyboardKey key) {
@@ -1146,7 +1144,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
   void _openRank() {
     final mode = _mode;
     if (mode == null) return;
-    showGameRank(
+    showGameLeaderboard(
       context,
       game: 'sudoku',
       title: '数独 · $_modeLabel',
@@ -1258,7 +1256,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
         ],
       ),
       if (!puzzle.difficultyMet) const _DifficultyNotice(),
-      if (_isPhone(context) && _isLargeBoard && !_hideLargeNotice)
+      if (_isPhone(context) && _isLargeBoardMode(_mode!) && !_hideLargeNotice)
         _LargeBoardNotice(
           onClose: () => setState(() => _hideLargeNotice = true),
         ),
@@ -1309,10 +1307,10 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       above: above,
       pills: [
         GameScorePill(label: '错误', value: '$_errors/$_maxErrors'),
-        GameScorePill(label: '用时', value: gameFmtDuration(_seconds)),
+        GameScorePill(label: '用时', value: fmtDuration(_seconds)),
         GameScorePill(
           label: '最佳',
-          value: bestSeconds > 0 ? gameFmtDuration(bestSeconds) : '--',
+          value: bestSeconds > 0 ? fmtDuration(bestSeconds) : '--',
         ),
       ],
       actions: [
@@ -1556,7 +1554,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
           title: _win ? '恭喜通关！' : '挑战失败',
           fail: !_win,
           description:
-              '${_win ? '用时 ${gameFmtDuration(_seconds)} · 得分 $_lastScore' : '错误已达 $_maxErrors 次 · 用时 ${gameFmtDuration(_seconds)}'}'
+              '${_win ? '用时 ${fmtDuration(_seconds)} · 得分 $_lastScore' : '错误已达 $_maxErrors 次 · 用时 ${fmtDuration(_seconds)}'}'
               '${puzzle.difficultyMet ? '' : ' · 难度未达标称档'}'
               '${_win && _lastBreakdown != null ? '\n${_lastBreakdown!.detailLabel}' : ''}',
           action: '再来一局',

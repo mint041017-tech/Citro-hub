@@ -1,24 +1,18 @@
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:math' as math;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
-import '../state/app_state.dart';
-import '../theme/app_theme.dart';
-import '../theme/tokens.dart';
-import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
+import 'game_common.dart' show showGameLeaderboard;
 import 'game_ui.dart'
     show
         GameActionButton,
         GameIcons,
-        GameIdentityScope,
-        GameScaffold,
-        GameScorePill,
-        showGameRank;
+        GameScaffold;
+import 'game_web_shell.dart';
 
 /// Web 端用 iframe 装载同一份 liquid2048 资源；桌面 / iPad 与 Web 统一标准骨架。
 class GameLiquidPage extends StatefulWidget {
@@ -28,19 +22,15 @@ class GameLiquidPage extends StatefulWidget {
   State<GameLiquidPage> createState() => _GameLiquidPageState();
 }
 
-class _GameLiquidPageState extends State<GameLiquidPage> {
+class _GameLiquidPageState extends State<GameLiquidPage>
+    with LiquidWebShellState<GameLiquidPage> {
   final String _viewType =
       'citro-liquid-${DateTime.now().microsecondsSinceEpoch}';
   late final web.HTMLIFrameElement _iframe;
   late final JSFunction _messageListener;
   bool _loading = true;
-  bool _submitting = false;
   bool _themeInitialized = false;
   bool _isDark = false;
-  int _score = 0;
-  int _best = 0;
-  List<int> _next = const [];
-  final ValueNotifier<String> _liveProgress = ValueNotifier('开局准备中');
 
   @override
   void initState() {
@@ -89,7 +79,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   @override
   void dispose() {
     web.window.removeEventListener('message', _messageListener);
-    _liveProgress.dispose();
+    disposeLiveProgress();
     super.dispose();
   }
 
@@ -106,64 +96,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
     if (data is! Map || data['__citroLiquid'] != 1) return;
     final type = '${data['type'] ?? ''}';
     if (type == 'live') {
-      _handleLiveState(data);
+      applyLiveState(data);
       return;
     }
     if (type == 'over') {
-      final score = (data['score'] as num?)?.toInt() ?? 0;
-      unawaited(_submitScore(score));
-    }
-  }
-
-  int _asInt(dynamic value) =>
-      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
-
-  void _handleLiveState(Map data) {
-    final progress = '${data['progress'] ?? ''}'.trim();
-    if (progress.isNotEmpty && _liveProgress.value != progress) {
-      _liveProgress.value = progress;
-    }
-    final score = _asInt(data['score']);
-    final best = _asInt(data['best']);
-    final rawNext = data['next'];
-    final next = rawNext is List
-        ? rawNext.map(_asInt).where((v) => v > 0).toList(growable: false)
-        : const <int>[];
-    final changed = score != _score || best != _best || !_sameInts(next, _next);
-    if (changed && mounted) {
-      setState(() {
-        _score = score;
-        _best = best;
-        _next = next;
-      });
-    }
-  }
-
-  bool _sameInts(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-
-  Future<void> _submitScore(int score) async {
-    if (score <= 0) {
-      unawaited(AppState.instance.noteGameRound());
-      return;
-    }
-    if (_submitting) return;
-    _submitting = true;
-    try {
-      final res = await AppState.instance.submitScore('liquid', score);
-      if (!mounted) return;
-      final rank = res['rank'];
-      AppToast.show(
-        context,
-        rank is num && rank > 0 ? '已计入排行榜 · 第 $rank 名' : '成绩已记录',
-      );
-    } finally {
-      _submitting = false;
+      final score = LiquidWebShellState.asInt(data['score']);
+      unawaited(submitLiquidScore(score));
     }
   }
 
@@ -178,17 +116,9 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       title: '咕噜果冻铺',
       rankGame: 'liquid',
       showLive: true,
-      liveProgress: _liveProgress,
+      liveProgress: liveProgress,
       onBack: () => Navigator.maybePop(context),
-      pills: [
-        GameScorePill(label: '分数', value: '$_score'),
-        GameScorePill(label: '最高分', value: '${math.max(_best, _score)}'),
-        GameScorePill(
-          label: '接下来',
-          value: _next.isEmpty ? '—' : _next.join('·'),
-          minWidth: 96,
-        ),
-      ],
+      pills: liquidPills(),
       actions: [
         GameActionButton(
           label: '重开',
@@ -198,7 +128,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         GameActionButton(
           label: '排行榜',
           icon: GameIcons.trophy,
-          onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+          onTap: () => showGameLeaderboard(context, game: 'liquid', title: '咕噜果冻铺'),
         ),
       ],
       boardGap: 12,
@@ -213,57 +143,17 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
             child: Stack(
               children: [
                 Positioned.fill(child: HtmlElementView(viewType: _viewType)),
-                if (_loading) const Positioned.fill(child: _LiquidBoot()),
+                if (_loading)
+                  const Positioned.fill(
+                    child: GameWebLinearBoot(
+                      label: '正在准备果冻铺',
+                      subtitle: '咕噜果冻铺 · 软体合并',
+                    ),
+                  ),
               ],
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字），替代白底转圈。
-class _LiquidBoot extends StatelessWidget {
-  const _LiquidBoot();
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return ColoredBox(
-      color: identity.soft,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 132,
-              height: 4,
-              child: LinearProgressIndicator(
-                minHeight: 4,
-                color: identity.primary,
-                backgroundColor: identity.primary.withAlpha(40),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '正在准备果冻铺',
-              style: context.body(
-                size: CitroType.body,
-                weight: CitroType.strong,
-                color: identity.deep,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '咕噜果冻铺 · 软体合并',
-              style: context.body(
-                size: CitroType.small,
-                color: identity.primaryInk,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

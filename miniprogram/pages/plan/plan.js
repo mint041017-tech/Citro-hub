@@ -119,19 +119,6 @@ function getLunar() {
   }
 }
 
-function initStore(store) {
-  try {
-    if (store && typeof store.ensureInit === "function") {
-      const pending = store.ensureInit();
-      if (pending && typeof pending.catch === "function") {
-        pending.catch(function () {});
-      }
-    }
-  } catch (e) {
-    // 初始化失败时仍继续读本地 summary。
-  }
-}
-
 function lunarInfoFor(lunar, date) {
   const empty = { lunar: "", term: "", festival: "", label: "" };
   if (!lunar || typeof lunar.todayInfo !== "function") return empty;
@@ -305,7 +292,6 @@ function buildTodoView() {
   };
   const store = getTodoStore();
   if (!store || typeof store.summary !== "function") return empty;
-  initStore(store);
 
   let sum = null;
   try {
@@ -391,7 +377,6 @@ function buildLedgerView() {
   };
   const store = getLedgerStore();
   if (!store || typeof store.summary !== "function") return empty;
-  initStore(store);
 
   let sum = null;
   try {
@@ -654,7 +639,6 @@ Page({
       this.setData(buildCountdownView(null, now));
       return;
     }
-    initStore(store);
 
     let result = null;
     try {

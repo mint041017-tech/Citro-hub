@@ -12,7 +12,6 @@ class Sfx {
   static final List<AudioPlayer> _steps = <AudioPlayer>[];
   static final Map<AudioPlayer, double> _baseVolume = <AudioPlayer, double>{};
   static AudioPlayer? _knock;
-  static AudioPlayer? _chime;
   static AudioPlayer? _settle;
   static AudioPlayer? _strand;
   static AudioPlayer? _win;
@@ -28,7 +27,6 @@ class Sfx {
       if (p != null) _steps.add(p);
     }
     _knock = await _tryLoad('knockwater/audio/knock.wav', 0.62);
-    _chime = await _tryLoad('knockwater/audio/chime.wav', 0.5);
     _settle = await _tryLoad('knockwater/audio/settle.wav', 0.5);
     _strand = await _tryLoad('knockwater/audio/strand.wav', 0.55);
     _win = await _tryLoad('knockwater/audio/win.wav', 0.6);
@@ -72,7 +70,6 @@ class Sfx {
     _play(p);
   }
 
-  static void chime() => _play(_chime);
   static void settle() => _play(_settle);
   static void strand() => _play(_strand);
   static void win() => _play(_win);

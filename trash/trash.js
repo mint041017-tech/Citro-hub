@@ -47,7 +47,6 @@ const SESSION_DAYS = 30;
 const QR_TTL = 5 * 60 * 1000; // 扫码登录二维码有效期 5 分钟
 const FEED_MAX = 100; // 每次拉取最新动态条数（数据永久保留）
 const MAX_COMMENTS = 100; // 单帖最多评论
-const MAX_LEN = 200; // 帖子/评论最大字数
 const MAX_IMGS = 3; // 单帖最多配图数
 /* Web AI 只通过本站代理访问 GLM，密钥不会下发到浏览器。 */
 const GLM_API_KEY = envCfg('GLM_API_KEY', '');
@@ -856,9 +855,6 @@ function lanternOpenState() {
     isMidAutumn: !!w /* 活动档期：入口/作答同一窗口 */,
     active: !!w,
   };
-}
-function isZhongqiuDate(date) {
-  return !!lanternWindowForZq(date);
 }
 function lanternWindow() {
   const now = Date.now();
@@ -1732,21 +1728,24 @@ function currentUser(req) {
   }
   return { name: s.name, token: tok };
 }
-function setCookie(res, req, token) {
+function cookieFlags(req) {
   const proto = String((req.headers['x-forwarded-proto'] || '').split(',')[0]).trim();
   const origin = String(req.headers.origin || '');
   /* APK 跨域（origin=https://localhost）需 SameSite=None 才能種 Cookie；網站同源保持 Lax 更安全 */
   const ss = origin && origin !== 'https://chimu-claw.xyz' ? 'None' : 'Lax';
-  let c = 'trash_token=' + token + '; Path=/; HttpOnly; SameSite=' + ss + '; Max-Age=' + SESSION_DAYS * 86400;
-  if (proto === 'https' || ss === 'None') c += '; Secure'; /* SameSite=None 必須 Secure；API 永遠走 HTTPS */
+  const secure = proto === 'https' || ss === 'None'; /* SameSite=None 必須 Secure；API 永遠走 HTTPS */
+  return { ss: ss, secure: secure };
+}
+function setCookie(res, req, token) {
+  const flags = cookieFlags(req);
+  let c = 'trash_token=' + token + '; Path=/; HttpOnly; SameSite=' + flags.ss + '; Max-Age=' + SESSION_DAYS * 86400;
+  if (flags.secure) c += '; Secure';
   res.setHeader('Set-Cookie', c);
 }
 function clearCookie(res, req) {
-  const proto = String((req.headers['x-forwarded-proto'] || '').split(',')[0]).trim();
-  const origin = String(req.headers.origin || '');
-  const ss = origin && origin !== 'https://chimu-claw.xyz' ? 'None' : 'Lax';
-  let c = 'trash_token=; Path=/; HttpOnly; SameSite=' + ss + '; Max-Age=0';
-  if (proto === 'https' || ss === 'None') c += '; Secure'; /* 同上 */
+  const flags = cookieFlags(req);
+  let c = 'trash_token=; Path=/; HttpOnly; SameSite=' + flags.ss + '; Max-Age=0';
+  if (flags.secure) c += '; Secure';
   res.setHeader('Set-Cookie', c);
 }
 
@@ -2168,6 +2167,31 @@ function readBody(req, max) {
     });
   });
 }
+/* 读取请求体并解析为 JSON；体超限/解析失败时按路由约定响应，返回 null。
+   调用方收到 null 后用 `if (res.headersSent) return;` 提前退出，避免重复写响应。 */
+async function readJsonBody(res, req, max, largeMsg, badJsonMsg) {
+  const raw = await readBody(req, max);
+  if (raw == null) {
+    json(res, 413, { err: largeMsg });
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    json(res, 400, { err: badJsonMsg });
+    return null;
+  }
+}
+/* 读取请求体并解析为 JSON；体超限返回 null，解析失败按空对象处理（与原路由行为一致）。 */
+async function readJsonOrEmpty(req, max) {
+  const raw = await readBody(req, max);
+  if (raw == null) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return {};
+  }
+}
 /* 解析 dataURL 图片（前端压缩后以 base64 提交） */
 function parseDataUrl(s) {
   const m = /^data:image\/(jpeg|jpg|png|webp);base64,([a-z0-9+/=\s]+)$/i.exec(String(s || ''));
@@ -2184,24 +2208,25 @@ function parseDataUrl(s) {
 function imgName() {
   return newId() + '.jpg';
 }
+function plain404(res) {
+  res.writeHead(404);
+  res.end('nope');
+}
 function serveImg(req, res, dir, file) {
   if (!/^[A-Za-z0-9_-]+\.jpg$/.test(file)) {
-    res.writeHead(404);
-    res.end('nope');
+    plain404(res);
     return;
   }
   const fp = path.join(dir, file);
   if (!fp.startsWith(dir) || !fs.existsSync(fp)) {
-    res.writeHead(404);
-    res.end('nope');
+    plain404(res);
     return;
   }
   let st;
   try {
     st = fs.statSync(fp);
   } catch (e) {
-    res.writeHead(404);
-    res.end('nope');
+    plain404(res);
     return;
   }
   /* 图片名即内容指纹（上传时随机生成、永不覆盖），可以放心长缓存；
@@ -2256,14 +2281,12 @@ function parseVoiceUrl(s) {
 function serveVoice(req, res, file) {
   const m = /^([A-Za-z0-9_-]+)\.(webm|mp4|m4a|ogg|oga|mp3|wav)$/.exec(file);
   if (!m) {
-    res.writeHead(404);
-    res.end('nope');
+    plain404(res);
     return;
   }
   const fp = path.join(VOICE_DIR, file);
   if (!fp.startsWith(VOICE_DIR) || !fs.existsSync(fp)) {
-    res.writeHead(404);
-    res.end('nope');
+    plain404(res);
     return;
   }
   res.writeHead(200, {
@@ -2283,10 +2306,15 @@ function needAuth(res, me) {
   return true;
 }
 function cleanText(s) {
+  /* 帖子/评论不再截 200 字：只收敛空白。换行必须保留，否则长文的段落
+     会被压成一行；连续空行最多留一行，避免刷屏。 */
   return String(s == null ? '' : s)
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, MAX_LEN);
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t\f\v]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 function newId() {
   /* 文件名用加密随机数，避免被枚举或高并发下互相覆盖。 */
@@ -2711,16 +2739,6 @@ const server = http.createServer(async function (req, res) {
   const query = new URL(req.url, 'http://localhost').searchParams;
   const ip = clientIp(req);
   const me = currentUser(req);
-  const body = function (max) {
-    return readBody(req, max).then(function (raw) {
-      if (raw == null) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (e) {
-        return {};
-      }
-    });
-  };
 
   /* ===== 天气代理：小程序只请求本站备案域名 ===== */
   if (req.method === 'GET' && url === '/api/weather') {
@@ -2895,7 +2913,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 扫码登录：手机端扫码确认（需手机已登录） ===== */
   if (req.method === 'POST' && url === '/api/auth/qr/confirm') {
     if (needAuth(res, me)) return;
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const id = String((b && b.id) || '');
     const q = qrLogins[id];
     if (!q || q.exp < Date.now()) {
@@ -2909,7 +2927,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 扫码登录：桌面端轮询结果（确认后一次性发放会话） ===== */
   if (req.method === 'POST' && url === '/api/auth/qr/poll') {
     if (limited(ip, 'qr-poll', 600, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const id = String((b && b.id) || '');
     const q = qrLogins[id];
     if (!q || q.exp < Date.now()) {
@@ -2952,7 +2970,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 账号：注册（手机号或邮箱 + 昵称 + 密码，邀请码限制已移除） ===== */
   if (req.method === 'POST' && url === '/api/auth/register') {
     if (limited(ip, 'auth', 8, 60000)) return json(res, 429, { err: '尝试太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const pw = String((b && b.password) || '');
     const phone = String((b && b.phone) || '').replace(/\D/g, '');
     const email = String((b && b.email) || '')
@@ -2986,7 +3004,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 账号：登录（手机号或邮箱 + 密码） ===== */
   if (req.method === 'POST' && url === '/api/auth/login') {
     if (limited(ip, 'auth', 8, 60000)) return json(res, 429, { err: '尝试太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const account = String((b && (b.account || b.phone || b.email)) || '').trim();
     const pw = String((b && b.password) || '');
     let u = null;
@@ -3019,7 +3037,7 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/auth/name') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'auth', 8, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const name = String((b && b.name) || '').trim();
     if (!NAME_RE.test(name)) return json(res, 400, { err: '昵称需 2-16 位，中英文/数字/下划线' });
     if (name.startsWith('游客') || name === CICI_NAME) return json(res, 400, { err: '该昵称不可用，换一个吧' });
@@ -3075,7 +3093,7 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/auth/profile') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'auth', 12, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const u = findUser(me.name);
     if (!u) return json(res, 401, { err: '请先登录' });
     let newName = u.name;
@@ -3143,7 +3161,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 账号：登出 ===== */
   if (req.method === 'POST' && url === '/api/auth/logout') {
     if (me) {
-      const b = await body();
+      const b = await readJsonOrEmpty(req);
       delete sessions[me.token];
       saveSessions();
       if (b && b.token) removePushToken(me.name, b.token);
@@ -3156,7 +3174,7 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/auth/delete') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'account-delete', 3, 3600000)) return json(res, 429, { err: '操作太频繁，请稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const password = String((b && b.password) || '');
     const u = findUser(me.name);
     if (!u) return json(res, 401, { err: '请先登录' });
@@ -3382,14 +3400,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/auth/avatar') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'avatar', 12, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 8 * 1024 * 1024);
-    if (raw == null) return json(res, 413, { err: '图片太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 8 * 1024 * 1024, '图片太大了', '参数错误');
+    if (res.headersSent) return;
     const buf = parseDataUrl(b && b.img);
     if (!buf) return json(res, 400, { err: '图片格式不正确' });
     if (buf.length > 2 * 1024 * 1024) return json(res, 400, { err: '头像图片过大' });
@@ -3449,14 +3461,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/posts') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'post', 5, 60000)) return json(res, 429, { err: '发得太快啦，歇口气' });
-    const raw = await readBody(req, 20 * 1024 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 20 * 1024 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     const text = cleanText(b && b.text);
     const hasVoice = !!(b && b.voice);
     /* 先做空校验再落盘，避免产生孤儿文件 */
@@ -3572,15 +3578,9 @@ const server = http.createServer(async function (req, res) {
     if (act[2] === 'comment') {
       if (limited(ip, 'comment', 15, 60000)) return json(res, 429, { err: '评论太快啦' });
       if ((p.comments || []).length >= MAX_COMMENTS) return json(res, 400, { err: '这条评论太多啦' });
-      /* ★评论可带图/带语音：与发帖同格式，body 上限同发帖 20MB（旧 body() 仅 16KB，带语音必超） */
-      const raw = await readBody(req, 20 * 1024 * 1024);
-      if (raw == null) return json(res, 413, { err: '内容太大了' });
-      let b;
-      try {
-        b = JSON.parse(raw);
-      } catch (e) {
-        return json(res, 400, { err: '参数错误' });
-      }
+      /* ★评论可带图/带语音：与发帖同格式，body 上限同发帖 20MB（旧默认 16KB，带语音必超） */
+      const b = await readJsonBody(res, req, 20 * 1024 * 1024, '内容太大了', '参数错误');
+      if (res.headersSent) return;
       const text = cleanText(b && b.text);
       const hasVoice = !!(b && b.voice);
       /* 空校验：文字/图片/语音至少一项（先校验后落盘，避免孤儿文件） */
@@ -3771,7 +3771,7 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/report') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'report', 10, 60000)) return json(res, 429, { err: '举报太频繁，请稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const type = String((b && b.type) || '');
     const reason = String((b && b.reason) || '').slice(0, 40);
     const detail = String((b && b.detail) || '')
@@ -3882,14 +3882,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/notes') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'note', 10, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 256 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 256 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     const title = String((b && b.title) || '')
       .replace(/\s+/g, ' ')
       .trim()
@@ -3919,14 +3913,8 @@ const server = http.createServer(async function (req, res) {
 
     if (req.method === 'POST') {
       if (limited(ip, 'note', 10, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-      const raw = await readBody(req, 256 * 1024);
-      if (raw == null) return json(res, 413, { err: '内容太大了' });
-      let b;
-      try {
-        b = JSON.parse(raw);
-      } catch (e) {
-        return json(res, 400, { err: '参数错误' });
-      }
+      const b = await readJsonBody(res, req, 256 * 1024, '内容太大了', '参数错误');
+      if (res.headersSent) return;
       const title = String((b && b.title) || '')
         .replace(/\s+/g, ' ')
         .trim()
@@ -3951,7 +3939,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== ★消息通知：列表（派生自帖子数据，无需额外写入） ===== */
   if (req.method === 'POST' && url === '/api/push/devices') {
     if (needAuth(res, me)) return;
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const current = currentUser(req);
     if (!current || current.token !== me.token || current.name !== me.name) return json(res, 401, { err: '请先登录' });
     let next;
@@ -3968,7 +3956,7 @@ const server = http.createServer(async function (req, res) {
 
   if (req.method === 'DELETE' && url === '/api/push/devices') {
     if (needAuth(res, me)) return;
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     removePushToken(me.name, b && b.token);
     return json(res, 200, { ok: true });
   }
@@ -4130,7 +4118,7 @@ const server = http.createServer(async function (req, res) {
     const st = lanternOpenState();
     if (!st.isMidAutumn) return json(res, 403, { err: '灯谜活动尚未开始或已结束', closed: true });
     if (!st.open) return json(res, 403, { err: '灯谜已收卷（截止 ' + st.closedAfter + '）', closed: true });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const id = b && parseInt(b.id, 10);
     const answer = b && b.answer;
     const riddle = LANTERN_RIDDLES.find(function (r) {
@@ -4184,7 +4172,7 @@ const server = http.createServer(async function (req, res) {
     const st = lanternOpenState();
     if (!st.isMidAutumn) return json(res, 403, { err: '活动尚未开始或已结束', closed: true });
     if (!st.open) return json(res, 403, { err: '已收卷（截止 ' + st.closedAfter + '）', closed: true });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const box = lanternDayBox(st.date);
     const eu = lanternEmojiUser(box, me.name);
     if (eu.current == null) return json(res, 400, { err: '先抽一题' });
@@ -4221,7 +4209,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== ★星座运势：锁定星座（一旦锁定不可改） ===== */
   if (req.method === 'POST' && url === '/api/zodiac') {
     if (limited(ip, 'zodiac-lock', 10, 60000)) return json(res, 429, { err: '操作太频繁' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const sign = String((b && b.sign) || '')
       .trim()
       .toLowerCase();
@@ -4279,7 +4267,7 @@ const server = http.createServer(async function (req, res) {
   }
   if (req.method === 'POST' && url === '/api/play') {
     if (limited(ip, 'playdraw', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const key = playKeyOf(me, b && b.deviceId);
     if (!key) return json(res, 400, { err: '缺少身份标识' });
     const now = Date.now();
@@ -4307,6 +4295,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== ★每日运签：领取/读取当日一签（账号或设备，当日固定，不重抽） ===== */
   /* 节日日：全员固定节日签（内容在前端 FESTIVAL_FORTUNES）；已抽记录迁移为节日签 */
   const DRAW_N = 8; // 与前端 FORTUNES 条数一致
+  const DRAW_SLOTS = 6; // 每个等级 6 支，槽位也随机抽一次
   const FESTIVAL_DATE_MAP = {
     '2025-01-29': 'chunjie',
     '2025-02-12': 'yuanxiao',
@@ -4416,18 +4405,24 @@ const server = http.createServer(async function (req, res) {
     if (fest) return json(res, 200, fest);
     const hit = zodiacDraws[ck];
     if (hit && hit.idx != null) {
+      /* 旧记录没有 slot：补抽一次并落盘，之后当天不再变。 */
+      if (!Number.isInteger(hit.slot) || hit.slot < 0 || hit.slot >= DRAW_SLOTS) {
+        hit.slot = Math.floor(Math.random() * DRAW_SLOTS);
+        saveZodiacDraws();
+      }
       return json(res, 200, {
         idx: hit.idx,
+        slot: hit.slot,
         first: false,
         date: dayStr(),
         transfer: !!hit.transfer,
       });
     }
-    return json(res, 200, { idx: null, first: false, date: dayStr() });
+    return json(res, 200, { idx: null, slot: null, first: false, date: dayStr() });
   }
   if (req.method === 'POST' && url === '/api/draw') {
     if (limited(ip, 'draw', 20, 60000)) return json(res, 429, { err: '操作太频繁' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const zkey = zodiacKeyOf(me, b && b.deviceId);
     if (!zkey) return json(res, 400, { err: '缺少身份标识' });
     const ck = zkey + '|' + dayStr();
@@ -4435,24 +4430,31 @@ const server = http.createServer(async function (req, res) {
     if (fest) return json(res, 200, fest);
     /* 今日已抽：原样返回，绝不重抽 */
     if (zodiacDraws[ck] && zodiacDraws[ck].idx != null) {
+      const hit = zodiacDraws[ck];
+      if (!Number.isInteger(hit.slot) || hit.slot < 0 || hit.slot >= DRAW_SLOTS) {
+        hit.slot = Math.floor(Math.random() * DRAW_SLOTS);
+        saveZodiacDraws();
+      }
       return json(res, 200, {
-        idx: zodiacDraws[ck].idx,
+        idx: hit.idx,
+        slot: hit.slot,
         first: false,
         date: dayStr(),
-        transfer: !!zodiacDraws[ck].transfer,
+        transfer: !!hit.transfer,
       });
     }
     const idx = Math.floor(Math.random() * DRAW_N);
-    zodiacDraws[ck] = { idx: idx, ts: Date.now(), key: zkey };
+    const slot = Math.floor(Math.random() * DRAW_SLOTS);
+    zodiacDraws[ck] = { idx: idx, slot: slot, ts: Date.now(), key: zkey };
     saveZodiacDraws();
-    return json(res, 200, { idx: idx, first: true, date: dayStr() });
+    return json(res, 200, { idx: idx, slot: slot, first: true, date: dayStr() });
   }
   /* ===== ★抽签转运：下签/下下签分享好事后重抽一次 =====
      只允许当天 idx=6（下签）或 7（下下签），每天一次，且只从 0..5 里重抽，
      不能「转运」又转回凶签；节日签不参与。 */
   if (req.method === 'POST' && url === '/api/draw/reroll') {
     if (limited(ip, 'drawreroll', 10, 60000)) return json(res, 429, { err: '操作太频繁' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const zkey = zodiacKeyOf(me, b && b.deviceId);
     if (!zkey) return json(res, 400, { err: '缺少身份标识' });
     const ck = zkey + '|' + dayStr();
@@ -4466,15 +4468,17 @@ const server = http.createServer(async function (req, res) {
       return json(res, 400, { err: '只有下签才需要转运' });
     }
     const idx = Math.floor(Math.random() * 6);
+    const slot = Math.floor(Math.random() * DRAW_SLOTS);
     zodiacDraws[ck] = {
       idx: idx,
+      slot: slot,
       ts: Date.now(),
       key: zkey,
       transfer: true,
       prevIdx: hit.idx,
     };
     saveZodiacDraws();
-    return json(res, 200, { ok: true, idx: idx, transfer: true, prevIdx: hit.idx });
+    return json(res, 200, { ok: true, idx: idx, slot: slot, transfer: true, prevIdx: hit.idx });
   }
 
   /* ===== 每日打卡：连续天数跨端同步 ===== */
@@ -4557,7 +4561,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'checkin', 30, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = await body(16 * 1024);
+    const b = await readJsonOrEmpty(req, 16 * 1024);
     if (b == null) return json(res, 413, { err: '请求太大' });
     let dirty = false;
     /* 首次上云：用客户端已有的本地连续天数做迁移，避免老用户被清零 */
@@ -4646,7 +4650,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'checkin-action', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = await body(16 * 1024);
+    const b = await readJsonOrEmpty(req, 16 * 1024);
     if (b == null) return json(res, 413, { err: '请求太大' });
     const date = String((b && b.date) || '');
     if (!checkinValidDate(date)) return json(res, 400, { err: '日期无效' });
@@ -4712,7 +4716,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'checkin-reflection', 40, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = await body(16 * 1024);
+    const b = await readJsonOrEmpty(req, 16 * 1024);
     if (b == null) return json(res, 413, { err: '请求太大' });
     const date = String((b && b.date) || '');
     if (!checkinValidDate(date)) return json(res, 400, { err: '日期无效' });
@@ -4754,7 +4758,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'home-layout', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body(64 * 1024)) || {};
+      const b = (await readJsonOrEmpty(req, 64 * 1024)) || {};
       const layout = b.layout;
       if (!layout || typeof layout !== 'object') {
         return json(res, 400, { err: '布局数据无效' });
@@ -4787,7 +4791,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'todo', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body(260 * 1024)) || {};
+      const b = (await readJsonOrEmpty(req, 260 * 1024)) || {};
       const todo = b.todo;
       if (!todo || typeof todo !== 'object') {
         return json(res, 400, { err: '待办数据无效' });
@@ -4823,7 +4827,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'calendar', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body(260 * 1024)) || {};
+      const b = (await readJsonOrEmpty(req, 260 * 1024)) || {};
       const calendar = b.calendar;
       if (!calendar || typeof calendar !== 'object') {
         return json(res, 400, { err: '日历数据无效' });
@@ -4856,7 +4860,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'ledger', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body(1100 * 1024)) || {};
+      const b = (await readJsonOrEmpty(req, 1100 * 1024)) || {};
       const ledger = b.ledger;
       if (!ledger || typeof ledger !== 'object') {
         return json(res, 400, { err: '账本数据无效' });
@@ -4893,7 +4897,7 @@ const server = http.createServer(async function (req, res) {
       if (limited(ip, 'mbti', 60, 60000)) {
         return json(res, 429, { err: '操作太频繁' });
       }
-      const b = (await body(240 * 1024)) || {};
+      const b = (await readJsonOrEmpty(req, 240 * 1024)) || {};
       if (!Array.isArray(b.history)) {
         return json(res, 400, { err: '测试历史数据无效' });
       }
@@ -4921,7 +4925,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = (await body()) || {};
+    const b = (await readJsonOrEmpty(req)) || {};
     const c = cardEnsure(bu);
     const d = dayStr();
     const migrate = b.migrate === true;
@@ -4969,7 +4973,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = (await body()) || {};
+    const b = (await readJsonOrEmpty(req)) || {};
     const candidates = cardIdList(b.candidates, 500);
     if (!candidates.length) return json(res, 400, { err: '卡面目录为空' });
     const c = cardEnsure(bu);
@@ -4992,7 +4996,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = (await body()) || {};
+    const b = (await readJsonOrEmpty(req)) || {};
     const candidates = cardIdList(b.candidates, 500);
     if (!candidates.length) return json(res, 400, { err: '卡面目录为空' });
     const before = cardState(bu);
@@ -5011,7 +5015,7 @@ const server = http.createServer(async function (req, res) {
     if (limited(ip, 'cards-grant', 120, 60000)) return json(res, 429, { err: '操作太频繁' });
     const bu = findUser(me.name);
     if (!bu) return json(res, 404, { err: '账号不存在' });
-    const b = (await body()) || {};
+    const b = (await readJsonOrEmpty(req)) || {};
     const source = String(b.source || '');
     const c = cardEnsure(bu);
     const d = dayStr();
@@ -5047,7 +5051,7 @@ const server = http.createServer(async function (req, res) {
     if (needAuth(res, me)) return; /* 未登录直接 401 */
     if (limited(ip, 'astro', 40, 60000)) return json(res, 429, { err: '查询太频繁，歇一会儿再来' });
     const mode = url.endsWith('/natal') ? 'natal' : 'transit';
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     if (!b || typeof b !== 'object') return json(res, 400, { err: '请求格式不正确' });
 
     const natal = sanitizeBirth(b.natal || b);
@@ -5190,7 +5194,7 @@ const server = http.createServer(async function (req, res) {
     if (req.method !== 'PUT' && req.method !== 'POST') {
       return json(res, 405, { err: '支持 GET / PUT / POST / DELETE' });
     }
-    const rb = await body();
+    const rb = await readJsonOrEmpty(req);
     const birth = sanitizeBirth((rb && rb.birth) || rb); /* 兼容 {birth:{...}} 和 直接 {...} 两种提交 */
     if (!birth) return json(res, 400, { err: '出生信息不完整或超出范围（日期/时间/经纬度/时区）' });
     bu.birth = birth;
@@ -5212,7 +5216,7 @@ const server = http.createServer(async function (req, res) {
     if (req.method !== 'PUT' && req.method !== 'POST') {
       return json(res, 405, { err: '支持 GET / PUT / POST' });
     }
-    const rb = await body();
+    const rb = await readJsonOrEmpty(req);
     const cfg = rb && rb.config;
     const rest = Array.isArray(cfg && cfg.rest)
       ? cfg.rest.map(Number).filter(function (d) {
@@ -5310,7 +5314,7 @@ const server = http.createServer(async function (req, res) {
   /* ===== 小游戏：2048 / 记忆卡牌（账号同步 + 全站排行榜） ===== */
   if (req.method === 'POST' && url === '/api/games/score') {
     if (limited(ip, 'games', 40, 60000)) return json(res, 429, { err: '提交太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const key = String((b && b.game) || '');
     if (GAME_IDS.indexOf(key) === -1) return json(res, 400, { err: '未知游戏' });
     const score = Math.floor(Number(b && b.score));
@@ -5416,7 +5420,7 @@ const server = http.createServer(async function (req, res) {
      身份规则与成绩榜一致：登录用户按账号，游客按设备 ID（gid），旧客户端退回昵称。 */
   if (req.method === 'POST' && url === '/api/games/live') {
     if (limited(ip, 'gameslive', 60, 60000)) return json(res, 429, { err: '上报太频繁，稍后再试' });
-    const b = await body();
+    const b = await readJsonOrEmpty(req);
     const game = String((b && b.game) || '');
     if (LIVE_GAMES.indexOf(game) === -1) return json(res, 400, { err: '未知游戏' });
     let id = '',
@@ -5500,14 +5504,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/cook/img') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cookimg', 80, 60000)) return json(res, 429, { err: '上传太频繁，歇口气再试' });
-    const raw = await readBody(req, 12 * 1024 * 1024);
-    if (raw == null) return json(res, 413, { err: '图片太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 12 * 1024 * 1024, '图片太大了', '参数错误');
+    if (res.headersSent) return;
     const buf = parseDataUrl(b && b.img);
     if (!buf) return json(res, 400, { err: '图片格式不正确' });
     if (buf.length > 5 * 1024 * 1024) return json(res, 400, { err: '图片过大（超过 5MB）' });
@@ -5524,14 +5522,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/cook/recipe') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cook', 60, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 256 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 256 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     const out = cookPut(me.name, b && b.recipe);
     if (out.err) return json(res, out.code || 400, { err: out.err });
     return json(res, 200, { ok: true, recipe: cookPubMine(out.rec) });
@@ -5541,14 +5533,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/cook/recipe/delete') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cook', 60, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 8 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 8 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     const id = String((b && b.id) || '');
     const idx = cookRecipes.findIndex(function (r) {
       return r.id === id;
@@ -5585,14 +5571,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/cook/shopping') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cook', 60, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 256 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 256 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     cookShopping[me.name] = cookShoppingClean(b && b.shopping);
     saveCook();
     return json(res, 200, { ok: true, shopping: cookShopping[me.name] });
@@ -5602,14 +5582,8 @@ const server = http.createServer(async function (req, res) {
   if (req.method === 'POST' && url === '/api/cook/fridge') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cook', 60, 60000)) return json(res, 429, { err: '操作太频繁，稍后再试' });
-    const raw = await readBody(req, 256 * 1024);
-    if (raw == null) return json(res, 413, { err: '内容太大了' });
-    let b;
-    try {
-      b = JSON.parse(raw);
-    } catch (e) {
-      return json(res, 400, { err: '参数错误' });
-    }
+    const b = await readJsonBody(res, req, 256 * 1024, '内容太大了', '参数错误');
+    if (res.headersSent) return;
     cookFridge[me.name] = cookFridgeClean(b && b.fridge);
     saveCook();
     return json(res, 200, { ok: true, fridge: cookFridge[me.name] });

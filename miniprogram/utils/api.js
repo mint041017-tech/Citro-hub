@@ -98,14 +98,6 @@ function profile(token, payload) {
   return request("POST", "/api/auth/profile", { data: payload, token });
 }
 
-function updateAvatar(token, dataUrl) {
-  return request("POST", "/api/auth/avatar", {
-    data: { img: dataUrl },
-    token,
-    timeout: 30000,
-  });
-}
-
 function deleteAccount(token, password) {
   return request("POST", "/api/auth/delete", {
     data: { password },
@@ -234,7 +226,6 @@ module.exports = {
   register,
   logout,
   profile,
-  updateAvatar,
   deleteAccount,
   playRecords,
   playDraw,

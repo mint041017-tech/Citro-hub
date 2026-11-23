@@ -64,8 +64,6 @@ module.exports = {
   user,
   save,
   clear,
-  agreement,
   hasAgreed,
   saveAgreement,
-  AGREEMENT_VERSION,
 };

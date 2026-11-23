@@ -297,8 +297,6 @@ class TodoTask {
     return at != null && at.isBefore(DateTime.now());
   }
 
-  int get doneSubtasks => subtasks.where((s) => s.done).length;
-
   /// 三态：待办 / 进行中 / 已完成。
   TodoTaskState get state => done
       ? TodoTaskState.done

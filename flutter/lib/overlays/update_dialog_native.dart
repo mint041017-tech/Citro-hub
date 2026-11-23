@@ -279,9 +279,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       ),
       child: Row(
         children: [
-          Text(
-            current.isEmpty ? '当前版本' : '当前 v$current',
-            style: context.body(size: CitroType.caption, color: c.inkSoft),
+          Flexible(
+            child: Text(
+              current.isEmpty ? '当前版本' : '当前 v$current',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
+            ),
           ),
           const Spacer(),
           Container(
@@ -297,12 +301,16 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             ),
           ),
           const Spacer(),
-          Text(
-            '最新 v${widget.info.version}',
-            style: context.body(
-              size: CitroType.meta,
-              weight: CitroType.medium,
-              color: c.accentInk,
+          Flexible(
+            child: Text(
+              '最新 v${widget.info.version}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.body(
+                size: CitroType.meta,
+                weight: CitroType.medium,
+                color: c.accentInk,
+              ),
             ),
           ),
         ],

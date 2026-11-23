@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../utils/lunar.dart';
 import 'api.dart';
+import 'clock.dart';
 
 class LanternWindow {
   final String date;
@@ -216,7 +217,7 @@ class LanternApi {
 
   /// 活动窗口为中秋 00:00 至次日 03:00（UTC+8）。
   static LanternWindow? currentWindow([DateTime? at]) {
-    final now = (at ?? DateTime.now()).toUtc();
+    final now = (at ?? CitroClock.now()).toUtc();
     for (final entry in kFestivals.entries) {
       if (entry.value != 'zhongqiu') continue;
       final start = DateTime.parse('${entry.key}T00:00:00+08:00');
@@ -231,7 +232,7 @@ class LanternApi {
   }
 
   static String dayKey([DateTime? at]) {
-    final china = (at ?? DateTime.now()).toUtc().add(const Duration(hours: 8));
+    final china = (at ?? CitroClock.now()).toUtc().add(const Duration(hours: 8));
     return '${china.year.toString().padLeft(4, '0')}-'
         '${china.month.toString().padLeft(2, '0')}-'
         '${china.day.toString().padLeft(2, '0')}';

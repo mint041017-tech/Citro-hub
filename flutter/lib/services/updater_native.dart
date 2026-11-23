@@ -270,8 +270,6 @@ class UpdateService {
   static Future<InstalledVersion> installedVersion() =>
       _installed ??= _loadInstalledVersion();
 
-  static void resetInstalledVersionCache() => _installed = null;
-
   static Future<InstalledVersion> _loadInstalledVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();

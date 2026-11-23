@@ -49,8 +49,6 @@ class SudokuCubeFaceMap {
   final Set<int> sharedEdgeCells;
 
   int cellAt(int row, int col) => cells[row * 9 + col];
-
-  bool isShared(int row, int col) => sharedEdgeCells.contains(row * 9 + col);
 }
 
 /// 一个全局 cell 在某个面上的局部坐标；共享边格会有两个 ref。
@@ -154,8 +152,6 @@ class SudokuPuzzle {
 
   bool get isCube3d => variant == SudokuVariant.cube3d;
 
-  bool get isWindmill => windmill;
-
   int get activeCount {
     var n = 0;
     for (final a in active) {
@@ -199,6 +195,17 @@ class SudokuPuzzle {
   bool isActive(int index) =>
       index >= 0 && index < active.length && active[index];
 
+  /// 与 [cell] 同属任一约束单元的其他格子（高亮同行/列/宫用）。
+  Set<int> peersOf(int cell) {
+    final out = <int>{};
+    for (final unit in units) {
+      if (!unit.contains(cell)) continue;
+      out.addAll(unit);
+    }
+    out.remove(cell);
+    return out;
+  }
+
   SudokuPuzzle copyWith({
     SudokuDifficulty? difficulty,
     List<int>? givens,
@@ -230,33 +237,6 @@ class SudokuPuzzle {
       cellCountOverride: cellCountOverride,
     );
   }
-
-  /// 仅用于调试/题库导出的紧凑描述。
-  Map<String, Object?> toJson() => {
-    'variant': variant.name,
-    'difficulty': difficulty.name,
-    'overlap': overlapCount,
-    'windmill': windmill,
-    'rows': rows,
-    'cols': cols,
-    'layers': layers,
-    'cellCount': cellCount,
-    'score': difficultyScore,
-    'difficultyMet': difficultyMet,
-    'solution': solution.join(','),
-    'givens': givens.join(','),
-    'regionOf': regionOf.join(','),
-    'active': active.map((e) => e ? '1' : '0').join(),
-    'grids': [for (final g in grids) '${g.top},${g.left},${g.size}'],
-    'cubeFaces': [
-      for (final f in cubeFaces) '${f.face.name}:${f.cells.join(".")}',
-    ],
-    'cages': [for (final c in cages) '${c.sum}:${c.cells.join('.')}'],
-    'inequalities': [for (final e in inequalities) '${e.a},${e.b}'],
-    'even': (evenCells.toList()..sort()).join(','),
-    'odd': (oddCells.toList()..sort()).join(','),
-    'units': units.length,
-  };
 
   @override
   String toString() =>

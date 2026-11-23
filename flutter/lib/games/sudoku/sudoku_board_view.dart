@@ -129,9 +129,6 @@ class SudokuBoardView extends StatelessWidget {
   final bool paused;
   final bool over;
 
-  bool _active(int index) =>
-      index >= 0 && index < puzzle.active.length ? puzzle.active[index] : true;
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -166,7 +163,7 @@ class SudokuBoardView extends StatelessWidget {
                           layer * puzzle.rows * puzzle.cols +
                           row * puzzle.cols +
                           col;
-                      if (!_active(index)) return;
+                      if (!puzzle.isActive(index)) return;
                       onSelect!(index);
                     },
               child: CustomPaint(
@@ -235,22 +232,8 @@ class _SudokuBoardPainter extends CustomPainter {
   int get _cols => puzzle.cols;
   int get _base => layer * _rows * _cols;
 
-  bool _active(int index) =>
-      index >= 0 && index < puzzle.active.length ? puzzle.active[index] : true;
-
   int? _valueAt(int index) =>
       index >= 0 && index < board.length ? board[index] : 0;
-
-  Set<int> _peers() {
-    final result = <int>{};
-    if (selected < 0) return result;
-    for (final unit in puzzle.units) {
-      if (!unit.contains(selected)) continue;
-      result.addAll(unit);
-    }
-    result.remove(selected);
-    return result;
-  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -283,7 +266,7 @@ class _SudokuBoardPainter extends CustomPainter {
   void _paintCellFills(Canvas canvas) {
     // 杀手盘以笼色为主，选中后不再叠加同行/列/宫与同数字的引导色。
     final guides = puzzle.variant != SudokuVariant.killer;
-    final peers = guides ? _peers() : const <int>{};
+    final peers = guides ? puzzle.peersOf(selected) : const <int>{};
     final selectedValue = guides && selected >= 0
         ? (_valueAt(selected) ?? 0)
         : 0;
@@ -301,7 +284,7 @@ class _SudokuBoardPainter extends CustomPainter {
     for (var row = 0; row < _rows; row++) {
       for (var col = 0; col < _cols; col++) {
         final index = _base + row * _cols + col;
-        if (!_active(index)) continue;
+        if (!puzzle.isActive(index)) continue;
         final value = _valueAt(index) ?? 0;
         var color = colors.surface2;
         if (puzzle.variant == SudokuVariant.killer &&
@@ -380,7 +363,7 @@ class _SudokuBoardPainter extends CustomPainter {
     for (var row = 0; row < _rows; row++) {
       for (var col = 0; col < _cols; col++) {
         final index = _base + row * _cols + col;
-        if (!_active(index)) continue;
+        if (!puzzle.isActive(index)) continue;
         final even = puzzle.evenCells.contains(index);
         final odd = puzzle.oddCells.contains(index);
         if (!even && !odd) continue;
@@ -478,7 +461,7 @@ class _SudokuBoardPainter extends CustomPainter {
     for (var row = 0; row < _rows; row++) {
       for (var col = 0; col < _cols; col++) {
         final index = _base + row * _cols + col;
-        if (!_active(index)) continue;
+        if (!puzzle.isActive(index)) continue;
         final value = _valueAt(index) ?? 0;
         final given = index < puzzle.givens.length
             ? puzzle.givens[index] != 0
@@ -696,16 +679,7 @@ class _SudokuBoardPainter extends CustomPainter {
 
   void _paintKillerCages(Canvas canvas) {
     if (puzzle.cages.isEmpty) return;
-    final cageOf = List<int>.filled(
-      _rows * _cols * _maxLayers,
-      -1,
-      growable: false,
-    );
-    for (var ci = 0; ci < puzzle.cages.length; ci++) {
-      for (final index in puzzle.cages[ci].cells) {
-        if (index >= 0 && index < cageOf.length) cageOf[index] = ci;
-      }
-    }
+    final cageOf = _cageMap();
     final line = Paint()
       ..color = colors.ink.withValues(alpha: .64)
       ..strokeWidth = math.max(1.3, cell * .040)
@@ -713,7 +687,7 @@ class _SudokuBoardPainter extends CustomPainter {
     for (var r = 0; r < _rows; r++) {
       for (var c = 0; c < _cols; c++) {
         final index = _base + r * _cols + c;
-        if (!_active(index)) continue;
+        if (!puzzle.isActive(index)) continue;
         final id = index < cageOf.length ? cageOf[index] : -1;
         if (c == _cols - 1 ||
             index + 1 >= cageOf.length ||

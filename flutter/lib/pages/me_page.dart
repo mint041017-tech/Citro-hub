@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
-import '../checkin/checkin_models.dart';
 import '../data/cards.dart';
 import '../overlays/auth_modal.dart';
 import '../overlays/blocked_users.dart';
@@ -27,7 +26,6 @@ import '../widgets/card_morph.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
-import 'checkin_scroll_page.dart';
 import 'legal_page.dart';
 
 Future<void> showMeWindow(BuildContext context) {
@@ -232,15 +230,6 @@ class MePage extends StatelessWidget {
           heroTag: CitroHero.tagOf('profile', 'me'),
         ),
         const _BlockDivider(),
-        if (CheckinFlags.scrollEnabled) ...[
-          _SettingsRow(
-            icon: AppIcons.book,
-            label: '我的长卷',
-            value: '七天一卷',
-            onTap: () => openCheckinScroll(context),
-          ),
-          const _RowDivider(),
-        ],
         _SettingsRow(
           icon: AppIcons.logout,
           label: '退出登录',

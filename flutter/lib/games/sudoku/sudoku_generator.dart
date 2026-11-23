@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../game_random.dart';
 import 'sudoku_constraints.dart';
 import 'sudoku_grader.dart';
 import 'sudoku_layouts.dart';
@@ -23,7 +24,7 @@ class SudokuGenerator {
     SudokuDifficulty difficulty, {
     int? seed,
   }) {
-    final rnd = math.Random(seed ?? math.Random().nextInt(1 << 31));
+    final rnd = GameRandom.create(seed);
     _Candidate? best;
     final attempts = _attempts(mode);
     for (var attempt = 0; attempt < attempts; attempt++) {

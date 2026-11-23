@@ -184,59 +184,6 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
 // 滚轮选择
 // ---------------------------------------------------------------------------
 
-/// 单列滚轮底部面板，返回选中的序号；取消返回 null。
-Future<int?> showTodoWheel({
-  required BuildContext context,
-  required String title,
-  required int count,
-  required String Function(int index) labelOf,
-  int initial = 0,
-  double height = 260,
-}) {
-  var index = initial.clamp(0, math.max(0, count - 1)).toInt();
-  final controller = FixedExtentScrollController(initialItem: index);
-  return showCitroSheet<int>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      final c = ctx.c;
-      return _WheelShell(
-        title: title,
-        height: height,
-        child: CupertinoPicker(
-          scrollController: controller,
-          itemExtent: 40,
-          looping: false,
-          backgroundColor: Colors.transparent,
-          selectionOverlay: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: c.accent.withAlpha(28),
-              borderRadius: BorderRadius.circular(CitroColors.radii.small),
-              border: Border.all(color: c.accent.withAlpha(70)),
-            ),
-          ),
-          onSelectedItemChanged: (i) => index = i,
-          children: [
-            for (var i = 0; i < count; i++)
-              Center(
-                child: Text(
-                  labelOf(i),
-                  style: ctx.ui(
-                    size: CitroType.title,
-                    weight: CitroType.regular,
-                    color: c.ink,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        onDone: () => Navigator.of(ctx).pop(index),
-      );
-    },
-  );
-}
-
 class _WheelShell extends StatelessWidget {
   final String title;
   final double height;

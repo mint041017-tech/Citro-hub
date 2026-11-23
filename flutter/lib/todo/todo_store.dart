@@ -305,13 +305,6 @@ class TodoStore extends ChangeNotifier {
     return task;
   }
 
-  TodoTask? taskById(String id) {
-    for (final t in _tasks) {
-      if (t.id == id) return t;
-    }
-    return null;
-  }
-
   void updateTask(TodoTask task) {
     final i = _tasks.indexWhere((t) => t.id == task.id);
     if (i < 0) return;
@@ -324,26 +317,12 @@ class TodoStore extends ChangeNotifier {
     unawaited(_save());
   }
 
-  void toggleTask(TodoTask task) {
-    setTaskState(task, task.done ? TodoTaskState.todo : TodoTaskState.done);
-  }
-
   /// 直接设定三态，面板里点击状态按钮时用。
   void setTaskState(TodoTask task, TodoTaskState state) {
     task.done = state == TodoTaskState.done;
     task.doing = state == TodoTaskState.doing;
     task.doneAt = task.done ? DateTime.now() : null;
     unawaited(_save());
-  }
-
-  /// 待办 → 进行中 → 已完成 → 待办。
-  void cycleTaskState(TodoTask task) {
-    final next = switch (task.state) {
-      TodoTaskState.todo => TodoTaskState.doing,
-      TodoTaskState.doing => TodoTaskState.done,
-      TodoTaskState.done => TodoTaskState.todo,
-    };
-    setTaskState(task, next);
   }
 
   /// 标记重点：优先级在 0（普通）与 1（重要）之间切换。
@@ -354,29 +333,6 @@ class TodoStore extends ChangeNotifier {
 
   void toggleSubtask(TodoTask task, TodoSubtask sub) {
     sub.done = !sub.done;
-    unawaited(_save());
-  }
-
-  void addSubtasks(TodoTask task, List<String> titles) {
-    for (final title in titles) {
-      final t = title.trim();
-      if (t.isEmpty) continue;
-      task.subtasks.add(TodoSubtask(id: _newId('s'), title: t));
-    }
-    unawaited(_save());
-  }
-
-  /// 把任务挪到另一天（日程视图拖拽/改期用）。
-  void moveTaskToDay(TodoTask task, DateTime day) {
-    final at = task.scheduledAt(task.dueAt ?? task.remindAt ?? DateTime.now());
-    final h = at?.hour ?? 9;
-    final m = at?.minute ?? 0;
-    final target = DateTime(day.year, day.month, day.day, h, m);
-    if (task.kind == TodoKind.reminder) {
-      task.remindAt = target;
-    } else if (task.kind == TodoKind.task) {
-      task.dueAt = target;
-    }
     unawaited(_save());
   }
 
@@ -476,21 +432,6 @@ class TodoStore extends ChangeNotifier {
   /// 的任务从今日列表里消失。
   List<TodoTask> get allTasks => List.unmodifiable(_tasks);
 
-  List<TodoTask> get openTasks => _tasks.where((t) => !t.done).toList();
-
-  /// 从 [day] 往后 14 天里每天的任务数，用于日程日历。
-  Map<DateTime, List<TodoTask>> monthMap(DateTime month) {
-    final out = <DateTime, List<TodoTask>>{};
-    final first = DateTime(month.year, month.month, 1);
-    final days = DateTime(month.year, month.month + 1, 0).day;
-    for (var i = 0; i < days; i++) {
-      final d = DateTime(first.year, first.month, first.day + i);
-      final list = tasksOn(d);
-      if (list.isNotEmpty) out[d] = list;
-    }
-    return out;
-  }
-
   int doneOn(DateTime day) {
     final d = dayOf(day);
     final done = _tasks
@@ -516,9 +457,6 @@ class TodoStore extends ChangeNotifier {
 
   int get todayDone => doneOn(DateTime.now());
   int get todayTotal => totalOn(DateTime.now());
-  double get todayRate =>
-      todayTotal == 0 ? 0 : (todayDone / todayTotal).clamp(0, 1);
-
   /// 连续完成天数：今天有完成就从今天算，否则从昨天往前算。
   int get streak {
     var cursor = dayOf(DateTime.now());
@@ -543,14 +481,6 @@ class TodoStore extends ChangeNotifier {
           doneOn(today.subtract(Duration(days: i))),
         ),
     ];
-  }
-
-  Map<String, int> listCounts(DateTime day) {
-    final out = <String, int>{};
-    for (final t in tasksOn(day)) {
-      out[t.listId] = (out[t.listId] ?? 0) + (t.done ? 1 : 0);
-    }
-    return out;
   }
 
   // -------------------------------------------------------------------------
@@ -614,13 +544,6 @@ class TodoStore extends ChangeNotifier {
     _moods.sort((a, b) => a.ts.compareTo(b.ts));
     unawaited(_save());
     return entry;
-  }
-
-  void updateMood(MoodEntry entry) {
-    final i = _moods.indexWhere((m) => m.id == entry.id);
-    if (i < 0) return;
-    _moods[i] = entry;
-    unawaited(_save());
   }
 
   void deleteMood(String id) {

@@ -62,13 +62,26 @@ void main() {
     expect(a.kind, b.kind);
   });
 
-  test('连续 6 天能把同等级 6 支签轮完', () {
+  test('指定 slot 时直接取同级对应签，六支都能取到', () {
+    final day = DateTime(2026, 11, 20);
     final names = <String>{};
-    for (var i = 0; i < 6; i++) {
-      final day = DateTime(2026, 11, 20).add(Duration(days: i));
-      names.add(fortuneForDay(3, day).name);
+    for (var slot = 0; slot < 6; slot++) {
+      final fortune = fortuneForDay(3, day, slot: slot);
+      expect(fortune.lv, kFortunes[3].lv);
+      names.add(fortune.name);
     }
     expect(names.length, 6);
+  });
+
+  test('不指定 slot 时不再按日期逐日轮换', () {
+    // 同一支签隔天会重新散列；这里只校验同一天稳定，且不再依赖
+    // 「昨天 slot + 1」这种可预测序列。
+    final day = DateTime(2026, 11, 20);
+    final a = fortuneForDay(3, day);
+    final b = fortuneForDay(3, day.add(const Duration(days: 1)));
+    expect(a.name, isNotEmpty);
+    expect(b.name, isNotEmpty);
+    expect(fortuneForDay(3, day).name, a.name);
   });
 
   test('签池序号落在对应等级的区间里', () {

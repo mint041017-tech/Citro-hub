@@ -56,36 +56,6 @@ class TodoAi {
   }
 
   // -------------------------------------------------------------------------
-  // 整理：一段自然语言 → 多条任务
-  // -------------------------------------------------------------------------
-
-  static const _organizeSystem =
-      '你是待办整理器。只输出严格 JSON，不要代码块，不要解释。'
-      '所有时间使用 24 小时制，日期格式 yyyy-MM-dd HH:mm。';
-
-  static Future<List<TodoDraft>> organize(
-    String text, {
-    List<String> categoryNames = const ['学习', '工作', '运动', '健康'],
-  }) async {
-    final prompt =
-        '''
-把下面这段待办描述整理成任务列表。规则：
-1. 只整理用户明确提到的事，不要新增、不要编造时间。
-2. kind 只能是 reminder（到点提醒）、task（有截止时间）、habit（每周重复）、quick（随手做，无时间）。
-3. 用户没说时间时 kind 用 quick，at 为 null；说"提醒我"用 reminder；说"每天/每周"用 habit，days 写 1-7。
-4. category 只能从这些里选：${categoryNames.join('、')}；都不合适就填空字符串。
-5. subtasks 只在原文已经包含步骤时填写，否则给空数组。
-6. 输出格式：
-{"tasks":[{"title":"","kind":"task","category":"","at":"2026-11-08 18:00","days":[1,3],"time":"20:00","note":"","subtasks":[""]}]}
-
-待办描述：
-$text
-''';
-    final raw = await _complete(prompt, _organizeSystem);
-    return parseDrafts(raw);
-  }
-
-  // -------------------------------------------------------------------------
   // 拆解：一条任务 → 子步骤
   // -------------------------------------------------------------------------
 
@@ -167,38 +137,6 @@ ${task.note.isEmpty ? '' : '补充：${task.note}'}
       _summarySystem,
       maxTokens: 520,
       temperature: .3,
-    );
-    return raw.trim();
-  }
-
-  // -------------------------------------------------------------------------
-  // 建议
-  // -------------------------------------------------------------------------
-
-  static Future<String> suggest({
-    required List<TodoTask> recent,
-    required Map<DateTime, int> doneByDay,
-    required int focusMinutes,
-  }) async {
-    const system =
-        '你是客观的待办分析员。只输出 1 到 2 条具体、可执行的建议，每条一句话，'
-        '必须引用数据作为依据，不写鼓励或空泛的话。';
-    final open = recent.where((t) => !t.done).toList();
-    final overdue = open.where((t) => t.overdue).toList();
-    final buffer = StringBuffer()
-      ..writeln(
-        '近 7 天完成数：${doneByDay.entries.map((e) => '${dayKey(e.key)}=${e.value}').join('，')}',
-      )
-      ..writeln('未完成任务：${open.length} 条，其中已逾期 ${overdue.length} 条')
-      ..writeln('本周专注：$focusMinutes 分钟');
-    if (overdue.isNotEmpty) {
-      buffer.writeln('逾期任务：${overdue.take(5).map((t) => t.title).join('、')}');
-    }
-    final raw = await _complete(
-      '$buffer\n请给出建议。',
-      system,
-      maxTokens: 320,
-      temperature: .4,
     );
     return raw.trim();
   }

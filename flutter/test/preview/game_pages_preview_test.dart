@@ -4,12 +4,15 @@
 //
 // GAME_KEY 留空 = 跑全部游戏（可能因为内存死掉，建议逐个跑）。
 import 'package:citro/games/game_loader.dart';
+import 'package:citro/games/game_random.dart';
 import 'package:citro/games/game_registry.dart';
 import 'package:citro/games/game_ui.dart';
 import 'package:citro/services/prefs.dart';
+import 'package:citro/services/clock.dart';
 import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
+import 'package:citro/widgets/home_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,6 +60,22 @@ void main() {
       ..gid = 'game-pages-preview'
       ..guestName = '视觉测试';
     GameScaffold.liveEnabled = false;
+    // 固定播种：所有游戏初始牌面 / 盘面确定性复现，整页 golden 不随随机种子漂移。
+    GameRandom.debugSeed = 7;
+    // 钉死背景时段图：空卡面时背景原本进程内随机四选一，横屏 / 桌面整页基线会随
+    // 抽图漂移；测试专用，生产 debugTimeAsset 保持 null。phone 基线维持现状不钉。
+    if (_sizeSpec != 'phone') {
+      CitroAmbientBackground.debugTimeAsset = CitroTimeBackground.assets[1];
+      // 冻结时钟：羊了个羊初始帧的用时原本读真实墙钟，跨进程 0.1s/0.4s 抖动；
+      // 与背景图同一思路收口，测试专用。
+      CitroClock.debugNow = DateTime(2026, 6, 18, 21, 30);
+    }
+  });
+
+  tearDownAll(() {
+    GameRandom.debugSeed = null;
+    CitroAmbientBackground.debugTimeAsset = null;
+    CitroClock.debugNow = null;
   });
 
   for (final size in _parseSizes().entries) {

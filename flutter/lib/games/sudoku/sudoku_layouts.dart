@@ -31,23 +31,6 @@ const List<String> kJigsawNineSeeds = [
   '336666666/433000662/433000002/433101822/443111882/444111882/455177882/555777782/555577782',
 ];
 
-/// 八臂雪花模板：中心 3×3 + 8 条臂，每区 9 格且连通。
-const List<String> kSnowflakeSeeds = [
-  '333355444/333555444/338555544/888000664/888000666/288000666/227777611/222777111/222771111',
-  '888811155/888811155/444811155/444000555/444000222/777000222/773336222/773336666/773336666',
-  // 上面两个基础形的 90° 版本，作为独立固定模板（仍只做固定变换，不搜索）。
-  '222288333222888333227888833777000553777000555177000555116666544111666444111664444',
-  '777744488777744488333744488333000888333000111666000111662225111662225555662225555',
-];
-
-/// 与 [kSnowflakeSeeds] 配套的满解（预计算，避免运行时反复重解宫形）。
-const List<String> kSnowflakeSolutions = [
-  '573419628918264375621375894352986741867542139249731586184697253796853412435128967',
-  '573419628918625437469283715825371946137968254681542379352794861246857193794136582',
-  '471283695398465217564972183186759324259348761837126549942517836615834972723691458',
-  '723618495945832617462175983187593264359467821674281359518329746896754132231946578',
-];
-
 List<int> decodeRegionSeed(String seed) {
   final cells = <int>[];
   for (var i = 0; i < seed.length; i++) {
@@ -500,26 +483,6 @@ JigsawLayout randomJigsawLayout(math.Random rnd) {
 List<int> decodeSolution(String seed) => [
   for (final code in seed.codeUnits) code - 0x30,
 ];
-
-/// 雪花模板只做固定模板的旋转/镜像，运行时不做任何宫形搜索。
-/// 当前为 4 个固定条目（两个基础形 + 各自 90° 版本），形状是
-/// 中心 3×3 + 八花瓣（4 重对称）。正方形 9×9 网格不存在严格的 60°
-/// 六重旋转；若产品必须视觉 6 臂，需要另做非对称近似模板。
-/// 满解随模板一起旋转/镜像，再整体做数字置换。
-JigsawLayout randomSnowflakeLayout(math.Random rnd) {
-  final index = rnd.nextInt(kSnowflakeSeeds.length);
-  final turn = rnd.nextInt(8);
-  final regions = transformGrid(
-    decodeRegionSeed(kSnowflakeSeeds[index]),
-    9,
-    turn,
-  );
-  final solution = digitsPermuted(
-    transformGrid(decodeSolution(kSnowflakeSolutions[index]), 9, turn),
-    rnd,
-  );
-  return JigsawLayout(regions: regions, solution: solution);
-}
 
 List<int> digitsPermuted(List<int> grid, math.Random rnd) {
   final digits = [1, 2, 3, 4, 5, 6, 7, 8, 9]..shuffle(rnd);

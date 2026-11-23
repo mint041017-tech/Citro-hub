@@ -912,7 +912,3 @@ FunSign randomFunSign({String? avoidId, math.Random? rng}) {
   }
   return sign;
 }
-
-/// 按签种取该组全部签，签筒里做「这一种还有几支」时用。
-List<FunSign> funSignsOf(String kind) =>
-    kFunSigns.where((s) => s.kind == kind).toList();

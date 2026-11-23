@@ -14,8 +14,10 @@ import { ERR } from './types';
 export interface TrashUser {
   name: string;
   token: string;
-  av?: string;
 }
+
+/** 缓存有效期：创建 / 加入房间不是高频操作，但前端重试和多端同时加入会重复问。 */
+const CACHE_TTL_MS = 60_000;
 
 /** 内存缓存：token → 用户。进程级，够用且没有额外依赖。 */
 const cache = new Map<string, { user: TrashUser; exp: number }>();
@@ -23,7 +25,6 @@ const cache = new Map<string, { user: TrashUser; exp: number }>();
 export async function verifyTrashToken(
   env: { TRASH_API_BASE?: string; TRASH_API_SECRET?: string },
   token: string | null,
-  cacheTtlMs = 60_000,
 ): Promise<TrashUser> {
   if (!token) throw ERR.noAuth();
   const apiBase = env.TRASH_API_BASE;
@@ -49,10 +50,6 @@ export async function verifyTrashToken(
   if (!name) throw ERR.noAuth('登录已失效，请重新登录');
 
   const user: TrashUser = { name, token };
-  cache.set(token, { user, exp: Date.now() + cacheTtlMs });
+  cache.set(token, { user, exp: Date.now() + CACHE_TTL_MS });
   return user;
-}
-
-export function guestUser(token: string): TrashUser {
-  return { name: `guest_${token.slice(0, 6)}`, token };
 }

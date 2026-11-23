@@ -4,7 +4,7 @@
 
 新版 Web、Android / iOS 与 Windows 桌面端共用 `flutter/lib/` 中的 Flutter 页面、游戏和业务逻辑，
 后端继续使用 Node 零依赖 API。Windows 桌面端采用 iPad 同款界面与动效，并增加无边框窗口与右上角悬浮窗控、
-全量资源库与应用内更新；Web 宽屏与其他端共用同一套响应式布局与侧栏导航。根目录的 `index.html` 与 `styles/` 暂时保留为旧版网页，便于对照与回退。
+全量资源库与应用内更新；Web 宽屏与其他端共用同一套响应式布局与侧栏导航。
 
 - 线上站点：<https://chimu-claw.xyz>
 - 新版前端：Flutter Web，`bash tool/build_web.sh` 构建（本地 CanvasKit、裁剪未用渲染器并预压缩）
@@ -41,7 +41,6 @@
 
 - **Web**：Flutter 3.47 原生 Widget，与移动端共享页面和状态；浏览器定位、录音等能力通过条件导入适配
 - **Windows**：Flutter 3.47 Windows 原生构建（Impeller），`window_manager` 无边框窗口，Inno Setup 用户级安装与静默更新；WebView2 运行「极限刹车」
-- **旧版前端**：原生 HTML / CSS / JavaScript，保留在根目录用于对照与回退
 - **后端**：Node.js 内置模块（`http` / `fs` / `crypto`），零第三方依赖；JSON 文件存储 + scrypt 密码哈希 + httpOnly Cookie 会话
 - **Android / iOS**：与 Web 共用 Flutter 原生 Widget 实现，全部页面 / 游戏 / 社区 / 食谱 / 星象均为原生 UI
 
@@ -49,11 +48,6 @@
 
 ```
 Citro/
-├─ index.html                 # 整站单页（HTML + 内联 CSS/JS）
-├─ manifest.json              # PWA manifest
-├─ styles/                    # 11 个外置样式表
-├─ fonts/                     # 本地字体子集（woff2）
-├─ 素材/                       # 站点用到的图片素材（logo / 图标 / Mod 封面 / 猫猫贴纸）
 ├─ trash/                     # 后端
 │  ├─ trash.js                #   Node 零依赖 API 服务（端口 10003）
 │  ├─ config.local.example.json  # 本地密钥配置模板
@@ -67,7 +61,6 @@ Citro/
 │  └─ android/                #   包名 com.chimu.crew、签名与启动资源
 ├─ WIN/                       # Windows 便携版构建产物（不入库）
 ├─ exe/                       # Windows 安装包与 update.json（不入库，上传 OBS）
-├─ kotlin/                    # 旧版 Kotlin WebView 外壳（历史存档，不再发版）
 ├─ devtools/                  # 字体子集、图标、图片压缩、本地静态服务等脚本
 ├─ docs/                      # 设计规范、素材清单、部署清单、发版记录
 └─ APK/                       # 站内提供下载的安装包
@@ -90,10 +83,10 @@ bash tool/build_web.sh
 # 产物：flutter/build/web/，包含本地 CanvasKit、gzip 预压缩文件并已裁剪未用渲染器
 ```
 
-部署时保留服务端 `/trashapi` 与 `/api` 反向代理，并将前端路由回退到 `index.html`。
+部署时保留服务端 `/trashapi` 与 `/api` 反向代理，并将前端路由回退到 Flutter Web 构建产物里的 `index.html`。
 Nginx 请启用 `gzip_static` 并参考 [`docs/nginx-citro-web.conf`](docs/nginx-citro-web.conf) 设置压缩与缓存；
 线上完整 vhost 与 `/trashapi` 反代配置见 [`docs/nginx/`](docs/nginx/)（含修改前备份）。
-Edge 与 Safari 会使用本站 CanvasKit，不再请求 CDN。构建命令不会覆盖根目录的旧版 `index.html`。
+Edge 与 Safari 会使用本站 CanvasKit，不再请求 CDN。
 
 ### 2. Windows 桌面端（开发）
 
@@ -112,26 +105,7 @@ flutter run -d windows
 贪吃蛇用 WASD / 方向键，跳一跳支持空格；成语接龙与飞花令选好输入法候选词后点“接”提交。
 Windows 版使用 iPad 界面，与其他端共用同一套响应式版式。
 
-### 3. 查看旧版前端（可选）
-
-任选一种静态服务器（旧站用根相对路径，必须起 HTTP 服务，直接双击 `index.html` 部分功能不可用）：
-
-```bash
-# Python
-python -m http.server 8019
-
-# 或 Node（任意静态服务器）
-npx serve -l 8019
-```
-
-```powershell
-# 或仓库自带的极简静态服务（Windows，零依赖）
-powershell -NoProfile -ExecutionPolicy Bypass -File devtools/serve.ps1 -Port 8019
-```
-
-打开 <http://127.0.0.1:8019/> 即可。
-
-### 4. 起后端（社区 / 登录 / 食谱 / 星象）
+### 3. 起后端（社区 / 登录 / 食谱 / 星象）
 
 ```bash
 node trash/trash.js
@@ -222,7 +196,7 @@ node build.js release     # 产出 ../APK/Citro-v1.8.0-release.apk
 
 - 任何密钥、签名文件（`密钥/`、`*.jks`、`keystore.properties`、`.env`、`config.local.json`）
 - 线上用户数据（`trash/data/` 下账号、会话、帖子、头像、语音等）
-- 构建产物与缓存（`kotlin/app/build/`、`.gradle*`、`assets/www`、`*.apk` 除 `APK/` 内提供下载的版本）
+- 构建产物与缓存（`.gradle*`、`assets/www`、`*.apk` 除 `APK/` 内提供下载的版本）
 - 第三方大文件下载资源（`小工具/`、`外设驱动/`，体积大且有版权风险，只在服务器上提供）
 - 服务端 AI/星象组件（`zodiac-ai/` Python 星盘引擎、`/api/mimo.php` AI 代理）不在本仓库内，
   因此单独 clone 无法完整复现线上的 AI 星象能力
@@ -233,7 +207,7 @@ node build.js release     # 产出 ../APK/Citro-v1.8.0-release.apk
 - [旧版设计规范](docs/citro-design.md)（手账 Paper Desk，已退役，仅作历史对照）
 - [素材与字体清单](docs/citro-assets.md)
 - [部署上传清单](docs/citro-部署上传清单.md)
-- [Android 发版记录](docs/)（`citro-android-v1.0.*.md`）、[Kotlin 原生版交接](docs/迟暮Crew-Kotlin原生版-交接.md)
+- [Android 发版记录](docs/)（v1.1.3 起，`citro-android-v1.1.3-release.md` … `v1.7.*`）
 - [功能规格](docs/compose/spec/)
 
 ## 说明

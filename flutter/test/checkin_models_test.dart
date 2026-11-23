@@ -50,9 +50,7 @@ void main() {
     });
 
     test('同日期的重复记录不会增加格子（由调用方 Map 保证）', () {
-      final days = {
-        '2026-11-21': _entry('2026-11-21'),
-      };
+      final days = {'2026-11-21': _entry('2026-11-21')};
       expect(buildCheckinVolumes(days.values.toList()), hasLength(1));
       expect(buildCheckinVolumes(days.values.toList()).first.filled, 1);
     });
@@ -140,7 +138,7 @@ void main() {
   });
 
   group('行动映射', () {
-    test('十类签都有兜底行动和按钮', () {
+    test('十类签都有按钮与提示', () {
       for (final kind in [
         'career',
         'study',
@@ -155,7 +153,7 @@ void main() {
       ]) {
         final plan = checkinPlanForKind(kind);
         expect(plan.primaryLabel, isNotEmpty);
-        expect(checkinActionTextFor(kind), isNotEmpty);
+        expect(plan.hint, isNotEmpty);
       }
       expect(checkinPlanForKind('study').type, CheckinActionType.focus);
       expect(checkinPlanForKind('study').thresholdMinutes, 10);
@@ -163,20 +161,11 @@ void main() {
       expect(checkinPlanForKind('idea').opensNotes, isTrue);
       expect(checkinPlanForKind('tiny').hasPrimary, isFalse);
     });
-
-    test('行动文案优先使用签面 / AI 文案', () {
-      expect(
-        checkinActionTextFor('tiny', stepText: ' 给朋友发一句问候 '),
-        '给朋友发一句问候',
-      );
-    });
   });
 
   test('本地字段不会进入服务端快照', () {
-    final entry = _entry('2026-11-21').copyWith(
-      pendingSync: true,
-      actionStartedAt: 123,
-    );
+    final entry = _entry('2026-11-21')
+        .copyWith(pendingSync: true, actionStartedAt: 123);
     final server = entry.toJson(includeLocal: false);
     expect(server.containsKey('pendingSync'), isFalse);
     expect(server.containsKey('actionStartedAt'), isFalse);

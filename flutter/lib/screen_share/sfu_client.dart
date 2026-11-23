@@ -145,7 +145,6 @@ class SfuClient {
   /// 最近一次错误，UI 直接展示。
   final ValueNotifier<String?> lastError = ValueNotifier<String?>(null);
 
-  bool get isPublishing => _publishing;
   String? get sessionId => _sessionId;
 
   /// 共享画面是否带了一路系统声音（视频里的声音，不是麦克风）。
@@ -655,11 +654,6 @@ class SfuClient {
         sdp: local?.sdp ?? answer.sdp ?? '',
       );
     });
-  }
-
-  /// 订阅读卡：把某一路订阅对应的 renderer 清掉（发布者下线时 UI 调用）。
-  void detach(RTCVideoRenderer renderer) {
-    renderer.srcObject = null;
   }
 
   // ── 收尾 ──────────────────────────────────────────────────────────────

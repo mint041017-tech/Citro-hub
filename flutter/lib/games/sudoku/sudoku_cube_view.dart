@@ -141,7 +141,7 @@ class _SudokuCubeViewState extends State<SudokuCubeView> {
                         child: Text(
                           '拖动旋转查看',
                           style: TextStyle(
-                            fontFamily: AppFonts.noto,
+                            fontFamily: AppFonts.rounded,
                             fontFamilyFallback: AppFonts.fallback,
                             fontSize: 11,
                             letterSpacing: .5,
@@ -372,20 +372,9 @@ class _SudokuCubePainter extends CustomPainter {
   final CitroColors colors;
   final _CubeGeometry geometry;
 
-  Set<int> _peers() {
-    final result = <int>{};
-    if (selected < 0) return result;
-    for (final unit in puzzle.units) {
-      if (!unit.contains(selected)) continue;
-      result.addAll(unit);
-    }
-    result.remove(selected);
-    return result;
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
-    final peers = _peers();
+    final peers = puzzle.peersOf(selected);
     final selectedValue = selected >= 0 && selected < board.length
         ? board[selected]
         : 0;
@@ -561,9 +550,9 @@ class _SudokuCubePainter extends CustomPainter {
           final tp = _layoutGlyph(
             '$value',
             TextStyle(
-              fontFamily: AppFonts.noto,
+              fontFamily: AppFonts.rounded,
               fontFamilyFallback: AppFonts.fallback,
-              fontWeight: given ? FontWeight.w700 : FontWeight.w700,
+              fontWeight: FontWeight.w700,
               color: conflict
                   ? colors.stamp
                   : (given ? colors.ink : colors.accentInk),
@@ -591,7 +580,7 @@ class _SudokuCubePainter extends CustomPainter {
       final tp = _layoutGlyph(
         '$n',
         TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontWeight: FontWeight.w700,
           color: colors.ink2,
           height: 1,

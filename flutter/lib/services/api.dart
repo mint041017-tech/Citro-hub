@@ -155,10 +155,7 @@ class Api {
   static Future<Map<String, dynamic>> cardsGrant(String source) =>
       post('/api/cards/grant', {'source': source});
 
-  /// 首页布局按账号同步：四个布局桶一起上传 / 下载。
-  static Future<Map<String, dynamic>> homeLayoutGet() =>
-      get('/api/home/layout');
-
+  /// 首页布局按账号同步：四个布局桶一起上传。
   static Future<Map<String, dynamic>> homeLayoutSave(
     Map<String, Object?> layout,
   ) => post('/api/home/layout', {'layout': layout});
@@ -312,8 +309,6 @@ class Api {
 
   static Future<Map<String, dynamic>> toggleLike(String id) =>
       post('/api/posts/$id/like');
-  static Future<Map<String, dynamic>> toggleHug(String id) =>
-      post('/api/posts/$id/hug');
 
   static Future<Map<String, dynamic>> comment(
     String id, {
@@ -446,12 +441,6 @@ class Api {
         (v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{},
       );
 
-  static Future<Map<String, dynamic>> historyToday({bool force = false}) => get(
-    '/api/history/today',
-    query: force ? {'force': '1'} : null,
-    auth: false,
-  );
-
   static Future<Map<String, dynamic>> cookData() => get('/api/cook');
   static Future<List<Recipe>> cookSquare() async {
     final j = await get('/api/cook/square');
@@ -517,15 +506,6 @@ class Api {
   /// 每日打卡：一次拉回统计与最近记录，减少启动时的并发请求。
   static Future<Map<String, dynamic>> checkinBootstrap({int days = 35}) =>
       get('/api/checkin/bootstrap', query: {'days': '$days'}, auth: true);
-
-  static Future<Map<String, dynamic>> checkinHistory({
-    String? before,
-    int limit = 35,
-  }) => get(
-    '/api/checkin/history',
-    query: {if (before != null) 'before': before, 'limit': '$limit'},
-    auth: true,
-  );
 
   static Future<Map<String, dynamic>> checkinAction({
     required String date,

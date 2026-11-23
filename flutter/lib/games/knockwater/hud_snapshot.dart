@@ -14,7 +14,6 @@ class GameHudSnapshot {
   final int petalCount;
   final bool canUndo;
   final bool charging;
-  final int stars;
   final GameStatus status;
   final LoseReason loseReason;
 
@@ -27,7 +26,6 @@ class GameHudSnapshot {
     required this.petalCount,
     required this.canUndo,
     required this.charging,
-    required this.stars,
     required this.status,
     required this.loseReason,
   });
@@ -42,13 +40,10 @@ class GameHudSnapshot {
       petalCount: engine.petals.length,
       canUndo: engine.canUndo,
       charging: engine.charging,
-      stars: engine.stars,
       status: engine.status,
       loseReason: engine.loseReason,
     );
   }
-
-  bool get knockAvailable => charges >= 3;
 
   @override
   bool operator ==(Object other) {
@@ -61,7 +56,6 @@ class GameHudSnapshot {
         other.petalCount == petalCount &&
         other.canUndo == canUndo &&
         other.charging == charging &&
-        other.stars == stars &&
         other.status == status &&
         other.loseReason == loseReason;
   }
@@ -76,7 +70,6 @@ class GameHudSnapshot {
     petalCount,
     canUndo,
     charging,
-    stars,
     status,
     loseReason,
   );

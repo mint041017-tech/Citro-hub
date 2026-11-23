@@ -188,26 +188,6 @@ const kGameIdentities = <GameIdentity>[
   ),
 ];
 
-/// 各游戏在 [AppState] 里的最佳成绩 key（与排行榜 / 本地最佳一致）。
-const kGameBestKeys = <String, String>{
-  'g2048': '2048',
-  'gmem': 'memory',
-  'gsudoku': 'sudoku',
-  'gnono': 'nono',
-  'gslide': 'slide',
-  'gsnake': 'snake',
-  'gsheep': 'sheep',
-  'gjump': 'jump',
-  'gpeng': 'peng',
-  'gbrake': 'brake',
-  'gidiom': 'idiom',
-  'gfeihua': 'feihua',
-  'gliquid': 'liquid',
-  'gknockwater': 'knockwater',
-};
-
-String bestKeyOf(String key) => kGameBestKeys[key] ?? key;
-
 /// 按 key 取身份；缺省时回退到中性纸色，保证未知游戏不炸。
 GameIdentity identityOf(String key) {
   for (final i in kGameIdentities) {

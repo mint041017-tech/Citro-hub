@@ -65,8 +65,6 @@ class SudokuResume {
 
   String get difficultyLabel => difficulty.label;
 
-  Duration get ttl => sudokuResumeTtl;
-
   bool isExpired(DateTime now) => !now.isBefore(savedAt.add(sudokuResumeTtl));
 
   Duration remaining(DateTime now) {

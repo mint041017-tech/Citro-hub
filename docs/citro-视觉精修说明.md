@@ -109,5 +109,5 @@
 
 ## 5. 发布前提醒
 
-仓库里存在打包副本：`capacitor/www/` 与 `kotlin/app/src/main/assets/www/`（以及历史 `_tmp/apkchk*`）。
-本轮只改了根目录的 `index.html` 与 `styles/citro-refine.css`；打 APK 前需要把这两处同步进 www（沿用现有 `devtools/_tmp/syncwww_*.py` 的同步流程），否则原生端仍是旧视觉。
+当前各端都由 `flutter/` 构建，仓库内已无 WebView 打包副本（历史 `_tmp/apkchk*` 也已清理）。
+本轮只改了根目录的 `index.html` 与 `styles/citro-refine.css`；若日后另建离线包，需要把这两处同步进去（沿用 `devtools/_tmp/syncwww_*.py` 的同步流程），否则原生端仍是旧视觉。

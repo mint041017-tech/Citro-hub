@@ -105,7 +105,7 @@ void main() {
     ),
   );
 
-  testWidgets('duo landscape keeps the two-column home dashboard', (
+  testWidgets('duo landscape keeps the wide bento home dashboard', (
     tester,
   ) async {
     addTearDown(tester.view.reset);
@@ -133,10 +133,14 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    final fish = tester.getTopLeft(find.byType(FishCard));
-    final zodiac = tester.getTopLeft(find.byType(ZodiacCard));
-    // 新默认布局：摸鱼日历在首行右段，星象在它正下方（同一列、更靠右半区）。
-    expect(zodiac.dx, greaterThanOrEqualTo(fish.dx));
+    final fish = tester.getRect(find.byType(FishCard));
+    final zodiac = tester.getRect(find.byType(ZodiacCard));
+    // 宽屏默认栅格：首行是打卡 / 摸鱼 / 天气 / 心情四张小卡，星象是紧随其后的
+    // 12 列通栏整宽大卡（左缘起手、宽度约为摸鱼小卡的 4 倍）；旧版右半列里
+    // 挂在摸鱼日历下方的半宽星象已在「六排布局」提交中移除，这里不再校验左右列序。
+    expect(zodiac.top, greaterThanOrEqualTo(fish.top));
+    expect(zodiac.left, lessThanOrEqualTo(fish.left));
+    expect(zodiac.width, greaterThan(fish.width * 3));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

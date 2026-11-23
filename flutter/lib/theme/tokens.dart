@@ -423,18 +423,6 @@ class AppFonts {
   /// 数字 / 数据读出：Xiaolai Mono（OFL）。
   static const mono = 'XiaolaiMono';
 
-  /// 兼容旧名：正文字体。
-  static const noto = rounded;
-
-  /// 兼容旧名：展示字体。
-  static const kalam = rounded;
-
-  /// 兼容旧名：标题字体。
-  static const zcool = rounded;
-
-  /// 兼容旧名：数字/注释字体。
-  static const caveat = mono;
-
   static const fallback = <String>[
     rounded,
     'Noto Sans SC',

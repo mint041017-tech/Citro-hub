@@ -14,13 +14,14 @@ import '../state/app_state.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import 'game_common.dart' show showGameLeaderboard;
+import 'game_random.dart';
 import 'game_ui.dart'
     show
         GameActionButton,
         GameIcons,
-        GameScaffold,
-        GameScorePill,
-        showGameRank;
+        GameScaffold;
+import 'game_web_shell.dart';
 import 'gliquid_game.dart';
 import 'gliquid_physics.dart';
 import 'gliquid_sfx.dart';
@@ -378,25 +379,17 @@ class _GameLiquidPageState extends State<GameLiquidNativePage>
         showLive: true,
         liveProgress: _liveProgressNotifier,
         onBack: () => popOrHome(context),
-        pills: [
-          GameScorePill(label: '分数', value: LiquidGame.formatScore(game.score)),
-          GameScorePill(
-            label: '最高分',
-            value: LiquidGame.formatScore(math.max(_best, game.score)),
-          ),
-          GameScorePill(
-            label: '接下来',
-            value: game.queue
-                .skip(1)
-                .take(3)
-                .map(
-                  (l) =>
-                      LiquidGame.formatBlobValue(LiquidLevels.valueForLevel(l)),
-                )
-                .join('·'),
-            minWidth: 96,
-          ),
-        ],
+        pills: LiquidWebShellState.liquidPillsFor(
+          score: LiquidGame.formatScore(game.score),
+          best: LiquidGame.formatScore(math.max(_best, game.score)),
+          next: game.queue
+              .skip(1)
+              .take(3)
+              .map(
+                (l) => LiquidGame.formatBlobValue(LiquidLevels.valueForLevel(l)),
+              )
+              .join('·'),
+        ),
         actions: [
           GameActionButton(
             label: '重开',
@@ -406,7 +399,7 @@ class _GameLiquidPageState extends State<GameLiquidNativePage>
           GameActionButton(
             label: '排行榜',
             icon: GameIcons.trophy,
-            onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+            onTap: () => showGameLeaderboard(context, game: 'liquid', title: '咕噜果冻铺'),
           ),
         ],
         boardGap: 12,
@@ -434,7 +427,7 @@ class _GameLiquidPageState extends State<GameLiquidNativePage>
                 onRestart: () => _restart(),
                 onHome: () => _restart(demo: true),
                 onRank: () =>
-                    showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+                    showGameLeaderboard(context, game: 'liquid', title: '咕噜果冻铺'),
                 onPointerDown: _onPointerDown,
                 onPointerMove: _onPointerMove,
                 onPointerUp: _onPointerUp,
@@ -683,7 +676,7 @@ class _LiquidBrand extends StatelessWidget {
         const Text(
           '咕噜果冻铺',
           style: TextStyle(
-            fontFamily: AppFonts.zcool,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 18,
             height: 1.1,
@@ -780,7 +773,7 @@ class _Stat extends StatelessWidget {
       overflow: TextOverflow.fade,
       softWrap: false,
       style: const TextStyle(
-        fontFamily: AppFonts.kalam,
+        fontFamily: AppFonts.rounded,
         fontFamilyFallback: AppFonts.fallback,
         fontSize: 20,
         height: 1.05,
@@ -809,7 +802,7 @@ class _Stat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 9,
             height: 1,
@@ -844,7 +837,7 @@ class _LiquidNextCard extends StatelessWidget {
           Text(
             '接下来',
             style: TextStyle(
-              fontFamily: AppFonts.noto,
+              fontFamily: AppFonts.rounded,
               fontFamilyFallback: AppFonts.bodyFallback,
               fontSize: 9,
               letterSpacing: 0.6,
@@ -884,7 +877,7 @@ class _NextChip extends StatelessWidget {
       child: Text(
         LiquidGame.formatBlobValue(LiquidLevels.valueForLevel(level)),
         style: const TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontFamilyFallback: AppFonts.bodyFallback,
           fontWeight: FontWeight.w700,
           fontSize: 9,
@@ -926,7 +919,7 @@ class _LiquidHint extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontFamily: AppFonts.noto,
+              fontFamily: AppFonts.rounded,
               fontFamilyFallback: AppFonts.bodyFallback,
               fontSize: 11,
               letterSpacing: 0.3,
@@ -966,7 +959,7 @@ class _LiquidToast extends StatelessWidget {
         textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-          fontFamily: AppFonts.noto,
+          fontFamily: AppFonts.rounded,
           fontFamilyFallback: AppFonts.bodyFallback,
           fontSize: 11,
           height: 1.35,
@@ -1003,7 +996,7 @@ class _IntroOverlay extends StatelessWidget {
             Text(
               'SOFT LIQUID MERGE · 软体合并',
               style: TextStyle(
-                fontFamily: AppFonts.noto,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -1033,7 +1026,7 @@ class _IntroOverlay extends StatelessWidget {
                 const Text(
                   '咕噜果冻铺',
                   style: TextStyle(
-                    fontFamily: AppFonts.zcool,
+                    fontFamily: AppFonts.rounded,
                     fontFamilyFallback: AppFonts.bodyFallback,
                     fontSize: 36,
                     height: 1.12,
@@ -1059,7 +1052,7 @@ class _IntroOverlay extends StatelessWidget {
                   child: Text(
                     '把软乎乎的一团投进罐子。\n相同数字会流到一起，\n数字没有上限。',
                     style: TextStyle(
-                      fontFamily: AppFonts.noto,
+                      fontFamily: AppFonts.rounded,
                       fontFamilyFallback: AppFonts.bodyFallback,
                       fontSize: 12,
                       height: 1.65,
@@ -1096,7 +1089,7 @@ class _IntroOverlay extends StatelessWidget {
               '${best > 0 ? '  本机最佳 ${LiquidGame.formatScore(best)}' : ''}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: AppFonts.noto,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: 9,
                 height: 1.5,
@@ -1139,7 +1132,7 @@ class _HowTo extends StatelessWidget {
           child: Text(
             step,
             style: const TextStyle(
-              fontFamily: AppFonts.kalam,
+              fontFamily: AppFonts.rounded,
               fontFamilyFallback: AppFonts.fallback,
               fontSize: 12,
               height: 1,
@@ -1151,7 +1144,7 @@ class _HowTo extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -1162,7 +1155,7 @@ class _HowTo extends StatelessWidget {
         Text(
           caption,
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 9,
             color: _ink.withValues(alpha: 0.6),
@@ -1209,7 +1202,7 @@ class _EndOverlay extends StatelessWidget {
                   child: Text(
                     "TODAY'S JAR",
                     style: TextStyle(
-                      fontFamily: AppFonts.noto,
+                      fontFamily: AppFonts.rounded,
                       fontFamilyFallback: AppFonts.bodyFallback,
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
@@ -1233,7 +1226,7 @@ class _EndOverlay extends StatelessWidget {
                       child: const Text(
                         '新的本机纪录',
                         style: TextStyle(
-                          fontFamily: AppFonts.noto,
+                          fontFamily: AppFonts.rounded,
                           fontFamilyFallback: AppFonts.bodyFallback,
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
@@ -1248,7 +1241,7 @@ class _EndOverlay extends StatelessWidget {
             const Text(
               '罐口溢出来啦',
               style: TextStyle(
-                fontFamily: AppFonts.zcool,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: 32,
                 height: 1.15,
@@ -1260,7 +1253,7 @@ class _EndOverlay extends StatelessWidget {
             Text(
               newBest ? '刷新了本机纪录，这罐果冻很争气。' : '罐口溢出来了，这罐就打烊。',
               style: TextStyle(
-                fontFamily: AppFonts.noto,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: 11,
                 color: _ink.withValues(alpha: 0.66),
@@ -1278,7 +1271,7 @@ class _EndOverlay extends StatelessWidget {
                       Text(
                         '本局得分',
                         style: TextStyle(
-                          fontFamily: AppFonts.noto,
+                          fontFamily: AppFonts.rounded,
                           fontFamilyFallback: AppFonts.bodyFallback,
                           fontSize: 9,
                           letterSpacing: 0.6,
@@ -1292,7 +1285,7 @@ class _EndOverlay extends StatelessWidget {
                         overflow: TextOverflow.fade,
                         softWrap: false,
                         style: const TextStyle(
-                          fontFamily: AppFonts.kalam,
+                          fontFamily: AppFonts.rounded,
                           fontFamilyFallback: AppFonts.fallback,
                           fontSize: 36,
                           height: 1,
@@ -1340,7 +1333,7 @@ class _EndOverlay extends StatelessWidget {
                     child: Text(
                       '本机最佳 ${LiquidGame.formatScore(best)}',
                       style: TextStyle(
-                        fontFamily: AppFonts.noto,
+                        fontFamily: AppFonts.rounded,
                         fontFamilyFallback: AppFonts.bodyFallback,
                         fontSize: 10,
                         color: _ink.withValues(alpha: 0.65),
@@ -1350,7 +1343,7 @@ class _EndOverlay extends StatelessWidget {
                   Text(
                     '下一站 ${LiquidGame.formatBlobValue(nextValue)}',
                     style: TextStyle(
-                      fontFamily: AppFonts.noto,
+                      fontFamily: AppFonts.rounded,
                       fontFamilyFallback: AppFonts.bodyFallback,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -1429,7 +1422,7 @@ class _EndStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontFamily: AppFonts.noto,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.bodyFallback,
             fontSize: 9,
             color: _ink.withValues(alpha: 0.5),
@@ -1439,7 +1432,7 @@ class _EndStat extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            fontFamily: AppFonts.kalam,
+            fontFamily: AppFonts.rounded,
             fontFamilyFallback: AppFonts.fallback,
             fontSize: 15,
             color: _ink,
@@ -1566,7 +1559,7 @@ class _PaperButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: AppFonts.zcool,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: compact ? 12 : 16,
                 letterSpacing: 1,
@@ -1578,7 +1571,7 @@ class _PaperButton extends StatelessWidget {
               Text(
                 trailing!,
                 style: TextStyle(
-                  fontFamily: AppFonts.noto,
+                  fontFamily: AppFonts.rounded,
                   fontSize: compact ? 11 : 15,
                   color: foreground,
                 ),
@@ -1708,7 +1701,7 @@ class _LiquidStagePainter extends CustomPainter {
   _LiquidStagePainter({required this.game, super.repaint});
 
   final LiquidGame game;
-  final math.Random _shakeRng = math.Random();
+  final math.Random _shakeRng = GameRandom.create();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -3308,7 +3301,7 @@ TextPainter _textPainter(
     text: TextSpan(
       text: text,
       style: TextStyle(
-        fontFamily: AppFonts.noto,
+        fontFamily: AppFonts.rounded,
         fontFamilyFallback: AppFonts.bodyFallback,
         fontSize: rounded,
         height: 1,

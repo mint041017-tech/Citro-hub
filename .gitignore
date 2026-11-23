@@ -58,13 +58,6 @@ backups/
 素材/外设驱动/
 
 # ---------- 构建产物 ----------
-kotlin/.gradle/
-kotlin/.gradle-home/
-kotlin/.kotlin/
-kotlin/app/build/
-# 由 kotlin/sync-www.js 在构建时生成的整站副本
-kotlin/app/src/main/assets/www/
-capacitor/android/app/build/
 *.apk
 *.aab
 *.idsig
@@ -129,6 +122,11 @@ flutter/android/.kotlin/
 flutter/android/**/build/
 flutter/.flutter-plugins
 flutter/.flutter-plugins-dependencies
+
+# 本地验证报告与 OBS 回读临时文件
+flutter/_verify_report.md
+flutter/tool/reports/
+tmp_obs/
 devtools/.fontcache/
 
 # ---------- 其他独立项目（不并入 Citro 仓库） ----------

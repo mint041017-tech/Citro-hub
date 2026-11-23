@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'clock.dart';
 import 'prefs.dart';
 
 class FishConfig {
@@ -167,5 +168,5 @@ class FishState {
 
 class FishStateView {
   static String get chipText =>
-      FishState.chipText(DateTime.now(), FishConfig.load());
+      FishState.chipText(CitroClock.now(), FishConfig.load());
 }

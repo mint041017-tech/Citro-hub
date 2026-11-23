@@ -5,6 +5,8 @@
 /// - 同类操作按「日期 + 字段」合并，多次修改只同步最后一次。
 /// - 创建当天记录必须先于行动 / 回签。
 /// - 409 保留本地草稿并带最新 rev 重试；429 不做无限重试。
+library;
+
 import 'dart:convert';
 
 import '../services/api.dart';

@@ -1,24 +1,20 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../services/platform.dart' as platform;
-import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import '../widgets/paper.dart';
 import 'liquid_board_metrics.dart';
+import 'game_common.dart' show showGameLeaderboard;
 import 'game_ui.dart'
     show
         GameActionButton,
         GameIcons,
-        GameIdentityScope,
-        GameScaffold,
-        GameScorePill,
-        showGameRank;
+        GameScaffold;
+import 'game_web_shell.dart';
 
 /// 咕噜果冻铺 Web 版：资源内联进单页 HTML。
 /// 与其它游戏一致，统一走 GameScaffold 标准外壳（顶栏 + HUD + 棋盘 + 操作 + 正在玩），
@@ -30,18 +26,12 @@ class GameLiquidPage extends StatefulWidget {
   State<GameLiquidPage> createState() => _GameLiquidPageState();
 }
 
-class _GameLiquidPageState extends State<GameLiquidPage> {
+class _GameLiquidPageState extends State<GameLiquidPage>
+    with WebBootState<GameLiquidPage>, LiquidWebShellState<GameLiquidPage> {
   InAppWebViewController? _web;
   String? _html;
-  String? _error;
-  bool _loading = true;
-  bool _submitting = false;
   bool _isDark = false;
   bool _themeInitialized = false;
-  int _score = 0;
-  int _best = 0;
-  List<int> _next = const [];
-  final ValueNotifier<String> _liveProgress = ValueNotifier('开局准备中');
 
   static const _baseUrl = 'https://liquid2048.local/';
   static const _disableSelectionScript = '''
@@ -77,12 +67,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   @override
   void dispose() {
     // 正在玩的轮询与离房由 GameScaffold 统一负责（与其它游戏一致）。
-    _liveProgress.dispose();
+    disposeLiveProgress();
     super.dispose();
   }
 
   Future<void> _prepare() async {
-    if (mounted) setState(() => _error = null);
+    if (mounted) resetBoot();
     try {
       final html = await _buildHtml();
       if (!mounted) return;
@@ -90,21 +80,12 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       final web = _web;
       if (web != null) await _loadInto(web, html);
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = '$e';
-        _loading = false;
-      });
+      markBootFailed(e);
     }
   }
 
   Future<void> _loadInto(InAppWebViewController web, String html) async {
-    if (mounted) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
+    resetBoot();
     await web.loadData(
       data: html,
       mimeType: 'text/html',
@@ -144,58 +125,9 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
   }
 
   Future<Map<String, dynamic>> _onScore(Map<String, dynamic> body) async {
-    final score = (body['score'] as num?)?.toInt() ?? 0;
-    if (score <= 0) {
-      unawaited(AppState.instance.noteGameRound());
-      return {'ok': false};
-    }
-    if (_submitting) return {'ok': false};
-    _submitting = true;
-    try {
-      final res = await AppState.instance.submitScore('liquid', score);
-      if (mounted) {
-        final rank = res['rank'];
-        AppToast.show(
-          context,
-          rank is num && rank > 0 ? '已计入排行榜 · 第 $rank 名' : '成绩已记录',
-        );
-      }
-      return {'ok': res['ok'] != false, 'rank': res['rank'] ?? 0};
-    } finally {
-      _submitting = false;
-    }
-  }
-
-  int _asInt(dynamic value) =>
-      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
-
-  void _handleLiveState(Map<String, dynamic> body) {
-    final progress = '${body['progress'] ?? ''}'.trim();
-    if (progress.isNotEmpty && _liveProgress.value != progress) {
-      _liveProgress.value = progress;
-    }
-    final score = _asInt(body['score']);
-    final best = _asInt(body['best']);
-    final rawNext = body['next'];
-    final next = rawNext is List
-        ? rawNext.map(_asInt).where((v) => v > 0).toList(growable: false)
-        : const <int>[];
-    final changed = score != _score || best != _best || !_sameInts(next, _next);
-    if (changed && mounted) {
-      setState(() {
-        _score = score;
-        _best = best;
-        _next = next;
-      });
-    }
-  }
-
-  bool _sameInts(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
+    final score = LiquidWebShellState.asInt(body['score']);
+    final result = await submitLiquidScore(score);
+    return Map<String, dynamic>.from(result);
   }
 
   Future<void> _applyThemeMode() async {
@@ -253,17 +185,9 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       title: '咕噜果冻铺',
       rankGame: 'liquid',
       showLive: true,
-      liveProgress: _liveProgress,
+      liveProgress: liveProgress,
       onBack: () => Navigator.maybePop(context),
-      pills: [
-        GameScorePill(label: '分数', value: '$_score'),
-        GameScorePill(label: '最高分', value: '${math.max(_best, _score)}'),
-        GameScorePill(
-          label: '接下来',
-          value: _next.isEmpty ? '—' : _next.join('·'),
-          minWidth: 96,
-        ),
-      ],
+      pills: liquidPills(),
       actions: [
         GameActionButton(
           label: '重开',
@@ -273,7 +197,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
         GameActionButton(
           label: '排行榜',
           icon: GameIcons.trophy,
-          onTap: () => showGameRank(context, game: 'liquid', title: '咕噜果冻铺'),
+          onTap: () => showGameLeaderboard(context, game: 'liquid', title: '咕噜果冻铺'),
         ),
       ],
       boardGap: 12,
@@ -333,7 +257,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
                   final body = args.isNotEmpty && args.first is Map
                       ? Map<String, dynamic>.from(args.first as Map)
                       : <String, dynamic>{};
-                  _handleLiveState(body);
+                  applyLiveState(body);
                   return true;
                 },
               );
@@ -343,7 +267,7 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
               }
             },
             onLoadStop: (controller, _) {
-              if (mounted) setState(() => _loading = false);
+              markBootReady();
               unawaited(
                 controller.evaluateJavascript(source: _disableSelectionScript),
               );
@@ -352,18 +276,26 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
             },
             onReceivedError: (_, request, error) {
               if (!mounted || request.isForMainFrame != true) return;
-              setState(() {
-                _error = error.description;
-                _loading = false;
-              });
+              markBootFailed(error.description);
             },
           ),
         ),
-        if (_loading && _error == null)
-          const Positioned.fill(child: _LiquidBoot()),
-        if (_error != null)
+        if (loading && bootError == null)
+          const Positioned.fill(
+            child: GameWebLinearBoot(
+              label: '正在准备果冻铺',
+              subtitle: '咕噜果冻铺 · 软体合并',
+            ),
+          ),
+        if (bootError != null)
           Positioned.fill(
-            child: _LiquidBootError(message: _error!, onRetry: _retry),
+            child: GameWebBootError(
+              title: '果冻铺没有开门',
+              message: bootError!,
+              retryLabel: '重试',
+              onRetry: _retry,
+              messageMaxLines: 3,
+            ),
           ),
       ],
     );
@@ -378,99 +310,6 @@ class _GameLiquidPageState extends State<GameLiquidPage> {
       child: Text(
         '咕噜果冻铺',
         style: context.heading(size: CitroType.titleLg, color: c.ink),
-      ),
-    );
-  }
-}
-
-/// 加载态：身份色进度屏（浅色端底 + 主色进度条 + 深色端文字），替代白底转圈。
-class _LiquidBoot extends StatelessWidget {
-  const _LiquidBoot();
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return ColoredBox(
-      color: identity.soft,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 132,
-              height: 4,
-              child: LinearProgressIndicator(
-                minHeight: 4,
-                color: identity.primary,
-                backgroundColor: identity.primary.withAlpha(40),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '正在准备果冻铺',
-              style: context.body(
-                size: CitroType.body,
-                weight: CitroType.strong,
-                color: identity.deep,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '咕噜果冻铺 · 软体合并',
-              style: context.body(
-                size: CitroType.small,
-                color: identity.primaryInk,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 错误态：身份色底 + 主色实底按钮（按钮文字走 identity.onPrimary）。
-class _LiquidBootError extends StatelessWidget {
-  const _LiquidBootError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return ColoredBox(
-      color: identity.soft,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '果冻铺没有开门',
-                style: context.heading(
-                  size: CitroType.titleLg,
-                  color: identity.deep,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                message,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: context.body(
-                  size: CitroType.caption,
-                  color: identity.primaryInk,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 14),
-              GameActionButton(label: '重试', primary: true, onTap: onRetry),
-            ],
-          ),
-        ),
       ),
     );
   }

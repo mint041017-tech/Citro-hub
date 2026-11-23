@@ -7,7 +7,9 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_identity.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
 
 /// 2048 —— 1:1 复刻原版 Web：index.html 1745 行区 + styles/citro-games.css 第 7 节
 /// 移动端实测（390×844）：棋盘 335.39×335.39、cell 74.09、gap 7、pad 8、tile 圆角 10。
@@ -27,7 +29,7 @@ class _Tile {
 }
 
 class _Game2048PageState extends State<Game2048Page> {
-  final math.Random _rnd = math.Random();
+  final math.Random _rnd = GameRandom.create();
   final List<_Tile> _tiles = [];
   int _nextId = 1;
   List<_Tile>? _undoTiles;
@@ -37,7 +39,6 @@ class _Game2048PageState extends State<Game2048Page> {
   bool _over = false;
   bool _won = false;
   bool _submitted = false;
-  final _progress = ValueNotifier<String>('分数 0');
   final _focus = FocusNode();
 
   @override
@@ -49,7 +50,6 @@ class _Game2048PageState extends State<Game2048Page> {
 
   @override
   void dispose() {
-    _progress.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -66,7 +66,7 @@ class _Game2048PageState extends State<Game2048Page> {
   void _newGame() {
     _tiles
       ..clear()
-      ..addAll(_tilesFromGrid(List.filled(16, 0), animate: false));
+      ..addAll(_tilesFromGrid(List.filled(16, 0)));
     _score = 0;
     _over = false;
     _won = false;
@@ -75,12 +75,11 @@ class _Game2048PageState extends State<Game2048Page> {
     _undoScore = null;
     _spawn();
     _spawn();
-    _progress.value = '分数 $_score';
     setState(() {});
     _focus.requestFocus();
   }
 
-  List<_Tile> _tilesFromGrid(List<int> g, {bool animate = true}) {
+  List<_Tile> _tilesFromGrid(List<int> g) {
     final out = <_Tile>[];
     for (var i = 0; i < 16; i++) {
       if (g[i] != 0) out.add(_Tile(_nextId++, g[i], i));
@@ -163,7 +162,6 @@ class _Game2048PageState extends State<Game2048Page> {
       t.pop = false;
     }
     _spawn();
-    _progress.value = '分数 $_score';
     if (!_canMove()) _over = true;
     if (_score > _best) {
       _best = _score;
@@ -207,7 +205,6 @@ class _Game2048PageState extends State<Game2048Page> {
       _undoTiles = null;
       _undoScore = null;
       _over = false;
-      _progress.value = '分数 $_score';
     });
   }
 
@@ -251,7 +248,7 @@ class _Game2048PageState extends State<Game2048Page> {
         onUndo: _undo,
         onNew: _newGame,
         onRank: () =>
-            showGameRank(context, game: '2048', title: '2048', aiSplit: true),
+            showGameLeaderboard(context, game: '2048', title: '2048', aiSplit: true),
       ),
     );
   }

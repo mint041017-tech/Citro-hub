@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/paper.dart';
 import '../game_ui.dart';
+import '../game_common.dart' show fmtDuration;
 import 'sudoku_modes.dart';
 import 'sudoku_resume.dart';
 import '../game_theme.dart';
@@ -309,7 +310,7 @@ class _ResumeCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '已填 $filled/${resume.board.length} · '
-                  '用时 ${gameFmtDuration(resume.seconds)}',
+                  '用时 ${fmtDuration(resume.seconds)}',
                   style: context.body(size: 10, color: c.inkSoft),
                 ),
               ],
@@ -611,7 +612,7 @@ class _CompactModeCard extends StatelessWidget {
             children: [
               for (final d in mode.difficulties)
                 _StartChip(
-                  label: mode.difficulties.length == 1 ? d.label : d.label,
+                  label: d.label,
                   compact: true,
                   onTap: () => onStart(mode, d),
                 ),
@@ -751,7 +752,6 @@ class _VariantGlyph extends StatelessWidget {
           ink: c.ink2,
           accent: c.accent,
           soft: c.line2,
-          paper: c.surface2,
         ),
       ),
     );
@@ -766,7 +766,6 @@ class _GlyphPainter extends CustomPainter {
     required this.ink,
     required this.accent,
     required this.soft,
-    required this.paper,
   });
 
   final SudokuVariant variant;
@@ -775,7 +774,6 @@ class _GlyphPainter extends CustomPainter {
   final Color ink;
   final Color accent;
   final Color soft;
-  final Color paper;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1057,6 +1055,5 @@ class _GlyphPainter extends CustomPainter {
       old.overlapCount != overlapCount ||
       old.ink != ink ||
       old.accent != accent ||
-      old.soft != soft ||
-      old.paper != paper;
+      old.soft != soft;
 }

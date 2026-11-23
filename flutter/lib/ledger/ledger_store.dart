@@ -87,8 +87,6 @@ class LedgerStore extends ChangeNotifier {
     return _otherCategory(fallbackKind);
   }
 
-  LedgerCategory otherCategory(LedgerKind kind) => _otherCategory(kind);
-
   // -------------------------------------------------------------------------
   // 初始化与持久化
   // -------------------------------------------------------------------------
@@ -423,15 +421,6 @@ class LedgerStore extends ChangeNotifier {
     var total = 0;
     for (final entry in entriesOnDay(day)) {
       if (entry.kind == LedgerKind.expense) total += entry.amountCents;
-    }
-    return total;
-  }
-
-  int todayIncome([DateTime? now]) {
-    final day = now ?? DateTime.now();
-    var total = 0;
-    for (final entry in entriesOnDay(day)) {
-      if (entry.kind == LedgerKind.income) total += entry.amountCents;
     }
     return total;
   }

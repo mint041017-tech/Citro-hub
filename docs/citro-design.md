@@ -193,7 +193,7 @@ $cfg=@{outDir=(Join-Path (Get-Location).Path '_tmp\team\<你的名字>'); port=9
 - **圆角体系**：页面卡 22 / 浮层 24 / popover 20 / 内嵌 14 / 小件 10。
 - **短屏**：`max-height:880px` 起小游戏入口压到 2 行，`max-height:770px` 压到 1 行，保证 Mod 卡完整。
 - **审计回修**：天气卡小字对比度、深色「我的」、auth 遮罩/阴影、空态居中、手机发帖色带、分类 chips 渐隐均已在此层处理。
-- 详细说明见 `docs/citro-视觉精修说明.md`；发布 APK 前需把 `citro-refine.css` 与 `index.html` 的 link 同步进 `capacitor/www/` 等打包副本。
+- 详细说明见 `docs/citro-视觉精修说明.md`；当前各端由 `flutter/` 构建，若日后另建 WebView 离线包，需把 `citro-refine.css` 与 `index.html` 的 link 同步进去。
 
 ---
 

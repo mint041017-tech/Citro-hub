@@ -4,8 +4,6 @@
  * Replace this file (and the rendering layer in app.js) when connecting real APP/web data.
  */
 window.CITRO_DEMO = {
-  brand: "Citro",
-  product: "增长分析",
   scope: "APP + 网页",
   demoAsOf: "2026-10-25",
   defaultRange: "30d",

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -24,27 +23,15 @@ import '../todo/todo_models.dart';
 import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../widgets/cici_chat_kit.dart';
 import '../widgets/cici_composer.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 
-class _ChatMessage {
-  final bool user;
-  String text;
-  bool pending;
-  final String? image;
-  _ChatMessage({
-    required this.user,
-    required this.text,
-    this.pending = false,
-    this.image,
-  });
-}
-
-final List<_ChatMessage> _history = [];
+final List<CiciChatMessage> _history = [];
 
 /// 转运对话同样跟着一次 App 会话走，关掉面板不会丢，退出 App 才清空。
-final List<_ChatMessage> _deedHistory = [];
+final List<CiciChatMessage> _deedHistory = [];
 
 Future<void> showAiChat(
   BuildContext context, {
@@ -81,17 +68,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
   final FocusNode _focus = FocusNode();
-  bool _sending = false;
+  final _session = CiciChatSession(historyLimit: 14);
   bool _deedShared = false;
-  String? _pendingImage;
-  bool _picking = false;
   bool _chatRewarded = false;
   bool _listening = false;
   String _voiceBase = '';
 
   // 转运对话单独一份记录，不把「好事」混进日常 CiCi 历史。
-  List<_ChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
-  String? _error;
+  List<CiciChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
 
   /// 桌面端麦克风按钮的长按说话：按下超过 0.42s 开始听写，松手停止；
   /// 短按仍然只是开关。
@@ -149,7 +133,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
   static const _deedDoneText = '好事收到，转运机会已经到账\n回到签卡，点「再抽一签」看看新运气。';
 
   Future<void> _toggleVoice() async {
-    if (_sending || _picking) return;
+    if (_session.sending || _session.picking) return;
     if (_listening) {
       setState(() => _listening = false);
       // 系统听写的 stop 在某些 ROM 上会一直不回，别让这次点击吊在这里。
@@ -195,7 +179,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
 
   /// 桌面端麦克风机按下：0.42s 后开始听写，松手停止；短按只切换开关。
   void _micDown() {
-    if (_sending || _picking) return;
+    if (_session.sending || _session.picking) return;
     _micLongPressed = false;
     _micTimer?.cancel();
     _micTimer = Timer(const Duration(milliseconds: 420), () {
@@ -213,17 +197,18 @@ class _AiChatSheetState extends State<_AiChatSheet>
   /// [keepInput] 为 true 时（快捷「建议」）发送预设文案，但保留输入框里
   /// 用户已经打了一半的内容，不清空。
   Future<void> _send([String? preset, bool keepInput = false]) async {
-    if (_sending) return;
+    if (_session.sending) return;
     final text = (preset ?? _input.text).trim();
-    final image = preset == null ? _pendingImage : null;
+    final image = preset == null ? _session.pendingImage : null;
     if (text.isEmpty && image == null) return;
     if (!keepInput) _input.clear();
-    _error = null;
-    final user = _ChatMessage(user: true, text: text, image: image);
+    _session.error = null;
+    _session.messages = _messages;
+    final user = _session.addUser(text, image);
     setState(() {
-      _pendingImage = null;
-      _messages.add(user);
-      _sending = true;
+      _session.pendingImage = null;
+      _session.messages.add(user);
+      _session.sending = true;
     });
     _scrollToEnd();
 
@@ -231,15 +216,15 @@ class _AiChatSheetState extends State<_AiChatSheet>
       await _reviewDeed(user);
       return;
     }
-    final assistant = _ChatMessage(user: false, text: '', pending: true);
-    setState(() => _messages.add(assistant));
+    final assistant = _session.addAssistant();
+    setState(() => _session.messages.add(assistant));
     _scrollToEnd();
     await _streamReply(assistant);
   }
 
-  Future<void> _reviewDeed(_ChatMessage user) async {
-    final assistant = _ChatMessage(user: false, text: '', pending: true);
-    setState(() => _messages.add(assistant));
+  Future<void> _reviewDeed(CiciChatMessage user) async {
+    final assistant = _session.addAssistant();
+    setState(() => _session.messages.add(assistant));
     _scrollToEnd();
     try {
       final result = await AiService.reviewGoodDeed(
@@ -263,14 +248,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
       }
       _deedShared = true;
       widget.onGoodDeed?.call();
-      final done = _ChatMessage(
-        user: false,
+      final done = _session.addAssistant(
         text: '${result.reply}\n\n$_deedDoneText',
+        pending: false,
       );
       setState(() {
         assistant.pending = false;
         assistant.text = result.reply;
-        _messages.add(done);
+        _session.messages.add(done);
       });
       unawaited(_recordDeed(user.text, done, image: user.image));
     } on AiException catch (e) {
@@ -286,44 +271,33 @@ class _AiChatSheetState extends State<_AiChatSheet>
         assistant.text = '网络有点不稳，稍后再试。';
       });
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) setState(() => _session.sending = false);
       _scrollToEnd();
     }
   }
 
-  Future<void> _streamReply(_ChatMessage assistant) async {
-    final source = _messages
-        .where((m) => !m.pending && (m.text.isNotEmpty || m.image != null))
-        .map(
-          (m) => <String, dynamic>{
-            'role': m.user ? 'user' : 'assistant',
-            'content': _contentFor(m),
-          },
-        )
-        .toList();
-    final messages = source.length > 14
-        ? source.sublist(source.length - 14)
-        : source;
-    try {
-      await for (final chunk in AiService.streamChat(
-        messages,
-        extraSystem: _systemContext(),
-        persona: AppState.instance.ciciPersona,
-      )) {
+  String _classifyError(Object e) =>
+      e is AiException ? e.message : '网络有点不稳，稍后再试。';
+
+  Future<void> _streamReply(CiciChatMessage assistant) async {
+    _session.messages = _messages;
+    _session.streamFactory = (messages) => AiService.streamChat(
+      messages,
+      extraSystem: _systemContext(),
+      persona: AppState.instance.ciciPersona,
+    );
+    _session.classifyError = _classifyError;
+    await _session.runAssistantStream(
+      assistant,
+      onReplied: () async {
         if (!mounted) return;
-        setState(() {
-          assistant.text += chunk;
-          assistant.pending = false;
-        });
-        _scrollToEnd();
-      }
-      if (!mounted) return;
-      if (assistant.text.isEmpty) {
-        setState(() {
-          assistant.pending = false;
-          assistant.text = '我刚刚走神了，再问我一次吧。';
-        });
-      } else {
+        if (assistant.text.isEmpty) {
+          setState(() {
+            assistant.pending = false;
+            assistant.text = '我刚刚走神了，再问我一次吧。';
+          });
+          return;
+        }
         // CiCi 可以在回复里带上待办、账单、日历标记的指令：按
         // 「待办 → 日历 → 账单」的顺序剥掉指令并落库，再补一行回执。
         final (afterTodo, todoDrafts) = TodoAi.parseReply(assistant.text);
@@ -357,39 +331,14 @@ class _AiChatSheetState extends State<_AiChatSheet>
         } else if (clean.trim().isNotEmpty && clean != assistant.text) {
           setState(() => assistant.text = clean.trim());
         }
-      }
-    } on AiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        assistant.pending = false;
-        assistant.text = e.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        assistant.pending = false;
-        assistant.text = '网络有点不稳，稍后再试。';
-      });
-    } finally {
-      if (mounted) setState(() => _sending = false);
-      _scrollToEnd();
-    }
-  }
-
-  dynamic _contentFor(_ChatMessage message) {
-    if (message.image == null) return message.text;
-    return <Map<String, dynamic>>[
-      if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
-      {
-        'type': 'image_url',
-        'image_url': {'url': message.image},
       },
-    ];
+      onTick: _scrollToEnd,
+    );
   }
 
   Future<void> _pickImage() async {
-    if (_picking || _sending) return;
-    setState(() => _picking = true);
+    if (_session.picking || _session.sending) return;
+    setState(() => _session.picking = true);
     try {
       final raw = await MediaService.pickImageBytes(
         maxWidth: 1600,
@@ -403,21 +352,21 @@ class _AiChatSheetState extends State<_AiChatSheet>
         limit: 300 * 1024,
       );
       if (!mounted) return;
-      setState(() => _pendingImage = MediaService.dataUrl(compressed));
+      setState(() => _session.pendingImage = MediaService.dataUrl(compressed));
     } catch (_) {
       if (mounted) AppToast.show(context, '图片读取失败，换一张试试');
     } finally {
-      if (mounted) setState(() => _picking = false);
+      if (mounted) setState(() => _session.picking = false);
     }
   }
 
   void _clear() {
-    if (_sending) return;
+    if (_session.sending) return;
     setState(() {
       _messages.clear();
-      _error = null;
+      _session.error = null;
       _deedShared = false;
-      _pendingImage = null;
+      _session.pendingImage = null;
     });
   }
 
@@ -490,7 +439,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
   /// 转运分享的好事同步成一条社区动态（图片一并带上），不再写进笔记。
   Future<void> _recordDeed(
     String text,
-    _ChatMessage message, {
+    CiciChatMessage message, {
     String? image,
   }) async {
     final state = AppState.instance;
@@ -746,7 +695,6 @@ class _AiChatSheetState extends State<_AiChatSheet>
         child: ColoredBox(
           // 页面底跟随主题：浅色奶米 / 深色近黑。
           // 写死浅色会让深色模式下整页仍是奶米底，和已经 token 化的
-          // 顶栏 / 气泡 / 输入栏错配（同族 todo_cici 用的是 c.surface）。
           color: c.bg,
           child: SizedBox(
             height: height,
@@ -869,19 +817,18 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   Expanded(
                     child: _messages.isEmpty
                         ? _welcome(context)
-                        : ListView.builder(
+                        : CiciMessageListView(
+                            messages: _messages,
                             controller: _scroll,
                             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                            itemCount: _messages.length,
-                            itemBuilder: (_, i) =>
-                                _bubble(context, _messages[i]),
+                            bubbleBuilder: _bubble,
                           ),
                   ),
-                  if (_error != null)
+                  if (_session.error != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                       child: Text(
-                        _error!,
+                        _session.error!,
                         style: context.body(
                           size: CitroType.small,
                           color: c.stamp,
@@ -1043,7 +990,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
     );
   }
 
-  Widget _bubble(BuildContext context, _ChatMessage m) {
+  Widget _bubble(BuildContext context, CiciChatMessage m) {
     final c = context.c;
     if (m.user) {
       return Align(
@@ -1070,7 +1017,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
               if (m.image != null) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                  child: _LocalImage(
+                  child: CiciLocalImage(
                     dataUrl: m.image!,
                     width: 178,
                     height: 132,
@@ -1134,26 +1081,13 @@ class _AiChatSheetState extends State<_AiChatSheet>
                 border: Border.all(color: c.line),
               ),
               child: m.pending && m.text.isEmpty
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.7,
-                            color: c.accent,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '正在想想…',
-                          style: context.body(
-                            size: CitroType.caption,
-                            color: c.inkSoft,
-                          ),
-                        ),
-                      ],
+                  ? CiciPendingIndicator(
+                      label: '正在想想…',
+                      strokeWidth: 1.7,
+                      labelStyle: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                     )
                   : Text(
                       m.text,
@@ -1179,7 +1113,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_pendingImage != null)
+            if (_session.pendingImage != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                 child: Row(
@@ -1188,11 +1122,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       borderRadius: BorderRadius.circular(
                         CitroColors.radii.small,
                       ),
-                      child: Image.memory(
-                        base64Decode(_pendingImage!.split(',').last),
+                      child: CiciLocalImage(
+                        dataUrl: _session.pendingImage!,
                         width: 44,
                         height: 44,
-                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1206,7 +1139,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => setState(() => _pendingImage = null),
+                      onTap: () => setState(() => _session.pendingImage = null),
                       child: Padding(
                         padding: const EdgeInsets.all(6),
                         child: AppIcon(
@@ -1221,8 +1154,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
             CiciComposer(
               controller: _input,
-              sending: _sending,
-              picking: _picking,
+              sending: _session.sending,
+              picking: _session.picking,
               hint: '和 CiCi 说一句…',
               onSend: () => _send(),
               onPickImage: _pickImage,
@@ -1240,7 +1173,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_pendingImage != null)
+          if (_session.pendingImage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -1252,8 +1185,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         borderRadius: BorderRadius.circular(
                           CitroColors.radii.small,
                         ),
-                        child: _LocalImage(
-                          dataUrl: _pendingImage!,
+                        child: CiciLocalImage(
+                          dataUrl: _session.pendingImage!,
                           width: 58,
                           height: 58,
                         ),
@@ -1262,7 +1195,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         right: -6,
                         top: -6,
                         child: GestureDetector(
-                          onTap: () => setState(() => _pendingImage = null),
+                          onTap: () => setState(() => _session.pendingImage = null),
                           child: Container(
                             width: 20,
                             height: 20,
@@ -1324,7 +1257,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               GestureDetector(
-                onTap: _picking || _sending ? null : _pickImage,
+                onTap: _session.picking || _session.sending ? null : _pickImage,
                 child: Container(
                   width: 34,
                   height: 34,
@@ -1335,7 +1268,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     border: Border.all(color: c.line2),
                   ),
                   child: Center(
-                    child: _picking
+                    child: _session.picking
                         ? SizedBox(
                             width: 15,
                             height: 15,
@@ -1362,7 +1295,7 @@ class _AiChatSheetState extends State<_AiChatSheet>
                       _micLongPressed = false;
                       return;
                     }
-                    if (!_sending && !_picking) _toggleVoice();
+                    if (!_session.sending && !_session.picking) _toggleVoice();
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
@@ -1451,18 +1384,18 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _sending ? null : _send,
+                onTap: _session.sending ? null : _send,
                 child: Container(
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: _sending ? c.accent.withAlpha(100) : c.accent,
+                    color: _session.sending ? c.accent.withAlpha(100) : c.accent,
                     shape: BoxShape.circle,
                     border: Border.all(color: c.line2),
-                    boxShadow: _sending ? null : CitroColors.shadows.sm(c),
+                    boxShadow: _session.sending ? null : CitroColors.shadows.sm(c),
                   ),
                   child: Center(
-                    child: _sending
+                    child: _session.sending
                         ? SizedBox(
                             width: 16,
                             height: 16,
@@ -1706,69 +1639,6 @@ class _PersonaSheetState extends State<_PersonaSheet> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LocalImage extends StatefulWidget {
-  const _LocalImage({
-    required this.dataUrl,
-    required this.width,
-    required this.height,
-  });
-
-  final String dataUrl;
-  final double width;
-  final double height;
-
-  @override
-  State<_LocalImage> createState() => _LocalImageState();
-}
-
-class _LocalImageState extends State<_LocalImage> {
-  Uint8List? _bytes;
-
-  @override
-  void initState() {
-    super.initState();
-    _decode();
-  }
-
-  @override
-  void didUpdateWidget(covariant _LocalImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.dataUrl != widget.dataUrl) _decode();
-  }
-
-  void _decode() {
-    try {
-      final comma = widget.dataUrl.indexOf(',');
-      _bytes = comma < 0
-          ? null
-          : base64Decode(widget.dataUrl.substring(comma + 1));
-    } catch (_) {
-      _bytes = null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    if (_bytes == null) {
-      return Container(
-        width: widget.width,
-        height: widget.height,
-        color: c.surface2,
-        child: Icon(Icons.broken_image_outlined, size: 18, color: c.inkSoft),
-      );
-    }
-    return Image.memory(
-      _bytes!,
-      width: widget.width,
-      height: widget.height,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
-      cacheWidth: (widget.width * 2.2).round(),
     );
   }
 }

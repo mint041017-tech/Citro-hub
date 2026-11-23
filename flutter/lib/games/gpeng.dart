@@ -3,14 +3,16 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../services/game_sfx.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_identity.dart';
+import 'game_jump_common.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
 
 // ---------------------------------------------------------------------------
 // 常量与数据（对应 web index.html gpeng 常量）
@@ -226,16 +228,13 @@ class GamePengPage extends StatefulWidget {
 
 class _GamePengPageState extends State<GamePengPage>
     with SingleTickerProviderStateMixin {
-  final math.Random _rnd = math.Random();
+  final math.Random _rnd = GameRandom.create();
   final Stopwatch _clock = Stopwatch()..start();
   final ValueNotifier<String> _progress = ValueNotifier<String>('得分 0');
   CitroColors _colors = CitroColors.light;
   GameIdentity _identity = identityOf('gpeng');
 
-  late final Ticker _ticker;
-  bool _tickerReady = false;
-  Duration _lastElapsed = Duration.zero;
-  final ValueNotifier<int> _frame = ValueNotifier<int>(0);
+  final GameFrameTicker _frameTicker = GameFrameTicker();
   final ValueNotifier<double> _barProgress = ValueNotifier<double>(0);
   final _PengFrameData _scene = _PengFrameData();
   int _shownScore = -1;
@@ -273,15 +272,13 @@ class _GamePengPageState extends State<GamePengPage>
   void initState() {
     super.initState();
     _newGame(auto: false);
-    _ticker = createTicker(_onFrame)..start();
-    _tickerReady = true;
+    _frameTicker.bind(this, _onFrame);
   }
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _frameTicker.dispose();
     _progress.dispose();
-    _frame.dispose();
     _barProgress.dispose();
     super.dispose();
   }
@@ -316,10 +313,7 @@ class _GamePengPageState extends State<GamePengPage>
     _barProgress.value = 0;
     _syncScene(now);
     setState(() {});
-    if (_tickerReady && !_ticker.isActive) {
-      _lastElapsed = Duration.zero;
-      _ticker.start();
-    }
+    _frameTicker.restartIfNeeded();
   }
 
   double get _ballSpeed =>
@@ -399,15 +393,12 @@ class _GamePengPageState extends State<GamePengPage>
 
   void _onFrame(Duration elapsed) {
     if (!mounted) return;
-    var dt = (elapsed - _lastElapsed).inMicroseconds / 1000.0;
-    _lastElapsed = elapsed;
-    if (dt <= 0) dt = 16;
-    dt = dt.clamp(1.0, 60.0);
+    var dt = _frameTicker.dtMs(elapsed, 60.0);
     final now = _clock.elapsedMilliseconds.toDouble();
     _update(dt, now);
     _syncScene(now);
     _barProgress.value = math.min(1.0, _elapsed / _barFull);
-    _frame.value++;
+    _frameTicker.frame.value++;
     // 数字 HUD 只在秒数/分数变化时重建，120Hz 的球与边框只走画布重绘。
     final hudTime = _elapsed.floor();
     if (hudTime != _shownTime || _score != _shownScore) {
@@ -592,8 +583,8 @@ class _GamePengPageState extends State<GamePengPage>
     _overScore = _score;
     _improved = _score > best;
     if (_improved) _best = _score;
-    _ticker.stop();
-    _lastElapsed = Duration.zero;
+    _frameTicker.ticker.stop();
+    _frameTicker.resetElapsed();
     _syncScene(_clock.elapsedMilliseconds.toDouble());
     setState(() {});
     await context.app.saveLocalBest('peng', _score);
@@ -637,7 +628,7 @@ class _GamePengPageState extends State<GamePengPage>
     _lastT = now;
     // 拖拽只改棋盘姿态：推画布重绘，不重建整页。
     _syncScene(now.toDouble());
-    _frame.value++;
+    _frameTicker.frame.value++;
   }
 
   void _release() {
@@ -685,7 +676,7 @@ class _GamePengPageState extends State<GamePengPage>
       time: _elapsed.floor(),
       timeProgress: math.min(1.0, _elapsed / _barFull),
       frameData: _scene,
-      sceneRepaint: _frame,
+      sceneRepaint: _frameTicker.frame,
       barProgress: _barProgress,
       hintOn: _hintOn,
       overlayVisible: _overlayVisible,
@@ -698,7 +689,7 @@ class _GamePengPageState extends State<GamePengPage>
       onPointerMove: _move,
       onPointerUp: _release,
       onNew: () => _newGame(auto: true),
-      onRank: () => showGameRank(context, game: 'peng', title: '淘气小球'),
+      onRank: () => showGameLeaderboard(context, game: 'peng', title: '淘气小球'),
       onRetry: () => _newGame(auto: true),
       onBoardSize: (size) => _syncLayout(size.width, size.height),
     );
@@ -834,7 +825,13 @@ class GamePengView extends StatelessWidget {
                 const SizedBox(height: gap),
                 IgnorePointer(
                   child: Center(
-                    child: _PengHint(identity: id, active: hintOn, height: hintH),
+                    child: GameHintPill(
+                      identity: id,
+                      active: hintOn,
+                      height: hintH,
+                      text: '按住拖动 · 旋转边框守球',
+                      overflow: TextOverflow.clip,
+                    ),
                   ),
                 ),
               ],
@@ -1023,154 +1020,42 @@ class GamePengView extends StatelessWidget {
             ),
             if (overlayVisible)
               Positioned.fill(
-                child: _PengOverlay(
-                  secs: overlaySecs,
-                  bounces: overlayBounces,
-                  score: overlayScore,
-                  improved: overlayImproved,
+                child: GameEndOverlay(
+                  title: '球飞出去了！',
                   identity: id,
                   onRetry: onRetry,
+                  body: [
+                    const TextSpan(text: '坚持了 '),
+                    TextSpan(
+                      text: '$overlaySecs',
+                      style: TextStyle(
+                        color: gameEndOverlayInk(context, id),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const TextSpan(text: ' 秒 · 反弹 '),
+                    TextSpan(
+                      text: '$overlayBounces',
+                      style: TextStyle(
+                        color: gameEndOverlayInk(context, id),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const TextSpan(text: ' 次 · 得分 '),
+                    TextSpan(
+                      text: '$overlayScore',
+                      style: TextStyle(
+                        color: gameEndOverlayInk(context, id),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (overlayImproved)
+                      const TextSpan(text: '· 新纪录诞生！'),
+                  ],
                 ),
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 提示胶囊：纸底 + 身份色描边 + 前置圆点，移到棋盘外常驻。
-class _PengHint extends StatelessWidget {
-  const _PengHint({
-    required this.identity,
-    required this.active,
-    this.height = 34,
-  });
-
-  final GameIdentity identity;
-  final bool active;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border.all(color: identity.primary.withAlpha(70)),
-        borderRadius: BorderRadius.circular(CitroColors.radii.button),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: active ? identity.primary : identity.deep.withAlpha(120),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              '按住拖动 · 旋转边框守球',
-              maxLines: 1,
-              overflow: TextOverflow.clip,
-              softWrap: false,
-              style: context.body(
-                size: CitroType.caption,
-                weight: CitroType.strong,
-                color: c.ink2,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// `.gpeng-overlay`：rgba(252,248,240,.94) + 1px 边 + r22 + gap10
-class _PengOverlay extends StatelessWidget {
-  const _PengOverlay({
-    required this.secs,
-    required this.bounces,
-    required this.score,
-    required this.improved,
-    required this.identity,
-    required this.onRetry,
-  });
-  final int secs;
-  final int bounces;
-  final int score;
-  final bool improved;
-  final GameIdentity identity;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final id = identity;
-    // 浮层是 c.surface（暗色下深面）：primaryInk 只有约 3.0:1，
-    // 暗色主题改用 onDark()。
-    final overlayInk = c.dark ? id.onDark() : id.primaryInk;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface.withValues(alpha: 0.96),
-        border: Border.all(color: id.primary.withAlpha(70)),
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '球飞出去了！',
-            style: context.heading(size: CitroType.subtitle, color: c.ink),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: '坚持了 '),
-                  TextSpan(
-                    text: '$secs',
-                    style: TextStyle(
-                      color: overlayInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const TextSpan(text: ' 秒 · 反弹 '),
-                  TextSpan(
-                    text: '$bounces',
-                    style: TextStyle(
-                      color: overlayInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const TextSpan(text: ' 次 · 得分 '),
-                  TextSpan(
-                    text: '$score',
-                    style: TextStyle(
-                      color: overlayInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (improved) const TextSpan(text: '· 新纪录诞生！'),
-                ],
-              ),
-              textAlign: TextAlign.center,
-              style: context.body(size: CitroType.meta, color: c.ink2),
-            ),
-          ),
-          const SizedBox(height: 10),
-          GameActionButton(label: '再来一局', primary: true, onTap: onRetry),
-        ],
       ),
     );
   }

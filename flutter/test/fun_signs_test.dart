@@ -6,7 +6,11 @@ void main() {
     expect(kFunSigns.length, 80);
     expect(kFunSignKinds.length, 16);
     for (final kind in kFunSignKinds) {
-      expect(funSignsOf(kind).length, 5, reason: '$kind 应正好 5 支');
+      expect(
+        kFunSigns.where((s) => s.kind == kind).length,
+        5,
+        reason: '$kind 应正好 5 支',
+      );
     }
     expect(kFunSigns.map((s) => s.kind).toSet(), kFunSignKinds.toSet());
   });
@@ -81,7 +85,7 @@ void main() {
       '反内耗签': ['内耗', '完美', '复盘', '情绪', '努力'],
     };
     for (final entry in marks.entries) {
-      final group = funSignsOf(entry.key);
+      final group = kFunSigns.where((s) => s.kind == entry.key).toList();
       final hit = group.any((s) {
         final all = '${s.name}${s.poem1}${s.poem2}${s.note}';
         return entry.value.any(all.contains);

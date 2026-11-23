@@ -2,8 +2,7 @@
 // 用法: node build.js [debug|release]   （默认 release）
 // 产物输出到 ../APK/Citro-v<版本>-<类型>.apk
 //
-// v1.1.3 起不再打包网页资源：所有页面由 Flutter Widget 原生实现，
-// 不依赖 WebView / assets/www，也不再调用 kotlin/sync-www.js。
+// v1.1.3 起不再打包网页资源：所有页面由 Flutter Widget 原生实现，不依赖 WebView / assets/www。
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');

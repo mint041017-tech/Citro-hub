@@ -6,6 +6,8 @@
 // 金额一律是「分」的整数，绝不用浮点保存；只有展示层才转成元。
 const api = require("./api");
 const session = require("./session");
+const kit = require("./storage");
+const synckit = require("./sync");
 
 const STORAGE_KEY = "citro_ledger_v1";
 const AT_KEY = "citro_ledger_v1_at";
@@ -14,20 +16,10 @@ const MONTH_RE = /^(\d{4})-(\d{2})$/;
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 const FALLBACK_COLOR = 0xff8a7f6a;
 
+const pad2 = kit.pad2;
+const asInt = kit.asInt;
+
 /* ---------------- 基础工具 ---------------- */
-
-function pad2(n) {
-  return n < 10 ? "0" + n : String(n);
-}
-
-function asInt(value, fallback) {
-  if (typeof value === "number" && isFinite(value)) return Math.floor(value);
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return fallback;
-}
 
 function isMonthKey(key) {
   const match = MONTH_RE.exec(String(key || ""));
@@ -90,15 +82,14 @@ function groupDigits(value) {
 }
 
 // 展示用金额：整数元不补 .00，千分位分组，负数保留负号。
-function fmtMoney(cents, options) {
-  const opts = options || {};
+function fmtMoney(cents) {
   const n = asInt(cents, 0);
   const abs = Math.abs(n);
   const yuan = Math.floor(abs / 100);
   const fen = abs % 100;
   const body =
     fen === 0 ? groupDigits(yuan) : groupDigits(yuan) + "." + pad2(fen);
-  return (n < 0 ? "-" : "") + (opts.symbol === false ? "" : "¥") + body;
+  return (n < 0 ? "-" : "") + "¥" + body;
 }
 
 // 输入框回填：不带 ¥、不带千分位，整数元不补小数。
@@ -346,31 +337,11 @@ function normalizeSnapshot(raw) {
 /* ---------------- 本地读写 ---------------- */
 
 function load() {
-  let stored = null;
-  try {
-    stored = wx.getStorageSync(STORAGE_KEY);
-  } catch (e) {
-    stored = null;
-  }
-  let raw = null;
-  if (typeof stored === "string" && stored) {
-    try {
-      raw = JSON.parse(stored);
-    } catch (e) {
-      raw = null;
-    }
-  } else if (stored && typeof stored === "object") {
-    raw = stored;
-  }
-  return normalizeSnapshot(raw);
+  return normalizeSnapshot(kit.readJson(STORAGE_KEY));
 }
 
 function storedAt() {
-  try {
-    return asInt(wx.getStorageSync(AT_KEY), 0);
-  } catch (e) {
-    return 0;
-  }
+  return kit.readAt(AT_KEY, asInt);
 }
 
 let flushTimer = null;
@@ -398,14 +369,7 @@ function scheduleFlush(snap) {
 
 function save(snap) {
   const data = normalizeSnapshot(snap);
-  try {
-    wx.setStorageSync(STORAGE_KEY, data);
-  } catch (e) {
-    // 本地存储写失败时仍继续走云端推送。
-  }
-  try {
-    wx.setStorageSync(AT_KEY, Date.now());
-  } catch (e) {}
+  kit.writePair(STORAGE_KEY, AT_KEY, data, Date.now());
   scheduleFlush(data);
   return data;
 }
@@ -415,7 +379,7 @@ function save(snap) {
 // GET /api/ledger -> { ledger, at }。整包覆盖，last writer wins。
 // 网络失败或未登录时直接回退本地，不抛出异常。
 function sync(token) {
-  const tok = token || session.token();
+  const tok = synckit.resolveToken(token);
   const local = load();
   const localAt = storedAt();
   if (!tok) return Promise.resolve(local);
@@ -423,11 +387,8 @@ function sync(token) {
   return api
     .ledgerGet(tok)
     .then(function (body) {
-      const remote = body && body.ledger;
-      const at = body ? asInt(body.at, 0) : 0;
-      const hasRemote =
-        !!remote && typeof remote === "object" && !Array.isArray(remote);
-      if (!hasRemote || localAt > at) {
+      const u = synckit.unwrapRemote(body, "ledger", asInt);
+      if (!u.hasRemote || localAt > u.at) {
         // 云端为空或本地更新：把本地整包推上去。
         return api
           .ledgerSave(tok, local)
@@ -436,11 +397,9 @@ function sync(token) {
             return local;
           });
       }
-      const snap = normalizeSnapshot(remote);
-      try {
-        wx.setStorageSync(STORAGE_KEY, snap);
-        wx.setStorageSync(AT_KEY, at);
-      } catch (e) {}
+      const snap = normalizeSnapshot(u.remote);
+      kit.write(STORAGE_KEY, snap);
+      kit.write(AT_KEY, u.at);
       return snap;
     })
     .catch(function () {
@@ -514,7 +473,6 @@ function summary(snap, monthKey) {
 /* ---------------- 导出 ---------------- */
 
 module.exports = {
-  STORAGE_KEY: STORAGE_KEY,
   load: load,
   save: save,
   sync: sync,
@@ -527,5 +485,4 @@ module.exports = {
   monthKeyOf: monthKeyOf,
   dayKeyOf: dayKeyOf,
   shiftMonth: shiftMonth,
-  monthLabel: monthLabel,
 };

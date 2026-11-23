@@ -27,7 +27,7 @@ class GameSfx {
   static bool _muted = false;
   static bool get muted => _muted;
 
-  /// v1.6.0：只有跳一跳 / 极限刹车保留音效（用户反馈），其余游戏只震动。
+  /// 只有跳一跳保留音效（用户反馈），其余游戏只震动。
   /// 需要声音的页面在 initState 打开、dispose 恢复；tone/noise 在关闭时
   /// 直接跳过，语义化快捷方式里的 vibrate 不受影响。
   static bool soundsEnabled = false;
@@ -43,10 +43,6 @@ class GameSfx {
     try {
       await Prefs.setString(PrefKeys.gameMuted, v ? '1' : '0');
     } catch (_) {}
-    if (v) {
-      unawaited(engineSet(0, false));
-      unawaited(tireSet(0));
-    }
   }
 
   // ------------------------------------------------------------------
@@ -73,12 +69,6 @@ class GameSfx {
       _cacheBytes -= removed?.lengthInBytes ?? 0;
     }
     return bytes;
-  }
-
-  /// 系统内存紧张时清掉合成音缓存，下次播放会按需重新生成。
-  static void clearCache() {
-    _cache.clear();
-    _cacheBytes = 0;
   }
 
   static AudioPlayer? _nextPlayer() {
@@ -166,74 +156,6 @@ class GameSfx {
     } catch (e) {
       if (!kIsWeb) _available = false;
     }
-  }
-
-  // ------------------------------------------------------------------
-  // 极限刹车的持续音（引擎 / 轮胎噪声循环）
-  // ------------------------------------------------------------------
-
-  static AudioPlayer? _engine;
-  static AudioPlayer? _tire;
-
-  static Future<void> _ensureLoop(AudioPlayer? p, Uint8List bytes) async {
-    if (p == null) return;
-    try {
-      await p.setReleaseMode(ReleaseMode.loop);
-      await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
-      await p.setVolume(0);
-    } catch (_) {}
-  }
-
-  static Uint8List? _engineBuf;
-  static Future<void> engineStart() async {
-    if (!_supported) return;
-    try {
-      _engine ??= AudioPlayer();
-      _engineBuf ??= _synth(freq: 55.125, dur: 1.0, type: 'engine', vol: 1);
-      await _ensureLoop(_engine, _engineBuf!);
-    } catch (_) {}
-  }
-
-  /// rate 0~1（速度比），on=false 时淡出。
-  static Future<void> engineSet(double rate, bool on) async {
-    final p = _engine;
-    if (p == null || !_supported) return;
-    try {
-      final f = 48 + rate * 230;
-      await p.setPlaybackRate((f / 55.125).clamp(0.4, 4.2));
-      await p.setVolume(on && !_muted ? 0.055 + rate * 0.075 : 0);
-    } catch (_) {}
-  }
-
-  static Future<void> engineStop() => engineSet(0, false);
-
-  static Uint8List? _tireBuf;
-  static Future<void> tireStart() async {
-    if (!_supported) return;
-    try {
-      _tire ??= AudioPlayer();
-      _tireBuf ??= _noise(dur: 1.2, vol: 1, freq: 2100);
-      await _ensureLoop(_tire, _tireBuf!);
-    } catch (_) {}
-  }
-
-  static Future<void> tireSet(double v) async {
-    final p = _tire;
-    if (p == null || !_supported) return;
-    try {
-      await p.setVolume(_muted ? 0 : v.clamp(0.0, 0.16));
-    } catch (_) {}
-  }
-
-  static Future<void> disposeLoops() async {
-    try {
-      await _engine?.stop();
-      await _engine?.release();
-      await _tire?.stop();
-      await _tire?.release();
-    } catch (_) {}
-    _engine = null;
-    _tire = null;
   }
 
   static Uint8List? _chargeBuf;
@@ -425,26 +347,6 @@ class GameSfx {
     vibrate(GameVibe.heavy);
   }
 
-  static void crash({bool heavy = false}) {
-    unawaited(
-      noise(
-        dur: heavy ? 0.5 : 0.65,
-        vol: heavy ? 0.5 : 0.6,
-        freq: heavy ? 1600 : 420,
-      ),
-    );
-    unawaited(
-      tone(
-        freq: heavy ? 220 : 120,
-        dur: heavy ? 0.5 : 0.6,
-        type: 'sawtooth',
-        vol: 0.22,
-        slide: heavy ? 60 : 44,
-      ),
-    );
-    vibrate(GameVibe.heavy);
-  }
-
   // ------------------------------------------------------------------
   // WAV 合成
   // ------------------------------------------------------------------
@@ -615,8 +517,3 @@ class GameSfx {
 }
 
 enum GameVibe { tick, light, medium, heavy }
-
-/// 语义化音效（各游戏通用的短事件）。
-extension GameSfxEvents on GameSfx {
-  // 见 GameSfx 上的静态方法。
-}

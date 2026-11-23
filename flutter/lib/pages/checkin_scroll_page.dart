@@ -16,10 +16,7 @@ import '../widgets/paper.dart';
 
 /// 打开长卷页。
 Future<void> openCheckinScroll(BuildContext context, {int? volume}) {
-  return Navigator.of(context).pushNamed(
-    '/checkin/scroll',
-    arguments: volume,
-  );
+  return Navigator.of(context).pushNamed('/checkin/scroll', arguments: volume);
 }
 
 /// 长卷页：七天一卷，可翻看历史卷，点任一格可补 / 改回签。
@@ -98,10 +95,7 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
           ? _store.currentVolume
           : CheckinVolume(index: _selected!, entries: const []);
     }
-    final index = (_selected ?? volumes.last.index).clamp(
-      1,
-      volumes.length,
-    );
+    final index = (_selected ?? volumes.last.index).clamp(1, volumes.length);
     return volumes.firstWhere(
       (v) => v.index == index,
       orElse: () => volumes.last,
@@ -135,77 +129,82 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
     final media = MediaQuery.sizeOf(context);
     final wide = media.width >= 700;
     final side = wide ? 32.0 : 16.0;
-    return Stack(
-      children: [
-        Positioned.fill(child: ColoredBox(color: c.bg)),
-        CitroBackground(
-          color: Colors.transparent,
-          child: SafeArea(
-            bottom: false,
-            child: ListenableBuilder(
-              listenable: _store,
-              builder: (context, _) {
-                final volume = _volume;
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  padding: EdgeInsets.fromLTRB(
-                    side,
-                    platform.isWindows ? AppSpacing.pageTop(media.width) : 8,
-                    side,
-                    110,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 700),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _header(context),
-                          const SizedBox(height: 18),
-                          _volumeCard(context, volume),
-                          const SizedBox(height: 14),
-                          _syncStrip(context),
-                          const SizedBox(height: 18),
-                          ...List.generate(7, (i) {
-                            final entry = i < volume.entries.length
-                                ? volume.entries[i]
-                                : null;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: entry == null
-                                  ? _EmptyCell(index: i)
-                                  : _DayCell(
-                                      entry: entry,
-                                      onTap: () => _openEntry(entry),
-                                    ),
-                            );
-                          }),
-                          const SizedBox(height: 10),
-                          _volumeNav(context, volume),
-                          const SizedBox(height: 22),
-                          _posterActions(context, volume),
-                          const SizedBox(height: 10),
-                          Text(
-                            '七天一卷，不要求连续；漏掉的格子不会把前面的记录清空。',
-                            textAlign: TextAlign.center,
-                            style: context.body(
-                              size: CitroType.small,
-                              color: c.inkSoft,
-                              height: 1.5,
+    // 最外层必须是 Material：这个页面没有 Scaffold，缺了 Material 之后
+    // 页面里每一条 Text 都会退回「未包 Material」的兜底样式，
+    // 整页文字都拖着一根黄色下划线（同 games_page 的注释）。
+    return Material(
+      color: c.bg,
+      child: Stack(
+        children: [
+          CitroBackground(
+            color: Colors.transparent,
+            child: SafeArea(
+              bottom: false,
+              child: ListenableBuilder(
+                listenable: _store,
+                builder: (context, _) {
+                  final volume = _volume;
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      side,
+                      platform.isWindows ? AppSpacing.pageTop(media.width) : 8,
+                      side,
+                      110,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 700),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _header(context),
+                            const SizedBox(height: 18),
+                            _volumeCard(context, volume),
+                            const SizedBox(height: 14),
+                            _syncStrip(context),
+                            const SizedBox(height: 18),
+                            ...List.generate(7, (i) {
+                              final entry = i < volume.entries.length
+                                  ? volume.entries[i]
+                                  : null;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: entry == null
+                                    ? _EmptyCell(index: i)
+                                    : _DayCell(
+                                        entry: entry,
+                                        onTap: () => _openEntry(entry),
+                                      ),
+                              );
+                            }),
+                            const SizedBox(height: 10),
+                            _volumeNav(context, volume),
+                            const SizedBox(height: 22),
+                            _posterActions(context, volume),
+                            const SizedBox(height: 10),
+                            Text(
+                              '七天一卷，不要求连续；漏掉的格子不会把前面的记录清空。',
+                              textAlign: TextAlign.center,
+                              style: context.body(
+                                size: CitroType.small,
+                                color: c.inkSoft,
+                                height: 1.5,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -251,17 +250,11 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '我的长卷',
-                style: context.heading(size: CitroType.heading),
-              ),
+              Text('我的长卷', style: context.heading(size: CitroType.heading)),
               const SizedBox(height: 4),
               Text(
                 '把每一次来过的日子，按七天收成一卷。',
-                style: context.body(
-                  size: CitroType.caption,
-                  color: c.inkSoft,
-                ),
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
               ),
             ],
           ),
@@ -315,11 +308,7 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
             children: [
               Text(
                 volume.title,
-                style: context.display(
-                  size: 30,
-                  color: c.accentInk,
-                  height: 1,
-                ),
+                style: context.display(size: 30, color: c.accentInk, height: 1),
               ),
               const SizedBox(width: 10),
               Padding(
@@ -335,10 +324,7 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
               const Spacer(),
               Text(
                 '$total 卷',
-                style: context.body(
-                  size: CitroType.small,
-                  color: c.inkSoft,
-                ),
+                style: context.body(size: CitroType.small, color: c.inkSoft),
               ),
             ],
           ),
@@ -541,10 +527,7 @@ class _DayCellState extends State<_DayCell> {
                               e.signTitle,
                               maxLines: 3,
                               textAlign: TextAlign.center,
-                              style: context.heading(
-                                size: 11,
-                                color: c.ink2,
-                              ),
+                              style: context.heading(size: 11, color: c.ink2),
                             ),
                           ),
                         )
@@ -583,17 +566,19 @@ class _DayCellState extends State<_DayCell> {
                       overflow: TextOverflow.ellipsis,
                       style: context.heading(size: 15, color: c.ink),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      e.actionText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.body(
-                        size: CitroType.small,
-                        color: c.ink2,
-                        height: 1.35,
+                    if (e.actionText.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        e.actionText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.ink2,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
+                    ],
                     if (e.hasText) ...[
                       const SizedBox(height: 5),
                       Text(
@@ -705,11 +690,7 @@ class _DayFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final face = CardFaceImage(
-      card: card,
-      cacheWidth: 200,
-      fit: BoxFit.cover,
-    );
+    final face = CardFaceImage(card: card, cacheWidth: 200, fit: BoxFit.cover);
     if (!muted) return face;
     return ColorFiltered(
       colorFilter: const ColorFilter.matrix(_mutedMatrix),
@@ -734,10 +715,7 @@ class _MiniTag extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: context.body(
-          size: CitroType.micro,
-          color: c.accentInk,
-        ),
+        style: context.body(size: CitroType.micro, color: c.accentInk),
       ),
     );
   }
@@ -799,10 +777,7 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           text,
-          style: context.body(
-            size: CitroType.micro,
-            color: c.inkSoft,
-          ),
+          style: context.body(size: CitroType.micro, color: c.inkSoft),
         ),
       ],
     );
@@ -840,27 +815,16 @@ class _NavButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon == AppIcons.arrowLeft) ...[
-                AppIcon(
-                  strokeSvg(icon, width: 2),
-                  size: 14,
-                  color: c.ink2,
-                ),
+                AppIcon(strokeSvg(icon, width: 2), size: 14, color: c.ink2),
                 const SizedBox(width: 5),
               ],
               Text(
                 label,
-                style: context.body(
-                  size: CitroType.small,
-                  color: c.ink2,
-                ),
+                style: context.body(size: CitroType.small, color: c.ink2),
               ),
               if (icon == AppIcons.arrowRight) ...[
                 const SizedBox(width: 5),
-                AppIcon(
-                  strokeSvg(icon, width: 2),
-                  size: 14,
-                  color: c.ink2,
-                ),
+                AppIcon(strokeSvg(icon, width: 2), size: 14, color: c.ink2),
               ],
             ],
           ),

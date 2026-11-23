@@ -11,6 +11,7 @@ import '../calendar/calendar_models.dart';
 import '../calendar/calendar_page.dart';
 import '../calendar/calendar_store.dart';
 import '../services/api.dart';
+import '../services/clock.dart';
 import '../services/fish.dart';
 import '../services/haptics.dart';
 import '../overlays/appreciation_sheet.dart';
@@ -822,7 +823,7 @@ class _HomeTopBar extends StatelessWidget {
       );
     }
     final app = context.app;
-    final now = DateTime.now();
+    final now = CitroClock.now();
     final user = app.user;
     // user.av 可能是相对路径，必须过 Api.imageUrl 拼成完整地址，
     // 否则 Image.network 直接失败、errorBuilder 返回空——整个圆就是空白。
@@ -963,7 +964,7 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = CitroClock.now();
     final greeting = now.hour < 6
         ? '夜深了'
         : now.hour < 11
@@ -1868,7 +1869,7 @@ class ZodiacCard extends StatelessWidget {
     final tone = _ZodiacTone.of(c);
     final sign = zodiacById(state.zodiacSign);
     final f = state.zodiacFortune;
-    final now = DateTime.now();
+    final now = CitroClock.now();
     final dateText =
         '${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} ${weekdayChinese(now)}';
     return CitroCard(
@@ -2355,7 +2356,7 @@ class ZodiacCard extends StatelessWidget {
                 Text(
                   '$value',
                   style: TextStyle(
-                    fontFamily: AppFonts.kalam,
+                    fontFamily: AppFonts.rounded,
                     fontSize: compact ? 14 : 16,
                     fontWeight: FontWeight.w700,
                     height: 1,
@@ -2365,7 +2366,7 @@ class ZodiacCard extends StatelessWidget {
                 Text(
                   '分',
                   style: TextStyle(
-                    fontFamily: AppFonts.noto,
+                    fontFamily: AppFonts.rounded,
                     fontSize: 9,
                     height: 1,
                     color: tone.inkSoft,
@@ -2377,7 +2378,7 @@ class ZodiacCard extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: AppFonts.noto,
+                fontFamily: AppFonts.rounded,
                 fontFamilyFallback: AppFonts.bodyFallback,
                 fontSize: 9,
                 height: 1.2,
@@ -2425,7 +2426,7 @@ class ZodiacCard extends StatelessWidget {
     child: Text(
       '$label $value',
       style: TextStyle(
-        fontFamily: AppFonts.noto,
+        fontFamily: AppFonts.rounded,
         fontFamilyFallback: AppFonts.bodyFallback,
         fontSize: 9,
         height: 1.2,
@@ -2678,7 +2679,7 @@ class QuoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final now = DateTime.now();
+    final now = CitroClock.now();
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     final q = kQuotes[dayOfYear % kQuotes.length];
     return CitroCard(

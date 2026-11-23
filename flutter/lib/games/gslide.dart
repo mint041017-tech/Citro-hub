@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'game_common.dart';
+import 'game_random.dart';
 import 'game_ui.dart';
 
 class GameSlidePage extends StatefulWidget {
@@ -78,7 +79,7 @@ class _GameSlidePageState extends State<GameSlidePage> {
   }
 
   void _shuffle() {
-    final rnd = math.Random();
+    final rnd = GameRandom.create();
     var last = -1;
     for (var i = 0; i < size * size * 40; i++) {
       final nbs = _neighbors(empty).where((n) => n != last).toList();
@@ -185,6 +186,7 @@ class _GameSlidePageState extends State<GameSlidePage> {
         bestSeconds: bestSeconds,
         diff: diff,
         over: over,
+        score: math.max(1, _meta.$3 - seconds),
         onDiff: (d) {
           setState(() => diff = d);
           _newGame();
@@ -217,6 +219,7 @@ class GameSlideView extends StatelessWidget {
     required this.bestSeconds,
     required this.diff,
     this.over = false,
+    this.score = 0,
     this.onDiff,
     this.onNewGame,
     this.onTap,
@@ -233,6 +236,7 @@ class GameSlideView extends StatelessWidget {
   final int bestSeconds;
   final String diff;
   final bool over;
+  final int score;
   final ValueChanged<String>? onDiff;
   final VoidCallback? onNewGame;
   final ValueChanged<int>? onTap;
@@ -367,20 +371,16 @@ class GameSlideView extends StatelessWidget {
               height: cell,
               child: tileAt(i, tiles[i]),
             ),
-        if (over) Positioned.fill(child: _overlay(context, radius)),
+        if (over) Positioned.fill(child: _overlay(context)),
       ],
     );
   }
 
   /// 结算浮层 —— v1.6.1 起与淘气小球结算卡同一套样式
   /// （半透明纸面 / 圆角 22 / Kalam 标题 / 灰描述金棕数字 / 主按钮垂直居中）。
-  Widget _overlay(BuildContext context, double radius) {
+  Widget _overlay(BuildContext context) {
     final c = context.c;
     final id = GameIdentityScope.of(context);
-    final score = math.max(
-      1,
-      (diff == 'easy' ? 1200 : (diff == 'std' ? 3000 : 6000)) - seconds,
-    );
     return Container(
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(

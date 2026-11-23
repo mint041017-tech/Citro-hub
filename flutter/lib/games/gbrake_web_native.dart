@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,9 +8,10 @@ import '../services/api.dart';
 import '../services/refresh_rate.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../theme/tokens.dart';
 import 'game_identity.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
+import 'game_web_shell.dart';
 
 /// 极限刹车：内嵌原始版（three.js 构建产物），完全离线、不依赖任何 URL。
 ///
@@ -31,12 +31,11 @@ class GameBrakeWebPage extends StatefulWidget {
   State<GameBrakeWebPage> createState() => _GameBrakeWebPageState();
 }
 
-class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
+class _GameBrakeWebPageState extends State<GameBrakeWebPage>
+    with WebBootState<GameBrakeWebPage> {
   static const _assetDir = 'assets/shache';
 
   InAppWebViewController? _web;
-  bool _loading = true;
-  String? _bootError;
 
   /// 加载阶段文案（0 打包资源 → 1 初始化三维场景 → 2 就绪）。
   int _stage = 0;
@@ -92,12 +91,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
       await _load();
     } catch (e) {
       debugPrint('brake bundle build failed: $e');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _bootError = '内置页面构建失败：$e';
-        });
-      }
+      markBootFailed('内置页面构建失败：$e');
     }
   }
 
@@ -194,11 +188,8 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
   }
 
   Future<void> _retry() async {
-    setState(() {
-      _bootError = null;
-      _loading = true;
-      _stage = _html == null ? 0 : 1;
-    });
+    resetBoot();
+    setState(() => _stage = _html == null ? 0 : 1);
     if (_html == null) {
       await _buildBundle();
     } else {
@@ -207,23 +198,10 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
   }
 
   /// App 榜单 → 原版页面需要的 entries 结构。
-  Future<List<Map<String, dynamic>>> _entries(int limit) async {
+  Future<List<Map<String, Object?>>> _entries(int limit) async {
     final res = await AppState.instance.fetchBoard('brake');
     final raw = res['list'] ?? res['entries'] ?? res['board'] ?? res['data'];
-    final out = <Map<String, dynamic>>[];
-    if (raw is List) {
-      for (final e in raw.take(limit)) {
-        if (e is! Map) continue;
-        out.add({
-          'nickname': '${e['name'] ?? e['nickname'] ?? '游客'}',
-          'score': ((e['score'] ?? e['best'] ?? e['value'] ?? 0) as num)
-              .toInt(),
-          'v0': e['v0'] ?? 0,
-          'stopTime': e['stopTime'] ?? 0,
-        });
-      }
-    }
-    return out;
+    return brakeBoardEntries(raw, limit);
   }
 
   Future<Map<String, dynamic>> _fetchLive() async {
@@ -237,26 +215,6 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
     } catch (_) {
       return <String, dynamic>{'list': const <dynamic>[]};
     }
-  }
-
-  Future<Map<String, dynamic>> _onScore(Map body) async {
-    final v0 = (body['v0'] as num?)?.toDouble() ?? 0;
-    final stop = (body['stopTime'] as num?)?.toDouble() ?? 0;
-    final reported = (body['score'] as num?)?.toInt() ?? 0;
-    final computed = stop > 0 ? (v0 * v0 / stop).round() : 0;
-    final score = reported > 0 ? reported : computed;
-    if (body['failed'] == true) {
-      await AppState.instance.noteGameRound();
-      return {'ok': false, 'failed': true};
-    }
-    if (score <= 0) return {'ok': false, 'err': 'empty score'};
-    final res = await AppState.instance.submitScore('brake', score);
-    return {
-      'ok': res['ok'] != false,
-      'score': score,
-      'best': res['best'] ?? score,
-      'rank': res['rank'] ?? 0,
-    };
   }
 
   @override
@@ -324,7 +282,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                                         args.first as Map,
                                       )
                                     : <String, dynamic>{};
-                                return _onScore(body);
+                                return submitBrakeScore(body);
                               },
                             );
                             controller.addJavaScriptHandler(
@@ -345,7 +303,7 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                               handlerName: 'citroRank',
                               callback: (args) {
                                 if (mounted) {
-                                  showGameRank(
+                                  showGameLeaderboard(
                                     context,
                                     game: 'brake',
                                     title: '极限刹车',
@@ -367,8 +325,9 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                                   );
                               if (!mounted) return;
                               if (hasCanvas != true) {
-                                setState(
-                                  () => _bootError = '页面已加载但画布未初始化（WebGL 不可用？）',
+                                markBootFailed(
+                                  '页面已加载但画布未初始化（WebGL 不可用？）',
+                                  keepLoading: true,
                                 );
                                 return;
                               }
@@ -379,57 +338,38 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
                               if (!mounted) return;
                               setState(() {
                                 _stage = 2;
-                                _loading = false;
                               });
+                              markBootReady();
                             } catch (_) {}
                           },
                         ),
                       ),
-                      if (_loading && _bootError == null)
+                      if (loading && bootError == null)
                         Positioned.fill(
                           child: IgnorePointer(
-                            child: _BrakeLoading(stage: _stage),
+                            child: GameWebArcBoot(
+                              stage: _stage,
+                              labels: const [
+                                '正在准备赛道资源',
+                                '正在初始化三维场景',
+                                '准备就绪',
+                              ],
+                              subtitle: '极限刹车 · 原版赛道',
+                            ),
                           ),
                         ),
-                      if (_bootError != null)
+                      if (bootError != null)
                         Positioned.fill(
-                          child: ColoredBox(
-                            color: identity.soft,
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 32,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '游戏加载失败',
-                                      style: context.heading(
-                                        size: CitroType.titleLg,
-                                        color: identity.deep,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _bootError!,
-                                      textAlign: TextAlign.center,
-                                      style: context.body(
-                                        size: CitroType.caption,
-                                        color: identity.primaryInk,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    GameActionButton(
-                                      label: '重新加载',
-                                      primary: true,
-                                      onTap: _retry,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                          child: GameWebBootError(
+                            title: '游戏加载失败',
+                            message: bootError!,
+                            retryLabel: '重新加载',
+                            onRetry: _retry,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
                             ),
+                            titleGap: 8,
+                            buttonGap: 16,
                           ),
                         ),
                     ],
@@ -442,156 +382,4 @@ class _GameBrakeWebPageState extends State<GameBrakeWebPage> {
       ),
     );
   }
-}
-
-/// 加载动画：身份色浅底 + 旋转主色弧 + 速度表意象 + 深色端阶段文案。
-/// 原版页面初始化 three.js 需要一两百毫秒到数秒（视机型），这里做成
-/// 有明确进度的等待，而不是一个白色空屏。
-class _BrakeLoading extends StatefulWidget {
-  const _BrakeLoading({required this.stage});
-
-  /// 0 = 准备资源，1 = 初始化三维场景，2 = 就绪。
-  final int stage;
-
-  @override
-  State<_BrakeLoading> createState() => _BrakeLoadingState();
-}
-
-class _BrakeLoadingState extends State<_BrakeLoading>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  String get _label => switch (widget.stage) {
-    0 => '正在准备赛道资源',
-    1 => '正在初始化三维场景',
-    _ => '准备就绪',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final identity = GameIdentityScope.of(context);
-    return ColoredBox(
-      color: identity.soft,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 112,
-              height: 112,
-              child: AnimatedBuilder(
-                animation: _c,
-                builder: (ctx, _) => CustomPaint(
-                  painter: _LoadingArcPainter(
-                    t: _c.value,
-                    base: identity.deep.withAlpha(70),
-                    arc: identity.primary,
-                    tick: identity.deep,
-                  ),
-                  child: Center(
-                    child: Opacity(
-                      opacity: 0.75 + 0.25 * (1 - (_c.value - 0.5).abs() * 2),
-                      child: Icon(
-                        Icons.speed_rounded,
-                        size: 36,
-                        color: identity.primary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              _label,
-              style: context.body(
-                size: CitroType.body,
-                weight: CitroType.strong,
-                color: identity.deep,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '极限刹车 · 原版赛道',
-              style: context.body(
-                size: CitroType.small,
-                color: identity.primaryInk,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingArcPainter extends CustomPainter {
-  const _LoadingArcPainter({required this.t, required this.base, required this.arc, required this.tick});
-
-  final double t;
-  final Color base;
-  final Color arc;
-  final Color tick;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final r = size.shortestSide / 2 - 3;
-    final rect = Rect.fromCircle(center: center, radius: r);
-
-    // 底线圆环
-    canvas.drawCircle(
-      center,
-      r,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
-        ..color = base,
-    );
-
-    // 旋转的进度弧（圆头）
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(t * 6.28318);
-    canvas.translate(-center.dx, -center.dy);
-    canvas.drawArc(
-      rect,
-      -1.5708,
-      3.14159,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.8
-        ..strokeCap = StrokeCap.round
-        ..color = arc,
-    );
-    canvas.restore();
-
-    // 刻度点（速度表意象）
-    for (var i = 0; i < 12; i++) {
-      final a = i * 0.5236 - 1.5708;
-      final p1 = center + Offset(math.cos(a) * (r - 9), math.sin(a) * (r - 9));
-      final p2 = center + Offset(math.cos(a) * (r - 5), math.sin(a) * (r - 5));
-      canvas.drawLine(
-        p1,
-        p2,
-        Paint()
-          ..strokeWidth = 1.4
-          ..color = tick.withValues(alpha: .35 + .65 * (((i / 12) + t) % 1)),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LoadingArcPainter old) =>
-      old.t != t || old.base != base || old.arc != arc || old.tick != tick;
 }

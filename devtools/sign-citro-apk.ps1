@@ -4,8 +4,9 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File devtools/sign-citro-apk.ps1 `
 #     -Keystore "密钥/chimu-release.jks" -StorePassword "***" -KeyAlias "***" -KeyPassword "***"
 #
-# Default input : kotlin/app/build/outputs/apk/stable/release/app-stable-release-unsigned.apk
-# Default output: APK/Citro-v<versionName>-release.apk (versionName read from aapt2 badging)
+# Input  : pass an unsigned APK with -Apk
+#          (the Flutter build already signs with flutter/android/app/key.properties)
+# Output : APK/Citro-v<versionName>-release.apk (versionName read from aapt2 badging)
 #
 # IMPORTANT: use the SAME keystore as previous releases
 # (CN=Chimu Crew, SHA-256 30a30b98...413654), otherwise existing users
@@ -31,7 +32,7 @@ $apksigner = Join-Path $bt.FullName 'apksigner.bat'
 $aapt2 = Join-Path $bt.FullName 'aapt2.exe'
 
 if (-not $Apk) {
-  $Apk = Join-Path $repo 'kotlin\app\build\outputs\apk\stable\release\app-stable-release-unsigned.apk'
+  throw '请用 -Apk 指定未签名 APK（Flutter 版已在 build.gradle 内自动签名）'
 }
 if (-not (Test-Path $Apk)) { throw "Unsigned APK not found: $Apk" }
 

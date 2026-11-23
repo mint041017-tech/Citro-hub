@@ -7,26 +7,18 @@
 // 网络失败、429 等都在这里吞掉，页面始终可以使用本地数据。
 const api = require("./api");
 const session = require("./session");
+const kit = require("./storage");
+const synckit = require("./sync");
 
 const STORAGE_KEY = "citro_calendar_marks_v1";
 const AT_KEY = "citro_calendar_marks_v1_at";
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86400000;
 
+const pad2 = kit.pad2;
+const asInt = kit.asInt;
+
 /* ---------------- 基础工具 ---------------- */
-
-function pad2(n) {
-  return n < 10 ? "0" + n : String(n);
-}
-
-function asInt(value, fallback) {
-  if (typeof value === "number" && isFinite(value)) return Math.floor(value);
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return fallback;
-}
 
 function ymd(p) {
   return p.y + "-" + pad2(p.m) + "-" + pad2(p.d);
@@ -131,48 +123,21 @@ function normalizeSnapshot(raw) {
 /* ---------------- 本地读写 ---------------- */
 
 function load() {
-  let stored = null;
-  try {
-    stored = wx.getStorageSync(STORAGE_KEY);
-  } catch (e) {
-    stored = null;
-  }
-  let raw = null;
-  if (typeof stored === "string" && stored) {
-    try {
-      raw = JSON.parse(stored);
-    } catch (e) {
-      raw = null;
-    }
-  } else if (stored && typeof stored === "object") {
-    raw = stored;
-  }
-  return normalizeSnapshot(raw);
+  return normalizeSnapshot(kit.readJson(STORAGE_KEY));
 }
 
 function storedAt() {
-  try {
-    return asInt(wx.getStorageSync(AT_KEY), 0);
-  } catch (e) {
-    return 0;
-  }
+  return kit.readAt(AT_KEY, asInt);
 }
 
 function save(snap) {
   const data = normalizeSnapshot(snap);
   const at = Date.now();
-  try {
-    wx.setStorageSync(STORAGE_KEY, data);
-  } catch (e) {
-    // 本地存储写失败时仍继续尝试云端。
-  }
-  try {
-    wx.setStorageSync(AT_KEY, at);
-  } catch (e) {}
+  kit.writePair(STORAGE_KEY, AT_KEY, data, at);
   // 异步整包上传，失败静默；下次保存会再次推送。
   const token = session.token();
   if (token) {
-    api.calendarSave(token, data).catch(function () {});
+    synckit.pushSilent(api.calendarSave(token, data));
   }
   return data;
 }
@@ -182,7 +147,7 @@ function save(snap) {
 // GET /api/calendar -> {calendar, at}。
 // 云端更新则覆盖本地；否则把本地整包推上去。任何失败都回退本地快照。
 function sync(token) {
-  const tok = token || session.token();
+  const tok = synckit.resolveToken(token);
   const local = load();
   const localAt = storedAt();
   if (!tok) return Promise.resolve(local);
@@ -190,22 +155,17 @@ function sync(token) {
   return api
     .calendarGet(tok)
     .then(function (body) {
-      const remote = body && body.calendar;
-      const at = body ? asInt(body.at, 0) : 0;
-      const hasRemote =
-        !!remote && typeof remote === "object" && !Array.isArray(remote);
+      const u = synckit.unwrapRemote(body, "calendar", asInt);
 
-      if (hasRemote && at > localAt) {
-        const snap = normalizeSnapshot(remote);
-        try {
-          wx.setStorageSync(STORAGE_KEY, snap);
-          wx.setStorageSync(AT_KEY, at);
-        } catch (e) {}
+      if (u.hasRemote && u.at > localAt) {
+        const snap = normalizeSnapshot(u.remote);
+        kit.write(STORAGE_KEY, snap);
+        kit.write(AT_KEY, u.at);
         return snap;
       }
 
       // 与 Flutter 一致：本地有标记就把本地推上去；空快照不主动覆盖云端。
-      if (local.marks.length > 0 || localAt > at) {
+      if (local.marks.length > 0 || localAt > u.at) {
         return api
           .calendarSave(tok, local)
           .catch(function () {})
@@ -305,7 +265,6 @@ function upcoming(today, n) {
 }
 
 module.exports = {
-  STORAGE_KEY: STORAGE_KEY,
   load: load,
   save: save,
   sync: sync,

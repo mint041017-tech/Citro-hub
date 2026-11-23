@@ -11,6 +11,8 @@ import '../theme/tokens.dart';
 import '../widgets/browser_effects.dart';
 import 'game_identity.dart';
 import 'game_ui.dart';
+import 'game_common.dart' show showGameLeaderboard;
+import 'game_random.dart';
 
 /// 记忆卡牌（web `#gmemPage`：index.html:8109-8143 + gmem JS 18096-18239）。
 ///
@@ -38,17 +40,16 @@ class _MemoryCard {
 }
 
 class _DiffSpec {
-  const _DiffSpec(this.label, this.cols, this.rows, this.pairs);
-  final String label;
+  const _DiffSpec(this.cols, this.rows, this.pairs);
   final int cols;
   final int rows;
   final int pairs;
 }
 
 const _diffSpecs = <String, _DiffSpec>{
-  'easy': _DiffSpec('简单 4×3', 4, 3, 6),
-  'std': _DiffSpec('标准 4×4', 4, 4, 8),
-  'hard': _DiffSpec('困难 5×4', 5, 4, 10),
+  'easy': _DiffSpec(4, 3, 6),
+  'std': _DiffSpec(4, 4, 8),
+  'hard': _DiffSpec(5, 4, 10),
 };
 const _chars = '福禄寿喜梅兰竹菊松鹤龙凤';
 
@@ -92,7 +93,7 @@ class _GameMemoryPageState extends State<GameMemoryPage> {
       cards.add(_MemoryCard(i, _chars[i]));
       cards.add(_MemoryCard(i, _chars[i]));
     }
-    cards.shuffle(math.Random());
+    cards.shuffle(GameRandom.create());
     setState(() {
       deck = cards;
       open = [];
@@ -181,7 +182,7 @@ class _GameMemoryPageState extends State<GameMemoryPage> {
   }
 
   void _openRank() {
-    showGameRank(
+    showGameLeaderboard(
       context,
       game: 'memory',
       title: '记忆卡牌',

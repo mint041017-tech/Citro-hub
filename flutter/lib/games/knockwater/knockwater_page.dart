@@ -25,6 +25,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
 import '../game_identity.dart';
 import '../game_ui.dart';
+import '../game_common.dart' show showGameLeaderboard;
 import 'engine.dart';
 import 'hud_snapshot.dart';
 import 'levels.dart';
@@ -918,7 +919,7 @@ class _KnockwaterPageState extends State<KnockwaterPage>
                     key: const ValueKey('kw-rank'),
                     label: '排行榜',
                     icon: GameIcons.trophy,
-                    onTap: () => showGameRank(
+                    onTap: () => showGameLeaderboard(
                       context,
                       game: 'knockwater',
                       title: '铃渡',

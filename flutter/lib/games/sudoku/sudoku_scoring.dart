@@ -96,10 +96,6 @@ int sudokuReferenceSeconds(SudokuPuzzle puzzle) {
 class SudokuScore {
   const SudokuScore({
     required this.base,
-    required this.seconds,
-    required this.errors,
-    required this.hintsUsed,
-    required this.referenceSeconds,
     required this.timeFactor,
     required this.errorFactor,
     required this.hintFactor,
@@ -109,10 +105,6 @@ class SudokuScore {
   });
 
   final int base;
-  final int seconds;
-  final int errors;
-  final int hintsUsed;
-  final int referenceSeconds;
   final double timeFactor;
   final double errorFactor;
   final double hintFactor;
@@ -167,10 +159,6 @@ SudokuScore sudokuScoreOf(
       .toInt();
   return SudokuScore(
     base: base,
-    seconds: elapsed,
-    errors: safeErrors,
-    hintsUsed: safeHints,
-    referenceSeconds: reference,
     timeFactor: timeFactor,
     errorFactor: errorFactor,
     hintFactor: hintFactor,

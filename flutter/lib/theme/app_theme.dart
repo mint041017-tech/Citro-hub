@@ -19,7 +19,6 @@ class CitroSkin extends ThemeExtension<CitroSkin> {
 
 extension CitroContext on BuildContext {
   CitroColors get c => Theme.of(this).extension<CitroSkin>()!.colors;
-  CitroSkin get skin => Theme.of(this).extension<CitroSkin>()!;
 
   /// 正文 / 通用文字。
   TextStyle body({
