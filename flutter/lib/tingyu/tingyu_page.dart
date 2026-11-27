@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -73,77 +74,78 @@ class _TingyuPageState extends State<TingyuPage> {
             data: theme,
             child: _NookBackdrop(
               child: Scaffold(
-              backgroundColor: Colors.transparent,
-              appBar: !portrait
-                  ? null
-                  : AppBar(
-                      backgroundColor: Colors.transparent,
-                      surfaceTintColor: Colors.transparent,
-                      elevation: 0,
-                      scrolledUnderElevation: 0,
-                      shadowColor: Colors.transparent,
-                      centerTitle: false,
-                      leadingWidth: 56,
-                      leading: Center(
-                        child: GestureDetector(
-                          onTap: () => _closeTingyu(context),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: theme.dividerColor),
+                backgroundColor: Colors.transparent,
+                appBar: !portrait
+                    ? null
+                    : AppBar(
+                        backgroundColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        shadowColor: Colors.transparent,
+                        centerTitle: false,
+                        leadingWidth: 56,
+                        leading: Center(
+                          child: GestureDetector(
+                            onTap: () => _closeTingyu(context),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: theme.dividerColor),
+                              ),
+                              child: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 15,
+                                color: theme.colorScheme.onSurface,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              size: 15,
-                              color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        titleSpacing: 4,
+                        title: Text(
+                          '听隅',
+                          style: TextStyle(
+                            fontFamily: AppFonts.rounded,
+                            fontSize: CitroType.title,
+                            fontWeight: CitroType.strong,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        actions: [
+                          TingyuPomoTicker(
+                            compact: true,
+                            onOpen: () => _homeKey.currentState?.openPage(1),
+                          ),
+                          IconButton(
+                            tooltip: '呼吸练习',
+                            onPressed: () =>
+                                _homeKey.currentState?.openBreathe(),
+                            icon: const Icon(
+                              Icons.self_improvement_outlined,
+                              size: 20,
                             ),
                           ),
-                        ),
-                      ),
-                      titleSpacing: 4,
-                      title: Text(
-                        '听隅',
-                        style: TextStyle(
-                          fontFamily: AppFonts.rounded,
-                          fontSize: CitroType.title,
-                          fontWeight: CitroType.strong,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      actions: [
-                        TingyuPomoTicker(
-                          compact: true,
-                          onOpen: () => _homeKey.currentState?.openPage(1),
-                        ),
-                        IconButton(
-                          tooltip: '呼吸练习',
-                          onPressed: () => _homeKey.currentState?.openBreathe(),
-                          icon: const Icon(
-                            Icons.self_improvement_outlined,
-                            size: 20,
+                          Padding(
+                            padding: EdgeInsets.only(
+                              right: 8 + CitroDesktopShell.windowControlsInset,
+                            ),
+                            child: TingyuTopClock(compact: size.width < 380),
                           ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: 8 + CitroDesktopShell.windowControlsInset,
-                          ),
-                          child: TingyuTopClock(compact: size.width < 380),
-                        ),
-                      ],
-                    ),
-              body: MediaQuery.removePadding(
-                context: context,
-                removeTop: portrait,
-                child: NookHome(
-                  key: _homeKey,
-                  controller: _c,
-                  landscapeHeader: !portrait,
+                        ],
+                      ),
+                body: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: portrait,
+                  child: NookHome(
+                    key: _homeKey,
+                    controller: _c,
+                    landscapeHeader: !portrait,
+                  ),
                 ),
               ),
-            ),
             ),
           ),
         );
@@ -536,6 +538,7 @@ class Palette {
   Color get muted => c.inkSoft;
   Color get accent => tingyuAccent(c);
   Color get onAccent => tingyuOnAccent(c);
+
   /// 选中 / 软强调底：用强调色的淡色版（原来是固定的薄荷绿，和随背景
   /// 变化的强调色放在一起会撞色）。
   Color get soft => accent.withValues(alpha: dark ? .22 : .14);
@@ -3132,7 +3135,9 @@ class _NookHomeState extends State<NookHome> {
               p.surface,
             ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(inField ? 26 : CitroColors.radii.card),
+        borderRadius: BorderRadius.circular(
+          inField ? 26 : CitroColors.radii.card,
+        ),
         side: inField
             ? BorderSide(
                 color: Colors.white.withValues(alpha: p.dark ? .14 : .50),
@@ -3143,7 +3148,9 @@ class _NookHomeState extends State<NookHome> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => loadScene(scene),
-        borderRadius: BorderRadius.circular(inField ? 26 : CitroColors.radii.card),
+        borderRadius: BorderRadius.circular(
+          inField ? 26 : CitroColors.radii.card,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -5571,16 +5578,47 @@ class _BreathBackdropPainter extends CustomPainter {
     final glow = Paint()
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 80)
       ..color = accent.withValues(alpha: dark ? .075 : .10);
-    canvas.drawCircle(
-      Offset(size.width * .24, size.height * (.25 - breath * .02)),
-      size.width * .45,
-      glow,
-    );
-    canvas.drawCircle(
-      Offset(size.width * .82, size.height * (.34 + breath * .03)),
-      size.width * .34,
-      glow..color = accent.withValues(alpha: dark ? .055 : .075),
-    );
+    // Android 上每帧对两枚超大圆做 80 高斯模糊是听隅呼吸页的主要掉帧源；
+    // 用径向渐变近似光晕，边缘一样柔，但每帧不再生成模糊遮罩。
+    final cheap = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    if (cheap) {
+      void halo(Offset center, double radius, double alpha) {
+        final r = Rect.fromCircle(center: center, radius: radius);
+        canvas.drawCircle(
+          center,
+          radius,
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                accent.withValues(alpha: alpha),
+                accent.withValues(alpha: 0),
+              ],
+            ).createShader(r),
+        );
+      }
+
+      halo(
+        Offset(size.width * .24, size.height * (.25 - breath * .02)),
+        size.width * .45,
+        dark ? .10 : .14,
+      );
+      halo(
+        Offset(size.width * .82, size.height * (.34 + breath * .03)),
+        size.width * .34,
+        dark ? .08 : .10,
+      );
+    } else {
+      canvas.drawCircle(
+        Offset(size.width * .24, size.height * (.25 - breath * .02)),
+        size.width * .45,
+        glow,
+      );
+      canvas.drawCircle(
+        Offset(size.width * .82, size.height * (.34 + breath * .03)),
+        size.width * .34,
+        glow..color = accent.withValues(alpha: dark ? .055 : .075),
+      );
+    }
     final dot = Paint()..color = accent.withValues(alpha: dark ? .14 : .11);
     for (var i = 0; i < 30; i++) {
       final x =
@@ -5693,6 +5731,7 @@ class _BreathAuraPainter extends CustomPainter {
           ..color = color.withValues(alpha: .12 - i * .022),
       );
     }
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) return;
     canvas.drawCircle(
       center,
       base * .98,
@@ -5732,13 +5771,18 @@ class _BreathCorePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 2;
-    canvas.drawCircle(
-      center,
-      radius * .92,
-      Paint()
-        ..color = color.withValues(alpha: .10 + breath * .05)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26),
-    );
+    // 径向渐变已经提供体积感；Android 不再叠加每帧高斯模糊。
+    final cheapBlur =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    if (!cheapBlur) {
+      canvas.drawCircle(
+        center,
+        radius * .92,
+        Paint()
+          ..color = color.withValues(alpha: .10 + breath * .05)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26),
+      );
+    }
     final rect = Rect.fromCircle(center: center, radius: radius);
     canvas.drawCircle(
       center,

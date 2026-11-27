@@ -83,6 +83,16 @@ class _CrispPageTransitionState extends State<_CrispPageTransition> {
         final t = _curved.value.clamp(0.0, 1.0);
         // 进出一律用同一条连续公式，不按 status 切换：否则进场途中返回，
         // 透明度会在同一帧从 ~0.9 跳到 ~0.5。进场从 0 淡入，退场归零。
+        final cheap =
+            !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+        if (cheap) {
+          // Android 工具页内容重：只做位移，避免整页 Opacity/缩放
+          // 每帧重建渲染层。
+          return FractionalTranslation(
+            translation: Offset((1 - t) * .055, 0),
+            child: child,
+          );
+        }
         final opacity = t;
         final dx = (1 - t) * .055;
         final scale = .994 + .006 * t;

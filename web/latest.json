@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.5.1",
-    "build_number": "3501",
-    "build_id": "d45aa51883cdf70020731299d21314ce",
-    "file": "Citro-web-3.5.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.5.1.zip",
-    "size": 45707378,
-    "sha256": "b44bbeffacc4bc7cd7a206929a82880effe38c50bba5dcf85ec97e05cf610921",
-    "published_at": "2026-11-27T20:56:25Z",
-    "notes": "3.5.1:天气详情与心情详情弹窗提高玻璃模糊并加深深色填充，首页天气卡字号放大；Android 滚动与切 Tab 时底栏玻璃自适应降低实时模糊；累计包含测试中心与十二系测评、MBTI 测试档案、每日一签完全随机、登录注册改版、全局玻璃与游戏卡片视觉升级，以及 Web 桌面横屏与首屏延迟加载优化。"
+    "version": "3.5.2",
+    "build_number": "3502",
+    "build_id": "48d3d2303a8d95dee34489a9c7aee486",
+    "file": "Citro-web-3.5.2.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.5.2.zip",
+    "size": 45707564,
+    "sha256": "cb5439328a001f58cecc8eb042676713cd617d468f5a60eba4ba939e5ab139fa",
+    "published_at": "2026-11-27T21:29:07Z",
+    "notes": "3.5.2:横屏 Tab 切换改为上下翻页；所有弹窗玻璃模糊统一提高并加深深色填充；Android 待办/记账/食谱/听隅/我的页动画优化，减少整页透明度、缩放与逐帧模糊；延续天气/心情弹窗与天气卡字号调整。"
 }

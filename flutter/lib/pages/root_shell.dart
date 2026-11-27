@@ -380,11 +380,20 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 一旦在「页面」和「FractionalTranslation(页面)」之间切换，页面
     // Element 会被整棵重建，滚动位置和状态全丢。
     var dx = 0.0;
+    var dy = 0.0;
     if ((active || leaving) && !CitroMotion.reduced(context)) {
       final t = CitroMotion.tabSlideCurve.transform(_tabAnim.value);
-      dx = active ? _dir * (1 - t) : -_dir * t;
+      // 横屏用上下切换：页签在横向空间里按上下顺序翻页，和竖屏的左右
+      // 滑动区分开，避免横屏时整页横向甩动看起来像在切换横向栏目。
+      final vertical =
+          MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+      if (vertical) {
+        dy = active ? _dir * (1 - t) : -_dir * t;
+      } else {
+        dx = active ? _dir * (1 - t) : -_dir * t;
+      }
     }
-    return FractionalTranslation(translation: Offset(dx, 0), child: child);
+    return FractionalTranslation(translation: Offset(dx, dy), child: child);
   }
 
   Widget _pageAt(int i) {

@@ -235,57 +235,57 @@ class _TodoPageState extends State<TodoPage>
         builder: (context) {
           return CitroBackground(
             child: Scaffold(
-            // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
-            backgroundColor: Colors.transparent,
-            body: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (wide) _rail(context),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 0),
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Column(
-                            children: [
-                              SizedBox(height: top),
-                              Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 1120,
-                                  ),
-                                  child: _header(context, wide: wide),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Expanded(
-                                child: Center(
+              // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+              backgroundColor: Colors.transparent,
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (wide) _rail(context),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 0),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Column(
+                              children: [
+                                SizedBox(height: top),
+                                Center(
                                   child: ConstrainedBox(
                                     constraints: const BoxConstraints(
                                       maxWidth: 1120,
                                     ),
-                                    child: _pages(pages),
+                                    child: _header(context, wide: wide),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Expanded(
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 1120,
+                                      ),
+                                      child: _pages(pages),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        // 键盘弹起时收起底栏（下滑 + 淡出，逻辑同以前）。
-                        if (!wide)
-                          _bottomBar(
-                            context,
-                            visible:
-                                MediaQuery.viewInsetsOf(context).bottom == 0,
-                          ),
-                      ],
+                          // 键盘弹起时收起底栏（下滑 + 淡出，逻辑同以前）。
+                          if (!wide)
+                            _bottomBar(
+                              context,
+                              visible:
+                                  MediaQuery.viewInsetsOf(context).bottom == 0,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           );
         },
       ),
@@ -1049,16 +1049,20 @@ class _EnterVeil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (CitroMotion.reduced(context)) return child;
+    // Android 上整页 Opacity 会强制 saveLayer，待办页卡片多，切 Tab 时
+    // 正好把这一帧预算吃掉；只保留位移，形状与节奏不变但不重绘整页。
+    final cheap = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     return AnimatedBuilder(
       animation: animation,
       builder: (context, inner) {
         final t = active ? Curves.easeOutCubic.transform(animation.value) : 1.0;
+        final dx = Offset(.05 * (1 - t), 0);
+        if (cheap) {
+          return FractionalTranslation(translation: dx, child: inner);
+        }
         return Opacity(
           opacity: t.clamp(0.0, 1.0),
-          child: FractionalTranslation(
-            translation: Offset(.05 * (1 - t), 0),
-            child: inner,
-          ),
+          child: FractionalTranslation(translation: dx, child: inner),
         );
       },
       child: child,
@@ -1094,12 +1098,7 @@ Widget _menuRow(BuildContext context, String icon, String label, Color color) {
   );
 }
 
-Widget _meta(
-  BuildContext context,
-  Color color,
-  String text, {
-  double? height,
-}) {
+Widget _meta(BuildContext context, Color color, String text, {double? height}) {
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -1167,7 +1166,9 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                 compact ? 9 : 10,
               ),
               decoration: BoxDecoration(
-                color: task.done ? c.surface2.withValues(alpha: c.surface2.a * (150) / 255) : c.surface2,
+                color: task.done
+                    ? c.surface2.withValues(alpha: c.surface2.a * (150) / 255)
+                    : c.surface2,
                 borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                 border: Border.all(
                   color: task.overdue
@@ -1336,7 +1337,12 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                             if (task.overdue)
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
-                                child: _meta(context, c.stamp, '已逾期', height: 1),
+                                child: _meta(
+                                  context,
+                                  c.stamp,
+                                  '已逾期',
+                                  height: 1,
+                                ),
                               ),
                           ],
                         ),
@@ -1374,7 +1380,8 @@ class _SubtaskCard extends StatelessWidget {
     return Pressable(
       onTap: () {
         // 勾上时给一下轻触感（仅移动端；桌面 / Web 没有马达）。
-        if (!sub.done && !kIsWeb &&
+        if (!sub.done &&
+            !kIsWeb &&
             (defaultTargetPlatform == TargetPlatform.iOS ||
                 defaultTargetPlatform == TargetPlatform.android)) {
           HapticFeedback.lightImpact();
@@ -1385,7 +1392,9 @@ class _SubtaskCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
         decoration: BoxDecoration(
-          color: sub.done ? c.surface2.withValues(alpha: c.surface2.a * (120) / 255) : c.surface,
+          color: sub.done
+              ? c.surface2.withValues(alpha: c.surface2.a * (120) / 255)
+              : c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: sub.done ? c.line : c.line2),
         ),
@@ -1511,7 +1520,12 @@ class _ScheduleViewState extends State<_ScheduleView> {
                 flex: 3,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-                  children: [CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _calendar(context)))],
+                  children: [
+                    CitroFieldScope(
+                      tone: FieldTone.light,
+                      child: Builder(builder: (context) => _calendar(context)),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -1528,7 +1542,10 @@ class _ScheduleViewState extends State<_ScheduleView> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
           children: [
-            CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _calendar(context))),
+            CitroFieldScope(
+              tone: FieldTone.light,
+              child: Builder(builder: (context) => _calendar(context)),
+            ),
             const SizedBox(height: 16),
             taskSection,
           ],
@@ -1588,7 +1605,9 @@ class _ScheduleViewState extends State<_ScheduleView> {
               border: Border.all(
                 color: selected
                     ? c.accent
-                    : (today ? c.accent.withAlpha(70) : c.line.withValues(alpha: c.line.a * (170) / 255)),
+                    : (today
+                          ? c.accent.withAlpha(70)
+                          : c.line.withValues(alpha: c.line.a * (170) / 255)),
               ),
               boxShadow: selected ? CitroColors.shadows.glow(c) : null,
             ),

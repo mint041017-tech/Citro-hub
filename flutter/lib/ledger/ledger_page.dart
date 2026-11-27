@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -98,45 +99,45 @@ class _LedgerPageState extends State<LedgerPage>
         builder: (context) {
           return CitroBackground(
             child: Scaffold(
-            // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
-            backgroundColor: Colors.transparent,
-            body: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (wide) _rail(context),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.zero,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Column(
-                            children: [
-                              SizedBox(height: top),
-                              // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
-                              // 下面的内容区仍然保持 1120 的阅读宽度。
-                              _header(context, wide: wide),
-                              const SizedBox(height: 4),
-                              // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
-                              // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
-                              Expanded(child: _pages(pages)),
-                            ],
+              // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+              backgroundColor: Colors.transparent,
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (wide) _rail(context),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.zero,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Column(
+                              children: [
+                                SizedBox(height: top),
+                                // 页头单独铺满窗口宽度，右侧的同步/记一笔才真正贴右；
+                                // 下面的内容区仍然保持 1120 的阅读宽度。
+                                _header(context, wide: wide),
+                                const SizedBox(height: 4),
+                                // 记账页不再限制 1120 阅读宽度：右侧操作和月份行
+                                // 都贴窗口右边，宽屏下不会出现按钮/预算左右错位。
+                                Expanded(child: _pages(pages)),
+                              ],
+                            ),
                           ),
-                        ),
-                        // 键盘弹起时收起底栏（下滑 + 淡出，逻辑同以前）。
-                        if (!wide)
-                          _bottomBar(
-                            context,
-                            visible:
-                                MediaQuery.viewInsetsOf(context).bottom == 0,
-                          ),
-                      ],
+                          // 键盘弹起时收起底栏（下滑 + 淡出，逻辑同以前）。
+                          if (!wide)
+                            _bottomBar(
+                              context,
+                              visible:
+                                  MediaQuery.viewInsetsOf(context).bottom == 0,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           );
         },
       ),
@@ -271,16 +272,20 @@ class _EnterVeil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (CitroMotion.reduced(context)) return child;
+    // Android 上整页 Opacity 会强制 saveLayer，记账图表/卡片较多时容易掉帧；
+    // 只保留位移即可保持切页手感。
+    final cheap = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     return AnimatedBuilder(
       animation: animation,
       builder: (context, inner) {
         final t = active ? Curves.easeOutCubic.transform(animation.value) : 1.0;
+        final dx = Offset(.05 * (1 - t), 0);
+        if (cheap) {
+          return FractionalTranslation(translation: dx, child: inner);
+        }
         return Opacity(
           opacity: t.clamp(0.0, 1.0),
-          child: FractionalTranslation(
-            translation: Offset(.05 * (1 - t), 0),
-            child: inner,
-          ),
+          child: FractionalTranslation(translation: dx, child: inner),
         );
       },
       child: child,

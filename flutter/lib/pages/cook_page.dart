@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/desktop_shell.dart';
+
 import 'package:flutter/services.dart';
 
 import '../overlays/auth_modal.dart';
@@ -529,6 +530,11 @@ class _CookPageState extends State<CookPage> {
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
             transitionBuilder: (child, anim) {
+              // Android 上整页 FadeTransition 会强制 saveLayer，食谱页图片多，
+              // 切 Tab / 详情时最容易掉帧；直接换页，内容自身仍有入场动效。
+              if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+                return child;
+              }
               // 共享元素飞行时页面只淡入，位移交给封面替身。
               if (_coverFlighting) {
                 return FadeTransition(opacity: anim, child: child);
@@ -760,7 +766,10 @@ class _CookPageState extends State<CookPage> {
                     children: [
                       Text(
                         '食谱日记',
-                        style: context.heading(size: CitroType.title, color: c.ink),
+                        style: context.heading(
+                          size: CitroType.title,
+                          color: c.ink,
+                        ),
                       ),
                       Text(
                         'NOMBOOK',
@@ -793,10 +802,7 @@ class _CookPageState extends State<CookPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               '把喜欢的味道，一页页收好。',
-              style: context.body(
-                size: CitroType.caption,
-                color: c.inkSoft,
-              ),
+              style: context.body(size: CitroType.caption, color: c.inkSoft),
             ),
           ),
         ],
@@ -1092,16 +1098,17 @@ class _CookPageState extends State<CookPage> {
               boxShadow: CitroColors.shadows.sm(c),
             ),
             padding: const EdgeInsets.all(12),
-            child: Image.asset(
-              'assets/images/logo.webp',
-              cacheWidth: 240,
-            ),
+            child: Image.asset('assets/images/logo.webp', cacheWidth: 240),
           ),
           const SizedBox(height: 18),
           Text(
             '登录后开始收藏菜谱、记录下厨',
             textAlign: TextAlign.center,
-            style: context.body(size: CitroType.bodyLg, color: c.ink, height: 1.6),
+            style: context.body(
+              size: CitroType.bodyLg,
+              color: c.ink,
+              height: 1.6,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1177,10 +1184,7 @@ class _CookPageState extends State<CookPage> {
       return r.name.toLowerCase().contains(q) ||
           '${r.cuisine} ${r.dishType}'.toLowerCase().contains(q) ||
           r.tags.join(' ').toLowerCase().contains(q) ||
-          r.ingredients
-              .map((e) => e.name.toLowerCase())
-              .join(' ')
-              .contains(q);
+          r.ingredients.map((e) => e.name.toLowerCase()).join(' ').contains(q);
     }).toList();
     if (tab == 'recipes') {
       list = _sortWithPins(list);
@@ -1207,7 +1211,9 @@ class _CookPageState extends State<CookPage> {
                       ? '从第一道拿手菜开始记吧'
                       : (tab == 'recipes' ? '换个关键词或筛选试试' : null),
                   action: tab == 'recipes' && mine.isEmpty ? '＋ 新建第一个食谱' : null,
-                  onAction: tab == 'recipes' && mine.isEmpty ? _newRecipe : null,
+                  onAction: tab == 'recipes' && mine.isEmpty
+                      ? _newRecipe
+                      : null,
                 ),
               ],
             )
@@ -1305,7 +1311,9 @@ class _CookPageState extends State<CookPage> {
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: c.surface2,
-                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.small,
+                        ),
                       ),
                       child: Stack(
                         children: [
@@ -1560,7 +1568,9 @@ class _CookPageState extends State<CookPage> {
                   builder: (_, hidden, _) => Opacity(
                     opacity: hidden ? 0 : 1,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                       child: AspectRatio(
                         // 共享元素的落点：列表卡封面从那张卡的位置长到这里。
                         key: _detailCoverKey,
@@ -1608,7 +1618,10 @@ class _CookPageState extends State<CookPage> {
                   '来源：${r.source}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: context.body(size: CitroType.micro, color: c.accentInk),
+                  style: context.body(
+                    size: CitroType.micro,
+                    color: c.accentInk,
+                  ),
                 ),
               ],
               const SizedBox(height: 10),
@@ -1769,7 +1782,11 @@ class _CookPageState extends State<CookPage> {
                 const SizedBox(height: 5),
                 Text(
                   r.note,
-                  style: context.body(size: CitroType.body, color: c.ink2, height: 1.75),
+                  style: context.body(
+                    size: CitroType.body,
+                    color: c.ink2,
+                    height: 1.75,
+                  ),
                 ),
               ],
               const SizedBox(height: 14),
@@ -1779,7 +1796,10 @@ class _CookPageState extends State<CookPage> {
                   const SizedBox(width: 6),
                   Text(
                     '${r.diary.length} 次',
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                   const Spacer(),
                   if (r.mine)
@@ -2153,48 +2173,47 @@ class _CookPageState extends State<CookPage> {
                 if (step.text.isNotEmpty)
                   Text(
                     step.text,
-                    style: context.body(size: CitroType.body, color: c.ink2, height: 1.75),
+                    style: context.body(
+                      size: CitroType.body,
+                      color: c.ink2,
+                      height: 1.75,
+                    ),
                   ),
                 if (step.img.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: GestureDetector(
-                      onTap: () => Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).push<void>(
-                        PageRouteBuilder<void>(
-                          opaque: false,
-                          barrierColor: c.scrim,
-                          barrierDismissible: true,
-                          transitionDuration: CitroMotion.modal,
-                          reverseTransitionDuration: CitroMotion.modalReverse,
-                          pageBuilder: (ctx, animation, secondary) =>
-                              CitroImageViewer(
-                            urls: [Api.imageUrl(step.img)],
-                            initialIndex: 0,
-                            tagOf: (_) => 'cook-step-${r.id}-$i',
-                            cacheWidth: 720,
+                      onTap: () =>
+                          Navigator.of(context, rootNavigator: true).push<void>(
+                            PageRouteBuilder<void>(
+                              opaque: false,
+                              barrierColor: c.scrim,
+                              barrierDismissible: true,
+                              transitionDuration: CitroMotion.modal,
+                              reverseTransitionDuration:
+                                  CitroMotion.modalReverse,
+                              pageBuilder: (ctx, animation, secondary) =>
+                                  CitroImageViewer(
+                                    urls: [Api.imageUrl(step.img)],
+                                    initialIndex: 0,
+                                    tagOf: (_) => 'cook-step-${r.id}-$i',
+                                    cacheWidth: 720,
+                                  ),
+                              transitionsBuilder:
+                                  (ctx, animation, secondary, child) {
+                                    final curved = CurvedAnimation(
+                                      parent: animation,
+                                      curve: CitroMotion.easeOut,
+                                      reverseCurve: CitroMotion.exit,
+                                    );
+                                    return FadeTransition(
+                                      opacity: curved,
+                                      child: child,
+                                    );
+                                  },
+                            ),
                           ),
-                          transitionsBuilder: (
-                            ctx,
-                            animation,
-                            secondary,
-                            child,
-                          ) {
-                            final curved = CurvedAnimation(
-                              parent: animation,
-                              curve: CitroMotion.easeOut,
-                              reverseCurve: CitroMotion.exit,
-                            );
-                            return FadeTransition(
-                              opacity: curved,
-                              child: child,
-                            );
-                          },
-                        ),
-                      ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(
                           CitroColors.radii.small,
@@ -2311,7 +2330,11 @@ class _CookPageState extends State<CookPage> {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 d.result,
-                style: context.body(size: CitroType.body, color: c.ink2, height: 1.6),
+                style: context.body(
+                  size: CitroType.body,
+                  color: c.ink2,
+                  height: 1.6,
+                ),
               ),
             ),
         ],
@@ -2390,7 +2413,11 @@ class _CookPageState extends State<CookPage> {
       children: [
         Text(
           '告诉我手头有什么，我来找能做的菜。冰箱里有的可以直接点选。',
-          style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.6),
+          style: context.body(
+            size: CitroType.caption,
+            color: c.inkSoft,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 10),
         Row(
@@ -2436,9 +2463,7 @@ class _CookPageState extends State<CookPage> {
                   padding: const EdgeInsets.fromLTRB(10, 5, 5, 5),
                   decoration: BoxDecoration(
                     color: c.ink,
-                    borderRadius: BorderRadius.circular(
-                      CitroColors.radii.chip,
-                    ),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2816,7 +2841,10 @@ class _CookPageState extends State<CookPage> {
                           r.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.heading(size: CitroType.bodyLg, color: c.ink),
+                          style: context.heading(
+                            size: CitroType.bodyLg,
+                            color: c.ink,
+                          ),
                         ),
                       ),
                       if (m.fullMain) ...[
@@ -2848,14 +2876,20 @@ class _CookPageState extends State<CookPage> {
                   const SizedBox(height: 2),
                   Text(
                     '${m.mine ? '我的食谱' : '${r.owner ?? '广场'}'} · 食材 ${m.mainHit}/${m.mainTotal}',
-                    style: context.hand(size: CitroType.micro, color: c.inkSoft),
+                    style: context.hand(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                   if (m.missing.isNotEmpty)
                     Text(
                       '还缺 ${m.missing.length} 样：${m.missing.take(5).join('、')}${m.missing.length > 5 ? '…' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.body(size: CitroType.micro, color: c.danger),
+                      style: context.body(
+                        size: CitroType.micro,
+                        color: c.danger,
+                      ),
                     ),
                   const SizedBox(height: 5),
                   ClipRRect(
@@ -2924,7 +2958,9 @@ class _CookPageState extends State<CookPage> {
                   ),
                   decoration: BoxDecoration(
                     color: c.surface,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.inner,
+                    ),
                     boxShadow: CitroColors.shadows.sm(c),
                   ),
                   child: Row(
@@ -3042,182 +3078,188 @@ class _CookPageState extends State<CookPage> {
     return Padding(
       padding: EdgeInsets.only(bottom: clearBottom),
       child: Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            children: [
-              for (final it in shopping)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-                    boxShadow: CitroColors.shadows.sm(c),
-                  ),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => it.done = !it.done);
-                          _saveShopping();
-                        },
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: it.done ? c.ink : Colors.transparent,
-                            borderRadius: BorderRadius.circular(
-                              CitroColors.radii.small,
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              children: [
+                for (final it in shopping)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.inner,
+                      ),
+                      boxShadow: CitroColors.shadows.sm(c),
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => it.done = !it.done);
+                            _saveShopping();
+                          },
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: it.done ? c.ink : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                CitroColors.radii.small,
+                              ),
+                              border: Border.all(
+                                color: it.done ? c.ink : c.line2,
+                              ),
                             ),
-                            border: Border.all(
-                              color: it.done ? c.ink : c.line2,
+                            child: it.done
+                                ? Icon(Icons.check, size: 15, color: c.bg)
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            it.text,
+                            style: context
+                                .body(
+                                  size: CitroType.body,
+                                  color: it.done ? c.inkSoft : c.ink,
+                                  height: 1.5,
+                                )
+                                .copyWith(
+                                  decoration: it.done
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => shopping.remove(it));
+                            _saveShopping();
+                          },
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: c.dangerSoft,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: c.danger),
+                            ),
+                            child: Center(
+                              child: AppIcon(
+                                strokeSvg(AppIcons.close, width: 2.2),
+                                size: 15,
+                                color: c.danger,
+                              ),
                             ),
                           ),
-                          child: it.done
-                              ? Icon(Icons.check, size: 15, color: c.bg)
-                              : null,
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          it.text,
-                          style: context
-                              .body(
-                                size: CitroType.body,
-                                color: it.done ? c.inkSoft : c.ink,
-                                height: 1.5,
-                              )
-                              .copyWith(
-                                decoration: it.done
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => shopping.remove(it));
-                          _saveShopping();
-                        },
-                        child: Container(
-                          width: 34,
-                          height: 34,
+                      ],
+                    ),
+                  ),
+                if (shopping.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 50),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
                           decoration: BoxDecoration(
-                            color: c.dangerSoft,
+                            color: c.surface2,
                             shape: BoxShape.circle,
-                            border: Border.all(color: c.danger),
                           ),
                           child: Center(
                             child: AppIcon(
-                              strokeSvg(AppIcons.close, width: 2.2),
-                              size: 15,
-                              color: c.danger,
+                              strokeSvg(AppIcons.cart, width: 1.8),
+                              size: 30,
+                              color: c.accent,
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (shopping.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 50),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: c.surface2,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: AppIcon(
-                            strokeSvg(AppIcons.cart, width: 1.8),
-                            size: 30,
-                            color: c.accent,
+                        const SizedBox(height: 14),
+                        Text(
+                          '清单是空的，加一点要买的',
+                          style: context.body(
+                            size: CitroType.caption,
+                            color: c.inkSoft,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            decoration: BoxDecoration(
+              color: c.surface,
+              border: Border(top: BorderSide(color: c.line)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: c.surface2,
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.chip,
                       ),
-                      const SizedBox(height: 14),
-                      Text(
-                        '清单是空的，加一点要买的',
-                        style: context.body(
+                      border: Border.all(color: c.line2),
+                    ),
+                    child: TextField(
+                      controller: shoppingInput,
+                      onSubmitted: (_) => _addShopping(),
+                      style: context.body(size: CitroType.meta),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        // 文字在 44 高的胶囊里垂直居中，不偏上 / 偏下。
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                        hintText: '添加要买的东西…',
+                        hintStyle: context.body(
                           size: CitroType.caption,
                           color: c.inkSoft,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          decoration: BoxDecoration(
-            color: c.surface,
-            border: Border(top: BorderSide(color: c.line)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-                    border: Border.all(color: c.line2),
-                  ),
-                  child: TextField(
-                    controller: shoppingInput,
-                    onSubmitted: (_) => _addShopping(),
-                    style: context.body(size: CitroType.meta),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      // 文字在 44 高的胶囊里垂直居中，不偏上 / 偏下。
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      hintText: '添加要买的东西…',
-                      hintStyle: context.body(
-                        size: CitroType.caption,
-                        color: c.inkSoft,
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _addShopping,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: c.ink,
+                      shape: BoxShape.circle,
+                      boxShadow: CitroColors.shadows.sm(c),
+                    ),
+                    child: Center(
+                      child: AppIcon(
+                        strokeSvg(AppIcons.plus, width: 2.2),
+                        size: 20,
+                        color: c.bg,
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _addShopping,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: c.ink,
-                    shape: BoxShape.circle,
-                    boxShadow: CitroColors.shadows.sm(c),
-                  ),
-                  child: Center(
-                    child: AppIcon(
-                      strokeSvg(AppIcons.plus, width: 2.2),
-                      size: 20,
-                      color: c.bg,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -3306,9 +3348,7 @@ class _IngredientCheckState extends State<_IngredientCheck> {
               borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               border: Border.all(color: checked ? c.ink : c.line2),
             ),
-            child: checked
-                ? Icon(Icons.check, size: 12, color: c.bg)
-                : null,
+            child: checked ? Icon(Icons.check, size: 12, color: c.bg) : null,
           ),
           const SizedBox(width: 8),
           Text(

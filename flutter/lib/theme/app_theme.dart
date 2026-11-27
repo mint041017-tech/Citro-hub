@@ -295,9 +295,7 @@ ThemeData buildCitroTheme(CitroColors colors) {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-        side: colors.dark
-            ? BorderSide(color: colors.line)
-            : BorderSide.none,
+        side: colors.dark ? BorderSide(color: colors.line) : BorderSide.none,
       ),
       titleTextStyle: TextStyle(
         color: colors.ink,
@@ -375,12 +373,18 @@ Widget _citroPageTransition<T>({
   // 半透明的那几帧会把旧页的字透出来，和新页叠在一起。
   final page = child;
   if (reduce) return page;
-  return SlideTransition(
+  final slide = SlideTransition(
     position: Tween<Offset>(begin: enterFrom, end: Offset.zero).animate(enter),
-    child: ScaleTransition(
-      scale: Tween<double>(begin: .994, end: 1).animate(enter),
-      child: page,
-    ),
+    child: page,
+  );
+  // Android 上整页缩放在有玻璃/模糊的页面上会反复重建采样层；
+  // 只保留位移，方向感不变，raster 成本明显更低。
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return slide;
+  }
+  return ScaleTransition(
+    scale: Tween<double>(begin: .994, end: 1).animate(enter),
+    child: slide,
   );
 }
 

@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.5.1",
-    "build_number": "3501",
-    "file": "Citro-downloads-3.5.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.5.1.zip",
-    "size": 1088931,
-    "sha256": "0c4c090639df82a6e061ca7177da2e189e9a87a2010bdf59ce711dcfdc831ed2",
-    "published_at": "2026-11-27T20:56:26Z",
-    "notes": "Citro downloads 静态站 3.5.1：Windows / Android 入口更新到 3.5.1，同步天气/心情弹窗模糊与天气卡字号、Android 动画优化、测试中心与十二系测评、登录注册改版、全局玻璃与游戏卡片视觉；Web 入口同步。"
+    "version": "3.5.2",
+    "build_number": "3502",
+    "file": "Citro-downloads-3.5.2.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.5.2.zip",
+    "size": 1088981,
+    "sha256": "54a352fe51d00dadd75bc8ad2efaba683ab78c38be30e045a9d0e32c7ba3c3a9",
+    "published_at": "2026-11-27T21:29:08Z",
+    "notes": "Citro downloads 静态站 3.5.2：Windows / Android 入口更新到 3.5.2，同步横屏上下切页、所有弹窗模糊提高、Android 动画优化与天气卡字号调整；Web 入口同步。"
 }
