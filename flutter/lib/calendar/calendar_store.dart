@@ -29,10 +29,6 @@ class CalendarStore extends ChangeNotifier {
 
   int get count => _marks.length;
 
-  bool get isEmpty => _marks.isEmpty;
-
-  bool get signedIn => AppState.instance.loggedIn;
-
   Future<void> ensureInit() async {
     if (_ready) return;
     _ready = true;

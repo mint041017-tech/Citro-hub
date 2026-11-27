@@ -65,7 +65,7 @@ class _FunSignSheetState extends State<_FunSignSheet>
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border(
-            top: BorderSide(color: c.line2.withAlpha(110), width: .6),
+            top: BorderSide(color: c.line2.withValues(alpha: c.line2.a * (110) / 255), width: .6),
           ),
         ),
         child: SafeArea(
@@ -95,8 +95,8 @@ class _FunSignSheetState extends State<_FunSignSheet>
                     const Spacer(),
                     CitroChip(
                       '$kFunSignCount 支 · ${kFunSignKinds.length} 种',
-                      background: c.tintYellow.withAlpha(150),
-                      borderColor: c.line2.withAlpha(120),
+                      background: c.tintYellow.withValues(alpha: c.tintYellow.a * (150) / 255),
+                      borderColor: c.line2.withValues(alpha: c.line2.a * (120) / 255),
                     ),
                   ],
                 ),

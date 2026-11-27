@@ -1,4 +1,6 @@
 import 'package:citro/main.dart';
+import 'package:citro/mbti/home_card.dart';
+import 'package:citro/overlays/card_collection.dart';
 import 'package:citro/pages/community_page.dart';
 import 'package:citro/pages/home_page.dart';
 import 'package:citro/services/models.dart';
@@ -9,6 +11,7 @@ import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/breakpoints.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/corner_guard.dart';
+import 'package:citro/widgets/home_entries.dart';
 import 'package:citro/widgets/tablet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -133,14 +136,13 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    final fish = tester.getRect(find.byType(FishCard));
-    final zodiac = tester.getRect(find.byType(ZodiacCard));
-    // 宽屏默认栅格：首行是打卡 / 摸鱼 / 天气 / 心情四张小卡，星象是紧随其后的
-    // 12 列通栏整宽大卡（左缘起手、宽度约为摸鱼小卡的 4 倍）；旧版右半列里
-    // 挂在摸鱼日历下方的半宽星象已在「六排布局」提交中移除，这里不再校验左右列序。
-    expect(zodiac.top, greaterThanOrEqualTo(fish.top));
-    expect(zodiac.left, lessThanOrEqualTo(fish.left));
-    expect(zodiac.width, greaterThan(fish.width * 3));
+    // 人格测试与卡面收藏和打卡卡同宽、两行高，并排在同一排。
+    final mbti = tester.getRect(find.byType(MbtiHomeCard));
+    final cards = tester.getRect(find.byType(CardCollectionEntry));
+    final checkin = tester.getRect(find.byType(CheckinCard));
+    expect(mbti.width, closeTo(checkin.width, .5));
+    expect(mbti.height, lessThan(checkin.height));
+    expect(cards.left, greaterThan(mbti.left));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -385,10 +387,11 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 350));
-    final fish = tester.getTopLeft(find.byType(FishCard));
-    final zodiac = tester.getTopLeft(find.byType(ZodiacCard));
-    // 新布局里星象和摸鱼日历在同一行（星象收小成半宽）。
-    expect(zodiac.dy, greaterThanOrEqualTo(fish.dy));
+    // 窄屏首页：人格测试卡与打卡卡同尺寸，两列并排。
+    final mbti = tester.getRect(find.byType(MbtiHomeCard));
+    final checkin = tester.getRect(find.byType(CheckinCard));
+    expect(mbti.width, closeTo(checkin.width, .5));
+    expect(mbti.height, lessThan(checkin.height));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

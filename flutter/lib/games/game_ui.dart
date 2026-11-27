@@ -153,10 +153,8 @@ class GameScaffold extends StatefulWidget {
     this.boardGap = GameMetrics.boardGap,
     this.liveProgress,
     this.showLive = true,
-    this.liveInScroll = false,
     this.titleSize,
     this.onBack,
-    this.extraHeadActions = const [],
     this.rankGame,
     this.rankDifficulties = const [],
     this.rankInitial = '',
@@ -201,12 +199,8 @@ class GameScaffold extends StatefulWidget {
   final double boardGap;
   final ValueNotifier<String>? liveProgress;
   final bool showLive;
-
-  /// true = live 条放进滚动内容（页面内容高于视口时整页滚动的行为）
-  final bool liveInScroll;
   final double? titleSize;
   final VoidCallback? onBack;
-  final List<Widget> extraHeadActions;
 
   /// iPad 横屏侧栏排行榜使用的游戏 key；缺省按 gameKey 推导。
   final String? rankGame;
@@ -1884,92 +1878,4 @@ class _LiveChip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 一条 CSS `box-shadow` 描述（外阴影语义：绘制在圆角矩形之外）
-class CssShadowSpec {
-  const CssShadowSpec({
-    required this.color,
-    this.offset = Offset.zero,
-    this.blur = 0,
-    this.spread = 0,
-  });
-
-  final Color color;
-  final Offset offset;
-  final double blur;
-  final double spread;
-}
-
-/// 复刻 CSS 外阴影：外阴影被裁剪在 border-box 之外，且 blur 半径 = 2σ。
-/// 用 Stack 把阴影画在 child 下方（child 自身可以是半透明底）。
-class CssShadowLayer extends StatelessWidget {
-  const CssShadowLayer({
-    super.key,
-    required this.shadows,
-    required this.radius,
-    required this.child,
-  });
-
-  final List<CssShadowSpec> shadows;
-  final double radius;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _CssShadowLayerPainter(shadows: shadows, radius: radius),
-            ),
-          ),
-        ),
-        child,
-      ],
-    );
-  }
-}
-
-class _CssShadowLayerPainter extends CustomPainter {
-  const _CssShadowLayerPainter({required this.shadows, required this.radius});
-
-  final List<CssShadowSpec> shadows;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outer = Offset.zero & size;
-    final inner = Path()
-      ..addRRect(RRect.fromRectAndRadius(outer, Radius.circular(radius)));
-    final clip = Path.combine(
-      PathOperation.difference,
-      Path()..addRect(outer.inflate(200)),
-      inner,
-    );
-    canvas.save();
-    canvas.clipPath(clip);
-    for (final s in shadows) {
-      final rect = outer.inflate(s.spread).shift(s.offset);
-      final path = Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            rect,
-            Radius.circular((radius + s.spread).clamp(0, 999)),
-          ),
-        );
-      final paint = Paint()..color = s.color;
-      if (s.blur > 0) {
-        paint.maskFilter = MaskFilter.blur(BlurStyle.normal, s.blur * 0.5);
-      }
-      canvas.drawPath(path, paint);
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _CssShadowLayerPainter old) =>
-      old.radius != radius || old.shadows != shadows;
 }

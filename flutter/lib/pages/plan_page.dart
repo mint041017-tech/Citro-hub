@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../calendar/calendar_models.dart';
 import '../calendar/calendar_store.dart';
 import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/ledger_home_card.dart';
@@ -26,14 +28,14 @@ class PlanPage extends StatelessWidget {
     final media = MediaQuery.sizeOf(context);
     final width = layout?.contentWidth ?? media.width;
     final maxWidth = width >= 780 ? 1120.0 : 760.0;
-    final side = math.max(8.0, (width - maxWidth) / 2);
+    final side = AppSpacing.pageSide(width, maxWidth);
     final sideNav = layout?.tabletNav ?? false;
-    // 下面三处排版只在 Windows 生效：手机 / iPad 保持原来的竖排。
-    final windows = platform.isWindows;
+    // 下面三处排版沿用 Windows：桌面壳（Windows / 平板横屏 / Web 横屏）都走这套，
+    // 手机与平板竖屏保持原来的竖排。
+    final windows = platform.isWindows || (kIsWeb && sideNav);
     return Stack(
       children: [
-        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
-        Positioned.fill(child: ColoredBox(color: context.c.bg)),
+        // 沉浸式：背景由壳层统一提供，这里不再铺纯色底。
         CitroBackground(
           color: Colors.transparent,
           child: SafeArea(
@@ -42,12 +44,12 @@ class PlanPage extends StatelessWidget {
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
+              // 与游戏页 / 社区页同一套宽松页边距。
               padding: EdgeInsets.fromLTRB(
                 side,
-                // 与游戏页 / 社区页对齐（宽屏 48）；手机保持原来的 8。
-                windows ? AppSpacing.pageTop(width) : 8,
+                AppSpacing.pageTopRoomy(width),
                 side,
-                sideNav ? 32 : 100,
+                AppSpacing.pageBottom(floatingNav: !sideNav),
               ),
               child: Center(
                 child: ConstrainedBox(
@@ -62,10 +64,10 @@ class PlanPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const CitroPageTitle('计划', '今天的安排，一目了然'),
-                            const SizedBox(height: AppSpacing.x3),
-                            const _TodayCard(),
-                            const SizedBox(height: AppSpacing.x3),
+                            const CitroPageTitle('计划', ''),
+                            const SizedBox(height: AppSpacing.block),
+                            const CitroFieldScope(tone: FieldTone.light, child: _TodayCard()),
+                            const SizedBox(height: AppSpacing.block),
                             if (windows)
                               // Windows 宽屏：待办在左、记账在右，同高并排。
                               SizedBox(
@@ -75,12 +77,18 @@ class PlanPage extends StatelessWidget {
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     Expanded(
-                                      child: const TodoHomeCard(
-                                        globalAccent: true,
+                                      child: const CitroFieldScope(
+                                        tone: FieldTone.primary,
+                                        child: TodoHomeCard(globalAccent: true),
                                       ),
                                     ),
-                                    const SizedBox(width: AppSpacing.x2),
-                                    Expanded(child: const LedgerHomeCard()),
+                                    const SizedBox(width: AppSpacing.grid + 4),
+                                    Expanded(
+                                    child: const CitroFieldScope(
+                                      tone: FieldTone.deep,
+                                      child: LedgerHomeCard(),
+                                    ),
+                                  ),
                                   ],
                                 ),
                               )
@@ -88,12 +96,18 @@ class PlanPage extends StatelessWidget {
                               SizedBox(
                                 height: (w * .82).clamp(250.0, 380.0),
                                 // 计划页的待办卡用全局品牌色，和下面的记账卡同一套强调色。
-                                child: const TodoHomeCard(globalAccent: true),
+                                child: const CitroFieldScope(
+                                  tone: FieldTone.primary,
+                                  child: TodoHomeCard(globalAccent: true),
+                                ),
                               ),
-                              const SizedBox(height: AppSpacing.x3),
+                              const SizedBox(height: AppSpacing.block),
                               SizedBox(
                                 height: (w * .64).clamp(190.0, 280.0),
-                                child: const LedgerHomeCard(),
+                                child: const CitroFieldScope(
+                                  tone: FieldTone.deep,
+                                  child: LedgerHomeCard(),
+                                ),
                               ),
                             ],
                           ],
@@ -147,28 +161,28 @@ class _TodayCardState extends State<_TodayCard> {
       listenable: CalendarStore.instance,
       builder: (context, _) {
         return CitroCard(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          padding: const EdgeInsets.all(AppSpacing.x2),
           onTap: () => Navigator.of(context).pushNamed('/calendar'),
           child: Column(
             children: [
               Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: c.accentLt.withAlpha(c.dark ? 70 : 170),
-                      shape: BoxShape.circle,
+                      color: c.accentLt,
+                      borderRadius: BorderRadius.circular(CitroColors.radii.small - 2),
                     ),
                     child: Center(
                       child: AppIcon(
                         strokeSvg(AppIcons.calendar, width: 2),
-                        size: 15,
+                        size: 17,
                         color: c.accentInk,
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.x2),
+                  const SizedBox(width: 12),
                   Text(
                     '${now.month} 月 ${now.day} 日 · $headline',
                     maxLines: 1,
@@ -187,7 +201,7 @@ class _TodayCardState extends State<_TodayCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   for (var i = 0; i < 7; i++) ...[
@@ -251,12 +265,17 @@ class _WeekCell extends StatelessWidget {
       labelColor = c.inkSoft;
     }
     final fg = isToday ? c.onAccent : c.ink;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    // 今天：accent → accent2 竖向渐变 + 光晕，像被托起的一格；
+    // 其他日子：透明底 + 发丝描边，让「今天」更跳出来。
+    return AnimatedContainer(
+      duration: CitroMotion.guard(context, CitroMotion.hover),
+      curve: CitroMotion.easeColor,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x1),
       decoration: BoxDecoration(
         color: isToday ? c.accent : c.surface2,
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        border: Border.all(color: isToday ? c.accent : c.line),
+        border: Border.all(color: isToday ? Colors.transparent : c.line),
+        boxShadow: isToday ? CitroColors.shadows.glow(c) : null,
       ),
       child: Column(
         children: [

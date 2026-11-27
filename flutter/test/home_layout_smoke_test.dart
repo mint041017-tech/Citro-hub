@@ -5,21 +5,12 @@ import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
 import 'package:citro/widgets/home_entries.dart';
-import 'package:citro/widgets/home_layout.dart';
 import 'package:citro/widgets/tablet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void _noop(int _) {}
-
-/// 首页整体下移的距离，用来判断抽屉有没有被拉开。
-double _drawerShift(WidgetTester tester) {
-  final t = tester.widget<Transform>(
-    find.byKey(const ValueKey('home-drawer-shift')),
-  );
-  return t.transform.getTranslation().y;
-}
 
 Widget _host(Widget child) => AppScope(
   state: AppState.instance,
@@ -78,27 +69,10 @@ void main() {
     await _pumpHome(tester, const Size(1208, 800), contentWidth: 1000);
   });
 
-  testWidgets('game and resource cards render on home', (tester) async {
+  testWidgets('抽签与视野 live 作为资源卡渲染在首页', (tester) async {
     tester.view.physicalSize = const Size(1032, 1366);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    const key = HomeLayoutKey.widePortrait;
-    final store = HomeLayoutStore.instance;
-    store.reset(key);
-    expect(store.available(key).any((o) => o.id == HomeCardId.game), isTrue);
-    expect(store.available(key).any((o) => o.id == HomeCardId.res), isTrue);
-    expect(store.add(key, HomeCardId.game, item: 'g2048'), isTrue);
-    expect(store.add(key, HomeCardId.res, item: 'tool:灵敏度'), isTrue);
-    expect(
-      store.slots(key).any((s) => s.id == HomeCardId.game && s.item == 'g2048'),
-      isTrue,
-    );
-    expect(
-      store
-          .slots(key)
-          .any((s) => s.id == HomeCardId.res && s.item == 'tool:灵敏度'),
-      isTrue,
-    );
     await tester.pumpWidget(
       _host(
         const CitroLayoutScope(
@@ -109,15 +83,14 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(HomeGameCard), findsOneWidget);
-    expect(find.byType(HomeResCard), findsOneWidget);
+    // 快捷工具栏已取消，玩法抽签 / 视野 live 以卡片形式留在首屏。
+    expect(find.text('玩法抽签'), findsOneWidget);
+    expect(find.text('视野live'), findsOneWidget);
+    expect(find.byType(HomeResCard), findsNWidgets(2));
     expect(tester.takeException(), isNull);
-    store.reset(key);
   });
 
-  testWidgets('home uses the fixed layout without edit affordances', (
-    tester,
-  ) async {
+  testWidgets('首页没有布局编辑入口，也没有旧版快捷工具与便签', (tester) async {
     tester.view.physicalSize = const Size(1032, 1366);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -131,98 +104,56 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 400));
-    // 固定布局：不再有编辑入口、拖拽圆柄和添加卡片面板。
     expect(find.byKey(const ValueKey('home-layout-edit')), findsNothing);
     expect(find.text('拖顶部圆柄换位 · 右上角垃圾桶删除 · 右下角调大小'), findsNothing);
     expect(find.byIcon(Icons.open_in_full_rounded), findsNothing);
+    expect(find.text('快捷工具'), findsNothing);
+    expect(find.text('便签'), findsNothing);
+    expect(find.text('灵敏度'), findsNothing);
+    expect(find.text('一起看'), findsNothing);
+    expect(find.text('摸鱼日历'), findsNothing);
+    expect(find.text('今日星象'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('hero pull-down reveals the negative screen', (tester) async {
+  testWidgets('下拉越界时内容回弹且背景图放大', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(_drawerShift(tester), 0);
 
-    // 在上半屏（背景图区域）往下拖，首页整体跟着走，抽屉从下面露出来。
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, 260),
-    );
+    final scroll = find.byType(SingleChildScrollView);
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable))
+        .position;
+    expect(position.minScrollExtent, 0);
+    expect(position.pixels, 0);
+
+    // 从顶部继续往下拖：ClampingScrollPhysics 会硬停，Bouncing 会越界回弹。
+    final gesture = await tester.startGesture(tester.getCenter(scroll));
+    await gesture.moveBy(const Offset(0, 120));
     await tester.pump();
-    expect(_drawerShift(tester), greaterThan(0));
-    await tester.pumpAndSettle();
-    expect(_drawerShift(tester), greaterThan(0));
-    expect(tester.takeException(), isNull);
-  });
+    expect(position.pixels, lessThan(0));
+    // 越界量驱动背景等比缩放：Transform.scale 出现过放大。
+    expect(_maxBackgroundScale(tester), greaterThan(1.0));
 
-  testWidgets('pull-down reveals the negative screen', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(_drawerShift(tester), 0);
-
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
-    await tester.pump();
-    expect(_drawerShift(tester), greaterThan(0));
-    await tester.pumpAndSettle();
-    expect(find.text('快捷工具'), findsOneWidget);
-    expect(find.text('灵敏度'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('swipe up anywhere closes the negative screen', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(_drawerShift(tester), 0);
-
-    // 先下拉把抽屉拉开。
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 320));
-    await tester.pumpAndSettle();
-    expect(_drawerShift(tester), greaterThan(0));
-
-    // 抽屉开着时，在首页任意位置（这里取下半屏）上滑都把它推回去。
-    final gesture = await tester.startGesture(const Offset(195, 700));
-    await gesture.moveBy(const Offset(0, -240));
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(_drawerShift(tester), 0);
+    // 松手后弹回原位。
+    expect(position.pixels, 0);
     expect(tester.takeException(), isNull);
   });
+}
 
-  testWidgets('negative screen follows the finger and snaps open', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(_host(const HomePage(onSwitchTab: _noop)));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(_drawerShift(tester), 0);
-
-    // 下拉 100px：抽屉跟手走 1:1（封顶在抽屉高度）。
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(SingleChildScrollView)),
-    );
-    await gesture.moveBy(const Offset(0, 100));
-    await tester.pump();
-    final follow = _drawerShift(tester);
-    expect(follow, greaterThan(0));
-    expect(follow, lessThanOrEqualTo(100));
-
-    // 继续下拉越过自动弹开点（带阻尼，实际行程更短）。
-    await gesture.moveBy(const Offset(0, 400));
-    await tester.pump();
-    await gesture.up();
-    await tester.pumpAndSettle();
-    expect(_drawerShift(tester), greaterThan(200));
-    expect(tester.takeException(), isNull);
-  });
+/// 首页背景层当前的最大缩放比例（没有 Transform.scale 时返回 1）。
+double _maxBackgroundScale(WidgetTester tester) {
+  var scale = 1.0;
+  for (final element in find.byType(Transform).evaluate()) {
+    final transform = (element.widget as Transform).transform;
+    final values = transform.storage;
+    // 只认等比放大（x 轴缩放 > 1，且不是动画里的位移矩阵）。
+    if (values[0] > scale && values[0] == values[5]) scale = values[0];
+  }
+  return scale;
 }

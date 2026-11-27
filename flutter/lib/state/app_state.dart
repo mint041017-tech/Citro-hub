@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../checkin/checkin_store.dart';
 import '../data/cards.dart';
 import '../mbti/store.dart';
+import '../kei/store.dart';
 import '../services/ai.dart';
 import '../services/api.dart';
 import '../services/location.dart';
@@ -33,13 +34,6 @@ class AppState extends ChangeNotifier {
   bool booting = true;
   bool online = true;
   WeatherNow weather = WeatherNow.fallback;
-  String? zodiacSign;
-  ZodiacFortune? zodiacFortune;
-  String? _zodiacFortuneSign;
-  String? _zodiacLoadingSign;
-  int _zodiacRequestId = 0;
-  bool zodiacLoading = false;
-  String? zodiacError;
   bool weatherLoading = false;
   String? weatherError;
   double _weatherLat = 21.4735;
@@ -142,7 +136,6 @@ class AppState extends ChangeNotifier {
     _weatherCityManual = Prefs.getBool(PrefKeys.weatherCityManual);
     // 上次选的 / 定位到的城市先显示出来，别让卡片一直停在默认城市上等接口。
     weather = weather.copyWith(city: _weatherCity);
-    zodiacSign = Prefs.getString(PrefKeys.zodiacSign);
     final token = Prefs.getString(PrefKeys.token);
     if (token != null && token.isNotEmpty) {
       Api.token = token;
@@ -162,7 +155,6 @@ class AppState extends ChangeNotifier {
     booting = false;
     notifyListeners();
     unawaited(refreshWeather());
-    if (zodiacSign != null) unawaited(refreshZodiacFortune());
   }
 
   Future<void> _restoreUser() async {
@@ -174,6 +166,7 @@ class AppState extends ChangeNotifier {
       final u = User.fromJson(j['user']);
       if (u == null) {
         await MbtiStore.clearLocal();
+        await KeiStore.clearLocal();
         await _clearAuth();
       } else {
         user = u;
@@ -186,9 +179,9 @@ class AppState extends ChangeNotifier {
         notifyListeners();
         unawaited(CheckinStore.instance.onAccountChanged(u.name));
         _startNotifyPolling();
-        unawaited(syncZodiac());
         unawaited(syncCardsFromCloud());
         unawaited(MbtiStore.syncFromAccount(account: u.name, force: true));
+        unawaited(KeiStore.syncFromAccount(account: u.name, force: true));
       }
     } catch (_) {
       // 离线时保留本地登录态，网络恢复后再校验。
@@ -252,10 +245,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
-    unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
     unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
+    unawaited(KeiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   /// 扫码登录成功：桌面端轮询拿到 token 与用户信息后落到本地会话。
@@ -268,10 +261,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
-    unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
     unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
+    unawaited(KeiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   Future<void> register({
@@ -294,10 +287,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     unawaited(CheckinStore.instance.onAccountChanged(user?.name));
     _startNotifyPolling();
-    unawaited(syncZodiac());
     unawaited(_loadCheckin());
     unawaited(syncCardsFromCloud());
     unawaited(MbtiStore.syncFromAccount(account: user?.name, force: true));
+    unawaited(KeiStore.syncFromAccount(account: user?.name, force: true));
   }
 
   Future<void> logout() async {
@@ -305,6 +298,7 @@ class AppState extends ChangeNotifier {
     final account = user?.name;
     final authToken = Api.token;
     await MbtiStore.clearLocal();
+    await KeiStore.clearLocal();
     // 服务端退登要清 Cookie / 推送绑定，但绝不能挡登录页：先把 token
     // 抓在手里，后台拿 Push token 再发请求；UI 走本地优先的 _clearAuth。
     final serverLogout = () async {
@@ -331,19 +325,13 @@ class AppState extends ChangeNotifier {
   /// 注销账号：服务端删除账号与全部个人数据，本机同步清理登录态与账号缓存。
   Future<void> deleteAccount(String password) async {
     await Api.deleteAccount(password);
-    _zodiacRequestId++;
     await CheckinStore.instance.clearLocalForDeletedAccount();
     await MbtiStore.clearLocal();
+    await KeiStore.clearLocal();
     await _clearAuth();
     try {
       await Prefs.clearAccountData();
     } catch (_) {}
-    zodiacSign = null;
-    zodiacFortune = null;
-    _zodiacFortuneSign = null;
-    _zodiacLoadingSign = null;
-    zodiacLoading = false;
-    zodiacError = null;
     notifyListeners();
   }
 
@@ -771,118 +759,6 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       return {'ok': false, 'err': '$e'};
     }
-  }
-
-  Future<void> setZodiacSign(String sign) async {
-    zodiacSign = sign;
-    await Prefs.setString(PrefKeys.zodiacSign, sign);
-    notifyListeners();
-    unawaited(refreshZodiacFortune(force: true));
-    unawaited(() async {
-      try {
-        await Api.zodiacLock(sign, gid);
-      } catch (_) {}
-    }());
-  }
-
-  Future<void> syncZodiac() async {
-    try {
-      final j = await Api.zodiacGet(gid);
-      final sign = j['sign']?.toString();
-      if (sign != null && sign.isNotEmpty) {
-        final changed = zodiacSign != sign;
-        zodiacSign = sign;
-        await Prefs.setString(PrefKeys.zodiacSign, sign);
-        notifyListeners();
-        if (changed) unawaited(refreshZodiacFortune(force: true));
-      }
-    } catch (_) {}
-  }
-
-  Future<void> refreshZodiacFortune({bool force = false}) async {
-    final sign = zodiacSign;
-    if (sign == null) return;
-    final signInfo = zodiacById(sign) ?? kZodiacSigns.first;
-    final today = _dayKey(DateTime.now());
-    final cacheKey = 'citro_zodiac_ai_${sign}_$today';
-    if (_zodiacFortuneSign != sign) {
-      zodiacFortune = null;
-      _zodiacFortuneSign = sign;
-      zodiacError = null;
-      notifyListeners();
-    }
-    if (!force) {
-      final raw = Prefs.getString(cacheKey);
-      if (raw != null) {
-        try {
-          final parsed = ZodiacFortune.fromJson(
-            jsonDecode(raw) as Map<String, dynamic>,
-          );
-          if (parsed.isComplete) {
-            zodiacFortune = parsed;
-            zodiacError = null;
-            notifyListeners();
-            return;
-          }
-        } catch (_) {}
-      }
-    }
-    if (zodiacLoading && _zodiacLoadingSign == sign) return;
-    final requestId = ++_zodiacRequestId;
-    _zodiacLoadingSign = sign;
-    zodiacLoading = true;
-    zodiacError = null;
-    notifyListeners();
-    try {
-      final f = await _generateZodiacFortune(signInfo);
-      if (requestId != _zodiacRequestId || zodiacSign != sign) return;
-      zodiacFortune = f;
-      _zodiacFortuneSign = sign;
-      await Prefs.setString(cacheKey, jsonEncode(f.toJson()));
-    } on AiException catch (e) {
-      if (requestId == _zodiacRequestId) zodiacError = e.message;
-    } catch (_) {
-      if (requestId == _zodiacRequestId) zodiacError = '星语生成失败，请稍后再试';
-    } finally {
-      if (requestId == _zodiacRequestId) {
-        zodiacLoading = false;
-        _zodiacLoadingSign = null;
-        notifyListeners();
-      }
-    }
-  }
-
-  Future<ZodiacFortune> _generateZodiacFortune(ZodiacSign sign) async {
-    final now = DateTime.now();
-    final prompt = [
-      '日期：${now.year}年${now.month}月${now.day}日',
-      '星座：${sign.name}（${sign.element}象星座，${sign.range}）',
-      '请生成这个星座当天的专属运势。要求：',
-      '1. 全部原创，具体、有画面感，语气温柔但不鸡汤；',
-      '2. 不要提 AI、模型或提示词，不要 Markdown、标题、分点；',
-      '3. 只输出一个 JSON 对象，不要代码块和解释，字段固定为：',
-      '{"score":0到100的整数,"tag":"4到8个汉字的关键词","text":"50到80个汉字的今日短评","love":0到100的整数,"work":0到100的整数,"wealth":0到100的整数,"health":0到100的整数,"color":"2到4个汉字的幸运色","number":"1到99的幸运数字","item":"2到6个汉字的幸运物"}',
-      '整体分数、四项指数和今日短评的情绪要一致。',
-    ].join(String.fromCharCode(10));
-    for (var attempt = 0; attempt < 2; attempt++) {
-      final raw = await AiService.complete(
-        prompt: prompt,
-        system: '你是温柔、审美在线的中文星座编辑，擅长写短小、具体的每日运势。只输出严格 JSON。',
-        maxTokens: 520,
-        temperature: .95,
-      );
-      final start = raw.indexOf('{');
-      final end = raw.lastIndexOf('}');
-      if (start < 0 || end <= start) continue;
-      try {
-        final j = jsonDecode(raw.substring(start, end + 1));
-        if (j is Map) {
-          final f = ZodiacFortune.fromAiJson(Map<String, dynamic>.from(j));
-          if (f != null) return f;
-        }
-      } catch (_) {}
-    }
-    throw AiException('星语格式异常，请重试');
   }
 
   /* ---------------- 卡面收藏 ---------------- */

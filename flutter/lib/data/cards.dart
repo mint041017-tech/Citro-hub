@@ -90,7 +90,6 @@ class CardCatalog {
   static void Function()? onChanged;
 
   static List<CardFace> get all => _all;
-  static bool get isEmpty => _all.isEmpty;
 
   static CardFace? byId(String? id) {
     if (id == null || id.isEmpty) return null;

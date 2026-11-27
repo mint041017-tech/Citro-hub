@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 
 Future<void> showBlockedUsersSheet(BuildContext context) {
   return showCitroSheet<void>(
@@ -68,29 +69,18 @@ class _BlockedUsersSheet extends StatelessWidget {
                 style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.6),
               ),
             ),
-            CitroDivider(color: c.line2.withAlpha(140)),
+            CitroDivider(color: c.line2.withValues(alpha: c.line2.a * (140) / 255)),
             Expanded(
               child: AnimatedBuilder(
                 animation: AppState.instance,
                 builder: (context, _) {
                   final users = AppState.instance.blockedUsers.toList()..sort();
                   if (users.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('🫧', style: TextStyle(fontSize: 36)),
-                          const SizedBox(height: 8),
-                          Text(
-                            '还没有拉黑任何人',
-                            style: context.body(size: CitroType.meta, color: c.inkSoft),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '在动态或评论的「…」里可以拉黑',
-                            style: context.body(size: CitroType.small, color: c.inkSoft),
-                          ),
-                        ],
+                    return const Center(
+                      child: CitroEmptyState(
+                        icon: Icon(Icons.shield_outlined),
+                        title: '还没有拉黑任何人',
+                        hint: '在动态或评论的「…」里可以拉黑',
                       ),
                     );
                   }
@@ -99,7 +89,7 @@ class _BlockedUsersSheet extends StatelessWidget {
                     itemCount: users.length,
                     separatorBuilder: (_, __) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: CitroDivider(color: c.line2.withAlpha(110)),
+                      child: CitroDivider(color: c.line2.withValues(alpha: c.line2.a * (110) / 255)),
                     ),
                     itemBuilder: (_, i) {
                       final nick = users[i];

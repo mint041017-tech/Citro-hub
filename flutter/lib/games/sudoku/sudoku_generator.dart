@@ -143,11 +143,8 @@ class SudokuGenerator {
     }
   }
 
-  /// 对外暴露目标档，测试与 UI 都可以核对“这局是否达到标称难度”。
-  static int targetTier(SudokuModeSpec mode, SudokuDifficulty difficulty) =>
-      _targetTier(mode, difficulty);
-
-  static int _targetTier(SudokuModeSpec mode, SudokuDifficulty difficulty) {
+  /// 目标档，测试与 UI 都可以核对“这局是否达到标称难度”。
+  static int targetTier(SudokuModeSpec mode, SudokuDifficulty difficulty) {
     if (mode.key == 'windmill') return difficulty.tier;
     if (mode.variant == SudokuVariant.jigsaw) {
       return difficulty.tier;
@@ -282,7 +279,7 @@ class SudokuGenerator {
       base,
       givens,
       difficulty,
-      _targetTier(mode, difficulty),
+      targetTier(mode, difficulty),
       minLevel: _requiredLevel(mode, difficulty),
       maxLevel: _maxLevel(mode, difficulty),
     );
@@ -333,7 +330,7 @@ class SudokuGenerator {
       batch: count >= 5 ? 12 : 6,
       maxNodes: 220000,
     );
-    return _finalize(base, givens, difficulty, _targetTier(mode, difficulty));
+    return _finalize(base, givens, difficulty, targetTier(mode, difficulty));
   }
 
   /// 风车：独立 mode（key=windmill），按参考图一采用五盘风车式错位

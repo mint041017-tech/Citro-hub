@@ -1,44 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
-/// 待办模块保留自己的钢青蓝，和全站暖橙区分开（产品明确要求）。
+/// 待办模块不再使用固定的钢青蓝，改为跟随全局（背景派生）配色。
 ///
-/// 只覆盖 accent / accent2 / accentLt / accentInk 四个语义字段，
-/// 表面、描边、文字全部继承全局，避免同一 App 内出现两套底色。
-const todoAccent = Color(0xFF7A9BBE);
-const todoAccent2 = Color(0xFF5F7FA3);
-const todoAccentLt = Color(0xFFC6D8E8);
-const todoInkLight = Color(0xFF35506E);
-const todoInkDark = Color(0xFFD3E2F2);
+/// 之前的产品要求保留待办钢青蓝，现已更改为跟随首页背景取色结果，
+/// 使待办主题色与全站主题色保持一致，随背景图变化。
+///
+/// 所有相关常量已移除，相关组件直接使用 context.c 获取全局配色。
 
-CitroColors todoColors(CitroColors base) => base.copyWith(
-  accent: base.dark ? const Color(0xFF8FB2D4) : todoAccent,
-  accent2: base.dark ? const Color(0xFF6E8FB0) : todoAccent2,
-  // 深色下 accentLt 是「软强调底」，必须是暗色块，不能沿用浅色值。
-  accentLt: base.dark ? const Color(0xFF22303E) : todoAccentLt,
-  accentInk: base.dark ? todoInkDark : todoInkLight,
-);
+/// [已废弃] 待办模块现在直接使用全局配色，不再覆盖主题色。
+/// 保留此函数以确保现有代码能正常编译，但实际返回原始配色。
+CitroColors todoColors(CitroColors base) => base;
 
-/// 给子树注入待办专用的钢青蓝。首页其他卡片仍使用全局配色。
+/// 待办模块的配色作用域，现已简化为透传全局主题。
+/// 移除颜色覆盖后，TodoScope 仅作为组件容器，确保代码结构不变。
 class TodoScope extends StatelessWidget {
   final Widget child;
 
   const TodoScope({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Theme(
-      data: theme.copyWith(
-        extensions: [
-          for (final e in theme.extensions.values)
-            if (e is! CitroSkin) e,
-          CitroSkin(todoColors(context.c)),
-        ],
-      ),
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) => child;
 }

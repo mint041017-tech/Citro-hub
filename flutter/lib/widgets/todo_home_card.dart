@@ -6,12 +6,14 @@ import '../theme/app_theme.dart';
 import '../theme/native.dart';
 import '../theme/tokens.dart';
 import '../todo/todo_models.dart';
-import '../todo/todo_page.dart';
+import '../todo/todo_page.dart' deferred as todoPage;
 import '../todo/todo_store.dart';
 import '../todo/todo_theme.dart';
-import '../widgets/card_flight.dart';
+import 'card_flight.dart';
+import 'lazy_page.dart';
 import '../widgets/card_morph.dart';
 import 'paper.dart';
+import 'motion_widgets.dart';
 
 /// 首页待办卡片。
 ///
@@ -19,7 +21,8 @@ import 'paper.dart';
 /// 小票式指标块（专注 / 连续 / 本周）。小卡只保留主指标和进度，
 /// 标准卡补两条任务与指标块，大卡自动列出更多任务。
 class TodoHomeCard extends StatelessWidget {
-  /// 计划页里用全局品牌橙，和记账卡保持一致；首页仍保留待办模块的钢青蓝。
+  /// 计划页里用全局品牌橙，和记账卡保持一致；待办模块现已改为跟随全局配色。
+  /// globalAccent 参数保留但已无实际效果（TodoScope 改为透传全局主题）。
   final bool globalAccent;
 
   const TodoHomeCard({super.key, this.globalAccent = false});
@@ -43,7 +46,7 @@ class TodoHomeCard extends StatelessWidget {
             builder: (context, cons) {
               final compact = cons.maxHeight < 150 || cons.maxWidth < 230;
               if (compact) {
-                return _compact(context, tasks, done, open);
+                return _compact(context, tasks, done);
               }
               final large = cons.maxHeight >= 250 || cons.maxWidth >= 420;
               return _full(context, tasks, done, open, large: large);
@@ -52,7 +55,7 @@ class TodoHomeCard extends StatelessWidget {
         },
       ),
     );
-    // TodoScope 注入钢青蓝；计划页要的是全局橙，跳过这层。
+    // TodoScope 现为透传，两种取值都使用全局（背景派生）配色。
     return globalAccent ? card : TodoScope(child: card);
   }
 
@@ -66,7 +69,12 @@ class TodoHomeCard extends StatelessWidget {
       context,
       source: rect,
       settings: const RouteSettings(name: '/todo'),
-      builder: (_) => const TodoPage(),
+      builder: (_) => CitroLazyPage(
+        load: () async {
+          await todoPage.loadLibrary();
+          return todoPage.TodoPage();
+        },
+      ),
       snapshot: CitroCardFlight.snapshotOf(context, rect),
     );
   }
@@ -79,7 +87,6 @@ class TodoHomeCard extends StatelessWidget {
     BuildContext context,
     List<TodoTask> tasks,
     int done,
-    List<TodoTask> open,
   ) {
     final c = context.c;
     final total = tasks.length;
@@ -128,9 +135,15 @@ class TodoHomeCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '$remaining',
-                      style: context.heading(size: 24, color: c.ink, height: 1),
+                    // 色场：大号粗数字是这块的视觉重心。
+                    CitroCountUp(
+                      remaining,
+                      style: context.heading(
+                        size: 46,
+                        color: c.ink,
+                        height: .95,
+                        letterSpacing: -2,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Padding(
@@ -149,8 +162,9 @@ class TodoHomeCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                '${(rate * 100).round()}%',
+              child: CitroCountUp(
+                rate * 100,
+                format: (v) => '${v.round()}%',
                 style: context.ui(
                   size: CitroType.caption,
                   weight: CitroType.strong,
@@ -242,12 +256,13 @@ class TodoHomeCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '$remaining',
+                    CitroCountUp(
+                      remaining,
                       style: context.heading(
-                        size: large ? 32 : 24,
+                        size: large ? 72 : 52,
                         color: c.ink,
-                        height: 1,
+                        height: .92,
+                        letterSpacing: large ? -4 : -3,
                       ),
                     ),
                     const SizedBox(width: 5),
@@ -280,8 +295,9 @@ class TodoHomeCard extends StatelessWidget {
           children: [
             Expanded(child: _progress(context, rate)),
             const SizedBox(width: 6),
-            Text(
-              '${(rate * 100).round()}%',
+            CitroCountUp(
+              rate * 100,
+              format: (v) => '${v.round()}%',
               style: context.ui(
                 size: CitroType.caption,
                 weight: CitroType.strong,
@@ -376,15 +392,15 @@ class TodoHomeCard extends StatelessWidget {
         if (large && task.doing) ...[
           const SizedBox(width: 5),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: c.accent.withAlpha(26),
-              borderRadius: BorderRadius.circular(99),
+              color: c.accentLt,
+              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             ),
             child: Text(
               '进行中',
               style: context.ui(
-                size: 8.5,
+                size: CitroType.micro,
                 weight: CitroType.strong,
                 color: c.accentInk,
               ),
@@ -410,8 +426,9 @@ class TodoHomeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(9),
+          // 指标块：一层很淡的强调色玻璃，随背景主题色变。
+          color: c.accent.withValues(alpha: c.dark ? .16 : .10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs + 2),
           // 和记账卡的指标块一样带发丝边，两张卡并排时颗粒一致。
           border: Border.all(color: c.line),
         ),

@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.3.1",
-    "build_number": "3301",
-    "build_id": "9df40e85108c382275740a8d6cdb095b",
-    "file": "Citro-web-3.3.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.3.1.zip",
-    "size": 49154056,
-    "sha256": "9df40e85108c382275740a8d6cdb095bce3ecc17131573820a83af5af13d37ea",
-    "published_at": "2026-11-22T23:58:47Z",
-    "notes": "3.3.1:每日一签改为完全随机，取消同级日期轮换；签文七段流式输出，今日一小步增加动作校验与兜底；社区取消 200 字限制，长文五行折叠；Windows / Android / Web / 下载站同步发布。"
+    "version": "3.3.5",
+    "build_number": "3305",
+    "build_id": "61022f35a06422d50f864304481c9b87",
+    "file": "Citro-web-3.3.5.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.3.5.zip",
+    "size": 45706100,
+    "sha256": "0eb1018d66d7d07b09d601a0cd4b7df969b35ce354e0134e2a0be2be5494ce63",
+    "published_at": "2026-11-27T20:08:49Z",
+    "notes": "3.3.5:新增测试中心与十二系亲密关系测评，MBTI 结果改为测试档案内联回顾；登录注册支持自动识别手机号/邮箱、免昵称注册与确认密码；全局玻璃与深色模式通透度重新调校；游戏卡片与游戏页视觉改版；沿用 3.3.2 的 Web 桌面横屏布局与首屏延迟加载优化。"
 }

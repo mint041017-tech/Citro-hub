@@ -15,6 +15,11 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
   <link rel="preload" href="main.dart.js" as="script">
+  <!-- 首屏字体：RoundedCN 400 / 700 是引擎初始化阶段必下的资源，先于
+       FontManifest 被发现就排进下载队列，和 main.dart.js 并行跑。
+       字体不做内容哈希，路径固定，nginx 上按 30 天缓存。 -->
+  <link rel="preload" href="assets/assets/fonts/rounded-400-app.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/assets/fonts/rounded-700-app.ttf" as="font" type="font/ttf" crossorigin>
   <!-- 首屏关键路径并行化：在解析 HTML 时就把 CanvasKit 的 JS/WASM 加入
        下载队列，而不是等 flutter_bootstrap.js 解析完再串行发起。
        版本选择必须与 Flutter 引擎一致（Blink 系用 canvaskit/chromium，

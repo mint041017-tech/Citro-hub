@@ -1682,6 +1682,26 @@ function queueCommunityPush(options) {
 function hashPw(pw, salt) {
   return crypto.scryptSync(pw, salt, 64).toString('hex');
 }
+/* 请求路径里一律用异步 scrypt：同步版每次会把整个事件循环卡住几十毫秒 */
+function hashPwAsync(pw, salt) {
+  return new Promise(function (resolve, reject) {
+    crypto.scrypt(pw, salt, 64, function (err, key) {
+      if (err) reject(err);
+      else resolve(key.toString('hex'));
+    });
+  });
+}
+const DUMMY_SALT = crypto.randomBytes(16).toString('hex');
+/* 校验密码；账号不存在时也算一次哈希，避免靠响应时间探测手机号/邮箱是否注册 */
+async function verifyPw(pw, u) {
+  try {
+    const h = await hashPwAsync(pw, u ? u.salt : DUMMY_SALT);
+    if (!u || !u.hash) return false;
+    return crypto.timingSafeEqual(Buffer.from(h, 'hex'), Buffer.from(u.hash, 'hex'));
+  } catch (e) {
+    return false;
+  }
+}
 function makeSalt() {
   return crypto.randomBytes(16).toString('hex');
 }
@@ -2138,25 +2158,28 @@ function glmStream(payload, res) {
 function readBody(req, max) {
   const limit = max || 16384;
   return new Promise(function (resolve) {
-    let b = '',
-      done = false,
+    /* 按 Buffer 收集再整体解码：直接 `str += chunk` 会把被 TCP 分片切开的
+       多字节汉字各自解码成 U+FFFD，长帖 / 笔记 / 食谱偶发乱码。 */
+    const chunks = [];
+    let done = false,
       len = 0;
     req.on('data', function (c) {
+      if (done) return;
       len += c.length;
       if (len > limit) {
-        req.destroy();
-        if (!done) {
-          done = true;
-          resolve(null);
-        }
+        done = true;
+        chunks.length = 0;
+        /* 不再读剩余数据，但保留连接让调用方能回 413 */
+        req.pause();
+        resolve(null);
         return;
       }
-      b += c;
+      chunks.push(c);
     });
     req.on('end', function () {
       if (!done) {
         done = true;
-        resolve(b);
+        resolve(Buffer.concat(chunks).toString('utf8'));
       }
     });
     req.on('error', function () {
@@ -2203,7 +2226,54 @@ function parseDataUrl(s) {
     return null;
   }
   if (!buf.length || buf.length < 64) return null;
+  /* 只认真实的 JPEG / PNG / WebP 文件头，挡掉伪装成图片的任意内容 */
+  if (!imgKind(buf)) return null;
   return buf;
+}
+/* 按文件头识别图片类型，返回 MIME；未知返回 null */
+function imgKind(buf) {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'image/png';
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  return null;
+}
+/* 读取已落盘图片的真实类型（历史文件统一叫 .jpg，但可能是 png / webp） */
+function imgKindOfFile(fp) {
+  let fd = null;
+  try {
+    fd = fs.openSync(fp, 'r');
+    const head = Buffer.alloc(12);
+    fs.readSync(fd, head, 0, 12, 0);
+    return imgKind(head);
+  } catch (e) {
+    return null;
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch (e) {}
+    }
+  }
+}
+/* 一次性落盘多份上传文件；任一失败就回滚已写入的，避免孤儿文件 */
+function writeUploads(items) {
+  const written = [];
+  for (let i = 0; i < items.length; i++) {
+    const fp = path.join(items[i].dir, items[i].name);
+    try {
+      fs.writeFileSync(fp, items[i].buf);
+      written.push(fp);
+    } catch (e) {
+      written.forEach(function (w) {
+        try {
+          fs.unlinkSync(w);
+        } catch (e2) {}
+      });
+      return false;
+    }
+  }
+  return true;
 }
 function imgName() {
   return newId() + '.jpg';
@@ -2233,7 +2303,8 @@ function serveImg(req, res, dir, file) {
      补上 Content-Length + ETag，客户端二次加载直接 304，不会再整张重传。 */
   const etag = '"' + st.size.toString(16) + '-' + Math.floor(st.mtimeMs).toString(16) + '"';
   const headers = {
-    'Content-Type': 'image/jpeg',
+    'Content-Type': imgKindOfFile(fp) || 'image/jpeg',
+    'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'public, max-age=31536000, immutable',
     'Access-Control-Allow-Origin': '*',
     'ETag': etag,
@@ -2289,12 +2360,49 @@ function serveVoice(req, res, file) {
     plain404(res);
     return;
   }
-  res.writeHead(200, {
+  let st;
+  try {
+    st = fs.statSync(fp);
+  } catch (e) {
+    plain404(res);
+    return;
+  }
+  const size = st.size;
+  const base = {
     'Content-Type': VOICE_EXT[m[2]] || 'application/octet-stream',
+    'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'public, max-age=31536000, immutable',
     'Access-Control-Allow-Origin': '*',
     'Accept-Ranges': 'bytes',
-  });
+  };
+  const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || '').trim());
+  if (range && (range[1] !== '' || range[2] !== '')) {
+    let start, end;
+    if (range[1] === '') {
+      /* bytes=-N：最后 N 字节 */
+      const n = parseInt(range[2], 10);
+      start = Math.max(0, size - n);
+      end = size - 1;
+    } else {
+      start = parseInt(range[1], 10);
+      end = range[2] === '' ? size - 1 : Math.min(parseInt(range[2], 10), size - 1);
+    }
+    if (!(start >= 0) || start >= size || end < start) {
+      base['Content-Range'] = 'bytes */' + size;
+      res.writeHead(416, base);
+      res.end();
+      return;
+    }
+    base['Content-Range'] = 'bytes ' + start + '-' + end + '/' + size;
+    base['Content-Length'] = end - start + 1;
+    res.writeHead(206, base);
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(fp, { start: start, end: end }).pipe(res);
+    return;
+  }
+  base['Content-Length'] = size;
+  res.writeHead(200, base);
+  if (req.method === 'HEAD') return res.end();
   fs.createReadStream(fp).pipe(res);
 }
 const NAME_RE = /^[一-龥A-Za-z0-9_]{2,16}$/;
@@ -2727,6 +2835,53 @@ function weatherCacheSet(key, data) {
   if (keys.length > 200) delete weatherCache[keys[0]];
 }
 
+/* ---------------- 定时清理 ---------------- */
+/* 过期会话原本只在被访问时删除，长期不登录的旧 token 会一直堆在 sessions.json 里 */
+function pruneSessions() {
+  const now = Date.now();
+  let n = 0;
+  Object.keys(sessions).forEach(function (tok) {
+    if (!sessions[tok] || sessions[tok].exp < now) {
+      delete sessions[tok];
+      n++;
+    }
+  });
+  if (n) saveSessions();
+}
+/* 食谱图是「先上传、后保存食谱」，用户中途放弃就会留下孤儿文件。
+   上传超过 7 天仍没有任何食谱引用的图才删（给本地草稿留足时间）。 */
+const COOK_ORPHAN_MS = 7 * 86400000;
+function pruneCookImages() {
+  let files;
+  try {
+    files = fs.readdirSync(COOK_DIR);
+  } catch (e) {
+    return;
+  }
+  const used = {};
+  cookRecipes.forEach(function (r) {
+    if (r && r.cover) used[String(r.cover).split('/').pop()] = 1;
+    ((r && r.steps) || []).forEach(function (st) {
+      if (st && st.img) used[String(st.img).split('/').pop()] = 1;
+    });
+  });
+  const now = Date.now();
+  let n = 0;
+  files.forEach(function (f) {
+    if (used[f] || !/^[A-Za-z0-9_-]+\.jpg$/.test(f)) return;
+    const fp = path.join(COOK_DIR, f);
+    try {
+      if (now - fs.statSync(fp).mtimeMs > COOK_ORPHAN_MS) {
+        fs.unlinkSync(fp);
+        n++;
+      }
+    } catch (e) {}
+  });
+  if (n) console.log('[cook] 清理孤儿食谱图 ' + n + ' 张');
+}
+setInterval(pruneSessions, 3600000).unref();
+setInterval(pruneCookImages, 6 * 3600000).unref();
+
 /* ---------------- 路由 ---------------- */
 const server = http.createServer(async function (req, res) {
   try {
@@ -2987,9 +3142,14 @@ const server = http.createServer(async function (req, res) {
     if (email && findUserByEmail(email)) return json(res, 409, { err: '这个邮箱已经注册过啦，直接登录吧' });
     if (findUser(name)) return json(res, 409, { err: '这个昵称已经被人占啦' });
     const salt = makeSalt();
+    const pwHash = await hashPwAsync(pw, salt);
+    /* 异步哈希期间可能有同名/同号的并发注册抢先完成，这里再查一次 */
+    if (phone && findUserByPhone(phone)) return json(res, 409, { err: '这个手机号已经注册过啦，直接登录吧' });
+    if (email && findUserByEmail(email)) return json(res, 409, { err: '这个邮箱已经注册过啦，直接登录吧' });
+    if (findUser(name)) return json(res, 409, { err: '这个昵称已经被人占啦' });
     /* profileDone=false：新注册用户还没在「更改信息」弹窗里点过保存，
        前端据此强制弹一次资料确认弹窗（老用户没有该字段，一律视为已完成）。 */
-    const user = { name: name, salt: salt, hash: hashPw(pw, salt), createdAt: Date.now(), profileDone: false };
+    const user = { name: name, salt: salt, hash: pwHash, createdAt: Date.now(), profileDone: false };
     if (phone) user.phone = phone;
     if (email) user.email = email;
     users.push(user);
@@ -3014,12 +3174,7 @@ const server = http.createServer(async function (req, res) {
       const phone = account.replace(/\D/g, '');
       if (PHONE_RE.test(phone)) u = findUserByPhone(phone);
     }
-    let ok = false;
-    if (u) {
-      try {
-        ok = crypto.timingSafeEqual(Buffer.from(hashPw(pw, u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
-      } catch (e) {}
-    }
+    const ok = await verifyPw(pw, u);
     if (!ok) return json(res, 401, { err: '账号或密码不对' });
     /* CiCi 是社区 AI 账号，只发评论，不允许登录。 */
     if (u.bot) return json(res, 403, { err: '该账号不可登录' });
@@ -3178,10 +3333,7 @@ const server = http.createServer(async function (req, res) {
     const password = String((b && b.password) || '');
     const u = findUser(me.name);
     if (!u) return json(res, 401, { err: '请先登录' });
-    let ok = false;
-    try {
-      ok = crypto.timingSafeEqual(Buffer.from(hashPw(password, u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
-    } catch (e) {}
+    const ok = await verifyPw(password, u);
     if (!ok) return json(res, 403, { err: '密码不正确' });
 
     const name = u.name;
@@ -3434,7 +3586,7 @@ const server = http.createServer(async function (req, res) {
 
   /* ===== 语音读取（帖子配语音，支持拖动进度） ===== */
   const voiceGet = url.match(/^\/api\/voice\/([A-Za-z0-9_-]+\.(?:webm|mp4|m4a|ogg|oga|mp3|wav))$/);
-  if (req.method === 'GET' && voiceGet) {
+  if ((req.method === 'GET' || req.method === 'HEAD') && voiceGet) {
     return serveVoice(req, res, voiceGet[1]);
   }
 
@@ -3469,7 +3621,8 @@ const server = http.createServer(async function (req, res) {
     if (!text && !(Array.isArray(b && b.imgs) && b.imgs.length) && !hasVoice) {
       return json(res, 400, { err: '内容不能为空' });
     }
-    /* 保存配图 */
+    /* 先把配图与语音全部校验完，再一次性落盘；中途任何一项不合格都不会留下孤儿文件 */
+    const uploads = [];
     let imgs = [];
     if (Array.isArray(b && b.imgs) && b.imgs.length) {
       if (b.imgs.length > MAX_IMGS) return json(res, 400, { err: '最多上传 ' + MAX_IMGS + ' 张图片' });
@@ -3478,15 +3631,11 @@ const server = http.createServer(async function (req, res) {
         if (!buf) return json(res, 400, { err: '第 ' + (i + 1) + ' 张图片格式不正确' });
         if (buf.length > 5 * 1024 * 1024) return json(res, 400, { err: '第 ' + (i + 1) + ' 张图片过大' });
         const fname = imgName();
-        try {
-          fs.writeFileSync(path.join(IMG_DIR, fname), buf);
-        } catch (e) {
-          return json(res, 500, { err: '图片保存失败，请重试' });
-        }
+        uploads.push({ dir: IMG_DIR, name: fname, buf: buf });
         imgs.push('/api/img/posts/' + fname);
       }
     }
-    /* 保存语音（≤3MB / 1-60 秒，前端 MediaRecorder 录制后 base64） */
+    /* 语音（≤3MB / 1-60 秒，前端 MediaRecorder 录制后 base64） */
     let voice = null,
       voiceDur = 0;
     if (hasVoice) {
@@ -3496,12 +3645,11 @@ const server = http.createServer(async function (req, res) {
       voiceDur = Math.round(Number(b.voiceDur) || 0);
       if (!(voiceDur >= 1 && voiceDur <= 60)) return json(res, 400, { err: '语音时长需在 1-60 秒' });
       const vname = newId() + '.' + v.ext;
-      try {
-        fs.writeFileSync(path.join(VOICE_DIR, vname), v.buf);
-      } catch (e) {
-        return json(res, 500, { err: '语音保存失败，请重试' });
-      }
+      uploads.push({ dir: VOICE_DIR, name: vname, buf: v.buf });
       voice = '/api/voice/' + vname;
+    }
+    if (uploads.length && !writeUploads(uploads)) {
+      return json(res, 500, { err: '附件保存失败，请重试' });
     }
     const anon = !!(b && b.anon);
     const p = {
@@ -3587,7 +3735,8 @@ const server = http.createServer(async function (req, res) {
       if (!text && !(Array.isArray(b && b.imgs) && b.imgs.length) && !hasVoice) {
         return json(res, 400, { err: '评论不能为空' });
       }
-      /* 保存评论配图（最多 2 张，与前端 CM_MAX_IMGS 一致） */
+      /* 评论配图（最多 2 张，与前端 CM_MAX_IMGS 一致）+ 语音：先校验后一次性落盘 */
+      const uploads = [];
       let imgs = [];
       if (Array.isArray(b && b.imgs) && b.imgs.length) {
         if (b.imgs.length > 2) return json(res, 400, { err: '评论最多上传 2 张图片' });
@@ -3596,15 +3745,10 @@ const server = http.createServer(async function (req, res) {
           if (!buf) return json(res, 400, { err: '第 ' + (i + 1) + ' 张图片格式不正确' });
           if (buf.length > 5 * 1024 * 1024) return json(res, 400, { err: '第 ' + (i + 1) + ' 张图片过大' });
           const fname = imgName();
-          try {
-            fs.writeFileSync(path.join(IMG_DIR, fname), buf);
-          } catch (e) {
-            return json(res, 500, { err: '图片保存失败，请重试' });
-          }
+          uploads.push({ dir: IMG_DIR, name: fname, buf: buf });
           imgs.push('/api/img/posts/' + fname);
         }
       }
-      /* 保存评论语音（≤3MB / 1-60 秒） */
       let voice = null,
         voiceDur = 0;
       if (hasVoice) {
@@ -3614,12 +3758,11 @@ const server = http.createServer(async function (req, res) {
         voiceDur = Math.round(Number(b.voiceDur) || 0);
         if (!(voiceDur >= 1 && voiceDur <= 60)) return json(res, 400, { err: '语音时长需在 1-60 秒' });
         const vname = newId() + '.' + v.ext;
-        try {
-          fs.writeFileSync(path.join(VOICE_DIR, vname), v.buf);
-        } catch (e) {
-          return json(res, 500, { err: '语音保存失败，请重试' });
-        }
+        uploads.push({ dir: VOICE_DIR, name: vname, buf: v.buf });
         voice = '/api/voice/' + vname;
+      }
+      if (uploads.length && !writeUploads(uploads)) {
+        return json(res, 500, { err: '附件保存失败，请重试' });
       }
       const anon = !!(b && b.anon);
       /* ★回复：replyId 指向本帖内被回复的评论，保存昵称快照 */
@@ -4920,6 +5063,44 @@ const server = http.createServer(async function (req, res) {
     }
   }
 
+  /* ===== 十二系亲密关系：测试档案按账号同步，最多保留 20 条 ===== */
+  if (url === '/api/kei') {
+    if (needAuth(res, me)) return;
+    const bu = findUser(me.name);
+    if (!bu) return json(res, 404, { err: '账号不存在' });
+    if (req.method === 'GET') {
+      return json(res, 200, {
+        history: Array.isArray(bu.keiHistory) ? bu.keiHistory : [],
+        at: bu.keiAt || 0,
+      });
+    }
+    if (req.method === 'POST') {
+      if (limited(ip, 'kei', 60, 60000)) {
+        return json(res, 429, { err: '操作太频繁' });
+      }
+      const b = (await readJsonOrEmpty(req, 240 * 1024)) || {};
+      if (!Array.isArray(b.history)) {
+        return json(res, 400, { err: '测试档案数据无效' });
+      }
+      const history = b.history
+        .filter((row) => row && typeof row === 'object' && !Array.isArray(row))
+        .slice(0, 20);
+      let serialized = '';
+      try {
+        serialized = JSON.stringify(history);
+      } catch (e) {
+        return json(res, 400, { err: '测试档案数据无效' });
+      }
+      if (serialized.length > 200000) {
+        return json(res, 400, { err: '测试档案数据过大' });
+      }
+      bu.keiHistory = history;
+      bu.keiAt = Date.now();
+      saveUsers();
+      return json(res, 200, { ok: true, at: bu.keiAt });
+    }
+  }
+
   if (req.method === 'POST' && url === '/api/cards/sync') {
     if (needAuth(res, me)) return;
     if (limited(ip, 'cards', 80, 60000)) return json(res, 429, { err: '操作太频繁' });
@@ -5617,6 +5798,8 @@ server.listen(PORT, HOST, function () {
   );
   /* 上线立即扫一次当天动态；之后靠新发帖触发。 */
   ensureCiciUser();
+  pruneSessions();
+  pruneCookImages();
   runCiciPass('system').catch(function (e) {
     console.error('[cici]', e && e.message ? e.message : e);
   });

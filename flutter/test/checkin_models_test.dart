@@ -158,7 +158,7 @@ void main() {
       expect(checkinPlanForKind('study').type, CheckinActionType.focus);
       expect(checkinPlanForKind('study').thresholdMinutes, 10);
       expect(checkinPlanForKind('heart').opensReflection, isTrue);
-      expect(checkinPlanForKind('idea').opensNotes, isTrue);
+      expect(checkinPlanForKind('idea').opensReflection, isTrue);
       expect(checkinPlanForKind('tiny').hasPrimary, isFalse);
     });
   });

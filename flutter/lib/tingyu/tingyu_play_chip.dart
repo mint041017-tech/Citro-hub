@@ -6,12 +6,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
 import 'tingyu_controller.dart';
-import 'tingyu_page.dart'
-    show
-        tingyuAccentDark,
-        tingyuAccentLight,
-        tingyuOnAccentDark,
-        tingyuOnAccentLight;
+import 'tingyu_page.dart' show tingyuAccent, tingyuOnAccent;
 
 /// 离开听隅后的统一播放入口：声音仍在播放时，把听隅入口换成可暂停的胶囊。
 class TingyuPlayChip extends StatelessWidget {
@@ -23,9 +18,8 @@ class TingyuPlayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // 听隅的播放入口属于模块品牌色（鼠尾草绿），不跟全站青瓷 accent。
-    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
-    final onAccent = c.dark ? tingyuOnAccentDark : tingyuOnAccentLight;
+    final accent = tingyuAccent(c);
+    final onAccent = tingyuOnAccent(c);
     final player = NookController.instance;
     return Semantics(
       button: true,
@@ -40,7 +34,7 @@ class TingyuPlayChip extends StatelessWidget {
           height: height,
           padding: const EdgeInsets.only(left: 14, right: 5),
           decoration: BoxDecoration(
-            color: c.surface2.withAlpha(220),
+            color: c.surface2.withValues(alpha: c.surface2.a * (220) / 255),
             borderRadius: BorderRadius.circular(CitroColors.radii.chip),
             border: Border.all(color: c.line),
             boxShadow: CitroColors.shadows.card(c),

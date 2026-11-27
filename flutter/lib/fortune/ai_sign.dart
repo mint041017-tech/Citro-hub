@@ -34,10 +34,6 @@ class FortuneAiSign {
 
   bool get isComplete => title.isNotEmpty && read.length >= 30;
 
-  /// 流式输出时，只要有一段能显示就先给签面，不等整签写完。
-  bool get hasAnyContent =>
-      title.isNotEmpty || poem.isNotEmpty || read.isNotEmpty;
-
   FortuneAiSign withDo(String step) => FortuneAiSign(
     title: title,
     poem: poem,
@@ -438,36 +434,5 @@ class FortuneAi {
         return;
       }
     }
-  }
-
-  /// 兼容旧调用：等整签结束再返回最后一个结果。
-  static Future<FortuneAiSign?> loadOrGenerate({
-    required Fortune fortune,
-    required DateTime day,
-    required int streak,
-    required String weekday,
-    String? lunar,
-    String? festival,
-    String? term,
-    String? cardLabel,
-    String owner = '',
-    bool force = false,
-  }) async {
-    FortuneAiSign? last;
-    await for (final sign in streamOrGenerate(
-      fortune: fortune,
-      day: day,
-      streak: streak,
-      weekday: weekday,
-      lunar: lunar,
-      festival: festival,
-      term: term,
-      cardLabel: cardLabel,
-      owner: owner,
-      force: force,
-    )) {
-      if (sign.finished) last = sign;
-    }
-    return last;
   }
 }

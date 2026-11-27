@@ -11,6 +11,7 @@ import '../theme/tokens.dart';
 import '../utils/lunar.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 import 'calendar_models.dart';
 import 'calendar_store.dart';
 
@@ -74,9 +75,10 @@ class _CalendarPageState extends State<CalendarPage> {
     final side = math.max(16.0, (width - 1120) / 2);
     // 与首页保持一致：手机压到 8px，平板 / 桌面保留 48px。
     final top = width < 700 ? 8.0 : AppSpacing.pageTop(width);
-    final c = context.c;
-    return Scaffold(
-      backgroundColor: c.bg,
+    return CitroBackground(
+      child: Scaffold(
+      // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: Padding(
@@ -98,9 +100,9 @@ class _CalendarPageState extends State<CalendarPage> {
                       return _scroll(
                         Column(
                           children: [
-                            _monthCard(context),
+                            CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _monthCard(context))),
                             const SizedBox(height: 12),
-                            _marksCard(context),
+                            CitroFieldScope(tone: FieldTone.deep, child: Builder(builder: (context) => _marksCard(context))),
                           ],
                         ),
                       );
@@ -110,12 +112,12 @@ class _CalendarPageState extends State<CalendarPage> {
                       children: [
                         Expanded(
                           flex: 6,
-                          child: _scroll(_monthCard(context)),
+                          child: _scroll(CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _monthCard(context)))),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           flex: 5,
-                          child: _scroll(_marksCard(context)),
+                          child: _scroll(CitroFieldScope(tone: FieldTone.deep, child: Builder(builder: (context) => _marksCard(context)))),
                         ),
                       ],
                     );
@@ -126,6 +128,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -595,35 +598,20 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget _emptyMarks(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         border: Border.all(color: c.line),
       ),
-      child: Column(
-        children: [
-          AppIcon(
-            strokeSvg(AppIcons.calendar, width: 1.8),
-            size: 26,
-            color: c.inkSoft.withAlpha(160),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '还没有记录的日子',
-            style: context.body(
-              size: CitroType.meta,
-              weight: CitroType.strong,
-              color: c.ink2,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '点右上角的 + 记一个生日、旅行或倒计时',
-            textAlign: TextAlign.center,
-            style: context.body(size: CitroType.small, color: c.inkSoft),
-          ),
-        ],
+      child: CitroEmptyState(
+        compact: true,
+        icon: AppIcon(
+          strokeSvg(AppIcons.calendar, width: 1.8),
+          size: 22,
+          color: c.accentInk,
+        ),
+        title: '还没有记录的日子',
+        hint: '点右上角的 + 记一个生日、旅行或倒计时',
       ),
     );
   }

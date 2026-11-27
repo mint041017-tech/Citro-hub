@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -23,6 +24,7 @@ import 'services/prefs.dart';
 import 'services/refresh_rate.dart';
 import 'services/web_route.dart';
 import 'state/app_state.dart';
+import 'theme/ambient_palette.dart';
 import 'theme/app_theme.dart';
 import 'theme/breakpoints.dart';
 import 'theme/motion.dart';
@@ -34,7 +36,17 @@ import 'widgets/home_background.dart';
 import 'widgets/paper.dart';
 import 'widgets/tablet_shell.dart';
 
+/// 仅调试版 Web：启动地址带 `?preview=1` 时跳过登录直接进主界面，用来在
+/// 浏览器里截图检查界面。必须在 main() 一开始读：启动后路由会改写地址栏，
+/// 查询参数就没了。release / profile 构建里 kDebugMode 恒为 false。
+bool _debugPreview = false;
+
 Future<void> main() async {
+  _debugPreview =
+      kDebugMode && kIsWeb && Uri.base.queryParameters['preview'] == '1';
+  // 同样只在调试版 Web 里：?slow=8 把所有动画放慢 8 倍，用来逐帧检查转场。
+  final slow = double.tryParse(Uri.base.queryParameters['slow'] ?? '');
+  if (_debugPreview && slow != null && slow >= 1) timeDilation = slow;
   PerfProbe.start();
   WidgetsFlutterBinding.ensureInitialized();
   // 全局请求屏幕最高刷新率：HyperOS 的 LTPO 屏在静态画面会降到 60Hz，
@@ -220,6 +232,8 @@ class _CitroAppState extends State<CitroApp> {
   final AppState _state = AppState.instance;
   late ThemeMode _themeMode = _state.themeMode;
   late bool _reduceMotion = _state.reduceMotion;
+  // 主题色随首页背景图派生，记录已应用到界面的版本号。
+  int _paletteEpoch = AmbientPalette.revision.value;
 
   @override
   void initState() {
@@ -227,6 +241,8 @@ class _CitroAppState extends State<CitroApp> {
     // AppState 还会为天气 / 未读 / 弹层状态等发通知。只关心主题，
     // 避免每次 notifyListeners 都重建整个 MaterialApp（弹层开合时尤其明显）。
     _state.addListener(_syncTheme);
+    // 首页背景换图 → 全局主题色跟着换。
+    AmbientPalette.revision.addListener(_syncTheme);
   }
 
   void _syncTheme() {
@@ -237,12 +253,15 @@ class _CitroAppState extends State<CitroApp> {
         _themeMode = mode;
         _reduceMotion = reduce;
       });
+    } else if (_paletteEpoch != AmbientPalette.revision.value) {
+      setState(() => _paletteEpoch = AmbientPalette.revision.value);
     }
   }
 
   @override
   void dispose() {
     _state.removeListener(_syncTheme);
+    AmbientPalette.revision.removeListener(_syncTheme);
     super.dispose();
   }
 
@@ -257,12 +276,14 @@ class _CitroAppState extends State<CitroApp> {
           navigatorObservers: [_citroRouteObserver],
           debugShowCheckedModeBanner: false,
           themeMode: _themeMode,
-          theme: buildCitroTheme(CitroColors.light),
-          darkTheme: buildCitroTheme(CitroColors.darkColors),
+          theme: buildCitroTheme(AmbientPalette.light),
+          darkTheme: buildCitroTheme(AmbientPalette.dark),
           themeAnimationCurve: CitroMotion.easeOut,
-          themeAnimationDuration: _reduceMotion
+          // 主题过渡期间依赖 Theme 的整棵树每帧重建：时长压到 themeShift，
+          // Web 端直接切换（CanvasKit 下整树重绘最贵）。
+          themeAnimationDuration: _reduceMotion || CitroMotion.liteByPlatform
               ? Duration.zero
-              : CitroMotion.modal,
+              : CitroMotion.themeShift,
           scrollBehavior: const CitroScrollBehavior(),
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
@@ -545,6 +566,7 @@ class _SplashGateState extends State<SplashGate> {
   @override
   Widget build(BuildContext context) {
     final Widget child;
+    final debugPreview = _debugPreview;
     if (!_ready) {
       child = const SplashScreen(key: ValueKey('splash'));
     } else if (!_booted) {
@@ -553,12 +575,12 @@ class _SplashGateState extends State<SplashGate> {
         onRetry: _boot,
         key: const ValueKey('boot-error'),
       );
-    } else if (!_enterMain && !AppState.instance.loggedIn) {
+    } else if (!_enterMain && !AppState.instance.loggedIn && !debugPreview) {
       child = CitroLoginPage(
         key: const ValueKey('login'),
         onAuthenticated: _handleAuthenticated,
       );
-    } else if (_enterMain) {
+    } else if (_enterMain || debugPreview) {
       child = KeyedSubtree(
         key: const ValueKey('shell'),
         child: CitroRoutes.pageFor(widget.initialRoute),
@@ -743,7 +765,7 @@ class _SplashScreenState extends State<SplashScreen>
                 gradient: RadialGradient(
                   center: const Alignment(0, -.35),
                   radius: 1.25,
-                  colors: [c.tintYellow.withAlpha(160), c.bg],
+                  colors: [c.tintYellow.withValues(alpha: c.tintYellow.a * (160) / 255), c.bg],
                   stops: const [0, .78],
                 ),
               ),

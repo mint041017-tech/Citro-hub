@@ -42,11 +42,6 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
   final scroll = ScrollController();
   List<ChainItem> chain = [];
   Set<String> used = {};
-  /// 当前需要接的首字**默认读音**。
-  ///
-  /// 只用于展示与喂给 AI —— 判定同音一律走 [_hitNeed]（按所有读法），
-  /// 不要再拿它做相等比较。
-  String needPinyin = '';
 
   /// 当前需要接的那个**字**本身 —— 判定同音要按它的所有读法算，
   /// 多音字只比默认读法会误杀（玩家接「月」接「乐(yuè)」被拒）。
@@ -118,7 +113,6 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     countdown.cancel();
     chain = [];
     used = {};
-    needPinyin = '';
     count = 0;
     score = 0;
     running = false;
@@ -139,23 +133,10 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     chain.add(ChainItem(seed, 'seed', '起手'));
     used.add(seed);
     needChar = seed.substring(seed.length - 1);
-    needPinyin = _pinyin(needChar);
     running = true;
     countdown.start();
     setState(() {});
     focus.requestFocus();
-  }
-
-  String _pinyin(String s) {
-    try {
-      return PinyinHelper.getPinyinE(
-        s,
-        separator: '',
-        format: PinyinFormat.WITHOUT_TONE,
-      ).toLowerCase();
-    } catch (_) {
-      return s;
-    }
   }
 
   /// 生僻读法白名单：lpinyin 的字典里混着不少现代汉语基本不用的读法
@@ -274,7 +255,6 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     setState(() {
       chain.add(ChainItem(raw, 'you', '接龙 ${mult > 1 ? '×$mult' : ''}'));
       needChar = raw.substring(raw.length - 1);
-      needPinyin = _pinyin(needChar);
       aiThinking = true;
       if (!aiVerified) toast.fb = '';
     });
@@ -317,7 +297,6 @@ class _GameIdiomPageState extends State<GameIdiomPage> {
     setState(() {
       chain.add(ChainItem(chosen, 'ai', 'AI 接龙'));
       needChar = chosen.substring(chosen.length - 1);
-      needPinyin = _pinyin(needChar);
       aiThinking = false;
       toast.fb = '';
     });

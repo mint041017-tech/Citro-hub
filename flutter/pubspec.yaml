@@ -3,7 +3,7 @@ description: "Citro App — 原生 Widget 实现（v1.9.10）"
 publish_to: 'none'
 
 # 版本规则：versionCode = major*1000 + minor*100 + patch（1.7.8 → 1708）
-version: 3.3.1+3301
+version: 3.3.5+3305
 
 environment:
   sdk: ^3.13.5
@@ -40,15 +40,6 @@ dependencies:
   qr_flutter: 4.1.0
   mobile_scanner: 5.2.3
   liquid_glass_widgets: ^1.17.1
-  # 屏幕共享：flutter_webrtc 1.6.3 是全平台最新，提供采集 / 发布 / 订阅。
-  # 注意：1.6.3 的 pubspec 没有声明 web 平台，Flutter Web 端不能用，
-  # Web 观众走 share.mint1017.cn 的纯网页实现（见 screen_share/README.md）。
-  flutter_webrtc: ^1.6.3
-  # 声网 Agora：国内直连的媒体主链路（Cloudflare SFU 兜底）。
-  # agora_rtc_engine 只覆盖移动端；Windows 端官方无插件，降级走 flutter_webrtc。
-  agora_rtc_engine: ^6.5.2
-  # 房间事件通道（聊天 / 成员 / 发布者上下线）。
-  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:
@@ -58,8 +49,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/splash_image.jpg
-    - assets/splash_landscape.jpg
+    # splash_image / splash_landscape 只在旧版网页启动页用过，Dart 侧已无引用，
+    # 不再打进四端产物（省 ~0.78 MB）。
     - assets/images/
     - assets/images/mods/
     - assets/images/cats/
@@ -80,6 +71,8 @@ flutter:
     - assets/tingyu/fonts/
     # 16 型人格测试：题库与类型内容包
     - assets/mbti/
+    # 十二系亲密关系测试：题库、维度与 12 型内容
+    - assets/kei/
   fonts:
     # nosh 风格重设计：圆体无衬线（Resource Han Rounded CN，OFL）+ 等宽数字（Xiaolai Mono，OFL）。
     # 两者都按 Citro 的字符集做了子集化，覆盖与旧 Noto Sans SC 子集一致。
@@ -87,8 +80,8 @@ flutter:
       fonts:
         - asset: assets/fonts/rounded-400-app.ttf
           weight: 400
-        - asset: assets/fonts/rounded-500-app.ttf
-          weight: 500
+        # 500 档不再打包：全库只有 8 处显式 w500，引擎会就近选 400；
+        # 换掉的是 2.29 MB 的字体文件和首屏一次 TTF 解析。
         - asset: assets/fonts/rounded-700-app.ttf
           weight: 700
     - family: XiaolaiMono

@@ -117,12 +117,13 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
   Widget build(BuildContext context) {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
+    // iOS 分段控件：灰色轨道 + 白色浮起滑块（深色下为 systemGray3）。
+    final knob = c.dark ? const Color(0xFF636366) : const Color(0xFFFFFFFF);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: c.bg2.withAlpha(c.dark ? 180 : 150),
-        borderRadius: BorderRadius.circular(CitroColors.radii.small),
-        border: Border.all(color: c.line),
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(9),
       ),
       child: Row(
         children: [
@@ -147,13 +148,19 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: widget.items[i].$1 == widget.value
-                            ? c.accent
+                            ? knob
                             : (_hover == i
-                                  ? c.accent.withAlpha(c.dark ? 34 : 26)
+                                  ? c.surface2
                                   : Colors.transparent),
-                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                        borderRadius: BorderRadius.circular(7),
                         boxShadow: widget.items[i].$1 == widget.value
-                            ? CitroColors.shadows.sm(c)
+                            ? const [
+                                BoxShadow(
+                                  color: Color(0x1F000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 3),
+                                ),
+                              ]
                             : null,
                       ),
                       child: Text(
@@ -164,7 +171,7 @@ class _TodoSegTabsState<T> extends State<TodoSegTabs<T>> {
                               ? CitroType.strong
                               : CitroType.regular,
                           color: widget.items[i].$1 == widget.value
-                              ? c.onAccent
+                              ? c.ink
                               : c.ink2,
                           height: 1,
                         ),
@@ -197,7 +204,8 @@ class _WheelShell extends StatelessWidget {
     required this.onDone,
   });
 
-  /// 滚轮弹层里也统一用待办的钢青蓝，别和全局橙色混在一起。
+  /// 滚轮弹层使用待办模块的主题配色（跟随全局背景图派生）。
+  /// 待办模块已改为跟随全局配色，不再使用固定的钢青蓝。
   @override
   Widget build(BuildContext context) =>
       TodoScope(child: Builder(builder: _build));
@@ -207,7 +215,9 @@ class _WheelShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.modal)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.modal),
+        ),
         border: Border(top: BorderSide(color: c.line)),
       ),
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
@@ -397,7 +407,9 @@ class _TodoCalendarState extends State<_TodoCalendar> {
                     child: Container(
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
+                        // 选中日：accent → accent2 渐变圆 + 光晕；今天：淡描边。
                         color: selected ? c.accent : Colors.transparent,
+                        boxShadow: selected ? CitroColors.shadows.glow(c) : null,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: selected
@@ -489,6 +501,10 @@ Future<String?> showTodoTimePicker(
     0,
     59,
   );
+  // 控制器提到 builder 外：放在 builder 里时，弹层每次重建（键盘、旋转、
+  // 主题切换）都会新建控制器，滚轮跳回初始值并把已选的时/分覆盖掉。
+  final hourCtrl = FixedExtentScrollController(initialItem: hour);
+  final minuteCtrl = FixedExtentScrollController(initialItem: minute);
   return showCitroSheet<String>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -504,9 +520,7 @@ Future<String?> showTodoTimePicker(
           children: [
             Expanded(
               child: CupertinoPicker(
-                scrollController: FixedExtentScrollController(
-                  initialItem: hour,
-                ),
+                scrollController: hourCtrl,
                 itemExtent: 40,
                 backgroundColor: Colors.transparent,
                 selectionOverlay: _wheelOverlay(
@@ -527,9 +541,7 @@ Future<String?> showTodoTimePicker(
             ),
             Expanded(
               child: CupertinoPicker(
-                scrollController: FixedExtentScrollController(
-                  initialItem: minute,
-                ),
+                scrollController: minuteCtrl,
                 itemExtent: 40,
                 backgroundColor: Colors.transparent,
                 selectionOverlay: _wheelOverlay(
@@ -653,87 +665,6 @@ class TodoCloseButton extends StatelessWidget {
               size: size * .45,
               color: c.inkSoft,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 步进器
-// ---------------------------------------------------------------------------
-
-class TodoStepper extends StatelessWidget {
-  final int value;
-  final int min;
-  final int max;
-  final String suffix;
-  final ValueChanged<int> onChanged;
-
-  const TodoStepper({
-    super.key,
-    required this.value,
-    required this.onChanged,
-    this.min = 0,
-    this.max = 99,
-    this.suffix = '',
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      height: 36,
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(CitroColors.radii.small),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _stepBtn(
-            context,
-            AppIcons.minus,
-            value > min ? () => onChanged(value - 1) : null,
-          ),
-          Container(
-            constraints: const BoxConstraints(minWidth: 56),
-            alignment: Alignment.center,
-            child: Text(
-              '$value$suffix',
-              style: context.ui(
-                size: CitroType.meta,
-                weight: CitroType.strong,
-                color: c.ink,
-              ),
-            ),
-          ),
-          _stepBtn(
-            context,
-            AppIcons.plus,
-            value < max ? () => onChanged(value + 1) : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _stepBtn(BuildContext context, String icon, VoidCallback? onTap) {
-    final c = context.c;
-    final enabled = onTap != null;
-    return Pressable(
-      onTap: onTap,
-      scale: .92,
-      child: SizedBox(
-        width: 34,
-        height: 34,
-        child: Center(
-          child: AppIcon(
-            strokeSvg(icon, width: 2),
-            size: 15,
-            color: enabled ? c.ink2 : c.inkSoft.withAlpha(90),
           ),
         ),
       ),
@@ -986,7 +917,9 @@ class MiniBars extends StatelessWidget {
                                 : (i == values.length - 1
                                       ? color
                                       : color.withAlpha(130)),
-                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.xs,
+                            ),
                           ),
                         ),
                         if (showValues && values[i] > 0)
@@ -1028,108 +961,3 @@ class MiniBars extends StatelessWidget {
   }
 }
 
-class TodoRing extends StatelessWidget {
-  final double progress;
-  final String label;
-  final String caption;
-  final Color color;
-  final double size;
-
-  const TodoRing({
-    super.key,
-    required this.progress,
-    required this.label,
-    required this.caption,
-    required this.color,
-    this.size = 96,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: progress.clamp(0, 1)),
-            duration: CitroMotion.size,
-            curve: CitroMotion.easeOut,
-            builder: (_, v, __) => CustomPaint(
-              size: Size(size, size),
-              painter: _RingPainter(progress: v, color: color, track: c.line2),
-            ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: context.ui(
-                  size: CitroType.subtitle,
-                  weight: CitroType.strong,
-                  color: c.ink,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                caption,
-                style: context.ui(
-                  size: CitroType.small,
-                  color: c.inkSoft,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final Color track;
-
-  _RingPainter({
-    required this.progress,
-    required this.color,
-    required this.track,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 5;
-    final stroke = 8.0;
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..color = track,
-    );
-    if (progress <= 0) return;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter old) =>
-      old.progress != progress || old.color != color || old.track != track;
-}

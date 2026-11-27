@@ -63,18 +63,8 @@ Future<void> showPomodoroOverlay(
   );
 }
 
-CitroColors _nookColors(BuildContext context) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  final base = dark ? CitroColors.darkColors : CitroColors.light;
-  // 子主题只覆盖强调色，其余（表面/描边/文字）全部继承全局，
-  // 避免同一 App 内切换时出现第二套「深色」。
-  return base.copyWith(
-    accent: dark ? const Color(0xFFAAC4A2) : const Color(0xFF4F6957),
-    accent2: dark ? const Color(0xFF8FAF86) : const Color(0xFF3E5747),
-    accentInk: dark ? const Color(0xFFC8DCC0) : const Color(0xFF3E5747),
-    accentLt: dark ? const Color(0xFFC8DCC0) : const Color(0xFF7C9B79),
-  );
-}
+/// 番茄钟弹层直接用全局令牌：强调色随首页背景图取色，不再单独固定绿色。
+CitroColors _nookColors(BuildContext context) => context.c;
 
 /// 全局监听番茄钟到点事件，在任何页面都能弹出完成提示。
 class PomodoroDoneWatcher extends StatefulWidget {
@@ -526,7 +516,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
             child: Material(
               color: c.ink.withAlpha(10),
               shape: CircleBorder(
-                side: BorderSide(color: c.line.withAlpha(110)),
+                side: BorderSide(color: c.line.withValues(alpha: c.line.a * (110) / 255)),
               ),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -578,7 +568,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
       child: Material(
         color: selected
             ? color.withAlpha(c.dark ? 56 : 30)
-            : c.surface2.withAlpha(c.dark ? 50 : 120),
+            : c.surface2.withValues(alpha: c.surface2.a * (c.dark ? 50 : 120) / 255),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(CitroColors.radii.small),
           side: BorderSide(
@@ -676,7 +666,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
               painter: _PomoRingPainter(
                 progress: value,
                 color: color,
-                track: c.line2.withValues(alpha: .8),
+                track: c.line2.withValues(alpha: c.line2.a * (.8)),
               ),
             ),
           ),
@@ -865,7 +855,7 @@ class _PomodoroCardState extends State<PomodoroCard> {
       child: Tooltip(
         message: tooltip,
         child: Material(
-          color: c.surface2.withAlpha(c.dark ? 40 : 200),
+          color: c.surface2.withValues(alpha: c.surface2.a * (c.dark ? 40 : 200) / 255),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(CitroColors.radii.inner),
             side: BorderSide(color: c.line2),

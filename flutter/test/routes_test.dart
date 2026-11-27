@@ -1,11 +1,7 @@
 import 'package:citro/games/gliquid.dart';
-import 'package:citro/ledger/ledger_page.dart';
-import 'package:citro/pages/cook_page.dart';
+import 'package:citro/widgets/lazy_page.dart';
 import 'package:citro/pages/me_page.dart';
-import 'package:citro/pages/play_page.dart';
 import 'package:citro/pages/root_shell.dart';
-import 'package:citro/pages/search_page.dart';
-import 'package:citro/pages/sens_page.dart';
 import 'package:citro/routes.dart';
 import 'package:citro/theme/crisp_page_route.dart';
 import 'package:flutter/widgets.dart';
@@ -32,9 +28,9 @@ void main() {
     }
   });
 
-  test('灵敏度 / 玩法抽签使用干净退场路由', () {
+  test('玩法抽签使用干净退场路由', () {
     expect(
-      CitroRoutes.onGenerateRoute(const RouteSettings(name: '/sens')),
+      CitroRoutes.onGenerateRoute(const RouteSettings(name: '/play')),
       isA<CitroCrispPageRoute<dynamic>>(),
     );
     expect(
@@ -48,13 +44,17 @@ void main() {
   });
 
   test('restores secondary pages from routes', () {
-    expect(CitroRoutes.pageFor('/cook'), isA<CookPage>());
+    // 美食 / 抽签 / 搜索页都是懒加载壳：点开才拉代码。
+    expect(CitroRoutes.pageFor('/cook'), isA<CitroLazyPage>());
     expect(CitroRoutes.pageFor('/me'), isA<MePage>());
-    expect(CitroRoutes.pageFor('/play'), isA<PlayPage>());
-    expect(CitroRoutes.pageFor('/sens'), isA<SensPage>());
-    expect(CitroRoutes.pageFor('/search'), isA<SearchPage>());
-    expect(CitroRoutes.pageFor('/ledger'), isA<LedgerPage>());
+    expect(CitroRoutes.pageFor('/play'), isA<CitroLazyPage>());
+    expect(CitroRoutes.pageFor('/search'), isA<CitroLazyPage>());
+    expect(CitroRoutes.pageFor('/ledger'), isA<CitroLazyPage>());
     expect(CitroRoutes.normalize('/ledger'), '/ledger');
+    expect(CitroRoutes.normalize('/tests'), '/tests');
+    expect(CitroRoutes.normalize('/kei'), '/kei');
+    expect(CitroRoutes.pageFor('/tests'), isA<CitroLazyPage>());
+    expect(CitroRoutes.pageFor('/kei'), isA<CitroLazyPage>());
     expect(CitroRoutes.pageFor('/gliquid'), isA<GameLiquidPage>());
   });
 }

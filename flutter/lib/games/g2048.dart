@@ -577,31 +577,16 @@ class _Tile24 extends StatelessWidget {
     BuildContext context,
     int v,
   ) {
-    final c = context.c;
     final id = GameIdentityScope.of(context);
     // 身份色阶：纸白 → 浅端 → 主色 → 深端，数值越大越沉。
     // 数字跟着底色走：浅端到主色实底用 deep（主色 #E08A2E 偏亮，
     // 纸白 onPrimary 只有 2.6:1）；更深的底色用 paper。
+    // 深浅主题同一套色阶：bg(.50) 是浅橘，配 onPrimary（纸白）只有 1.8:1，
+    // 深色下数字也只能压在浅底上用 deep。
     Color bg(double lerp) => Color.lerp(id.soft, id.primary, lerp)!;
-    if (!c.dark) {
-      return switch (v) {
-        2 => (id.soft, id.deep, null, false, false),
-        4 => (bg(.30), id.deep, null, false, false),
-        8 => (bg(.50), id.deep, null, false, false),
-        16 => (bg(.50), id.deep, null, false, false),
-        32 => (id.primary, id.deep, null, false, true),
-        64 => (id.primary, id.deep, null, false, true),
-        128 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
-        256 => (Color.lerp(id.primary, id.deep, .35)!, id.onPrimary, null, false, true),
-        512 => (id.deep, GameIdentity.paper, null, false, true),
-        _ => (id.deep, GameIdentity.paper, null, false, true),
-      };
-    }
     return switch (v) {
       2 => (id.soft, id.deep, null, false, false),
       4 => (bg(.30), id.deep, null, false, false),
-      // 深色主题下同样只能压在浅底上用 deep：bg(.50) 是浅橘，
-      // 配 onPrimary（纸白）只有 1.8:1，数字几乎看不见。
       8 => (bg(.50), id.deep, null, false, false),
       16 => (bg(.50), id.deep, null, false, false),
       32 => (id.primary, id.deep, null, false, true),

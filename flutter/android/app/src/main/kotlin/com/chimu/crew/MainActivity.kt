@@ -145,55 +145,10 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
-        // 屏幕共享：Android 14+ 要求先起 mediaProjection 前台服务再采集。
-        // 失败一律返回 false 而不是抛异常 —— 最坏情况是安卓旧版本上少一条
-        // 常驻通知，不能因此让共享直接崩掉。
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/screen_capture")
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "start" -> {
-                        val ok = runCatching { ScreenCaptureService.start(this) }.isSuccess
-                        result.success(ok)
-                    }
-                    "stop" -> {
-                        val ok = runCatching { ScreenCaptureService.stop(this) }.isSuccess
-                        result.success(ok)
-                    }
-                    else -> result.notImplemented()
-                }
-            }
-        // 一起看弹幕悬浮窗：观众聊天滚动在主持人屏幕画面上（应用最小化后仍在，
-        // MediaProjection 采整屏时会把悬浮窗一起采进视频流）。所有方法都吞异常
-        // 返回 false/null —— 弹幕是锦上添花，绝不能让聊天消息把房间页打崩。
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/danmaku")
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "canShow" -> result.success(runCatching { DanmakuOverlay.canShow(this) }.getOrDefault(false))
-                    "show" -> result.success(runCatching { DanmakuOverlay.show(this) }.getOrDefault(false))
-                    "hide" -> {
-                        runCatching { DanmakuOverlay.hide(this) }
-                        result.success(true)
-                    }
-                    "push" -> {
-                        val name = call.argument<String>("name") ?: ""
-                        val text = call.argument<String>("text") ?: ""
-                        runCatching { DanmakuOverlay.push(name, text) }
-                        result.success(true)
-                    }
-                    "clear" -> {
-                        runCatching { DanmakuOverlay.clear() }
-                        result.success(true)
-                    }
-                    "openPermissionSettings" -> result.success(
-                        runCatching { DanmakuOverlay.openPermissionSettings(this) }.getOrDefault(false)
-                    )
-                    else -> result.notImplemented()
-                }
-            }
-        // 麦克风权限预取：一起看的主持人开麦走声网 SDK 自采，SDK 原生层
-        // 不做运行时权限请求（只靠 manifest 声明），Android 23+ 上
-        // RECORD_AUDIO 未请求过就是 denied —— 表现就是「开麦没声」。
-        // 开麦时在这里把权限弹掉（观众端不开麦，不会白弹）。
+        // 麦克风权限预取：语音消息与语音聊天走系统录音，原生层不做运行时
+        // 权限请求（只靠 manifest 声明），Android 23+ 上 RECORD_AUDIO
+        // 未请求过就是 denied —— 表现就是「录音没声」。
+        // 录音前在这里把权限弹掉。
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chimu.crew/mic_permission")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

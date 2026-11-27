@@ -108,7 +108,18 @@ class _IngRow {
 
 /// 可数单位用 1 步进，其余（克/毫升/汤匙…）用 0.5。
 const _countUnits = {
-  '个', '瓣', '片', '颗', '根', '张', '块', '罐', '包', '瓶', '把', '杯',
+  '个',
+  '瓣',
+  '片',
+  '颗',
+  '根',
+  '张',
+  '块',
+  '罐',
+  '包',
+  '瓶',
+  '把',
+  '杯',
 };
 
 bool _isCountUnit(String unit) => _countUnits.contains(unit);
@@ -201,11 +212,7 @@ class _QtyStepper extends StatelessWidget {
         width: 34,
         height: 38,
         child: Center(
-          child: AppIcon(
-            strokeSvg(icon, width: 2.4),
-            size: 14,
-            color: c.ink2,
-          ),
+          child: AppIcon(strokeSvg(icon, width: 2.4), size: 14, color: c.ink2),
         ),
       ),
     );
@@ -446,7 +453,9 @@ class _CookEditorState extends State<_CookEditor> {
           height: 306,
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(CitroColors.radii.card),
+            ),
             border: Border.all(color: c.line),
           ),
           child: SafeArea(
@@ -465,7 +474,10 @@ class _CookEditorState extends State<_CookEditor> {
                           padding: const EdgeInsets.all(8),
                           child: Text(
                             '取消',
-                            style: ctx.body(size: CitroType.caption, color: c.inkSoft),
+                            style: ctx.body(
+                              size: CitroType.caption,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ),
                       ),
@@ -658,7 +670,11 @@ class _CookEditorState extends State<_CookEditor> {
             Text(
               '关闭会丢掉刚写的内容，确定要放弃吗？',
               textAlign: TextAlign.center,
-              style: ctx.body(size: CitroType.caption, color: ctx.c.inkSoft, height: 1.6),
+              style: ctx.body(
+                size: CitroType.caption,
+                color: ctx.c.inkSoft,
+                height: 1.6,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -736,8 +752,8 @@ class _CookEditorState extends State<_CookEditor> {
             decoration: BoxDecoration(
               color: c.surface,
               borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(CitroColors.radii.card),
-                ),
+                top: Radius.circular(CitroColors.radii.card),
+              ),
               border: Border.all(color: c.line),
             ),
             child: SafeArea(
@@ -758,7 +774,9 @@ class _CookEditorState extends State<_CookEditor> {
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
                             color: c.line2,
-                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.xs,
+                            ),
                           ),
                         ),
                         Padding(
@@ -792,7 +810,10 @@ class _CookEditorState extends State<_CookEditor> {
                               const Spacer(),
                               Text(
                                 '第 $step / 4 步',
-                                style: context.body(size: CitroType.small, color: c.inkSoft),
+                                style: context.body(
+                                  size: CitroType.small,
+                                  color: c.inkSoft,
+                                ),
                               ),
                               const SizedBox(width: 2),
                             ],
@@ -821,7 +842,10 @@ class _CookEditorState extends State<_CookEditor> {
                       padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
                       child: Text(
                         error!,
-                        style: context.body(size: CitroType.small, color: c.danger),
+                        style: context.body(
+                          size: CitroType.small,
+                          color: c.danger,
+                        ),
                       ),
                     ),
                   Container(
@@ -889,7 +913,9 @@ class _CookEditorState extends State<_CookEditor> {
                     height: 38,
                     decoration: BoxDecoration(
                       color: step == i + 1 ? c.ink : Colors.transparent,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.small,
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -910,19 +936,13 @@ class _CookEditorState extends State<_CookEditor> {
                           ),
                           child: Center(
                             child: i + 1 < step
-                                ? Icon(
-                                    Icons.check,
-                                    size: 12,
-                                    color: c.onAccent,
-                                  )
+                                ? Icon(Icons.check, size: 12, color: c.onAccent)
                                 : Text(
                                     '${i + 1}',
                                     style: context.body(
                                       size: CitroType.micro,
                                       weight: CitroType.strong,
-                                      color: step == i + 1
-                                          ? c.ink
-                                          : c.inkSoft,
+                                      color: step == i + 1 ? c.ink : c.inkSoft,
                                     ),
                                   ),
                           ),
@@ -961,10 +981,7 @@ class _CookEditorState extends State<_CookEditor> {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  color: c.ink,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: c.ink, shape: BoxShape.circle),
                 child: Center(
                   child: _aiCreating
                       ? SizedBox(
@@ -975,11 +992,7 @@ class _CookEditorState extends State<_CookEditor> {
                             color: c.bg,
                           ),
                         )
-                      : Icon(
-                          Icons.auto_awesome_rounded,
-                          size: 20,
-                          color: c.bg,
-                        ),
+                      : Icon(Icons.auto_awesome_rounded, size: 20, color: c.bg),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1084,11 +1097,18 @@ class _CookEditorState extends State<_CookEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: context.heading(size: CitroType.title, color: c.ink)),
+        Text(
+          title,
+          style: context.heading(size: CitroType.title, color: c.ink),
+        ),
         const SizedBox(height: 3),
         Text(
           desc,
-          style: context.body(size: CitroType.small, color: c.inkSoft, height: 1.6),
+          style: context.body(
+            size: CitroType.small,
+            color: c.inkSoft,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 12),
       ],
@@ -1155,14 +1175,14 @@ class _CookEditorState extends State<_CookEditor> {
             Expanded(
               child: _timeBtn(c, '准备时间', prepMin, () async {
                 final v = await _pickMinutes('准备要多久？', prepMin, max: 300);
-                if (v != null) setState(() => prepMin = v);
+                if (v != null && mounted) setState(() => prepMin = v);
               }),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _timeBtn(c, '烹饪时间', cookMin, () async {
                 final v = await _pickMinutes('烹饪要多久？', cookMin, max: 600);
-                if (v != null) setState(() => cookMin = v);
+                if (v != null && mounted) setState(() => cookMin = v);
               }),
             ),
           ],
@@ -1181,9 +1201,7 @@ class _CookEditorState extends State<_CookEditor> {
         decoration: BoxDecoration(
           color: c.surface2,
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          border: Border.all(
-            color: hasCover ? c.line2 : c.accent,
-          ),
+          border: Border.all(color: hasCover ? c.line2 : c.accent),
           image: coverPreview != null
               ? DecorationImage(
                   image: ResizeImage(MemoryImage(coverPreview!), width: 384),
@@ -1238,7 +1256,10 @@ class _CookEditorState extends State<_CookEditor> {
                   const SizedBox(height: 2),
                   Text(
                     '裁成 1:1',
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ],
               ),
@@ -1419,7 +1440,10 @@ class _CookEditorState extends State<_CookEditor> {
       children: [
         Row(
           children: [
-            Text(title, style: context.heading(size: CitroType.body, color: c.ink)),
+            Text(
+              title,
+              style: context.heading(size: CitroType.body, color: c.ink),
+            ),
             if (required) ...[
               const SizedBox(width: 3),
               Text(
@@ -1533,18 +1557,25 @@ class _CookEditorState extends State<_CookEditor> {
                     style: context.body(size: CitroType.meta, color: c.ink),
                     decoration: InputDecoration(
                       hintText: '食材名',
-                      hintStyle: context.body(size: CitroType.caption, color: c.inkSoft),
+                      hintStyle: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                       filled: true,
                       fillColor: c.surface,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12,
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.field,
+                        ),
                         borderSide: BorderSide(color: c.line),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.field,
+                        ),
                         borderSide: BorderSide(color: c.accent),
                       ),
                     ),
@@ -1581,14 +1612,19 @@ class _CookEditorState extends State<_CookEditor> {
                     alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
                       color: c.surface,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.field,
+                      ),
                       border: Border.all(color: c.line),
                     ),
                     child: Text(
                       row.unit.isEmpty ? '不用单位，也不用填数量' : '用量写「${row.unit}」就行',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.body(size: CitroType.small, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.small,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ),
                 )
@@ -1610,7 +1646,9 @@ class _CookEditorState extends State<_CookEditor> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: c.tintYellow,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.field,
+                    ),
                     border: Border.all(color: c.line),
                   ),
                   child: Row(
@@ -1703,7 +1741,9 @@ class _CookEditorState extends State<_CookEditor> {
                               ),
                               decoration: BoxDecoration(
                                 color: row.unit == unit ? c.ink : c.surface2,
-                                borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.chip,
+                                ),
                                 border: Border.all(
                                   color: row.unit == unit ? c.ink : c.line2,
                                 ),
@@ -1806,10 +1846,7 @@ class _CookEditorState extends State<_CookEditor> {
               Container(
                 width: 24,
                 height: 24,
-                decoration: BoxDecoration(
-                  color: c.ink,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: c.ink, shape: BoxShape.circle),
                 child: Center(
                   child: Text(
                     '${i + 1}',
@@ -1826,7 +1863,7 @@ class _CookEditorState extends State<_CookEditor> {
               const SizedBox(width: 6),
               _toolBtn(c, null, timer > 0 ? '⏱ $timer 分' : '⏱ 计时', () async {
                 final v = await _pickMinutes('这一步要多久？', timer, max: 300);
-                if (v != null) setState(() => row.timer.text = '$v');
+                if (v != null && mounted) setState(() => row.timer.text = '$v');
               }, accent: timer > 0),
               const SizedBox(width: 6),
               _deleteBtn(
@@ -1849,10 +1886,17 @@ class _CookEditorState extends State<_CookEditor> {
           TextField(
             controller: row.text,
             maxLines: 3,
-            style: context.body(size: CitroType.meta, color: c.ink, height: 1.6),
+            style: context.body(
+              size: CitroType.meta,
+              color: c.ink,
+              height: 1.6,
+            ),
             decoration: InputDecoration(
               hintText: '第 ${i + 1} 步：先做什么、火候多大、到什么状态算好…',
-              hintStyle: context.body(size: CitroType.caption, color: c.inkSoft),
+              hintStyle: context.body(
+                size: CitroType.caption,
+                color: c.inkSoft,
+              ),
               isDense: true,
               border: InputBorder.none,
               filled: true,
@@ -1871,7 +1915,9 @@ class _CookEditorState extends State<_CookEditor> {
                   children: [
                     Positioned.fill(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.small,
+                        ),
                         child: AppImage(
                           Api.imageUrl(row.img),
                           fit: BoxFit.cover,
@@ -1891,11 +1937,7 @@ class _CookEditorState extends State<_CookEditor> {
                             color: c.danger,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: c.bg,
-                          ),
+                          child: Icon(Icons.close, size: 14, color: c.bg),
                         ),
                       ),
                     ),
@@ -1933,7 +1975,11 @@ class _CookEditorState extends State<_CookEditor> {
           visibilityPublic
               ? '会出现在「食谱广场」，所有人都能看到这道菜（下厨日记仍只属于你）。'
               : '只有你自己能看到这份食谱。',
-          style: context.body(size: CitroType.micro, color: c.inkSoft, height: 1.6),
+          style: context.body(
+            size: CitroType.micro,
+            color: c.inkSoft,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 20),
       ],
@@ -2061,7 +2107,13 @@ class _CookEditorState extends State<_CookEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
+                  Text(
+                    label,
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
+                  ),
                   const SizedBox(height: 1),
                   Text(
                     minutes > 0 ? '$minutes 分钟' : '未设置',
@@ -2229,7 +2281,10 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
               Icon(Icons.auto_awesome_rounded, size: 20, color: c.accentInk),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('AI 快速创建食谱', style: context.heading(size: CitroType.titleLg)),
+                child: Text(
+                  'AI 快速创建食谱',
+                  style: context.heading(size: CitroType.titleLg),
+                ),
               ),
               IconButton(
                 tooltip: '关闭',
@@ -2241,7 +2296,11 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
           ),
           Text(
             '说说现有的食材、口味或想要的做法，CiCi 会先写一版草稿，你再改。',
-            style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.6),
+            style: context.body(
+              size: CitroType.caption,
+              color: c.inkSoft,
+              height: 1.6,
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -2253,7 +2312,10 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
             style: context.body(size: CitroType.meta, height: 1.5),
             decoration: InputDecoration(
               hintText: '例如：冰箱里有鸡蛋、番茄和半颗洋葱，想做两人份的晚饭',
-              hintStyle: context.body(size: CitroType.caption, color: c.inkSoft),
+              hintStyle: context.body(
+                size: CitroType.caption,
+                color: c.inkSoft,
+              ),
               filled: true,
               fillColor: c.surface2,
               contentPadding: const EdgeInsets.symmetric(
@@ -2279,7 +2341,10 @@ class _AiRecipePromptDialogState extends State<_AiRecipePromptDialog> {
                 ActionChip(
                   label: Text(
                     example,
-                    style: context.body(size: CitroType.small, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.inkSoft,
+                    ),
                   ),
                   backgroundColor: c.surface2,
                   side: BorderSide(color: c.line2),
@@ -2440,9 +2505,15 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('这张图读不出来', style: context.heading(size: CitroType.titleLg, color: c.ink)),
+              Text(
+                '这张图读不出来',
+                style: context.heading(size: CitroType.titleLg, color: c.ink),
+              ),
               const SizedBox(height: 6),
-              Text('换一张图片再试', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                '换一张图片再试',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
               const SizedBox(height: 14),
               AccentButton(
                 text: '关闭',
@@ -2469,7 +2540,10 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
           children: [
             Row(
               children: [
-                Text('裁切封面', style: context.heading(size: CitroType.titleLg, color: c.ink)),
+                Text(
+                  '裁切封面',
+                  style: context.heading(size: CitroType.titleLg, color: c.ink),
+                ),
                 const Spacer(),
                 GestureDetector(
                   onTap: _fit,
@@ -2479,7 +2553,9 @@ class _CoverCropDialogState extends State<_CoverCropDialog> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.chip,
+                      ),
                       border: Border.all(color: c.line2),
                     ),
                     child: Text(
@@ -2629,7 +2705,7 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now().add(const Duration(days: 1)),
                   );
-                  if (d != null) setState(() => date = d);
+                  if (d != null && ctx.mounted) setState(() => date = d);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -2638,19 +2714,27 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
                   ),
                   decoration: BoxDecoration(
                     color: c.surface2,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.field,
+                    ),
                     border: Border.all(color: c.line),
                   ),
                   child: Row(
                     children: [
                       Text(
                         '日期',
-                        style: context.body(size: CitroType.caption, color: c.inkSoft),
+                        style: context.body(
+                          size: CitroType.caption,
+                          color: c.inkSoft,
+                        ),
                       ),
                       const Spacer(),
                       Text(
                         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-                        style: context.body(size: CitroType.caption, color: c.ink),
+                        style: context.body(
+                          size: CitroType.caption,
+                          color: c.ink,
+                        ),
                       ),
                     ],
                   ),
@@ -2659,7 +2743,13 @@ Future<Recipe?> showDiaryDialog(BuildContext context, Recipe recipe) async {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text('评分', style: context.body(size: CitroType.caption, color: c.inkSoft)),
+                  Text(
+                    '评分',
+                    style: context.body(
+                      size: CitroType.caption,
+                      color: c.inkSoft,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   for (var i = 1; i <= 5; i++)
                     GestureDetector(
@@ -2809,7 +2899,9 @@ Future<FridgeItem?> showFridgeDialog(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: c.tintYellow,
-                        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.chip,
+                        ),
                         border: Border.all(color: c.line),
                       ),
                       child: Row(
@@ -2875,7 +2967,9 @@ Future<FridgeItem?> showFridgeDialog(
                         ),
                         decoration: BoxDecoration(
                           color: unit == u ? c.ink : c.surface2,
-                          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
                           border: Border.all(
                             color: unit == u ? c.ink : c.line2,
                           ),
@@ -2904,7 +2998,8 @@ Future<FridgeItem?> showFridgeDialog(
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2100),
                         );
-                        if (d != null) setState(() => buyDate = d);
+                        if (d != null && ctx.mounted)
+                          setState(() => buyDate = d);
                       },
                       child: _dateBox(context, c, '购买日期', ds(buyDate)),
                     ),
@@ -2991,7 +3086,10 @@ Widget _dateBox(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: context.body(size: CitroType.micro, color: c.inkSoft)),
+        Text(
+          label,
+          style: context.body(size: CitroType.micro, color: c.inkSoft),
+        ),
         Text(
           value,
           maxLines: 1,
@@ -3176,14 +3274,19 @@ class _FoodSheetState extends State<_FoodSheet> {
                       margin: const EdgeInsets.only(top: 8),
                       decoration: BoxDecoration(
                         color: c.line2,
-                        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                        borderRadius: BorderRadius.circular(
+                          CitroColors.radii.xs,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
                       child: Row(
                         children: [
-                          Text('今天吃什么', style: context.heading(size: CitroType.subtitle)),
+                          Text(
+                            '今天吃什么',
+                            style: context.heading(size: CitroType.subtitle),
+                          ),
                           const Spacer(),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
@@ -3238,7 +3341,9 @@ class _FoodSheetState extends State<_FoodSheet> {
                               ),
                               decoration: BoxDecoration(
                                 color: c.tintYellow,
-                                borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                                borderRadius: BorderRadius.circular(
+                                  CitroColors.radii.inner,
+                                ),
                                 border: Border.all(color: c.line),
                                 boxShadow: CitroColors.shadows.sm(c),
                               ),
@@ -3329,7 +3434,10 @@ class _FoodSheetState extends State<_FoodSheet> {
                           Text(
                             cat == _recipeCat ? '抽到食谱会直接打开详情' : '抽到满意的，就去厨房试试吧',
                             textAlign: TextAlign.center,
-                            style: context.body(size: CitroType.micro, color: c.inkSoft),
+                            style: context.body(
+                              size: CitroType.micro,
+                              color: c.inkSoft,
+                            ),
                           ),
                         ],
                       ),

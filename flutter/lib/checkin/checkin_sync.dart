@@ -58,21 +58,15 @@ class CheckinSyncOp {
 }
 
 class CheckinSyncRun {
-  final int handled;
   final int remaining;
-  final bool offline;
   final bool conflict;
   final String? message;
 
   const CheckinSyncRun({
-    this.handled = 0,
     this.remaining = 0,
-    this.offline = false,
     this.conflict = false,
     this.message,
   });
-
-  bool get ok => handled > 0 && remaining == 0 && !conflict;
 }
 
 class CheckinSync {
@@ -183,13 +177,11 @@ class CheckinSync {
   }) async {
     if (Api.token == null || Api.token!.isEmpty) {
       return const CheckinSyncRun(
-        offline: true,
         message: '已存本机，联网后再同步',
       );
     }
     var ops = _sort(load(account));
     if (ops.isEmpty) return const CheckinSyncRun();
-    var handled = 0;
     var conflict = false;
     String? message;
     while (ops.isNotEmpty) {
@@ -226,7 +218,6 @@ class CheckinSync {
         final remote = _dayOf(res);
         if (remote != null) onRemote(remote);
         ops.removeAt(0);
-        handled++;
       } on ApiException catch (e) {
         if (e.code == 409) {
           conflict = true;
@@ -286,7 +277,6 @@ class CheckinSync {
     }
     await save(account, ops);
     return CheckinSyncRun(
-      handled: handled,
       remaining: ops.length,
       conflict: conflict,
       message: message,

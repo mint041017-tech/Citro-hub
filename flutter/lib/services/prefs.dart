@@ -33,7 +33,6 @@ class Prefs {
     const keys = <String>[
       PrefKeys.token,
       PrefKeys.authUser,
-      PrefKeys.zodiacSign,
       PrefKeys.checkinLast,
       PrefKeys.checkinStreak,
       PrefKeys.checkinFortune,
@@ -44,7 +43,6 @@ class Prefs {
       PrefKeys.sudokuResume,
       PrefKeys.playRecords,
       PrefKeys.playCooldown,
-      PrefKeys.fishConfig,
       PrefKeys.cardsOwned,
       PrefKeys.cardsToday,
       PrefKeys.cardCredits,
@@ -62,8 +60,7 @@ class Prefs {
       await _sp.remove(key);
     }
     for (final key in _sp.getKeys().toList()) {
-      if (key.startsWith('citro_zodiac_ai_') ||
-          key.startsWith('citro_checkin_days_v1_') ||
+      if (key.startsWith('citro_checkin_days_v1_') ||
           key.startsWith('citro_checkin_outbox_v1_') ||
           key.startsWith('citro_checkin_ui_v1_') ||
           key.startsWith('citro_checkin_guest_merge_v1_') ||
@@ -85,8 +82,6 @@ class PrefKeys {
   static const guestName = 'citro_guest_name';
   static const playRecords = 'citro_play_records';
   static const playCooldown = 'citro_play_cooldown';
-  static const fishConfig = 'citro_fish_config';
-  static const zodiacSign = 'citro_zodiac_sign';
   static const checkinLast = 'citro_checkin_last';
   static const checkinStreak = 'citro_checkin_streak';
   static const checkinFortune = 'citro_checkin_fortune';
@@ -119,7 +114,6 @@ class PrefKeys {
   static const blockedUsers = 'citro_blocked_users';
   static const updateLastCheck = 'citro_update_last_check';
   static const updateSkippedVersion = 'citro_update_skipped_version';
-  static const homeLayout = 'citro_home_layout_v1';
   static const todo = 'citro_todo_v1';
   static const ledger = 'citro_ledger_v1';
   static const calendarMarks = 'citro_calendar_marks_v1';

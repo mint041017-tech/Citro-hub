@@ -4,7 +4,6 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import 'liquid_glass.dart';
 import 'motion_widgets.dart';
 import 'paper.dart';
 
@@ -25,8 +24,8 @@ class CitroTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unread = context.app.unread;
-    const double barHeight = 56;
-    const double ciciSize = 54;
+    const double barHeight = 62;
+    const double ciciSize = 62;
 
     final specs = <_TabSpec>[
       const _TabSpec('首页', AppIcons.home),
@@ -40,23 +39,27 @@ class CitroTabBar extends StatelessWidget {
       right: AppSpacing.x1,
       bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.x1,
       child: RepaintBoundary(
+        // 底座按内容收窄、整体居中（iOS 26 的悬浮标签栏），不再撑满屏宽；
+        // 每格固定宽度，屏幕再宽也是同一颗紧凑的胶囊。
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 四格一组：玻璃只包这一个整体，右侧 CICI 不在这层玻璃里。
-            Expanded(
-              child: CitroLiquidGlass(
-                height: barHeight,
-                radius: barHeight / 2,
-                clipBehavior: Clip.antiAlias,
-                child: Row(
-                  children: [
+            CitroDock(
+              height: barHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: CitroTabStrip(
+                  index: index,
+                  itemWidth: 70,
+                  height: barHeight,
+                  items: [
                     for (var i = 0; i < specs.length; i++)
-                      Expanded(child: _tabSlot(context, specs[i], i)),
+                      _tabSlot(context, specs[i], i),
                   ],
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.x2),
+            const SizedBox(width: 10),
             CiciAvatarButton(size: ciciSize, onTap: onCiciTap),
           ],
         ),
@@ -112,10 +115,15 @@ class _TabContent extends StatelessWidget {
     final c = context.c;
     final reduce = CitroMotion.reduced(context);
     // 选中态只用颜色区分（和 iOS 26 玻璃导航一致）：
-    // 实色墨 vs 灰，不压瓷实底，玻璃的通透感才留得住。
-    final fg = active ? c.ink : c.inkSoft;
+    // 强调墨 vs 灰，不压瓷实底；选中色用 accentInk，随背景主题色变，
+    // 和 GlassTabBar 的默认选中色一致。
+    // 选中：强调色图标 + 粗一档的字（底下的浅色胶囊由 CitroTabStrip 滑动）；
+    // 未选中：半透明墨色。
+    final fg = active
+        ? c.accentInk
+        : c.ink.withValues(alpha: c.dark ? .58 : .52);
     return SizedBox(
-      height: 44,
+      height: 50,
       child: Center(
         child: Stack(
           clipBehavior: Clip.none,
@@ -127,8 +135,12 @@ class _TabContent extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppIcon(strokeSvg(icon, width: 2), size: 20, color: fg),
-                  const SizedBox(height: 2),
+                  AppIcon(
+                    strokeSvg(icon, width: active ? 2.3 : 2),
+                    size: 22,
+                    color: fg,
+                  ),
+                  const SizedBox(height: 3),
                   // 文字不再自带语义：外面已经用 Semantics(label:) 报了 Tab 名，
                   // 否则读屏会把「首页 首页」念两遍。
                   ExcludeSemantics(
@@ -137,8 +149,8 @@ class _TabContent extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.body(
-                        size: CitroType.micro,
-                        weight: active ? CitroType.medium : CitroType.regular,
+                        size: 10.5,
+                        weight: active ? CitroType.strong : CitroType.medium,
                         color: fg,
                         height: 1,
                       ),
@@ -205,14 +217,13 @@ class CiciAvatarButton extends StatelessWidget {
         hoverLift: 0,
         hoverShadow: false,
         borderRadius: BorderRadius.circular(size / 2),
-        child: CitroLiquidGlass(
-          width: size,
+        // 与标签栏同一种玻璃：一颗圆形的磨砂按钮。
+        child: CitroDock(
           height: size,
-          radius: size / 2,
-          clipBehavior: Clip.antiAlias,
+          width: size,
           child: Center(
             child: AppIcon(
-              strokeSvg(AppIcons.sparkle, width: 2),
+              strokeSvg(AppIcons.sparkle, width: 2.2),
               size: size * .38,
               color: c.accentInk,
             ),

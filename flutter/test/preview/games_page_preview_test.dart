@@ -26,7 +26,7 @@ Future<void> _loadFonts() async {
 
   await load('RoundedCN', [
     'assets/fonts/rounded-400-app.ttf',
-    'assets/fonts/rounded-500-app.ttf',
+    'assets/fonts/rounded-400-app.ttf',
     'assets/fonts/rounded-700-app.ttf',
   ]);
   await load('XiaolaiMono', ['assets/fonts/mono-app.ttf']);

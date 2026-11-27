@@ -16,7 +16,7 @@ void main() {
     setUpAll(() async {
     await loadFont('RoundedCN', [
       'assets/fonts/rounded-400-app.ttf',
-      'assets/fonts/rounded-500-app.ttf',
+      'assets/fonts/rounded-400-app.ttf',
       'assets/fonts/rounded-700-app.ttf',
     ]);
     await loadFont('XiaolaiMono', ['assets/fonts/mono-app.ttf']);

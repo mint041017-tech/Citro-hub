@@ -6,10 +6,10 @@ import '../data/resources.dart';
 import '../games/game_registry.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/coin_sheet.dart';
-import '../overlays/extra_sheets.dart';
+import '../overlays/fortune_sheet.dart';
+import '../overlays/weather_sheet.dart';
 import '../overlays/lantern_sheet.dart';
 import '../overlays/pomodoro_sheet.dart';
-import '../overlays/zodiac_modal.dart';
 import '../pages/in_app_web.dart';
 import '../pages/me_page.dart';
 import '../pages/web_resource_actions.dart';
@@ -25,9 +25,7 @@ const _searchHistoryKey = 'chimu_search_hist';
 enum _SearchAction {
   route,
   checkin,
-  zodiac,
   weather,
-  fish,
   pomodoro,
   coin,
   lantern,
@@ -71,8 +69,8 @@ List<_SearchEntry> _buildSearchIndex() {
     const _SearchEntry(
       type: '页面',
       name: '首页',
-      desc: '天气、月历、摸鱼、星象与每日一言',
-      keys: 'home shouye 首页 手账 天气 日历 月历 摸鱼',
+      desc: '天气、月历、打卡与每日一言',
+      keys: 'home shouye 首页 手账 天气 日历 月历',
       action: _SearchAction.route,
       target: '/home',
     ),
@@ -95,18 +93,10 @@ List<_SearchEntry> _buildSearchIndex() {
     const _SearchEntry(
       type: '页面',
       name: '我的',
-      desc: '账号资料与我的笔记',
-      keys: 'me account 我的 账号 登录 资料 笔记',
+      desc: '账号资料与资源下载',
+      keys: 'me account 我的 账号 登录 资料 资源 下载',
       action: _SearchAction.route,
       target: '/me',
-    ),
-    const _SearchEntry(
-      type: '页面',
-      name: '灵敏度',
-      desc: '跨游戏灵敏度精确换算',
-      keys: 'lingmindu lingmin sensitivity sens dpi 灵敏度 转换 换算',
-      action: _SearchAction.route,
-      target: '/sens',
     ),
     const _SearchEntry(
       type: '页面',
@@ -133,24 +123,10 @@ List<_SearchEntry> _buildSearchIndex() {
     ),
     const _SearchEntry(
       type: '功能',
-      name: '星象',
-      desc: '每日运势 · 星座选择 · 幸运指数',
-      keys: 'xingzuo zodiac 星座 运势 星象',
-      action: _SearchAction.zodiac,
-    ),
-    const _SearchEntry(
-      type: '功能',
       name: '天气详情',
       desc: '当前天气、体感温度与未来预报',
       keys: 'weather tianqi 天气 气温 湿度 预报',
       action: _SearchAction.weather,
-    ),
-    const _SearchEntry(
-      type: '功能',
-      name: '摸鱼日历',
-      desc: '工作状态、休息日与上下班时间',
-      keys: 'fish moyu 摸鱼 下班 上班 休息日 工作日',
-      action: _SearchAction.fish,
     ),
     const _SearchEntry(
       type: '功能',
@@ -416,12 +392,13 @@ class _GlobalSearchState extends State<GlobalSearch>
           child: FadeTransition(
             opacity: CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(0, _panelBelow ? -0.06 : 0.06),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
-              ),
+              position:
+                  Tween<Offset>(
+                    begin: Offset(0, _panelBelow ? -0.06 : 0.06),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: anim, curve: CitroMotion.easeOut),
+                  ),
               child: TextFieldTapRegion(
                 groupId: _tapGroup,
                 child: Material(
@@ -520,13 +497,9 @@ class _GlobalSearchState extends State<GlobalSearch>
           Navigator.of(context).pushNamed(entry.target!);
         }
       case _SearchAction.checkin:
-        showCheckinOverlay(context);
-      case _SearchAction.zodiac:
-        showZodiacModal(context);
+        showFortuneOverlay(context);
       case _SearchAction.weather:
-        showWeatherSheet(context);
-      case _SearchAction.fish:
-        showFishSheet(context);
+        showWeatherDialog(context);
       case _SearchAction.pomodoro:
         showPomodoroOverlay(context);
       case _SearchAction.coin:
@@ -581,7 +554,10 @@ class _GlobalSearchState extends State<GlobalSearch>
         children: [
           Text(
             text,
-            style: context.body(size: CitroType.small, color: context.c.inkSoft),
+            style: context.body(
+              size: CitroType.small,
+              color: context.c.inkSoft,
+            ),
           ),
           const Spacer(),
           if (clear)
@@ -593,7 +569,10 @@ class _GlobalSearchState extends State<GlobalSearch>
               },
               child: Text(
                 '清空',
-                style: context.body(size: CitroType.small, color: context.c.accent),
+                style: context.body(
+                  size: CitroType.small,
+                  color: context.c.accent,
+                ),
               ),
             ),
         ],
@@ -686,7 +665,7 @@ class _GlobalSearchState extends State<GlobalSearch>
         child: Container(
           height: 44,
           decoration: BoxDecoration(
-            color: c.surface2.withAlpha(c.dark ? 225 : 245),
+            color: c.surface2.withValues(alpha: c.surface2.a * (c.dark ? 225 : 245) / 255),
             borderRadius: BorderRadius.circular(14),
             boxShadow: CitroColors.shadows.card(c),
           ),

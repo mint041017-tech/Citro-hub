@@ -26,6 +26,7 @@ import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 import '../widgets/shared_element.dart';
 import '../widgets/tablet_shell.dart';
 import '../widgets/voice_bubble.dart';
@@ -133,6 +134,10 @@ class _CommunityPageState extends State<CommunityPage>
   int unread = 0;
   bool loading = false;
   bool loaded = false;
+
+  /// 已经在列表里出现过的帖子。首次加载完成后一次性记下全部，
+  /// 之后新插入的（刚发布 / 刷新出来的）才播一次淡入上浮。
+  final Set<String> _seenPosts = {};
   String search = '';
   bool showSearch = false;
   final searchCtrl = TextEditingController();
@@ -562,7 +567,7 @@ class _CommunityPageState extends State<CommunityPage>
     final windows = !kIsWeb && platform.isWindows && width >= 600;
     final masonry = tabletNav || duo || webWide || pad || windows;
     final maxFeed = (tabletNav || webWide || pad || windows) ? 1180.0 : 760.0;
-    final side = math.max(8.0, (width - maxFeed) / 2);
+    final side = AppSpacing.pageSide(width, maxFeed);
     // iPad 横竖屏都固定双列；Windows 最多双列；网页宽屏双列；
     // Android 平板保留原来的 2/3 列规则。
     final columns = (pad || windows || kIsWeb)
@@ -578,14 +583,18 @@ class _CommunityPageState extends State<CommunityPage>
       }
       return true;
     }).toList();
+    // 首批帖子直接记为「已见」，不播入场；之后新出现的才播。
+    if (loaded && _seenPosts.isEmpty) {
+      _seenPosts.addAll(posts.map((p) => p.id));
+    }
     final showPosts =
         app.loggedIn && !(loading && !loaded) && filtered.isNotEmpty;
     final prelude = <Widget>[
       const CitroReveal(
         rise: 8,
         child: Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.x2),
-          child: CitroPageTitle('社区', '在清爽的汽水里，与同频的灵魂相遇'),
+          padding: EdgeInsets.only(bottom: AppSpacing.block),
+          child: CitroPageTitle('社区', ''),
         ),
       ),
       if (!app.loggedIn)
@@ -598,15 +607,12 @@ class _CommunityPageState extends State<CommunityPage>
         CitroReveal(
           rise: 8,
           delay: CitroMotion.staggerStep,
-          child: _cover(context, app),
+          child: CitroFieldScope(tone: FieldTone.primary, child: Builder(builder: (context) => _cover(context, app))),
         ),
-        if (showSearch) ...[const SizedBox(height: 8), _searchBox(context)],
-        const SizedBox(height: 10),
+        if (showSearch) ...[const SizedBox(height: 12), _searchBox(context)],
+        const SizedBox(height: AppSpacing.block - 4),
         if (loading && !loaded)
-          const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          )
+          CitroSkeleton.feed()
         else if (filtered.isEmpty)
           _empty(context),
       ],
@@ -625,8 +631,7 @@ class _CommunityPageState extends State<CommunityPage>
     );
     return Stack(
       children: [
-        // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
-        Positioned.fill(child: ColoredBox(color: context.c.bg)),
+        // 沉浸式：背景由壳层统一提供，这里不再铺纯色底。
         CitroBackground(
           color: Colors.transparent,
           child: SafeArea(
@@ -646,7 +651,7 @@ class _CommunityPageState extends State<CommunityPage>
                               SliverPadding(
                                 padding: EdgeInsets.fromLTRB(
                                   side,
-                                  width >= 700 ? AppSpacing.x6 : AppSpacing.x2,
+                                  AppSpacing.pageTopRoomy(width),
                                   side,
                                   0,
                                 ),
@@ -661,8 +666,8 @@ class _CommunityPageState extends State<CommunityPage>
                                   ),
                                   sliver: SliverMasonryGrid.count(
                                     crossAxisCount: columns,
-                                    mainAxisSpacing: 10,
-                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: AppSpacing.grid,
+                                    crossAxisSpacing: AppSpacing.grid,
                                     childCount: filtered.length,
                                     itemBuilder: (context, index) =>
                                         _feedTile(context, filtered[index]),
@@ -672,15 +677,15 @@ class _CommunityPageState extends State<CommunityPage>
                                 SliverPadding(
                                   padding: EdgeInsets.fromLTRB(
                                     side,
-                                    16,
+                                    AppSpacing.block,
                                     side,
-                                    36,
+                                    AppSpacing.pageBottom(floatingNav: false),
                                   ),
                                   sliver: SliverToBoxAdapter(child: footer),
                                 )
                               else
                                 const SliverToBoxAdapter(
-                                  child: SizedBox(height: 36),
+                                  child: SizedBox(height: 56),
                                 ),
                             ],
                           )
@@ -690,9 +695,9 @@ class _CommunityPageState extends State<CommunityPage>
                             ),
                             padding: EdgeInsets.fromLTRB(
                               side,
-                              width >= 700 ? AppSpacing.x6 : AppSpacing.x2,
+                              AppSpacing.pageTopRoomy(width),
                               side,
-                              110,
+                              AppSpacing.pageBottom(floatingNav: true),
                             ),
                             itemCount: itemCount,
                             itemBuilder: (context, index) {
@@ -700,7 +705,9 @@ class _CommunityPageState extends State<CommunityPage>
                               final feedIndex = index - prelude.length;
                               if (showPosts && feedIndex < filtered.length) {
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.grid,
+                                  ),
                                   child: _feedTile(
                                     context,
                                     filtered[feedIndex],
@@ -712,7 +719,7 @@ class _CommunityPageState extends State<CommunityPage>
                           ),
                   ),
                 ),
-                if (kIsWeb && width >= 1025)
+                if (kIsWeb && !tabletNav && width >= 1025)
                   Positioned(
                     left: 18,
                     bottom: MediaQuery.paddingOf(context).bottom + 24,
@@ -731,15 +738,15 @@ class _CommunityPageState extends State<CommunityPage>
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: c.ink,
+                          color: c.accent2,
                           shape: BoxShape.circle,
-                          boxShadow: CitroColors.shadows.float(c),
+                          boxShadow: CitroColors.shadows.glow(c),
                         ),
                         child: Center(
                           child: AppIcon(
                             strokeSvg(AppIcons.plus, width: 2.4),
                             size: 24,
-                            color: c.bg,
+                            color: c.onAccent,
                           ),
                         ),
                       ),
@@ -754,8 +761,16 @@ class _CommunityPageState extends State<CommunityPage>
   }
 
   Widget _feedTile(BuildContext context, Post p) {
-    return RepaintBoundary(
-      child: _PostCard(
+    final fresh = _seenPosts.isNotEmpty && _seenPosts.add(p.id);
+    return CitroReveal(
+      key: ValueKey('reveal-${p.id}'),
+      enabled: fresh && !CitroMotion.lite(context),
+      rise: 14,
+      child: RepaintBoundary(
+        // 色场：动态卡是白玻璃块（字多，保证可读）。
+        child: CitroFieldScope(
+        tone: FieldTone.glass,
+        child: _PostCard(
         key: ValueKey('post-${p.id}'),
         post: p,
         onAvatar: p.mine
@@ -779,6 +794,8 @@ class _CommunityPageState extends State<CommunityPage>
         onReportPost: () => _reportPost(context, p),
         onReportComment: (comment) => _reportComment(context, p, comment),
         onBlockUser: (nick) => _blockNick(context, nick),
+      ),
+      ),
       ),
     );
   }
@@ -842,6 +859,7 @@ class _CommunityPageState extends State<CommunityPage>
   Widget _cover(BuildContext context, AppState app) {
     final c = context.c;
     final user = app.user!;
+    final minePosts = posts.where((p) => p.mine).toList();
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Row(
@@ -876,7 +894,7 @@ class _CommunityPageState extends State<CommunityPage>
                   child: Row(
                     children: [
                       Text(
-                        '${posts.where((p) => p.mine).length}',
+                        '${minePosts.length}',
                         style: context.hand(
                           size: CitroType.meta,
                           color: c.accentInk,
@@ -891,7 +909,7 @@ class _CommunityPageState extends State<CommunityPage>
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        '${posts.where((p) => p.mine).fold<int>(0, (s, p) => s + p.likes)}',
+                        '${minePosts.fold<int>(0, (s, p) => s + p.likes)}',
                         style: context.hand(
                           size: CitroType.meta,
                           color: c.accentInk,
@@ -1036,30 +1054,15 @@ class _CommunityPageState extends State<CommunityPage>
   Widget _empty(BuildContext context) {
     final c = context.c;
     return CitroCard(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      child: Column(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: c.surface2,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: AppIcon(
-                strokeSvg(AppIcons.community, width: 1.8),
-                size: 28,
-                color: c.accent,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            '还没有动态，来发第一条吧',
-            style: context.body(size: CitroType.meta, color: c.inkSoft),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: CitroEmptyState(
+        icon: AppIcon(
+          strokeSvg(AppIcons.community, width: 1.8),
+          size: 26,
+          color: c.accentInk,
+        ),
+        title: '还没有动态',
+        hint: '来发第一条吧，分享此刻在做的事',
       ),
     );
   }
@@ -1112,8 +1115,6 @@ class _PostCardState extends State<_PostCard> {
   final comment = TextEditingController();
   final commentFocus = FocusNode();
   PostComment? replyTo;
-  // 评论默认全部展开，不再需要「查看全部」那一跳。
-  bool showAllComments = true;
   bool showCommentInput = false;
   bool sending = false;
   String? image;
@@ -1318,9 +1319,6 @@ class _PostCardState extends State<_PostCard> {
     final visibleComments = p.comments
         .where((cm) => !context.app.isBlocked(cm.nick))
         .toList();
-    final shown = showAllComments
-        ? visibleComments
-        : visibleComments.take(2).toList();
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Column(
@@ -1388,7 +1386,8 @@ class _PostCardState extends State<_PostCard> {
               else
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _showMoreMenu,
+                  onTap: () =>
+                      _showActions(onReport: widget.onReportPost, nick: widget.post.nick),
                   child: Padding(
                     padding: const EdgeInsets.all(6),
                     child: AppIcon(
@@ -1457,21 +1456,7 @@ class _PostCardState extends State<_PostCard> {
               ),
               child: Column(
                 children: [
-                  for (final cm in shown) _commentTile(context, cm),
-                  if (!showAllComments && visibleComments.length > shown.length)
-                    GestureDetector(
-                      onTap: () => setState(() => showAllComments = true),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          '查看全部 ${visibleComments.length} 条评论',
-                          style: context.body(
-                            size: CitroType.small,
-                            color: c.accentInk,
-                          ),
-                        ),
-                      ),
-                    ),
+                  for (final cm in visibleComments) _commentTile(context, cm),
                 ],
               ),
             ),
@@ -1888,19 +1873,6 @@ class _PostCardState extends State<_PostCard> {
     );
   }
 
-  Future<void> _showMoreMenu() {
-    return _showActions(onReport: widget.onReportPost, nick: widget.post.nick);
-  }
-
-  Future<void> _showCommentMenu(PostComment cm) {
-    return _showActions(
-      onReport: widget.onReportComment == null
-          ? null
-          : () => widget.onReportComment!(cm),
-      nick: cm.nick,
-    );
-  }
-
   Future<void> _showActions({
     required VoidCallback? onReport,
     required String nick,
@@ -2005,7 +1977,12 @@ class _PostCardState extends State<_PostCard> {
       onTap: () => _openComment(replyTo: cm),
       onLongPress: cm.mine
           ? () => _confirmDeleteComment(cm)
-          : () => _showCommentMenu(cm),
+          : () => _showActions(
+              onReport: widget.onReportComment == null
+                  ? null
+                  : () => widget.onReportComment!(cm),
+              nick: cm.nick,
+            ),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(
@@ -2564,28 +2541,13 @@ class _UserPostsSheetState extends State<_UserPostsSheet> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: c.surface2,
-                                shape: BoxShape.circle,
+                            CitroEmptyState(
+                              icon: AppIcon(
+                                strokeSvg(AppIcons.community, width: 1.8),
+                                size: 26,
+                                color: c.accentInk,
                               ),
-                              child: Center(
-                                child: AppIcon(
-                                  strokeSvg(AppIcons.community, width: 1.8),
-                                  size: 28,
-                                  color: c.accent,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              widget.mine ? '你还没有发布过动态' : 'TA 还没有发布过动态',
-                              style: context.body(
-                                size: CitroType.meta,
-                                color: c.inkSoft,
-                              ),
+                              title: widget.mine ? '你还没有发布过动态' : 'TA 还没有发布过动态',
                             ),
                           ],
                         ),
@@ -2711,15 +2673,11 @@ class _InboxSheetState extends State<_InboxSheet> {
             ),
             Expanded(
               child: widget.items.isEmpty
-                  ? Center(
-                      child: Text(
-                        '暂无消息\n别人评论或回复你时会在这里提醒',
-                        textAlign: TextAlign.center,
-                        style: context.body(
-                          size: CitroType.caption,
-                          color: c.inkSoft,
-                          height: 1.7,
-                        ),
+                  ? const Center(
+                      child: CitroEmptyState(
+                        icon: Icon(Icons.notifications_none_rounded),
+                        title: '暂无消息',
+                        hint: '别人评论或回复你时会在这里提醒',
                       ),
                     )
                   : ListView.separated(

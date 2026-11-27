@@ -4,25 +4,20 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 
 import '../data/quotes.dart';
 import '../calendar/calendar_models.dart';
-import '../calendar/calendar_page.dart';
+import '../calendar/calendar_page.dart' deferred as calendarPage;
 import '../calendar/calendar_store.dart';
 import '../services/api.dart';
 import '../services/clock.dart';
-import '../services/fish.dart';
 import '../services/haptics.dart';
 import '../overlays/appreciation_sheet.dart';
 import '../overlays/card_collection.dart';
-import '../overlays/extra_sheets.dart';
 import '../overlays/lantern_sheet.dart';
-import '../overlays/zodiac_modal.dart';
+import '../overlays/weather_sheet.dart';
 import '../services/lantern_api.dart';
-import '../services/models.dart';
 import '../state/app_state.dart';
-import '../state/negative_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/lunar.dart';
@@ -35,13 +30,13 @@ import '../widgets/home_bento.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/home_layout.dart';
 import '../mbti/home_card.dart';
-import '../widgets/negative_screen.dart';
 import '../widgets/paper.dart';
 import '../widgets/todo_home_card.dart';
 import '../widgets/mood_home_card.dart';
 import '../widgets/ledger_home_card.dart';
+import '../widgets/lazy_page.dart';
 import '../widgets/tablet_shell.dart';
-import 'cook_page.dart';
+import 'cook_page.dart' deferred as cookPage;
 import 'me_page.dart';
 import 'web_home.dart';
 
@@ -61,50 +56,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final ScrollController _scroll = ScrollController();
 
-  /// 负一屏展开进度（0..1）。
-  ///
-  /// 用 [ValueNotifier] 而不是 `setState`：拖拽每帧只重建那一层 Transform，
-  /// 不重建整棵首页（否则卡片、背景、栅格每帧都要重新 layout，必然掉帧）。
-  final ValueNotifier<double> _negProgress = ValueNotifier(0);
-
-  /// 下拉行程 = 负一屏面板高度（在 build 里按屏高算）。
-  double _negThreshold = 300;
-
-  /// 本次下拉累计的拖拽距离。
-  double _negPull = 0;
-
-  /// 阻尼系数：抽屉行程走手指的 95%，几乎跟手但略带重量。
-  static const double _negDamping = 0.95;
-
-  /// 到达这个开度就自动弹开（不用再松手）——很低，轻轻一拖就开。
-  static const double _negOpenAt = 0.35;
-
-  /// 松手时超过这个开度就吸开，否则立刻吸回（不停顿）。
-  static const double _negSnapAt = 0.3;
-
-  /// 负一屏自身上滑时把它推回顶部（同样按增量）。
-  bool _onNegativeScroll(ScrollNotification n) {
-    if (n is ScrollUpdateNotification && n.dragDetails != null) {
-      final d = n.scrollDelta ?? 0;
-      if (d > 0) {
-        _setNegProgress(
-          (_negProgress.value - d / _negThreshold).clamp(0.0, 1.0),
-        );
-      }
-    } else if (n is OverscrollNotification &&
-        n.dragDetails != null &&
-        n.overscroll > 0) {
-      _setNegProgress(
-        (_negProgress.value - n.overscroll / _negThreshold).clamp(0.0, 1.0),
-      );
-    } else if (n is ScrollEndNotification &&
-        _negProgress.value > 0 &&
-        _negProgress.value < 1) {
-      _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
-    }
-    return false;
-  }
-
   /// 当前背景露出高度与卡片覆盖比例（驱动背景模糊）。
   ///
   /// 背景图尺寸是异步解码的：图信息晚到时如果让英雄区变矮，整页滚动内容会
@@ -121,18 +72,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// ValueNotifier 只通知真正依赖它的背景层那一个 builder。
   final ValueNotifier<double> _bgCover = ValueNotifier<double>(0);
 
-  /// 外部请求展开负一屏时用的过渡动画（下拉驱动时不用它）。
-  AnimationController? _negAuto;
+  /// 越界位移（像素）：顶部下拉为正，底部上推为负。
+  ///
+  /// 回弹由 [BouncingScrollPhysics] 产生；背景图按这个值等比缩放，
+  /// 弹回时同步归零。同样只通知背景层，不重建卡片。
+  final ValueNotifier<double> _overscroll = ValueNotifier<double>(0);
 
   @override
   void initState() {
     super.initState();
-    negativeScreenSignal.addListener(_onNegativeSignal);
     CitroBlendImage.bottomEdge.addListener(_onBgEdge);
     _scroll.addListener(_onScrollOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showLanternWelcomeIfNeeded(context);
-      HomeLayoutStore.instance.syncFromAccount();
     });
   }
 
@@ -144,12 +96,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// 双击英雄区（背景可见的那一块）切换背景图。
   ///
   /// 手势只挂在这里：卡片、顶栏、横滑切 Tab 都不经过它；单击也不会被吞
-  /// （只认双击，单击照常落空）。抽屉（负一屏）开着时先不响应，
-  /// 免得一次双击既收起抽屉又换图。
+  /// （只认双击，单击照常落空）。
   /// 英雄区上一次点击的时间与位置，用来识别双击。
   ///
   /// 用 Listener 的原始指针事件而不是 GestureDetector 的 onDoubleTap：
-  /// 手势竞技场里双击识别器会和首页的下拉拖拽抢，导致下拉被拖住。
+  /// 手势竞技场里双击识别器会和首页的滚动/回弹抢，导致下拉被拖住。
   DateTime? _lastHeroTapAt;
   Offset? _lastHeroTapPos;
 
@@ -167,14 +118,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (isDoubleTap) {
       _lastHeroTapAt = null;
       _lastHeroTapPos = null;
-      _onDoubleTapBackground();
+      unawaited(Haptics.breath());
+      CitroAmbientBackground.cycle();
     }
-  }
-
-  void _onDoubleTapBackground() {
-    if (_negProgress.value >= 0.02) return;
-    unawaited(Haptics.breath());
-    CitroAmbientBackground.cycle();
   }
 
   void _onScrollOffset() {
@@ -185,65 +131,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if ((cover - _bgCover.value).abs() > .01) {
       _bgCover.value = cover;
     }
+    final position = _scroll.position;
+    final over = position.pixels < position.minScrollExtent
+        ? position.minScrollExtent - position.pixels
+        : position.pixels > position.maxScrollExtent
+        ? -(position.pixels - position.maxScrollExtent)
+        : 0.0;
+    if (over != _overscroll.value) _overscroll.value = over;
   }
 
   @override
   void dispose() {
     CitroBlendImage.bottomEdge.removeListener(_onBgEdge);
     _scroll.removeListener(_onScrollOffset);
-    negativeScreenSignal.removeListener(_onNegativeSignal);
-    _negAuto?.dispose();
-    _negProgress.dispose();
+    _overscroll.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  /// 平滑把负一屏推进 / 推回（外部入口与关闭按钮用）。
-  ///
-  /// 用弹簧而不是定时曲线：弹簧带一点过冲再回落，回弹不生硬。
-  void _animateNegTo(double target) {
-    if (!mounted) return;
-    _negAuto?.dispose();
-    final from = _negProgress.value;
-    if ((target - from).abs() < 0.001) return;
-    final controller = AnimationController(vsync: this, value: from);
-    _negAuto = controller;
-    controller.addListener(() => _setNegProgress(controller.value));
-    final simulation = SpringSimulation(
-      // 回弹要快、要干脆：刚度大、阻尼略低于临界，几乎不停顿。
-      SpringDescription(mass: 1, stiffness: 340, damping: 32),
-      from,
-      target,
-      0,
-    );
-    controller.animateWith(simulation).whenComplete(() {
-      if (identical(_negAuto, controller)) _negAuto = null;
-      // 弹簧停在容差内，最后补一刀精确落到目标值。
-      _setNegProgress(target);
-      controller.dispose();
-    });
-  }
-
-  /// 「我的 / 游戏页」的资源配置入口：平滑展开负一屏，而不是瞬间跳变。
-  void _onNegativeSignal() => _animateNegTo(1);
-
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb && MediaQuery.sizeOf(context).width >= 1025) {
+    final layout = CitroLayoutScope.maybeOf(context);
+    // 只有「Web 宽屏但仍走移动壳」（竖屏的宽窗口）才用网页专用首页。
+    // 横屏已经进了桌面壳（tabletNav），这里直接落到下面 Windows 同款分栏首页。
+    if (kIsWeb &&
+        !(layout?.tabletNav ?? false) &&
+        MediaQuery.sizeOf(context).width >= 1025) {
       return WebHomePage(onSwitchTab: widget.onSwitchTab);
     }
-    final layout = CitroLayoutScope.maybeOf(context);
     final media = MediaQuery.sizeOf(context);
     final width = layout?.contentWidth ?? media.width;
     final duoWide = (layout?.duo ?? false) && media.width > media.height;
     final wide = width >= 780 || (duoWide && width >= 600);
     final maxWidth = wide ? 1120.0 : 760.0;
-    final layoutKey = homeLayoutKeyFor(
-      wide ? HomeForm.wide : HomeForm.compact,
-      media.width > media.height,
-    );
+    final form = wide ? HomeForm.wide : HomeForm.compact;
     final sideNav = layout?.tabletNav ?? false;
-    final side = math.max(12.0, (width - maxWidth) / 2);
+    // 卡片区四周同一个留白：左右 = 顶部 = _panelGap（宽屏居中时左右取余量）。
+    final side = math.max(_panelGap, (width - maxWidth) / 2);
     // 桌面分栏：首页左栏放卡片背景，右栏放卡片区。
     // Windows 桌面壳与平板横屏（iPad / Android 平板）都走这套，
     // 手机与平板竖屏仍是原来的上下结构。
@@ -255,7 +179,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // 英雄区（背景 + 打招呼）= 这段高度减去顶栏。
     final heroBottom = wide
         ? math.min(480.0, media.height * .60)
-        : (media.height * .68).clamp(440.0, 640.0);
+        : (media.height * .58).clamp(400.0, 560.0);
     // 卡片面板的顶边：优先落在背景图的下边缘；图还没解码出来时按「视口
     // 55%」估算 —— 与 [CitroBlendImage] 对图片显示高度的封顶一致，
     // 图信息晚到后英雄区不会忽然变矮。
@@ -276,153 +200,159 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _bgHeight = math.max(_bgHeight, nextBgHeight);
     }
     final bgHeight = _bgHeight;
-    // 抽屉（负一屏）高度按内容自然高算，不再用屏高比例：
-    // 标题区 ≈75 + 小卡两排 70×2 + 行距 16×2 + 一起看长卡
-    // （桌面 102 / 手机 76）。手机端长卡收紧后抽屉也跟着矮一点，
-    // 否则底部会多出一截空白。
-    // 再加顶部安全区与底部 16px 呼吸位。矮屏 / 横屏用 0.62 封顶，
-    // 超出部分交给抽屉内滚动。
-    final safeTop = MediaQuery.paddingOf(context).top;
-    final negContent = media.width < 600 ? 323.0 : 349.0;
-    final negHeight = math.min(
-      media.height * .62,
-      safeTop + negContent + AppSpacing.x2,
-    );
-    _negThreshold = negHeight;
-    // 下拉行程 = 抽屉高度，手指拖多少首页就往下走多少。
-    final travel = negHeight;
 
     return Stack(
       children: [
-        // ── 1. 抽屉（负一屏）：固定在最底层，下拉时从首页下面露出来 ──
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: negHeight,
-          child: ValueListenableBuilder<double>(
-            valueListenable: _negProgress,
-            builder: (context, progress, child) =>
-                IgnorePointer(ignoring: progress < .95, child: child),
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onNegativeScroll,
-              child: NegativeScreen(onClose: () => _animateNegTo(0)),
-            ),
-          ),
-        ),
-
-        // ── 2. 整个首页：下拉时一起往下走（抽屉） ──
-        Positioned.fill(
-          child: ValueListenableBuilder<double>(
-            valueListenable: _negProgress,
-            builder: (context, progress, child) => Transform.translate(
-              key: const ValueKey('home-drawer-shift'),
-              offset: Offset(0, progress * travel),
-              child: child,
-            ),
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              // 单击抽屉以外的地方（首页内容）就收起抽屉。
-              onPointerDown: (_) {
-                if (_negProgress.value > 0.02) _animateNegTo(0);
-              },
-              child: Stack(
-                children: [
-                  // 背景层：铺满全屏，固定不动，只随下拉整体下移；
-                  // 清晰度随卡片覆盖下降（卡片上滑盖住背景时背景变糊）。
-                  // 首页英雄区是白字，强制深色罩面。
-                  // Windows 左右分栏时背景只属于左栏，不在这里铺。
-                  // 模糊强度从滚动 notifier 读：滚动时只有这一层重建，
-                  // 不会把上面的卡片栅格一起拖下水（旧实现每 1% 滚动
-                  // setState 整页，是滑动掉帧的主因之一）。
-                  if (!split)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: ValueListenableBuilder<double>(
-                          valueListenable: _bgCover,
-                          builder: (context, cover, _) => CitroAmbientBackground(
-                            blurred: true,
-                            blurSigma: cover * 16,
-                            darkScrim: true,
-                            // 深色主题下把背景图再压暗一点。
-                            dim: 0.18,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    // 分栏时这一层是页面的「底」：负一屏在同一棵 Stack 最底层，
-                    // 这里不铺实时，顶栏的 SafeArea 留白与左栏卡片外圈那 16px
-                    // 会把它露出来（标题、关闭钮、bg2 底色都会渗上来）。
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: ColoredBox(color: context.c.bg),
-                      ),
-                    ),
-                  // 顶栏固定 + 下方内容。
-                  Positioned.fill(
-                    child: Column(
-                      children: [
-                        // Windows 左右分栏时顶栏自带底色：否则负一屏（在 Stack
-                        // 最底层）的关闭钮会从透明顶栏后面露出来，压在日期胶囊上。
-                        _HomeTopBar(
-                          side: side,
-                          solid: split,
-                          empty: split,
-                        ),
-                        Expanded(
-                          child: split
-                              ? _splitBody(
-                                  width: width,
-                                  side: side,
-                                  sideNav: sideNav,
-                                )
-                              : NotificationListener<ScrollNotification>(
-                                  onNotification: _onScrollNotification,
-                                  child: SingleChildScrollView(
-                                    key: const ValueKey('home-scroll'),
-                                    controller: _scroll,
-                                    // 去掉回弹：到底 / 到顶都硬停，不弹。
-                                    physics: const ClampingScrollPhysics(
-                                      parent: AlwaysScrollableScrollPhysics(),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        SizedBox(
-                                          height: bgHeight,
-                                          // 双击这块可见背景换图：命中区就是英雄区
-                                          // （顶栏以下、卡片以上），不压到卡片点击。
-                                          // 用 Listener 而不是 GestureDetector：
-                                          // 后者要进手势竞技场，会把首页的下拉（负一屏）
-                                          // 拖拽一起拖住；Listener 只旁观指针，不参与竞争。
-                                          child: Listener(
-                                            behavior:
-                                                HitTestBehavior.translucent,
-                                            onPointerDown: _onHeroPointerDown,
-                                            child: _HomeHeader(side: side),
-                                          ),
-                                        ),
-                                        _cardsPanelWidget(
-                                          side: side,
-                                          sideNav: sideNav,
-                                          layoutKey: layoutKey,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
+        // 背景层：铺满全屏，固定不动。清晰度随卡片覆盖下降（卡片上滑盖住
+        // 背景时背景变糊）；越界回弹时按同一比例缩放，弹回时同步归位。
+        // Windows 左右分栏时背景只属于左栏，不在这里铺。
+        // 模糊强度从滚动 notifier 读：滚动时只有这一层重建，
+        // 不会把上面的卡片栅格一起拖下水（旧实现每 1% 滚动
+        // setState 整页，是滑动掉帧的主因之一）。
+        if (!split)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ValueListenableBuilder<double>(
+                valueListenable: _bgCover,
+                builder: (context, cover, _) => ValueListenableBuilder<double>(
+                  valueListenable: _overscroll,
+                  builder: (context, over, child) =>
+                      _zoomOnOverscroll(over, child!),
+                  child: CitroAmbientBackground(
+                    blurred: true,
+                    blurSigma: cover * 16,
+                    darkScrim: true,
+                    // 深色主题下把背景图再压暗一点。
+                    dim: 0.18,
                   ),
-                ],
+                ),
+              ),
+            ),
+          )
+        else
+          // 分栏：整窗铺同一张背景（重模糊 + 罩面），左栏再放清晰的原图，
+          // 右栏卡片浮在模糊背景上——像 iPad 的小组件页。
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ColoredBox(color: context.c.bg),
+                    CitroAmbientBackground(
+                      lowRes: true,
+                      blurred: false,
+                      scrim: false,
+                      cover: true,
+                      washMin: context.c.dark ? .64 : .40,
+                      washColor: context.c.field(FieldTone.deep).bg,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+        // 卡片区的磨砂底：同一张背景图的低清放大版（天然重模糊、零滤镜开销），
+        // 只露出在卡片面板顶边以下，顶边跟着滚动走——上面是清晰的原图，
+        // 卡片像一张磨砂玻璃板压在图上，这就是 iOS 小组件页的观感。
+        if (!split)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _scroll,
+                builder: (context, child) {
+                  final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+                  // 顶栏实高 = 安全区 + 8 上边距 + 42 内容。
+                  final barH = MediaQuery.paddingOf(context).top + 50;
+                  final top = (barH + bgHeight - offset).clamp(
+                    0.0,
+                    media.height,
+                  );
+                  return ClipRRect(
+                    clipper: _PanelBackdropClipper(
+                      top: top,
+                      radius: _panelRadius,
+                    ),
+                    child: child,
+                  );
+                },
+                child: RepaintBoundary(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(color: context.c.bg),
+                      // 色场底：同一张图的柔化版 + 主色家族的罩面（自适应：
+                      // 偏暗的图会自动加厚，卡片上的灰字始终读得清）。
+                      CitroAmbientBackground(
+                        lowRes: true,
+                        blurred: false,
+                        scrim: false,
+                        cover: true,
+                        washMin: context.c.dark ? .48 : .24,
+                        washColor: context.c.field(FieldTone.deep).bg,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        // 顶栏固定 + 下方内容。
+        Positioned.fill(
+          child: Column(
+            children: [
+              // Windows 左右分栏时顶栏自带底色，和右栏卡片区连成一体。
+              _HomeTopBar(side: side, solid: split, empty: split),
+              Expanded(
+                child: split
+                    ? _splitBody(width: width, side: side, sideNav: sideNav)
+                    : SingleChildScrollView(
+                        key: const ValueKey('home-scroll'),
+                        controller: _scroll,
+                        // 顶部 / 底部都保留回弹：越界量驱动背景等比缩放。
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: bgHeight,
+                              // 双击这块可见背景换图：命中区就是英雄区
+                              // （顶栏以下、卡片以上），不压到卡片点击。
+                              // 用 Listener 而不是 GestureDetector：
+                              // 后者要进手势竞技场，会把首页的下拉拖拽一起拖住；
+                              // Listener 只旁观指针，不参与竞争。
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: _onHeroPointerDown,
+                                child: _HomeHeader(side: side),
+                              ),
+                            ),
+                            _cardsPanelWidget(
+                              side: side,
+                              sideNav: sideNav,
+                              form: form,
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  /// 越界位移换算成背景等比缩放：顶部下拉放大，底部上推缩小。
+  Widget _zoomOnOverscroll(double over, Widget child) {
+    if (over == 0) return child;
+    final ratio = (over.abs() / 360).clamp(0.0, 1.0);
+    return Transform.scale(
+      scale: over > 0 ? 1 + ratio * .12 : 1 - ratio * .06,
+      alignment: over > 0 ? Alignment.topCenter : Alignment.bottomCenter,
+      child: child,
     );
   }
 
@@ -430,21 +360,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _cardsPanelWidget({
     required double side,
     required bool sideNav,
-    required HomeLayoutKey layoutKey,
-    double topPad = 8,
+    required HomeForm form,
+    double topPad = _panelGap,
   }) => _CardsPanel(
-    radiusTop: CitroColors.radii.card,
+    // 同心圆角：面板圆角 = 卡片圆角 + 留白，外圈和内圈的弧线平行。
+    radiusTop: _panelRadius,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(side, topPad, side, sideNav ? 92 : 108),
-          child: HomeBento(
-            layoutKey: layoutKey,
-            editing: false,
-            scrollController: _scroll,
-            builder: _cardFor,
-          ),
+          child: HomeBento(form: form, builder: _cardFor),
         ),
         const SizedBox(height: 18),
         Center(
@@ -497,13 +423,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         final wideCell =
             (colWidth - (HomeForm.wide.columns - 1) * HomeForm.wide.gap) /
             HomeForm.wide.columns;
+        // 十二列栅格至少要 55 一格：分栏右栏只有 580-750 宽时，
+        // 十二列会算出 36-50 一格，三格宽卡片就成了又窄又高的柱子。
         final useWide =
+            wideCell >= 55 &&
             (wideCell - cellTarget).abs() < (compactCell - cellTarget).abs();
-        final colKey = homeLayoutKeyFor(
-          useWide ? HomeForm.wide : HomeForm.compact,
-          MediaQuery.sizeOf(context).width >
-              MediaQuery.sizeOf(context).height,
-        );
+        final colForm = useWide ? HomeForm.wide : HomeForm.compact;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -520,12 +445,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       child: _FeatheredEdges(
                         radius: CitroColors.radii.card,
                         sigma: 14,
-                        child: CitroAmbientBackground(
-                          blurred: false,
-                          blurSigma: 0,
-                          darkScrim: true,
-                          dim: 0.18,
-                          ratio3x4: true,
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _overscroll,
+                          builder: (context, over, child) =>
+                              _zoomOnOverscroll(over, child!),
+                          child: CitroAmbientBackground(
+                            blurred: false,
+                            blurSigma: 0,
+                            darkScrim: true,
+                            dim: 0.18,
+                            ratio3x4: true,
+                          ),
                         ),
                       ),
                     ),
@@ -540,116 +470,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-        const SizedBox(width: AppSpacing.x2),
-        Expanded(
-          child: ColoredBox(
-            // 右栏铺底色：负一屏在 Stack 最底层，透明区域会把它露出来。
-            color: context.c.bg,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: SingleChildScrollView(
-                key: const ValueKey('home-scroll'),
-                controller: _scroll,
-                physics: const ClampingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                child: _cardsPanelWidget(
-                  // side 是整页居中用的留白（全屏 (width-1120)/2 能到 300），
-                  // 右栏不能跟着用，否则卡片被挤成 80px 宽、文字全溢出。
-                  side: math.min(side, 12.0),
-                  sideNav: sideNav,
-                  layoutKey: colKey,
-                  // 左栏图片从 body 顶 + 16 开始，卡片顶边也要落在同一条线上。
-                  topPad: bgInset,
+            const SizedBox(width: AppSpacing.x2),
+            Expanded(
+              child: ColoredBox(
+                // 右栏透明：卡片直接浮在整窗的模糊背景上。
+                color: Colors.transparent,
+                child: SingleChildScrollView(
+                  key: const ValueKey('home-scroll'),
+                  controller: _scroll,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  child: _cardsPanelWidget(
+                    // side 是整页居中用的留白（全屏 (width-1120)/2 能到 300），
+                    // 右栏不能跟着用，否则卡片被挤成 80px 宽、文字全溢出。
+                    side: _panelGap,
+                    sideNav: sideNav,
+                    form: colForm,
+                    // 左栏图片从 body 顶 + 16 开始，卡片顶边也要落在同一条线上。
+                    topPad: _panelGap,
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
           ],
         );
       },
     );
   }
 
-  /// 滚动通知偶尔会在帧内（布局/动画回调）派发，那时直接 setState 会触发
-  /// 「Build scheduled during frame」。这种情况挂到帧末再更新。
-  /// 直接写 [ValueNotifier]：只在帧末由 Flutter 统一重建监听它的那几层，
-  /// 不像 `setState` 那样把整棵首页连同卡片栅格一起重新 layout。
-  void _setNegProgress(double value) {
-    if (_negProgress.value == value) return;
-    _negProgress.value = value;
-  }
-
-  /// 把累计下拉距离换算成带阻尼的开度（0..1）。
-  double _pullProgress() =>
-      ((_negPull / _negThreshold) * _negDamping).clamp(0.0, 1.0);
-
-  /// 顶部下拉 / 上滑驱动负一屏（对齐微信首页下拉小程序面板）。
-  ///
-  /// - 关着：列表到顶还继续下拉，首页跟手（带阻尼），走到 [_negOpenAt]
-  ///   直接弹开，不用等松手。
-  /// - 开着：任意位置上滑立刻收起。
-  bool _onScrollNotification(ScrollNotification n) {
-    if (n is ScrollStartNotification) {
-      _negPull = 0;
-    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
-      if (_negAuto != null) return false;
-      final d = n.scrollDelta ?? 0;
-      if (d < 0 && _scroll.hasClients && _scroll.offset <= 0.5) {
-        _negPull += -d;
-        final next = _pullProgress();
-        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
-          unawaited(Haptics.breath());
-          _animateNegTo(1);
-          return false;
-        }
-        _setNegProgress(next);
-      } else if (d > 0 && _negProgress.value > 0.02) {
-        _animateNegTo(0);
-      }
-    } else if (n is OverscrollNotification &&
-        n.dragDetails != null &&
-        n.overscroll != 0 &&
-        _scroll.hasClients &&
-        _scroll.offset <= 0.5) {
-      if (_negAuto != null) return false;
-      if (n.overscroll < 0) {
-        _negPull += -n.overscroll;
-        final next = _pullProgress();
-        if (_negProgress.value < _negOpenAt && next >= _negOpenAt) {
-          unawaited(Haptics.breath());
-          _animateNegTo(1);
-          return false;
-        }
-        _setNegProgress(next);
-      } else if (n.overscroll > 0 && _negProgress.value > 0.02) {
-        _animateNegTo(0);
-      }
-    } else if (n is ScrollEndNotification) {
-      // 松手吸附：超过吸合线弹开，否则立刻收回（不停顿）。
-      if (_negProgress.value > 0 && _negAuto == null) {
-        _animateNegTo(_negProgress.value > _negSnapAt ? 1.0 : 0.0);
-      }
-      _negPull = 0;
-    }
-    return false;
-  }
-
   /// 首页卡片的内容映射：栅格只负责位置，卡片自身保持原来的交互与动效。
-  Widget _cardFor(HomeSlot slot) => switch (slot.id) {
+  ///
+  /// 色场重设计：每个模块包一层 [CitroFieldScope]，按模块分配色调——
+  /// 待办是最饱和的主色块（视觉重心），其余按浅 / 暖 / 深 / 玻璃错开。
+  Widget _cardFor(HomeSlot slot) =>
+      CitroFieldScope(tone: _toneFor(slot.id), child: _cardBody(slot));
+
+  static FieldTone _toneFor(HomeCardId id) => switch (id) {
+    // 主色：每屏最多一两块，最常用的放这里。
+    HomeCardId.todo => FieldTone.primary,
+    HomeCardId.checkin => FieldTone.primary,
+    // 深色：压住画面，和主色形成最大明暗对比。
+    HomeCardId.ledger => FieldTone.deep,
+    HomeCardId.tingyu => FieldTone.deep,
+    HomeCardId.quote => FieldTone.deep,
+    // 暖色 / 浅色：中间层。
+    HomeCardId.mood => FieldTone.warm,
+    HomeCardId.mbti => FieldTone.warm,
+    HomeCardId.game => FieldTone.warm,
+    HomeCardId.weather => FieldTone.light,
+    HomeCardId.calendar => FieldTone.light,
+    HomeCardId.cook => FieldTone.glass,
+    // 玻璃：信息少的入口。
+    HomeCardId.cardCollection => FieldTone.glass,
+    HomeCardId.res => FieldTone.light,
+  };
+
+  Widget _cardBody(HomeSlot slot) => switch (slot.id) {
     HomeCardId.checkin => const CheckinCard(),
     HomeCardId.todo => const TodoHomeCard(),
     HomeCardId.mood => const MoodHomeCard(),
     HomeCardId.ledger => const LedgerHomeCard(),
     HomeCardId.tingyu => const TingyuCard(),
-    HomeCardId.fish => const FishCard(),
     HomeCardId.weather => const WeatherCard(),
     HomeCardId.cook => const CookCard(),
     HomeCardId.calendar => const CalendarCard(),
-    HomeCardId.zodiac => const ZodiacCard(),
     HomeCardId.quote => const QuoteCard(),
-    HomeCardId.cardCollection => const CardCollectionEntry(compact: true),
+    HomeCardId.cardCollection => const CardCollectionEntry(),
     HomeCardId.mbti => const MbtiHomeCard(),
     HomeCardId.game => HomeGameCard(gameKey: slot.item ?? ''),
     HomeCardId.res => HomeResCard(item: slot.item ?? ''),
@@ -707,32 +594,34 @@ class _FeatheredEdgesState extends State<_FeatheredEdges> {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    return LayoutBuilder(builder: (context, cons) {
-      final size = cons.biggest;
-      final mask = _mask;
-      if (mask == null || _maskSize != size || _maskDpr != dpr) {
-        if (!_failed) _regen(size, dpr);
-        // 蒙版还没生成好：先只裁圆角，别闪一块直角出来。
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final size = cons.biggest;
+        final mask = _mask;
+        if (mask == null || _maskSize != size || _maskDpr != dpr) {
+          if (!_failed) _regen(size, dpr);
+          // 蒙版还没生成好：先只裁圆角，别闪一块直角出来。
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(widget.radius),
+            child: widget.child,
+          );
+        }
         return ClipRRect(
           borderRadius: BorderRadius.circular(widget.radius),
-          child: widget.child,
-        );
-      }
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(widget.radius),
-        child: ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (_) => ui.ImageShader(
-            mask,
-            TileMode.clamp,
-            TileMode.clamp,
-            // 蒙版按 devicePixelRatio 栅格化，这里再缩回逻辑尺寸。
-            Matrix4.diagonal3Values(1 / dpr, 1 / dpr, 1).storage,
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (_) => ui.ImageShader(
+              mask,
+              TileMode.clamp,
+              TileMode.clamp,
+              // 蒙版按 devicePixelRatio 栅格化，这里再缩回逻辑尺寸。
+              Matrix4.diagonal3Values(1 / dpr, 1 / dpr, 1).storage,
+            ),
+            child: widget.child,
           ),
-          child: widget.child,
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   void _regen(Size size, double dpr) {
@@ -815,10 +704,10 @@ class _HomeTopBar extends StatelessWidget {
       // Stack 最底层的负一屏（透明区域会把它露出来）。
       return SafeArea(
         bottom: false,
-        child: Container(
-          color: c.bg,
-          padding: const EdgeInsets.only(top: AppSpacing.x1),
-          child: const SizedBox(height: 42),
+        // 整窗已铺模糊背景（不透明），顶栏透明即可盖住负一屏。
+        child: const Padding(
+          padding: EdgeInsets.only(top: AppSpacing.x1),
+          child: SizedBox(height: 42),
         ),
       );
     }
@@ -833,7 +722,7 @@ class _HomeTopBar extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Container(
-        color: solid ? c.bg : null,
+        color: null,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             side,
@@ -962,6 +851,11 @@ class _HomeHeader extends StatelessWidget {
 
   const _HomeHeader({required this.side});
 
+  static const _heroShadow = [
+    Shadow(color: Color(0x59000000), blurRadius: 18, offset: Offset(0, 2)),
+    Shadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final now = CitroClock.now();
@@ -994,23 +888,31 @@ class _HomeHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Spacer(),
+          // iOS 锁屏式排版：小一号的问候在上，大号粗体的一句话在下；
+          // 白字压一层柔和投影，浅色背景图上也读得清。
           Text(
-            '$greeting，',
+            greeting,
             textAlign: TextAlign.left,
-            style: context.display(
-              size: CitroType.hero,
-              color: Colors.white,
-              height: 1.12,
-            ),
+            style: context
+                .heading(
+                  size: CitroType.titleLg,
+                  color: Colors.white.withValues(alpha: .92),
+                  height: 1.2,
+                )
+                .copyWith(shadows: _heroShadow),
           ),
+          const SizedBox(height: 2),
           Text(
             line,
             textAlign: TextAlign.left,
-            style: context.display(
-              size: CitroType.hero,
-              color: Colors.white,
-              height: 1.12,
-            ),
+            style: context
+                .display(
+                  size: CitroType.hero,
+                  color: Colors.white,
+                  height: 1.12,
+                  letterSpacing: -0.8,
+                )
+                .copyWith(shadows: _heroShadow),
           ),
           const SizedBox(height: AppSpacing.x3),
         ],
@@ -1031,12 +933,21 @@ class _CardsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 卡片区的底就是奶米 #F9EDD7，和上方背景图没盖到的区域连成一整块。
+    // 沉浸式：卡片区不再是一整块实色底，而是一层由浅到深的罩面，
+    // 背景图从卡片之间透出来；卡片本身是磨砂材质。罩面越往下越厚，
+    // 长列表滚到底部时文字依然读得清。
+    final c = context.c;
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(radiusTop)),
       child: Stack(
         children: [
-          Positioned.fill(child: ColoredBox(color: context.c.bg)),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ColoredBox(
+                color: c.field(FieldTone.deep).bg.withValues(alpha: .08),
+              ),
+            ),
+          ),
           child,
         ],
       ),
@@ -1095,7 +1006,7 @@ class WeatherCard extends StatelessWidget {
     final w = state.weather;
     return CitroCard(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      onTap: () => showWeatherSheet(context),
+      onTap: () => showWeatherDialog(context),
       // 小尺寸 bento 格里整体等比缩小，避免固定内容把卡片撑爆。
       child: LayoutBuilder(
         builder: (context, cons) => FittedBox(
@@ -1230,7 +1141,12 @@ class CookCard extends StatelessWidget {
           Navigator.of(context).push(
             MaterialPageRoute(
               settings: const RouteSettings(name: 'cook'),
-              builder: (_) => const CookPage(),
+              builder: (_) => CitroLazyPage(
+                load: () async {
+                  await cookPage.loadLibrary();
+                  return cookPage.CookPage();
+                },
+              ),
             ),
           );
           return;
@@ -1239,7 +1155,12 @@ class CookCard extends StatelessWidget {
           context,
           source: rect,
           settings: const RouteSettings(name: 'cook'),
-          builder: (_) => const CookPage(),
+          builder: (_) => CitroLazyPage(
+            load: () async {
+              await cookPage.loadLibrary();
+              return cookPage.CookPage();
+            },
+          ),
           snapshot: CitroCardFlight.snapshotOf(context, rect),
         );
       },
@@ -1330,88 +1251,6 @@ class CookCard extends StatelessWidget {
   }
 }
 
-class FishCard extends StatelessWidget {
-  const FishCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final infoText = FishStateView.chipText;
-    // 把「距休息日 N 天」里的数字单独放大，避免小卡片缩放后数字看不清。
-    final match = RegExp(r'^(.*?)(\d+)(\s*天.*)$').firstMatch(infoText);
-    final lead = match == null ? '' : match.group(1)!.trimRight();
-    final days = match?.group(2);
-    final tail = match == null ? '' : match.group(3)!.trimLeft();
-    return CitroCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      onTap: () => showFishSheet(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              AppIcon(
-                strokeSvg(AppIcons.wave, width: 2),
-                size: 14,
-                color: c.accent,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '摸鱼日历',
-                style: context.body(
-                  size: CitroType.meta,
-                  weight: CitroType.medium,
-                  color: c.inkSoft,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x1),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (lead.isNotEmpty)
-                  Text(
-                    lead,
-                    style: context.body(
-                      size: CitroType.label,
-                      weight: CitroType.medium,
-                      color: c.ink2,
-                    ),
-                  ),
-                if (lead.isNotEmpty) const SizedBox(width: 4),
-                Text(
-                  days ?? infoText,
-                  style: context.hand(
-                    size: 30,
-                    weight: CitroType.strong,
-                    color: c.accent,
-                    height: 1,
-                  ),
-                ),
-                if (tail.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    tail,
-                    style: context.body(
-                      size: CitroType.label,
-                      weight: CitroType.medium,
-                      color: c.ink2,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class CalendarCard extends StatefulWidget {
   /// 计划页只需要「今天」：大日期 + 星期 + 农历，不铺整月格子。
   final bool compact;
@@ -1441,7 +1280,12 @@ class _CalendarCardState extends State<CalendarCard> {
       context,
       source: rect,
       settings: const RouteSettings(name: '/calendar'),
-      builder: (_) => const CalendarPage(),
+      builder: (_) => CitroLazyPage(
+        load: () async {
+          await calendarPage.loadLibrary();
+          return calendarPage.CalendarPage();
+        },
+      ),
       snapshot: CitroCardFlight.snapshotOf(context, rect),
     );
   }
@@ -1859,820 +1703,6 @@ class _CalCell extends StatelessWidget {
   }
 }
 
-class ZodiacCard extends StatelessWidget {
-  const ZodiacCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.app;
-    final c = context.c;
-    final tone = _ZodiacTone.of(c);
-    final sign = zodiacById(state.zodiacSign);
-    final f = state.zodiacFortune;
-    final now = CitroClock.now();
-    final dateText =
-        '${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')} ${weekdayChinese(now)}';
-    return CitroCard(
-      radius: CitroColors.radii.card,
-      padding: EdgeInsets.zero,
-      // 和全站卡片同一个表面，只留一层很淡的粉彩渐变交代「星象」的情绪。
-      color: c.surface,
-      border: Border.all(color: c.line),
-      shadow: CitroColors.shadows.card(c),
-      clip: Clip.antiAlias,
-      onTap: () => showZodiacModal(context),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final cardHeight = constraints.hasBoundedHeight
-              ? constraints.maxHeight
-              : 272.0;
-          final maxW = constraints.maxWidth;
-          // 232 太窄，320 以下（半宽卡片 / 小屏）就走紧凑头，
-          // 否则「DAILY ZODIAC」+ 日期胶囊会把行撑爆。
-          final micro = maxW < 320 || cardHeight < 240;
-          final horizontal = maxW >= 316 && cardHeight >= 238;
-          final tall = cardHeight >= 342;
-          return SizedBox(
-            width: constraints.maxWidth,
-            height: cardHeight,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            c.tintYellow.withAlpha(80),
-                            c.surface,
-                            c.tintBlue.withAlpha(60),
-                          ],
-                          stops: const [0, .5, 1],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (sign != null)
-                  Positioned(
-                    right: -8,
-                    top: 20,
-                    child: IgnorePointer(
-                      child: Text(
-                        sign.symbol,
-                        style: TextStyle(
-                          fontFamily: AppFonts.rounded,
-                          fontSize: micro ? 56 : 76,
-                          height: 1,
-                          color: tone.watermark,
-                        ),
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    micro ? 12 : 14,
-                    16,
-                    micro ? 12 : 14,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _header(context, dateText, tone, micro: micro),
-                      SizedBox(height: micro ? 6 : 8),
-                      Expanded(
-                        child: sign == null
-                            ? _picker(context, tone, micro: micro)
-                            : _body(
-                                context,
-                                state,
-                                sign,
-                                f,
-                                tone,
-                                micro: micro,
-                                horizontal: horizontal,
-                                tall: tall,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _header(
-    BuildContext context,
-    String dateText,
-    _ZodiacTone tone, {
-    required bool micro,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(color: tone.chipBg, shape: BoxShape.circle),
-          child: Center(
-            child: Text(
-              '✦',
-              style: TextStyle(fontSize: 9, height: 1, color: tone.accent),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '今日星象',
-          style: context.heading(
-            size: micro ? 11.5 : 12.5,
-            color: tone.accentInk,
-            letterSpacing: 1.1,
-          ),
-        ),
-        if (!micro) ...[
-          const SizedBox(width: 8),
-          Text(
-            'DAILY ZODIAC',
-            style: context.body(
-              size: 9,
-              weight: FontWeight.w700,
-              color: tone.inkSoft.withAlpha(180),
-              letterSpacing: 1.4,
-            ),
-          ),
-        ],
-        const Spacer(),
-        if (!micro)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: tone.chipBg,
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: tone.chipLine),
-            ),
-            child: Text(
-              dateText,
-              style: context.body(
-                size: 9,
-                color: tone.inkSoft,
-                letterSpacing: .3,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _body(
-    BuildContext context,
-    AppState state,
-    ZodiacSign sign,
-    ZodiacFortune? f,
-    _ZodiacTone tone, {
-    required bool micro,
-    required bool horizontal,
-    required bool tall,
-  }) {
-    final ringSize = micro
-        ? 54.0
-        : (tall ? (horizontal ? 96.0 : 88.0) : (horizontal ? 84.0 : 76.0));
-    if (micro) {
-      return Row(
-        children: [
-          _score(f, tone, size: ringSize),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${sign.symbol} ${sign.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.heading(
-                    size: 18,
-                    color: tone.ink,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  f == null
-                      ? (state.zodiacError != null ? '星语生成失败' : '星语生成中…')
-                      : '✦ ${f.tag}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(
-                    size: 10,
-                    color: f == null ? tone.inkSoft : tone.accentInk,
-                  ),
-                ),
-                if (f != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '${sign.range} · ${sign.element}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 9, color: tone.inkSoft),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-    if (horizontal) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: ringSize + 18,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _score(f, tone, size: ringSize),
-                const SizedBox(height: 6),
-                Text(
-                  '综合运势',
-                  style: context.body(
-                    size: 9,
-                    weight: FontWeight.w700,
-                    color: tone.inkSoft,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${sign.symbol} ${sign.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.heading(
-                    size: 20,
-                    color: tone.ink,
-                    height: 1.1,
-                  ),
-                ),
-                Text(
-                  '${sign.range} · ${sign.element}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 10, color: tone.inkSoft),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(width: 1, color: tone.line),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _tagPill(context, state, f, tone),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ClipRect(
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        f?.text ?? _pendingText(state),
-                        maxLines: tall ? 6 : 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.body(
-                          size: 13,
-                          color: tone.ink2,
-                          height: 1.62,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (tall && f != null) ...[
-                  const SizedBox(height: 6),
-                  _luckChips(f, tone),
-                ],
-                if (f != null) ...[
-                  const SizedBox(height: 8),
-                  _metrics(f, tone, compact: !tall),
-                ],
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            _score(f, tone, size: ringSize),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${sign.symbol} ${sign.name}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.heading(
-                      size: 22,
-                      color: tone.ink,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${sign.range} · ${sign.element}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: 10, color: tone.inkSoft),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _tagPill(context, state, f, tone),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (f != null) ...[
-          Expanded(
-            child: ClipRect(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  f.text,
-                  maxLines: tall ? 5 : 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.body(size: 13, color: tone.ink2, height: 1.62),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _metrics(f, tone, compact: !tall),
-        ] else
-          Expanded(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Text(
-                _pendingText(state),
-                style: context.body(
-                  size: 12,
-                  color: state.zodiacError != null ? tone.error : tone.inkSoft,
-                  height: 1.55,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  String _pendingText(AppState state) =>
-      state.zodiacError ?? (state.zodiacLoading ? '星语生成中…' : '点开卡片生成今日星语');
-
-  Widget _score(ZodiacFortune? f, _ZodiacTone tone, {required double size}) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _ZodiacScorePainter(
-          score: f?.score,
-          accent: tone.accent,
-          track: tone.chipLine,
-          halo: tone.glow,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (f != null) ...[
-                Text(
-                  '${f.score}',
-                  style: TextStyle(
-                    fontFamily: AppFonts.mono,
-                    fontSize: size * .31,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                    color: tone.accentInk,
-                  ),
-                ),
-                Text(
-                  '综合',
-                  style: TextStyle(
-                    fontFamily: AppFonts.rounded,
-                    fontFamilyFallback: AppFonts.bodyFallback,
-                    fontSize: math.max(7, size * .105),
-                    height: 1.25,
-                    letterSpacing: 1,
-                    color: tone.inkSoft,
-                  ),
-                ),
-              ] else
-                Text(
-                  '✦',
-                  style: TextStyle(fontSize: size * .3, color: tone.accent),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tagPill(
-    BuildContext context,
-    AppState state,
-    ZodiacFortune? f,
-    _ZodiacTone tone,
-  ) {
-    final text = f == null
-        ? (state.zodiacError != null ? '星语生成失败' : '星语生成中…')
-        : '✦ ${f.tag}';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: tone.chipBg,
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: tone.chipLine),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: context.body(
-          size: 11,
-          weight: FontWeight.w700,
-          color: f == null ? tone.inkSoft : tone.accentInk,
-          letterSpacing: .4,
-        ),
-      ),
-    );
-  }
-
-  Widget _metrics(ZodiacFortune f, _ZodiacTone tone, {required bool compact}) {
-    return Row(
-      children: [
-        _stat('爱情', f.love, compact, tone),
-        _metricDivider(tone),
-        _stat('事业', f.work, compact, tone),
-        _metricDivider(tone),
-        _stat('财运', f.wealth, compact, tone),
-        _metricDivider(tone),
-        _stat('健康', f.health, compact, tone),
-      ],
-    );
-  }
-
-  Widget _stat(String label, int value, bool compact, _ZodiacTone tone) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  '$value',
-                  style: TextStyle(
-                    fontFamily: AppFonts.rounded,
-                    fontSize: compact ? 14 : 16,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                    color: tone.accentInk,
-                  ),
-                ),
-                Text(
-                  '分',
-                  style: TextStyle(
-                    fontFamily: AppFonts.rounded,
-                    fontSize: 9,
-                    height: 1,
-                    color: tone.inkSoft,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: compact ? 2 : 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppFonts.rounded,
-                fontFamilyFallback: AppFonts.bodyFallback,
-                fontSize: 9,
-                height: 1.2,
-                color: tone.inkSoft,
-              ),
-            ),
-            if (!compact) ...[
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: LinearProgressIndicator(
-                  value: value.clamp(0, 100) / 100,
-                  minHeight: 2.4,
-                  backgroundColor: tone.accent.withAlpha(24),
-                  valueColor: AlwaysStoppedAnimation(tone.accent),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _metricDivider(_ZodiacTone tone) =>
-      Container(width: 1, height: 18, color: tone.line);
-
-  Widget _luckChips(ZodiacFortune f, _ZodiacTone tone) => Wrap(
-    spacing: 5,
-    runSpacing: 4,
-    children: [
-      _luckChip('幸运色', f.color, tone),
-      _luckChip('幸运数', f.number, tone),
-      _luckChip('幸运物', f.item, tone),
-    ],
-  );
-
-  Widget _luckChip(String label, String value, _ZodiacTone tone) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: tone.chipBg,
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: tone.chipLine),
-    ),
-    child: Text(
-      '$label $value',
-      style: TextStyle(
-        fontFamily: AppFonts.rounded,
-        fontFamilyFallback: AppFonts.bodyFallback,
-        fontSize: 9,
-        height: 1.2,
-        color: tone.inkSoft,
-      ),
-    ),
-  );
-
-  Widget _picker(
-    BuildContext context,
-    _ZodiacTone tone, {
-    required bool micro,
-  }) {
-    if (micro) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('还没有本命星座', style: context.body(size: 11, color: tone.inkSoft)),
-            const SizedBox(height: 8),
-            Pressable(
-              onTap: () => showZodiacModal(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: tone.chipBg,
-                  borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: tone.chipLine),
-                ),
-                child: Text(
-                  '选择星座 →',
-                  style: context.body(
-                    size: 11,
-                    weight: FontWeight.w700,
-                    color: tone.accentInk,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 290;
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '选一个本命星座，解锁今日星象',
-              style: context.body(
-                size: compact ? 10.5 : 11.5,
-                color: tone.inkSoft,
-              ),
-            ),
-            SizedBox(height: compact ? 6 : 8),
-            Wrap(
-              spacing: compact ? 4 : 6,
-              runSpacing: compact ? 4 : 6,
-              alignment: WrapAlignment.center,
-              children: [
-                for (final z in kZodiacSigns)
-                  Pressable(
-                    onTap: () => showZodiacModal(context),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 6 : 8,
-                        vertical: compact ? 4 : 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: tone.chipBg,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: tone.chipLine),
-                      ),
-                      child: Text(
-                        '${z.symbol} ${z.name}',
-                        style: context.body(
-                          size: compact ? 9.5 : 10.5,
-                          color: tone.accentInk,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            SizedBox(height: compact ? 5 : 7),
-            Text(
-              '点击选择 →',
-              style: context.body(
-                size: CitroType.small,
-                weight: CitroType.medium,
-                color: tone.accentInk,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// 星象卡的纸面配色：浅色跟随纸卡，深色跟随暗色主题，保持同一套占星符号。
-class _ZodiacTone {
-  const _ZodiacTone({
-    required this.top,
-    required this.mid,
-    required this.bottom,
-    required this.accent,
-    required this.accentInk,
-    required this.ink,
-    required this.ink2,
-    required this.inkSoft,
-    required this.line,
-    required this.chipBg,
-    required this.chipLine,
-    required this.watermark,
-    required this.glow,
-    required this.border,
-    required this.error,
-  });
-
-  final Color top;
-  final Color mid;
-  final Color bottom;
-  final Color accent;
-  final Color accentInk;
-  final Color ink;
-  final Color ink2;
-  final Color inkSoft;
-  final Color line;
-  final Color chipBg;
-  final Color chipLine;
-  final Color watermark;
-  final Color glow;
-  final Color border;
-  final Color error;
-
-  /// 星象卡不再自带一套彩色渐变，改为和全站卡片同表面 + 同 token。
-  factory _ZodiacTone.of(CitroColors c) => _ZodiacTone(
-    top: c.surface,
-    mid: c.surface,
-    bottom: c.surface,
-    accent: c.accent,
-    accentInk: c.accentInk,
-    ink: c.ink,
-    ink2: c.ink2,
-    inkSoft: c.inkSoft,
-    line: c.line,
-    chipBg: c.tintYellow,
-    chipLine: c.line,
-    watermark: c.accent.withAlpha(16),
-    glow: c.accent.withAlpha(18),
-    border: c.line,
-    error: c.stamp,
-  );
-}
-
-/// 金色刻度环：12 格刻度 + 进度弧 + 中心光面。
-class _ZodiacScorePainter extends CustomPainter {
-  const _ZodiacScorePainter({
-    this.score,
-    required this.accent,
-    required this.track,
-    required this.halo,
-  });
-
-  final int? score;
-  final Color accent;
-  final Color track;
-  final Color halo;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 2;
-    final glow = Paint()
-      ..shader = RadialGradient(
-        colors: [halo, halo.withAlpha(0)],
-        stops: const [.44, 1],
-      ).createShader(Rect.fromCircle(center: center, radius: radius + 3));
-    canvas.drawCircle(center, radius + 3, glow);
-
-    final trackPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
-      ..color = track.withAlpha(70);
-    canvas.drawCircle(center, radius - 1.6, trackPaint);
-
-    final tick = Paint()
-      ..strokeWidth = .9
-      ..strokeCap = StrokeCap.round
-      ..color = track.withAlpha(85);
-    for (var i = 0; i < 12; i++) {
-      final a = i * math.pi / 6 - math.pi / 2;
-      final inner = radius - 8;
-      final outer = radius - 4;
-      canvas.drawLine(
-        center + Offset(math.cos(a), math.sin(a)) * inner,
-        center + Offset(math.cos(a), math.sin(a)) * outer,
-        tick,
-      );
-    }
-
-    final pct = (score ?? 0).clamp(0, 100) / 100;
-    if (score != null) {
-      final arc = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.2
-        ..strokeCap = StrokeCap.round
-        ..color = accent;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius - 1.6),
-        -math.pi / 2,
-        math.pi * 2 * pct,
-        false,
-        arc,
-      );
-    }
-
-    canvas.drawCircle(
-      center,
-      radius - 9,
-      Paint()..color = accent.withAlpha(12),
-    );
-    canvas.drawCircle(
-      center,
-      radius - 9,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = track.withAlpha(70),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ZodiacScorePainter oldDelegate) =>
-      oldDelegate.score != score ||
-      oldDelegate.accent != accent ||
-      oldDelegate.track != track ||
-      oldDelegate.halo != halo;
-}
-
 class QuoteCard extends StatelessWidget {
   const QuoteCard({super.key});
 
@@ -2751,3 +1781,28 @@ class QuoteCard extends StatelessWidget {
     );
   }
 }
+
+/// 卡片面板磨砂底的裁切：从 [top] 往下，顶部两角带卡片同款圆角。
+class _PanelBackdropClipper extends CustomClipper<RRect> {
+  final double top;
+  final double radius;
+
+  const _PanelBackdropClipper({required this.top, required this.radius});
+
+  @override
+  RRect getClip(Size size) => RRect.fromRectAndCorners(
+    Rect.fromLTRB(0, top, size.width, size.height + radius),
+    topLeft: Radius.circular(radius),
+    topRight: Radius.circular(radius),
+  );
+
+  @override
+  bool shouldReclip(_PanelBackdropClipper old) =>
+      old.top != top || old.radius != radius;
+}
+
+/// 首页卡片区四周的留白（顶部 / 左右相等）。
+const double _panelGap = 14;
+
+/// 卡片区面板的顶部圆角：卡片圆角（色场 26）+ 留白，保证同心。
+const double _panelRadius = 26 + _panelGap;

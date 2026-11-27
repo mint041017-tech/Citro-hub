@@ -19,9 +19,6 @@ class CheckinActionPlan {
   /// 点主按钮后直接打开回签弹层。
   final bool opensReflection;
 
-  /// 点主按钮后打开笔记弹层。
-  final bool opensNotes;
-
   /// 专注 / 听隅的自动完成阈值（分钟）。其他类型为 0。
   final int thresholdMinutes;
 
@@ -33,12 +30,11 @@ class CheckinActionPlan {
     required this.primaryLabel,
     this.route,
     this.opensReflection = false,
-    this.opensNotes = false,
     this.thresholdMinutes = 0,
     required this.hint,
   });
 
-  bool get hasPrimary => route != null || opensReflection || opensNotes;
+  bool get hasPrimary => route != null || opensReflection;
 
   bool get isAuto => type != CheckinActionType.manual;
 
@@ -47,11 +43,7 @@ class CheckinActionPlan {
 }
 
 /// 按签类取行动方案。
-CheckinActionPlan checkinPlanForKind(
-  String? kind, {
-  String? actionText,
-  String? stepText,
-}) {
+CheckinActionPlan checkinPlanForKind(String? kind) {
   switch (kind) {
     case 'career':
       return const CheckinActionPlan(
@@ -117,7 +109,7 @@ CheckinActionPlan checkinPlanForKind(
       return const CheckinActionPlan(
         type: CheckinActionType.note,
         primaryLabel: '写下来',
-        opensNotes: true,
+        opensReflection: true,
         hint: '记一条笔记，或保存一句回签，都会盖章',
       );
     default:

@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../data/quotes.dart';
 import '../games/game_registry.dart';
+import '../mbti/home_card.dart';
+import '../overlays/card_collection.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
 import '../widgets/home_entries.dart';
 import '../widgets/motion_widgets.dart';
@@ -29,65 +32,88 @@ class WebHomePage extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final height = math.max(900.0, constraints.maxHeight);
-          final rowHeight = (height - 64 - 16 * 9) / 8;
-          // 搜索框高 44，星象卡顶部与它对齐。
-          final zodiacTop = (rowHeight - 44) / 2;
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: CitroReveal(
               rise: 6,
               child: SizedBox(
                 height: height,
-                child: WebDesktopGrid(
-                  rows: 9,
-                  children: [
-                    ...header.cells(context),
-                    const WebGridCell(
-                      1,
-                      2,
-                      3,
-                      1,
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GlobalSearch(hint: '搜索功能 / 游戏 / 页面，回车必应'),
+                // 底部留一条边距：最后一行的卡片不贴着纸边被切掉。
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: WebDesktopGrid(
+                    rows: 9,
+                    children: [
+                      ...header.cells(context),
+                      const WebGridCell(
+                        1,
+                        2,
+                        4,
+                        1,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: GlobalSearch(hint: '搜索功能 / 游戏 / 页面，回车必应'),
+                        ),
                       ),
-                    ),
-                    const WebGridCell(1, 3, 3, 2, WeatherCard()),
-                    // 日历 / 待办 / 记账已经收进「计划」页，桌面首页不再重复。
-                    const WebGridCell(1, 5, 3, 2, FishCard()),
-                    const WebGridCell(1, 7, 3, 2, CheckinCard(compact: true)),
-                    WebGridCell(
-                      4,
-                      2,
-                      3,
-                      4,
-                      Padding(
-                        padding: EdgeInsets.only(top: zodiacTop),
-                        child: const ZodiacCard(),
+                      // 三栏等宽（各 4 格）：左栏搜索 + 天气 + 打卡 + 抽签；
+                      // 中栏社区 + 测试 + 卡面收藏 + 食谱日记，四张卡同尺寸；
+                      // 右栏小游戏两列七排。底部一行横带收尾。
+                      const WebGridCell(1, 3, 4, 2, WeatherCard()),
+                      // 日历 / 待办 / 记账已经收进「计划」页，桌面首页不再重复。
+                      const WebGridCell(1, 5, 4, 2, CheckinCard()),
+                      const WebGridCell(
+                        1,
+                        7,
+                        4,
+                        2,
+                        HomeResCard(item: 'tool:玩法抽签'),
                       ),
-                    ),
-                    WebGridCell(
-                      4,
-                      6,
-                      3,
-                      1,
-                      _WebCommunityTicket(
-                        unread: context.app.unread,
-                        onTap: () => onSwitchTab(2),
+                      WebGridCell(
+                        5,
+                        2,
+                        4,
+                        1,
+                        _WebCommunityTicket(
+                          unread: context.app.unread,
+                          onTap: () => onSwitchTab(2),
+                        ),
                       ),
-                    ),
-                    WebGridCell(
-                      4,
-                      7,
-                      3,
-                      2,
-                      _WebRecipeTicket(
-                        onTap: () => Navigator.of(context).pushNamed('/cook'),
+                      const WebGridCell(5, 3, 4, 2, MbtiHomeCard()),
+                      const WebGridCell(5, 5, 4, 2, CardCollectionEntry()),
+                      WebGridCell(
+                        5,
+                        7,
+                        4,
+                        2,
+                        _WebRecipeTicket(
+                          onTap: () => Navigator.of(context).pushNamed('/cook'),
+                        ),
                       ),
-                    ),
-                    const WebGridCell(7, 2, 6, 7, _WebGames()),
-                    const WebGridCell(1, 9, 12, 1, _WebQuoteStrip()),
-                  ],
+                      const WebGridCell(9, 2, 4, 7, _WebGames()),
+                      // 底部：每日一言 + 视野 live + 下载站，一条横带收尾。
+                      const WebGridCell(1, 9, 6, 1, _WebQuoteStrip()),
+                      const WebGridCell(
+                        7,
+                        9,
+                        3,
+                        1,
+                        HomeResCard(item: 'tool:视野live'),
+                      ),
+                      WebGridCell(
+                        10,
+                        9,
+                        3,
+                        1,
+                        _WebDownloadCard(
+                          onTap: () => openCitroPage(
+                            context,
+                            'https://dl.chimu-claw.xyz/',
+                            title: 'Citro 下载站',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -135,10 +161,11 @@ class _WebGames extends StatelessWidget {
             builder: (context, constraints) => GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
+                // 面板只占 4 格宽：两列排七排，14 款刚好铺满。
+                crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                mainAxisExtent: (constraints.maxHeight - 30) / 4,
+                mainAxisExtent: (constraints.maxHeight - 60) / 7,
               ),
               itemCount: kGameCards.length,
               itemBuilder: (context, index) =>
@@ -147,187 +174,7 @@ class _WebGames extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.x2),
-        const WebGameToolsRow(),
       ],
-    );
-  }
-}
-
-/// 桌面首页游戏面板底部的小工具卡：与 Web 手机端游戏页同款，
-/// 工具卡加大、下载站单独一条高亮卡，游戏网格自动让出空间。
-class WebGameToolsRow extends StatelessWidget {
-  const WebGameToolsRow({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final tools = <_WebGameTool>[
-      _WebGameTool(
-        title: '听隅',
-        desc: '白噪音混音',
-        icon: AppIcons.wave,
-        background: c.tintGreen,
-        foreground: c.mintInk,
-        onTap: () => Navigator.of(context).pushNamed('/tingyu'),
-      ),
-      _WebGameTool(
-        title: '玩法抽签',
-        desc: '无畏契约整活',
-        icon: AppIcons.sparkle,
-        background: c.tintYellow,
-        foreground: c.accentInk,
-        onTap: () => Navigator.of(context).pushNamed('/play'),
-      ),
-      _WebGameTool(
-        title: '瞬投',
-        desc: '投掷物点位',
-        icon: AppIcons.location,
-        background: c.tintGreen,
-        foreground: c.mintInk,
-        onTap: () =>
-            openCitroPage(context, 'https://shuntou.top/', title: '瞬投'),
-      ),
-      _WebGameTool(
-        title: '一起看',
-        desc: '把屏幕放进房间 · 可语音文字',
-        icon: AppIcons.monitor,
-        background: c.tintBlue,
-        foreground: c.accentInk,
-        onTap: () =>
-            openCitroPage(context, 'https://share.mint1017.cn/', title: '一起看'),
-      ),
-      _WebGameTool(
-        title: '视野live',
-        desc: '实时视野直播',
-        icon: AppIcons.eye,
-        background: c.tintGreen,
-        foreground: c.mintInk,
-        onTap: () => openCitroPage(
-          context,
-          'https://shijiao.xingpaste.com/',
-          title: '视野live',
-        ),
-      ),
-      _WebGameTool(
-        title: 'MsLab',
-        desc: '毫秒灵敏度调试',
-        icon: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
-        background: c.tintBlue,
-        foreground: c.accentInk,
-        onTap: () =>
-            openCitroPage(context, 'https://mslab.gg/', title: 'MsLab'),
-      ),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 84,
-          child: Row(
-            children: [
-              for (var i = 0; i < tools.length; i++) ...[
-                if (i > 0) const SizedBox(width: AppSpacing.x1),
-                Expanded(child: _WebGameToolCard(tool: tools[i])),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x1),
-        _WebDownloadCard(
-          onTap: () => openCitroPage(
-            context,
-            'https://dl.chimu-claw.xyz/',
-            title: 'Citro 下载站',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _WebGameTool {
-  final String title;
-  final String desc;
-  final String icon;
-  final Color background;
-  final Color foreground;
-  final VoidCallback onTap;
-
-  const _WebGameTool({
-    required this.title,
-    required this.desc,
-    required this.icon,
-    required this.background,
-    required this.foreground,
-    required this.onTap,
-  });
-}
-
-class _WebGameToolCard extends StatelessWidget {
-  final _WebGameTool tool;
-
-  const _WebGameToolCard({required this.tool});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Pressable(
-      onTap: tool.onTap,
-      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-      hoverLift: 0,
-      hoverShadow: false,
-      hoverColor: c.surface2,
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: tool.background,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(tool.icon, width: 2),
-                  size: 18,
-                  color: tool.foreground,
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              tool.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: context.body(
-                size: CitroType.meta,
-                weight: CitroType.medium,
-                color: c.ink,
-                height: 1.15,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              tool.desc,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: context.body(
-                size: CitroType.micro,
-                color: c.inkSoft,
-                height: 1.15,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -465,50 +312,193 @@ class _WebGameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Pressable(
-      onTap: () => Navigator.of(context).pushNamed('/${entry.key}'),
-      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-      hoverOverlayColor: c.surface2,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: entry.gradient,
+    final identity = entry.identity;
+    final radius = BorderRadius.circular(CitroColors.radii.inner);
+    return Semantics(
+      button: true,
+      label: '${entry.title}，${identity.tag}',
+      child: Pressable(
+        onTap: () => Navigator.of(context).pushNamed('/${entry.key}'),
+        scale: .98,
+        hoverLift: 2,
+        hoverShadow: false,
+        hoverOverlayColor: Colors.white.withValues(alpha: c.dark ? .04 : .10),
+        borderRadius: radius,
+        child: CitroGlass(
+          borderRadius: radius,
+          tint: c.surface,
+          borderColor: Colors.white.withValues(alpha: c.dark ? .12 : .42),
+          highlight: true,
+          shadow: CitroColors.shadows.sm(c),
+          padding: const EdgeInsets.all(6),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final horizontal =
+                  constraints.maxWidth >= 148 && constraints.maxHeight >= 72;
+              if (!horizontal) {
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color.lerp(identity.soft, identity.primary, .12)!,
+                              Color.lerp(identity.soft, identity.primary, .34)!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              child: entry.art(context),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 28,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                entry.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.heading(
+                                  size: CitroType.bodyLg,
+                                  color: c.ink,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: identity.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              final artSize = constraints.maxHeight < 84 ? 52.0 : 60.0;
+              return Row(
+                children: [
+                  Container(
+                    width: artSize,
+                    height: artSize,
+                    clipBehavior: Clip.antiAlias,
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color.lerp(identity.soft, identity.primary, .12)!,
+                          Color.lerp(identity.soft, identity.primary, .34)!,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(artSize * .28),
+                      border: Border.all(
+                        color: Colors.white.withValues(
+                          alpha: c.dark ? .10 : .38,
+                        ),
+                      ),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Positioned(
+                          top: -artSize * .22,
+                          right: -artSize * .20,
+                          child: Container(
+                            width: artSize * .62,
+                            height: artSize * .62,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(
+                                alpha: c.dark ? .05 : .20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: entry.art(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(CitroColors.radii.small),
-                ),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: entry.art(context),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: identity.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                identity.tag,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.body(
+                                  size: CitroType.small,
+                                  color: c.inkSoft,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            AppIcon(
+                              strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+                              size: 12,
+                              color: c.ink2,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          entry.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.heading(
+                            size: CitroType.bodyLg,
+                            color: c.ink,
+                            letterSpacing: -.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 28,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  entry.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.heading(size: CitroType.bodyLg),
-                ),
-              ),
-            ),
-          ],
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -578,7 +568,7 @@ class _EntryTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(CitroColors.radii.card),
       hoverLift: 0,
       hoverShadow: false,
-      hoverColor: c.surface.withAlpha(120),
+      hoverColor: c.surface.withValues(alpha: c.surface.a * (120) / 255),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(

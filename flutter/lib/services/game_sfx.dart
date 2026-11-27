@@ -28,7 +28,7 @@ class GameSfx {
   static bool get muted => _muted;
 
   /// 只有跳一跳保留音效（用户反馈），其余游戏只震动。
-  /// 需要声音的页面在 initState 打开、dispose 恢复；tone/noise 在关闭时
+  /// 需要声音的页面在 initState 打开、dispose 恢复；tone 在关闭时
   /// 直接跳过，语义化快捷方式里的 vibrate 不受影响。
   static bool soundsEnabled = false;
 
@@ -113,25 +113,6 @@ class GameSfx {
       await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
     } catch (e) {
       // 浏览器在手势外会拒绝播放；保留播放器以便后续手势重试。
-      if (!kIsWeb) _available = false;
-    }
-  }
-
-  /// 噪声脉冲（撞击 / 碎裂）。freq ≈ 带通中心。
-  static Future<void> noise({
-    required double dur,
-    double vol = 0.3,
-    double freq = 800,
-    double q = 0.8,
-  }) async {
-    if (!_supported || _muted || !soundsEnabled) return;
-    try {
-      final key = 'n$dur|$vol|$freq';
-      final bytes = _cached(key, () => _noise(dur: dur, vol: vol, freq: freq));
-      final p = _nextPlayer()!;
-      await p.stop();
-      await p.play(BytesSource(bytes, mimeType: 'audio/wav'));
-    } catch (e) {
       if (!kIsWeb) _available = false;
     }
   }
@@ -405,31 +386,6 @@ class GameSfx {
         env = attack * release;
       }
       data[i] = s * vol * env;
-    }
-    return _wav(data);
-  }
-
-  static Uint8List _noise({
-    required double dur,
-    required double vol,
-    required double freq,
-  }) {
-    final n = (dur * _rate).round();
-    final data = Float32List(n);
-    final rnd = math.Random(0x5EED);
-    // 简易带通：一阶低通 + 去直流，中心频率附近能量突出
-    final rc = 1 / (2 * math.pi * freq);
-    final a = rc / (rc + 1 / _rate);
-    double lp = 0, prev = 0, prevLp = 0;
-    for (var i = 0; i < n; i++) {
-      final w = rnd.nextDouble() * 2 - 1;
-      lp = lp + a * (w - lp);
-      final bp = lp - prevLp;
-      prevLp = lp;
-      final s = (bp * 4.5).clamp(-1.0, 1.0);
-      final env = (1 - i / n);
-      data[i] = s * vol * env * 0.9 + prev * 0.02;
-      prev = s;
     }
     return _wav(data);
   }

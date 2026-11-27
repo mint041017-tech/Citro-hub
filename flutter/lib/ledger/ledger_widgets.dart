@@ -272,7 +272,7 @@ class LedgerProgress extends StatelessWidget {
       borderRadius: BorderRadius.circular(CitroColors.radii.chip),
       child: Container(
         height: height,
-        color: c.line.withAlpha(120),
+        color: c.line.withValues(alpha: c.line.a * (120) / 255),
         alignment: Alignment.centerLeft,
         child: FractionallySizedBox(
           widthFactor: clamped,
@@ -505,7 +505,6 @@ class LedgerEmptyState extends StatelessWidget {
   final String hint;
   final String? action;
   final VoidCallback? onAction;
-  final String icon;
 
   const LedgerEmptyState({
     super.key,
@@ -513,7 +512,6 @@ class LedgerEmptyState extends StatelessWidget {
     required this.hint,
     this.action,
     this.onAction,
-    this.icon = AppIcons.wallet,
   });
 
   @override
@@ -571,141 +569,6 @@ class LedgerEmptyState extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// 数字键盘：大圆角按键，等宽数字。
-class LedgerNumberPad extends StatelessWidget {
-  final ValueChanged<String> onDigit;
-  final VoidCallback onBackspace;
-  final VoidCallback? onDone;
-  final String doneLabel;
-  final bool enabled;
-
-  const LedgerNumberPad({
-    super.key,
-    required this.onDigit,
-    required this.onBackspace,
-    this.onDone,
-    this.doneLabel = '完成',
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const keys = [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['.', '0', '⌫'],
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gap = constraints.maxWidth < 340 ? 6.0 : AppSpacing.x1;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final row in keys)
-              Padding(
-                padding: EdgeInsets.only(bottom: gap),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < row.length; i++) ...[
-                      if (i > 0) SizedBox(width: gap),
-                      Expanded(
-                        child: _PadKey(
-                          label: row[i],
-                          enabled: enabled,
-                          isBackspace: row[i] == '⌫',
-                          onTap: row[i] == '⌫'
-                              ? onBackspace
-                              : () => onDigit(row[i]),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            if (onDone != null)
-              SizedBox(
-                width: double.infinity,
-                height: AppSpacing.touch,
-                child: Pressable(
-                  onTap: enabled ? onDone : null,
-                  borderRadius: BorderRadius.circular(CitroColors.radii.button),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: enabled ? context.c.accent : context.c.line,
-                      borderRadius: BorderRadius.circular(
-                        CitroColors.radii.button,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        doneLabel,
-                        style: context.lui(
-                          size: CitroType.bodyLg,
-                          weight: CitroType.strong,
-                          color: context.c.onAccent,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _PadKey extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  final bool isBackspace;
-  final bool enabled;
-
-  const _PadKey({
-    required this.label,
-    required this.onTap,
-    this.isBackspace = false,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Pressable(
-      onTap: enabled ? onTap : null,
-      scale: .94,
-      hoverLift: 0,
-      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-      child: Container(
-        height: AppSpacing.touch + 8,
-        decoration: BoxDecoration(
-          color: isBackspace ? c.surface : c.surface2,
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          border: Border.all(color: c.line),
-        ),
-        child: Center(
-          child: isBackspace
-              ? AppIcon(
-                  strokeSvg(AppIcons.close, width: 2),
-                  size: 17,
-                  color: c.inkSoft,
-                )
-              : Text(
-                  label,
-                  style: context.lhand(
-                    size: CitroType.titleLg,
-                    weight: CitroType.strong,
-                    color: c.ink,
-                  ),
-                ),
-        ),
       ),
     );
   }
@@ -864,111 +727,6 @@ class LedgerChip extends StatelessWidget {
     );
     if (onTap == null) return content;
     return Pressable(onTap: onTap, scale: .95, hoverLift: 0, child: content);
-  }
-}
-
-/// 同步状态小圆点：已登录用薄荷绿，避免用户误以为数据只存在本机。
-class LedgerSyncBadge extends StatelessWidget {
-  final bool signedIn;
-  final bool syncing;
-
-  const LedgerSyncBadge({
-    super.key,
-    required this.signedIn,
-    this.syncing = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final color = signedIn ? c.mint : c.inkSoft;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (syncing)
-          SizedBox(
-            width: 10,
-            height: 10,
-            child: CircularProgressIndicator(strokeWidth: 1.6, color: color),
-          )
-        else
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-        const SizedBox(width: 4),
-        Text(
-          signedIn ? '已同步' : '仅本机',
-          style: context.lui(size: CitroType.small, color: c.inkSoft),
-        ),
-      ],
-    );
-  }
-}
-
-/// 金额输入展示：¥ 符号固定，数字用大号等宽字体。
-class LedgerAmountDisplay extends StatelessWidget {
-  final String value;
-  final String hint;
-  final bool focused;
-
-  const LedgerAmountDisplay({
-    super.key,
-    required this.value,
-    this.hint = '0.00',
-    this.focused = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final text = value.isEmpty ? hint : value;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            '¥',
-            style: context.lhand(
-              size: CitroType.titleLg,
-              weight: CitroType.strong,
-              color: c.inkSoft,
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  text,
-                  maxLines: 1,
-                  style: context.lhand(
-                    size: CitroType.poster,
-                    weight: CitroType.strong,
-                    color: value.isEmpty ? c.inkSoft.withAlpha(120) : c.ink,
-                    height: 1,
-                  ),
-                ),
-                if (focused && value.isNotEmpty)
-                  Container(
-                    width: 2,
-                    height: 34,
-                    margin: const EdgeInsets.only(left: 3, bottom: 4),
-                    color: c.accent,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
 

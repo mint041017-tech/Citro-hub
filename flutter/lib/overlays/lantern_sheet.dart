@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 import 'auth_modal.dart';
 
 const _lanternHelloPrefix = 'chimu_lantern_popup_';
@@ -486,13 +487,11 @@ class _LanternDialogState extends State<_LanternDialog> {
           ),
           const SizedBox(height: 12),
           if (board.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 22),
-              child: Text(
-                '暂无上榜，来当第一人',
-                textAlign: TextAlign.center,
-                style: context.body(size: CitroType.caption, color: c.inkSoft),
-              ),
+            const CitroEmptyState(
+              compact: true,
+              icon: Icon(Icons.emoji_events_outlined),
+              title: '暂无上榜',
+              hint: '来当第一人',
             )
           else
             for (var i = 0; i < board.length; i++) ...[

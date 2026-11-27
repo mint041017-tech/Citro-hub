@@ -2,20 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../assessments/tests_hub_page.dart' deferred as testsPage;
+import '../kei/models.dart';
+import '../kei/store.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/card_flight.dart';
 import '../widgets/card_morph.dart';
 import '../widgets/paper.dart';
-import 'mbti_page.dart';
+import '../widgets/lazy_page.dart';
 import 'models.dart';
 import 'store.dart';
 
-/// 首页 Bento 卡片：人格测试入口。
-///
-/// 测过之后直接显示最近一次的结果（类型 + 昵称），没测过则展示引导文案；
-/// 点按进入测试页，返回后刷新卡片上的最近结果。
+/// 首页 Bento 卡片：测试中心入口。
 class MbtiHomeCard extends StatefulWidget {
   const MbtiHomeCard({super.key});
 
@@ -27,24 +27,31 @@ class _MbtiHomeCardState extends State<MbtiHomeCard> {
   /// 类型昵称表按需加载；卡片只取昵称，不阻塞入口。
   TypeLibrary? library;
   List<MbtiRecord> records = MbtiStore.load();
+  List<KeiRecord> keiRecords = KeiStore.load();
 
   @override
   void initState() {
     super.initState();
     MbtiStore.changes.addListener(_reload);
+    KeiStore.changes.addListener(_reload);
     unawaited(MbtiStore.syncFromAccount(account: AppState.instance.user?.name));
+    unawaited(KeiStore.syncFromAccount(account: AppState.instance.user?.name));
     _loadNames();
   }
 
   @override
   void dispose() {
     MbtiStore.changes.removeListener(_reload);
+    KeiStore.changes.removeListener(_reload);
     super.dispose();
   }
 
   void _reload() {
     if (!mounted) return;
-    setState(() => records = MbtiStore.load());
+    setState(() {
+      records = MbtiStore.load();
+      keiRecords = KeiStore.load();
+    });
   }
 
   Future<void> _loadNames() async {
@@ -59,35 +66,63 @@ class _MbtiHomeCardState extends State<MbtiHomeCard> {
   Future<void> _open(BuildContext anchor) async {
     final rect = CitroCardFlight.rectOf(anchor);
     if (rect.isEmpty) {
-      await Navigator.of(context).pushNamed('/mbti');
+      await Navigator.of(context).pushNamed('/tests');
     } else {
       await CitroCardMorph.openCardPage<void>(
         context,
         source: rect,
-        settings: const RouteSettings(name: '/mbti'),
-        builder: (_) => const MbtiPage(),
+        settings: const RouteSettings(name: '/tests'),
+        builder: (_) => CitroLazyPage(
+          load: () async {
+            await testsPage.loadLibrary();
+            return testsPage.TestsHubPage();
+          },
+        ),
         snapshot: CitroCardFlight.snapshotOf(anchor, rect),
       );
     }
     if (!mounted) return;
-    setState(() => records = MbtiStore.load());
+    setState(() {
+      records = MbtiStore.load();
+      keiRecords = KeiStore.load();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final latest = records.isEmpty ? null : records.first;
-    final content = latest == null
+    final latestMbti = records.isEmpty ? null : records.first;
+    final latestKei = keiRecords.isEmpty ? null : keiRecords.first;
+    final useKei =
+        latestKei != null &&
+        (latestMbti == null || latestKei.takenAtMs > latestMbti.takenAtMs);
+    final mbtiContent = latestMbti == null
         ? null
-        : library?.byCode(latest.typeConfirmed ?? latest.result.typeRaw);
+        : library?.byCode(
+            latestMbti.typeConfirmed ?? latestMbti.result.typeRaw,
+          );
+    final latestLabel = useKei
+        ? '${latestKei.result.typeName} · 十二系'
+        : latestMbti == null
+        ? null
+        : [
+            latestMbti.displayType,
+            if (mbtiContent != null) mbtiContent.name,
+          ].join(' · ');
+    final total = records.length + keiRecords.length;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 120;
+        // 首页给的是小正方形卡片：高度和宽度都紧，标题压到一行。
+        final compact =
+            constraints.maxHeight < 150 || constraints.maxWidth < 220;
+        // 极窄（分栏右栏的两格宽）：图标缩小、去掉角标箭头，只留标题。
+        final tiny = constraints.maxWidth < 150;
+        final iconSize = tiny ? 24.0 : (compact ? 30.0 : 34.0);
         return CitroCard(
           padding: EdgeInsets.fromLTRB(
-            14,
+            tiny ? 10 : 14,
             compact ? 10 : 12,
-            14,
+            tiny ? 10 : 14,
             compact ? 10 : 12,
           ),
           onTap: () => _open(context),
@@ -97,52 +132,55 @@ class _MbtiHomeCardState extends State<MbtiHomeCard> {
               Row(
                 children: [
                   Container(
-                    width: compact ? 30 : 34,
-                    height: compact ? 30 : 34,
+                    width: iconSize,
+                    height: iconSize,
                     decoration: BoxDecoration(
                       color: c.tintYellow,
-                      borderRadius: BorderRadius.circular(
-                        (compact ? 30 : 34) * .3,
-                      ),
+                      borderRadius: BorderRadius.circular(iconSize * .3),
                     ),
                     child: Center(
                       child: Icon(
                         Icons.psychology_alt_rounded,
-                        size: compact ? 17 : 19,
+                        size: tiny ? 14 : (compact ? 17 : 19),
                         color: c.accentInk,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '人格测试',
-                    style: context.heading(size: CitroType.label, color: c.ink),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: c.accentLt,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: c.line),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 13,
-                        color: c.accentInk,
+                  SizedBox(width: tiny ? 6 : 8),
+                  Expanded(
+                    child: Text(
+                      '测试',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.heading(
+                        size: CitroType.label,
+                        color: c.ink,
                       ),
                     ),
                   ),
+                  if (!tiny)
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: c.accentLt,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.line),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 13,
+                          color: c.accentInk,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               if (compact) ...[
                 const Spacer(),
                 Text(
-                  latest == null
-                      ? '16 型 · 四个维度看懂自己'
-                      : '${latest.displayType}${content != null ? ' · ${content.name}' : ''}',
+                  latestLabel ?? 'MBTI 与十二系 · 看见自己',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.heading(size: CitroType.titleLg, color: c.ink),
@@ -150,9 +188,7 @@ class _MbtiHomeCardState extends State<MbtiHomeCard> {
               ] else ...[
                 const Spacer(),
                 Text(
-                  latest == null
-                      ? '你是哪一型？'
-                      : '${latest.displayType}${content != null ? ' · ${content.name}' : ''}',
+                  latestLabel ?? '两种测试，看见更完整的自己',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.display(
@@ -164,9 +200,9 @@ class _MbtiHomeCardState extends State<MbtiHomeCard> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  latest == null
-                      ? '约 8 分钟，四个维度看懂你的默认设置'
-                      : '已测 ${records.length} 次 · 点开看完整报告或再测一次',
+                  latestLabel == null
+                      ? 'MBTI 与十二系 · 约 8–12 分钟'
+                      : '已测 $total 次 · 点开测试中心',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.body(size: CitroType.small, color: c.inkSoft),

@@ -131,7 +131,7 @@ class TodoStore extends ChangeNotifier {
 
   Future<void> _save() async {
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    await _persistLocal();
+    await Prefs.setString(PrefKeys.todo, jsonEncode(_payload()));
     notifyListeners();
     unawaited(reschedule());
     _schedulePush();
@@ -147,10 +147,6 @@ class TodoStore extends ChangeNotifier {
     'autoReviewTime': autoReviewTime,
     'updatedAt': _updatedAt,
   };
-
-  Future<void> _persistLocal() async {
-    await Prefs.setString(PrefKeys.todo, jsonEncode(_payload()));
-  }
 
   /// 登录后拉取云端待办；远端更新时覆盖本地，否则把本地推上去。
   Future<void> syncFromAccount({bool force = false}) async {

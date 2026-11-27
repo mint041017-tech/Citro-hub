@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// 待办模块的数据模型。
 ///
-/// 全部字段手写 JSON，和项目里 CookIngredient / FishConfig 的做法一致：
+/// 全部字段手写 JSON，和项目里 CookIngredient 的做法一致：
 /// 数值走 num 容错、字符串走 `'${x ?? ''}'`、缺失集合给空列表。
 
 // ---------------------------------------------------------------------------
@@ -71,9 +71,6 @@ extension MoodKindX on MoodKind {
     MoodKind.low: Color(0xFF93A2B8),
     MoodKind.anxious: Color(0xFFD09A72),
   };
-
-  /// 浅色主题下的心情色。
-  Color get color => _lightColors[this]!;
 
   /// 按主题取心情色。
   Color colorFor(bool dark) => (dark ? _darkColors : _lightColors)[this]!;
@@ -301,44 +298,6 @@ class TodoTask {
   TodoTaskState get state => done
       ? TodoTaskState.done
       : (doing ? TodoTaskState.doing : TodoTaskState.todo);
-
-  TodoTask copyWith({
-    String? title,
-    String? note,
-    TodoKind? kind,
-    String? categoryId,
-    String? listId,
-    DateTime? remindAt,
-    DateTime? dueAt,
-    List<int>? leadMinutes,
-    Set<int>? habitDays,
-    String? habitTime,
-    bool? done,
-    bool? doing,
-    DateTime? doneAt,
-    List<TodoSubtask>? subtasks,
-    int? priority,
-    String? source,
-  }) => TodoTask(
-    id: id,
-    title: title ?? this.title,
-    note: note ?? this.note,
-    kind: kind ?? this.kind,
-    categoryId: categoryId ?? this.categoryId,
-    listId: listId ?? this.listId,
-    remindAt: remindAt ?? this.remindAt,
-    dueAt: dueAt ?? this.dueAt,
-    leadMinutes: leadMinutes ?? this.leadMinutes,
-    habitDays: habitDays ?? this.habitDays,
-    habitTime: habitTime ?? this.habitTime,
-    done: done ?? this.done,
-    doing: doing ?? this.doing,
-    doneAt: doneAt ?? this.doneAt,
-    createdAt: createdAt,
-    subtasks: subtasks ?? this.subtasks,
-    priority: priority ?? this.priority,
-    source: source ?? this.source,
-  );
 
   factory TodoTask.fromJson(Map<String, dynamic> j) => TodoTask(
     id: '${j['id'] ?? ''}',

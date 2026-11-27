@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../utils/navigation.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 
 class PlayPage extends StatefulWidget {
   const PlayPage({super.key});
@@ -44,7 +45,6 @@ class _PlayPageState extends State<PlayPage> {
   final math.Random rnd = math.Random();
   final stageKey = GlobalKey();
   String stageText = '点击「开始抽取」，命运交给橘子';
-  String? lastPun;
   bool rolling = false;
   bool _cancelRoll = false;
   int cooldownUntil = 0;
@@ -294,7 +294,6 @@ class _PlayPageState extends State<PlayPage> {
     _lastConfirmed = rec;
     _remoteVersion++;
     setState(() {
-      lastPun = text;
       stageText = text;
       rolling = false;
       remoteError = null;
@@ -585,13 +584,11 @@ class _PlayPageState extends State<PlayPage> {
               ),
             )
           else if (remote.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x3),
-              child: Text(
-                '还没有人抽，做第一个',
-                textAlign: TextAlign.center,
-                style: context.body(size: CitroType.caption, color: c.inkSoft),
-              ),
+            const CitroEmptyState(
+              compact: true,
+              icon: Icon(Icons.casino_outlined),
+              title: '还没有人抽',
+              hint: '做第一个吧',
             )
           else
             ...remote

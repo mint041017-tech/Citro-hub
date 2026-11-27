@@ -13,8 +13,11 @@ class CitroSkin extends ThemeExtension<CitroSkin> {
   CitroSkin copyWith({CitroColors? colors}) => CitroSkin(colors ?? this.colors);
 
   @override
-  CitroSkin lerp(covariant CitroSkin? other, double t) =>
-      t < 0.5 ? this : (other ?? this);
+  CitroSkin lerp(covariant CitroSkin? other, double t) {
+    if (other == null || identical(other, this)) return this;
+    // 逐色插值：背景图换主题色时，自定义令牌跟 ColorScheme 一起渐变。
+    return CitroSkin(CitroColors.lerp(colors, other.colors, t));
+  }
 }
 
 extension CitroContext on BuildContext {
@@ -93,12 +96,12 @@ extension CitroContext on BuildContext {
 
 ThemeData buildCitroTheme(CitroColors colors) {
   final brightness = colors.dark ? Brightness.dark : Brightness.light;
-  // 主按钮是近黑（浅色）/近白（深色）的胶囊，不是品牌橙——橙只作强调。
-  // primary 与 bg 在两套主题里互为反色，因此 onPrimary 直接用 bg 即可过对比。
+  // iOS 式：主操作用背景取色派生的强调色（accent2），白字 / 深字由
+  // AmbientPalette 按亮度选好放在 onAccent 里。
   final scheme = ColorScheme(
     brightness: brightness,
-    primary: colors.ink,
-    onPrimary: colors.bg,
+    primary: colors.accent2,
+    onPrimary: colors.onAccent,
     primaryContainer: colors.surface2,
     onPrimaryContainer: colors.ink,
     secondary: colors.accent,
@@ -107,7 +110,8 @@ ThemeData buildCitroTheme(CitroColors colors) {
     onSecondaryContainer: colors.accentInk,
     tertiary: colors.mint,
     onTertiary: colors.onAccent,
-    surface: colors.surface,
+    // Material 组件（Card、Dialog、Menu…）的 surface 必须不透明。
+    surface: colors.sheet,
     onSurface: colors.ink,
     surfaceContainerHighest: colors.surface2,
     onSurfaceVariant: colors.ink2,
@@ -170,14 +174,16 @@ ThemeData buildCitroTheme(CitroColors colors) {
     ),
     bottomSheetTheme: BottomSheetThemeData(
       constraints: const BoxConstraints(maxWidth: 760),
-      backgroundColor: colors.surface,
-      modalBackgroundColor: colors.surface,
+      backgroundColor: colors.sheet,
+      modalBackgroundColor: colors.sheet,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       modalElevation: 0,
-      // Apple 原生 sheet：顶部 28pt 圆角 + 发丝分隔 + 拖拽条。
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      // Apple 原生 sheet：顶部大圆角 + 发丝分隔 + 拖拽条。
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CitroColors.radii.modal),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       dragHandleColor: colors.line2,
@@ -187,6 +193,161 @@ ThemeData buildCitroTheme(CitroColors colors) {
       cursorColor: colors.accent,
       selectionColor: colors.hl,
       selectionHandleColor: colors.accent,
+    ),
+    // —— 控件默认值：没显式传色的控件也跟随背景派生的强调色 ——
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: colors.accent2,
+      linearTrackColor: colors.accentLt,
+      circularTrackColor: Colors.transparent,
+      refreshBackgroundColor: colors.sheet,
+      linearMinHeight: 4,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    switchTheme: SwitchThemeData(
+      // iOS 观感：白色圆钮 + 强调色轨道，关闭时灰轨。
+      thumbColor: const WidgetStatePropertyAll(Color(0xFFFFFFFF)),
+      thumbIcon: const WidgetStatePropertyAll(null),
+      trackColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? colors.accent
+            : colors.surface2.withValues(alpha: colors.dark ? .5 : .32),
+      ),
+      trackOutlineColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? Colors.transparent
+            : colors.line2,
+      ),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: colors.accent2,
+      inactiveTrackColor: colors.accentLt,
+      thumbColor: colors.accent2,
+      overlayColor: colors.accent.withAlpha(0x29),
+      valueIndicatorColor: colors.ink,
+      valueIndicatorTextStyle: TextStyle(
+        color: colors.bg,
+        fontFamily: AppFonts.mono,
+        fontSize: CitroType.caption,
+      ),
+      trackHeight: 4,
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? colors.accent2 : null,
+      ),
+      checkColor: WidgetStatePropertyAll(colors.onAccent),
+      side: BorderSide(color: colors.line2, width: 1.5),
+      // iOS 勾选是圆的。
+      shape: const CircleBorder(),
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? colors.accent2 : colors.line2,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: colors.accentInk,
+        shape: const StadiumBorder(),
+        overlayColor: colors.accent.withAlpha(0x1F),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: colors.accent2,
+        foregroundColor: colors.onAccent,
+        shape: const StadiumBorder(),
+        elevation: 0,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: colors.ink,
+      contentTextStyle: TextStyle(
+        color: colors.bg,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.label,
+      ),
+      actionTextColor: colors.accent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+      ),
+    ),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: colors.ink.withAlpha(0xEB),
+        borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+      ),
+      textStyle: TextStyle(
+        color: colors.bg,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.caption,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      waitDuration: const Duration(milliseconds: 400),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.sheet,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.modal),
+        side: colors.dark
+            ? BorderSide(color: colors.line)
+            : BorderSide.none,
+      ),
+      titleTextStyle: TextStyle(
+        color: colors.ink,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.title,
+        fontWeight: CitroType.strong,
+      ),
+      contentTextStyle: TextStyle(
+        color: colors.ink2,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.body,
+        height: 1.5,
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: colors.sheet,
+      surfaceTintColor: Colors.transparent,
+      elevation: 6,
+      shadowColor: const Color(0x33000000),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        side: BorderSide(color: colors.line),
+      ),
+      textStyle: TextStyle(
+        color: colors.ink,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.body,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: colors.surface2,
+      selectedColor: colors.accentLt,
+      side: BorderSide(color: colors.line),
+      shape: const StadiumBorder(),
+      labelStyle: TextStyle(
+        color: colors.ink2,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.label,
+      ),
+      secondaryLabelStyle: TextStyle(
+        color: colors.accentInk,
+        fontFamily: AppFonts.rounded,
+        fontFamilyFallback: AppFonts.bodyFallback,
+        fontSize: CitroType.label,
+      ),
+      checkmarkColor: colors.accentInk,
     ),
   );
 }
@@ -210,12 +371,9 @@ Widget _citroPageTransition<T>({
     reverseCurve: CitroMotion.exit,
   );
   final reduce = CitroMotion.reduced(context);
-  // 从 0 开始淡入会让旧页整段透出来，看起来像"闪一下"；
-  // 起始就有 90% 不透明度，位移负责方向感，透明度只做收尾。
-  final page = FadeTransition(
-    opacity: Tween<double>(begin: .82, end: 1).animate(enter),
-    child: child,
-  );
+  // 新页是不透明的整页（自带沉浸背景），直接推入、不做半透明：
+  // 半透明的那几帧会把旧页的字透出来，和新页叠在一起。
+  final page = child;
   if (reduce) return page;
   return SlideTransition(
     position: Tween<Offset>(begin: enterFrom, end: Offset.zero).animate(enter),

@@ -163,7 +163,7 @@ class _WindowControlState extends State<_WindowControl> {
     // 中性 hover：关闭钮用系统红，其余用半透明白/黑；不再用手账色（印章红/荧光黄）。
     final restColor = close
         ? c.danger.withAlpha(c.dark ? 92 : 30)
-        : c.surface.withAlpha(c.dark ? 190 : 220);
+        : c.surface.withValues(alpha: c.surface.a * (c.dark ? 190 : 220) / 255);
     final restBorder = close ? c.danger.withAlpha(60) : c.line;
     final hoverColor = close
         ? c.danger

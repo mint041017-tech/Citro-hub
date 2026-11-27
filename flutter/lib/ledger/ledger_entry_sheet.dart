@@ -34,9 +34,7 @@ class _LedgerEntrySheet extends StatefulWidget {
 
 class _LedgerEntrySheetState extends State<_LedgerEntrySheet> {
   late final TextEditingController _amount = TextEditingController(
-    text: widget.entry.amountCents % 100 == 0
-        ? '${widget.entry.amountCents ~/ 100}'
-        : (widget.entry.amountCents / 100).toStringAsFixed(2),
+    text: ledgerCentsInput(widget.entry.amountCents),
   );
   late final TextEditingController _note = TextEditingController(
     text: widget.entry.note,
@@ -225,7 +223,7 @@ class _LedgerEntrySheetState extends State<_LedgerEntrySheet> {
                         context,
                         initial: _at,
                       );
-                      if (picked == null) return;
+                      if (picked == null || !mounted) return;
                       setState(() => _at = picked);
                     },
                     scale: .96,

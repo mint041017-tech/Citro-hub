@@ -6,6 +6,7 @@ import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
 import 'package:citro/theme/app_theme.dart';
 import 'package:citro/theme/tokens.dart';
+import 'package:citro/widgets/auth_form_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,6 +57,122 @@ void main() {
     expect(find.text('《隐私政策》'), findsWidgets);
   });
 
+  testWidgets('login account auto-detects email', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    String? submittedAccount;
+    await tester.pumpWidget(
+      host(
+        Scaffold(
+          body: AuthFormKit(
+            login: (account, password) async {
+              submittedAccount = account;
+            },
+            register: ({
+              phone,
+              email,
+              required name,
+              required password,
+            }) async {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('auth-method-phone')), findsNothing);
+    expect(find.byKey(const ValueKey('auth-method-email')), findsNothing);
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-account')),
+      'player@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-password')),
+      'secret123',
+    );
+    await tester.tap(find.text('登录').last);
+    await tester.pumpAndSettle();
+    expect(submittedAccount, 'player@example.com');
+  });
+
+  testWidgets('register confirms password and submits temporary name', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    String? submittedPhone;
+    String? submittedName;
+    await tester.pumpWidget(
+      host(
+        Scaffold(
+          body: AuthFormKit(
+            initialMode: 'register',
+            login: (account, password) async {},
+            register: ({phone, email, required name, required password}) async {
+              submittedPhone = phone;
+              submittedName = name;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('昵称'), findsNothing);
+    expect(find.byKey(const ValueKey('auth-password-confirm')), findsOneWidget);
+    final methodSelector = find.descendant(
+      of: find.byKey(const ValueKey('auth-account')),
+      matching: find.byKey(const ValueKey('auth-method-select')),
+    );
+    expect(methodSelector, findsOneWidget);
+    expect(tester.getSize(methodSelector).height, lessThanOrEqualTo(48));
+    final accountRect = tester.getRect(
+      find.byKey(const ValueKey('auth-account')),
+    );
+    final selectorRect = tester.getRect(methodSelector);
+    expect(accountRect.right - selectorRect.right, greaterThanOrEqualTo(4));
+
+    await tester.tap(methodSelector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('auth-method-option-email')));
+    await tester.pumpAndSettle();
+    expect(find.text('name@example.com'), findsOneWidget);
+
+    await tester.tap(methodSelector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('auth-method-option-phone')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-account')),
+      '13800138000',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-password')),
+      'secret123',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-password-confirm')),
+      'secret124',
+    );
+    await tester.tap(find.byKey(const ValueKey('auth-agree')));
+    await tester.tap(find.text('创建账号'));
+    await tester.pumpAndSettle();
+    expect(find.text('两次输入的密码不一致'), findsOneWidget);
+    expect(submittedPhone, isNull);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-password-confirm')),
+      'secret123',
+    );
+    await tester.tap(find.text('创建账号'));
+    await tester.pumpAndSettle();
+    expect(submittedPhone, '13800138000');
+    expect(submittedName, startsWith('新友'));
+  });
+
   testWidgets('privacy page renders key sections', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -100,17 +217,15 @@ void main() {
 
   testWidgets('account data cleanup keeps device preferences', (tester) async {
     await Prefs.setString(PrefKeys.token, 'token');
-    await Prefs.setString(PrefKeys.zodiacSign, 'aries');
-    await Prefs.setString('citro_zodiac_ai_aries_2026-10-24', '{}');
+    await Prefs.setString('citro_checkin_days_v1_2026-10-24', '{}');
     await Prefs.setStringList(PrefKeys.playRecords, ['record']);
-    await Prefs.setString(PrefKeys.fishConfig, '{"x":1}');
+    await Prefs.setString(PrefKeys.checkinFortune, '{"x":1}');
     await Prefs.setBool(PrefKeys.notificationsEnabled, true);
     await Prefs.clearAccountData();
     expect(Prefs.getString(PrefKeys.token), isNull);
-    expect(Prefs.getString(PrefKeys.zodiacSign), isNull);
-    expect(Prefs.getString('citro_zodiac_ai_aries_2026-10-24'), isNull);
+    expect(Prefs.getString('citro_checkin_days_v1_2026-10-24'), isNull);
     expect(Prefs.getStringList(PrefKeys.playRecords), isEmpty);
-    expect(Prefs.getString(PrefKeys.fishConfig), isNull);
+    expect(Prefs.getString(PrefKeys.checkinFortune), isNull);
     expect(Prefs.getBool(PrefKeys.notificationsEnabled, false), isTrue);
   });
 }

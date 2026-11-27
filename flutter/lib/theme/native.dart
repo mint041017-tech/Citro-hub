@@ -5,10 +5,9 @@
 /// - Windows / Web：半透明表面 + 发丝边（避免大面积 BackdropFilter 重绘）。
 library;
 
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app_theme.dart';
 import 'tokens.dart';
@@ -21,12 +20,6 @@ class CitroNative {
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS);
-
-  static bool get isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
-  static bool get isWindows =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   /// 是否启用真实背景模糊。
   ///
@@ -41,14 +34,6 @@ class CitroNative {
     if (ratio <= 1) return 1;
     return (1 / ratio).clamp(0.25, 0.5);
   }
-
-  /// 中文回退：应用内置圆体优先，其次本机系统中文字体。
-  static List<String> get uiFontFallback => const [
-    AppFonts.rounded,
-    'Noto Sans SC',
-    'PingFang SC',
-    'Microsoft YaHei',
-  ];
 
   /// Apple 的字距规范：大标题收紧，小字保持 0，避免正文挤在一起。
   static double trackingFor(double size) => size >= 20 ? -0.02 * size : 0;
@@ -70,7 +55,7 @@ extension CitroNativeType on BuildContext {
     final colors = c;
     return TextStyle(
       fontFamily: AppFonts.rounded,
-      fontFamilyFallback: CitroNative.uiFontFallback,
+      fontFamilyFallback: AppFonts.fallback,
       fontSize: size,
       fontWeight: weight,
       color: color ?? colors.ink,
@@ -81,28 +66,24 @@ extension CitroNativeType on BuildContext {
   }
 }
 
-/// 玻璃 / tonal 材质的配色。亮色用中性白，暗色对齐 iOS 的
-/// secondarySystemBackground，避免"发蓝的深灰"。
+/// 玻璃 / tonal 材质的配色。亮色用半透明白色，暗色用轻量白色覆层，
+/// 让背景透出来，同时保留发丝边与顶部高光。
 extension CitroMaterialColors on CitroColors {
   /// 导航栏、侧栏、浮动胶囊的底色。
   Color get glassTint =>
-      dark ? const Color(0xC71C1C23) : const Color(0xE6FFFFFF);
+      dark ? const Color(0x1FFFFFFF) : const Color(0x8CFFFFFF);
 
   /// 对话框 / 弹层用的更实一点的底色，保证正文对比度。
   Color get glassTintStrong =>
-      dark ? const Color(0xE61C1C23) : const Color(0xFFFFFFFF);
+      dark ? const Color(0x33FFFFFF) : const Color(0xB8FFFFFF);
 
-  /// 发丝描边：亮色 black 10%，暗色 white 16%。
+  /// 发丝描边：跟随当前玻璃表面色的同色勾边。
   Color get glassBorder =>
-      dark ? const Color(0x29FFFFFF) : const Color(0x1A000000);
+      dark ? surface.withValues(alpha: .28) : const Color(0x1A000000);
 
   /// 顶部内高光，模拟玻璃边缘折射。
   Color get glassHighlight =>
       dark ? const Color(0x14FFFFFF) : const Color(0x33FFFFFF);
-
-  /// 玻璃投影：中性黑，不再用暖棕。
-  Color get glassShadow =>
-      dark ? const Color(0x59000000) : const Color(0x14000000);
 }
 
 /// 平台自适应的材质表面。
@@ -114,7 +95,7 @@ class CitroGlass extends StatelessWidget {
   final Widget child;
   final BorderRadius borderRadius;
   final bool blur;
-  final double sigma;
+  final double? sigma;
   final Color? tint;
   final Color? borderColor;
   final bool highlight;
@@ -128,7 +109,7 @@ class CitroGlass extends StatelessWidget {
     required this.child,
     this.borderRadius = const BorderRadius.all(Radius.circular(24)),
     this.blur = true,
-    this.sigma = 20,
+    this.sigma,
     this.tint,
     this.borderColor,
     // 玻璃统一无边框：默认不再描边、不再压内高光。
@@ -143,77 +124,79 @@ class CitroGlass extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.c;
     final line = CitroNative.hairline(context);
-    final radius = borderRadius;
+    final radius = borderRadius.topLeft.x;
+    final base = LiquidGlassSettings.ios27(context);
     final tintColor = tint ?? colors.glassTint;
-
-    Widget surface = DecoratedBox(
-      decoration: BoxDecoration(
-        color: tintColor,
-        borderRadius: radius,
-        border: Border.all(
-          color: borderColor ?? Colors.transparent,
-          width: line,
-        ),
-        boxShadow: shadow,
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            if (highlight)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: radius,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [colors.glassHighlight, Colors.transparent],
-                        stops: const [0, .55],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            Padding(padding: padding ?? EdgeInsets.zero, child: child),
-          ],
-        ),
-      ),
+    final edgeColor = tintColor.withValues(
+      alpha: (tintColor.a + .12).clamp(0.0, 1.0),
     );
-
-    // BackdropFilter 必须在半透明底色之下，并且裁到圆角内，
-    // 否则模糊会溢出到卡片外部。
-    if (blur && CitroNative.supportsBackdropBlur) {
-      surface = ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: sigma,
-            sigmaY: sigma,
-            tileMode: TileMode.decal,
-          ),
-          child: surface,
-        ),
-      );
-    }
-
-    if (height != null || width != null) {
-      surface = SizedBox(height: height, width: width, child: surface);
-    }
+    final settings = base.copyWith(
+      glassColor: tintColor,
+      bodyMode: GlassBodyMode.clear,
+      shadow: shadow ?? base.shadow,
+      frost: 0,
+      frostOpacity: 0,
+      bodyShade: 0,
+      saturation: 1,
+      lightIntensity: 0,
+      ambientStrength: 0,
+      fresnelStrength: 0,
+      edgeAbsorption: 0,
+      glowIntensity: 0,
+      rimLight: 0,
+      rimShade: 0,
+      whitenStrength: 0,
+      blur: blur ? (sigma ?? base.blur) : 0,
+    );
+    Widget surface = GlassContainer(
+      width: width,
+      height: height,
+      padding: padding,
+      clipBehavior: Clip.antiAlias,
+      quality: GlassQuality.minimal,
+      useOwnLayer: true,
+      settings: settings,
+      shape: LiquidRoundedSuperellipse(borderRadius: radius),
+      child: child,
+    );
+    surface = CustomPaint(
+      foregroundPainter: _GlassBorderPainter(
+        radius: radius,
+        color: edgeColor,
+        width: line,
+      ),
+      child: surface,
+    );
     return surface;
   }
 }
 
-/// 材质阴影（导航栏 / 侧栏 / 浮动胶囊）。
-extension CitroChromeShadow on AppShadows {
-  List<BoxShadow> chrome(CitroColors c) => [
-    BoxShadow(
-      color: c.glassShadow,
-      blurRadius: 24,
-      spreadRadius: -14,
-      offset: const Offset(0, 10),
-    ),
-  ];
+class _GlassBorderPainter extends CustomPainter {
+  final double radius;
+  final Color color;
+  final double width;
+
+  const _GlassBorderPainter({
+    required this.radius,
+    required this.color,
+    required this.width,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final rect = (Offset.zero & size).deflate(width / 2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(radius - width / 2)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = width
+        ..isAntiAlias = true
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GlassBorderPainter old) =>
+      old.radius != radius || old.color != color || old.width != width;
 }

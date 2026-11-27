@@ -11,29 +11,22 @@ class LedgerBarChart extends StatelessWidget {
   final List<({DateTime day, int expense, int income})> data;
   final double height;
 
-  /// 只显示最近 N 天；null 表示整个月。
-  final int? limit;
-
   const LedgerBarChart({
     super.key,
     required this.data,
     this.height = 132,
-    this.limit,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final rows = (limit == null || limit! >= data.length)
-        ? data
-        : data.sublist(data.length - limit!);
     return RepaintBoundary(
       child: SizedBox(
         height: height,
         width: double.infinity,
         child: CustomPaint(
           painter: _BarPainter(
-            data: rows,
+            data: data,
             line: c.line2,
             grid: c.line,
             expense: c.accent,

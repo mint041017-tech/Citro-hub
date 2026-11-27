@@ -172,7 +172,6 @@ class CheckinDayEntry {
     int? levelIndex,
     String? kind,
     String? cardId,
-    bool? clearCardId,
     bool? transferUsed,
     String? actionText,
     String? actionType,
@@ -180,11 +179,8 @@ class CheckinDayEntry {
     String? linkedId,
     bool? clearLinkedId,
     String? completedActionText,
-    bool? clearCompletedActionText,
     int? completedAt,
-    bool? clearCompletedAt,
     String? reflectionMood,
-    bool? clearReflectionMood,
     String? reflectionText,
     int? reflectionUpdatedAt,
     int? updatedAt,
@@ -198,21 +194,15 @@ class CheckinDayEntry {
     signTitle: signTitle ?? this.signTitle,
     levelIndex: levelIndex ?? this.levelIndex,
     kind: kind ?? this.kind,
-    cardId: clearCardId == true ? null : (cardId ?? this.cardId),
+    cardId: cardId ?? this.cardId,
     transferUsed: transferUsed ?? this.transferUsed,
     actionText: actionText ?? this.actionText,
     actionType: actionType ?? this.actionType,
     actionStatus: actionStatus ?? this.actionStatus,
     linkedId: clearLinkedId == true ? null : (linkedId ?? this.linkedId),
-    completedActionText: clearCompletedActionText == true
-        ? null
-        : (completedActionText ?? this.completedActionText),
-    completedAt: clearCompletedAt == true
-        ? null
-        : (completedAt ?? this.completedAt),
-    reflectionMood: clearReflectionMood == true
-        ? null
-        : (reflectionMood ?? this.reflectionMood),
+    completedActionText: completedActionText ?? this.completedActionText,
+    completedAt: completedAt ?? this.completedAt,
+    reflectionMood: reflectionMood ?? this.reflectionMood,
     reflectionText: reflectionText ?? this.reflectionText,
     reflectionUpdatedAt: reflectionUpdatedAt ?? this.reflectionUpdatedAt,
     createdAt: createdAt,
@@ -368,7 +358,6 @@ class CheckinVolume {
 
   int get filled => entries.length;
   bool get full => entries.length >= 7;
-  bool get isEmpty => entries.isEmpty;
   String get title => '第 $index 卷';
 
   String? get startDate => entries.isEmpty ? null : entries.first.date;

@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../overlays/qr_login_view.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'modal.dart';
 import 'paper.dart';
@@ -20,9 +23,13 @@ import 'paper.dart';
 enum AuthLegalDoc { terms, privacy }
 
 /// 登录提交：账号（手机号或邮箱，已按规则清洗）+ 密码。
-typedef AuthLoginInvoker = Future<void> Function(String account, String password);
+typedef AuthLoginInvoker = Future<void> Function(
+  String account,
+  String password,
+);
 
-/// 注册提交：参数命名与可空性对齐 `AppState.register`。
+/// 注册提交：参数命名与可空性对齐 `AppState.register`。昵称由表单生成
+/// 临时唯一名，注册后的首次资料引导再让用户修改。
 typedef AuthRegisterInvoker = Future<void> Function({
   String? phone,
   String? email,
@@ -92,34 +99,40 @@ class AuthFormKit extends StatefulWidget {
 class _AuthFormKitState extends State<AuthFormKit> {
   late String mode = widget.initialMode;
   String method = 'phone';
-  final phone = TextEditingController();
-  final email = TextEditingController();
-  final name = TextEditingController();
+  final account = TextEditingController();
   final pw = TextEditingController();
+  final pwConfirm = TextEditingController();
   bool loading = false;
   bool _agreed = false;
   bool _qrMode = false;
+  bool _methodHover = false;
   String? error;
 
   static final _phoneRe = RegExp(r'^1[3-9]\d{9}$');
   static final _emailRe = RegExp(
     r'^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$',
   );
-  static final _nameRe = RegExp(r'^[\u4e00-\u9fa5A-Za-z0-9_]{2,16}$');
 
   @override
   void dispose() {
-    phone.dispose();
-    email.dispose();
-    name.dispose();
+    account.dispose();
     pw.dispose();
+    pwConfirm.dispose();
     super.dispose();
   }
 
-  bool get _isEmail => method == 'email';
+  bool get _isEmail =>
+      mode == 'register' ? method == 'email' : account.text.contains('@');
 
-  String get _account =>
-      _isEmail ? email.text.trim() : phone.text.replaceAll(RegExp(r'\D'), '');
+  String get _account {
+    final raw = account.text.trim();
+    return _isEmail ? raw : raw.replaceAll(RegExp(r'\D'), '');
+  }
+
+  String _temporaryName() {
+    final stamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    return '新友$stamp${math.Random().nextInt(36).toRadixString(36)}';
+  }
 
   Future<void> _submit() async {
     if (_isEmail) {
@@ -132,14 +145,6 @@ class _AuthFormKitState extends State<AuthFormKit> {
       return;
     }
     if (mode == 'register') {
-      if (!_nameRe.hasMatch(name.text.trim())) {
-        setState(() => error = '昵称需 2-16 位，中英文/数字/下划线');
-        return;
-      }
-      if (name.text.trim().startsWith('游客')) {
-        setState(() => error = '该昵称不可用，换一个吧');
-        return;
-      }
       if (!_agreed) {
         setState(() => error = '请先阅读并同意《用户协议》和《隐私政策》');
         return;
@@ -147,6 +152,10 @@ class _AuthFormKitState extends State<AuthFormKit> {
     }
     if (pw.text.length < 6 || pw.text.length > 32) {
       setState(() => error = '密码需 6-32 位');
+      return;
+    }
+    if (mode == 'register' && pwConfirm.text != pw.text) {
+      setState(() => error = '两次输入的密码不一致');
       return;
     }
     setState(() {
@@ -160,15 +169,12 @@ class _AuthFormKitState extends State<AuthFormKit> {
         await widget.register(
           phone: _isEmail ? null : _account,
           email: _isEmail ? _account : null,
-          name: name.text.trim(),
+          name: _temporaryName(),
           password: pw.text,
         );
       }
       if (!mounted) return;
-      AppToast.show(
-        context,
-        mode == 'login' ? '登录成功，欢迎回来' : '注册成功，欢迎加入',
-      );
+      AppToast.show(context, mode == 'login' ? '登录成功，欢迎回来' : '注册成功，欢迎加入');
       await widget.onSuccess?.call(mode == 'register');
     } on Exception catch (e) {
       if (mounted) {
@@ -182,7 +188,27 @@ class _AuthFormKitState extends State<AuthFormKit> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return _qrMode ? _qrContent(c) : _passwordContent(c);
+    final reduce = CitroMotion.reduced(context);
+    final child = _qrMode ? _qrContent(c) : _passwordContent(c);
+    return AnimatedSwitcher(
+      duration: reduce ? Duration.zero : CitroMotion.size,
+      switchInCurve: CitroMotion.easeOut,
+      switchOutCurve: CitroMotion.exit,
+      transitionBuilder: (child, animation) {
+        if (reduce) return child;
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, .035),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(_qrMode ? 'qr' : mode), child: child),
+    );
   }
 
   Widget _qrContent(CitroColors c) {
@@ -235,53 +261,49 @@ class _AuthFormKitState extends State<AuthFormKit> {
         const SizedBox(height: 18),
         _modeSwitch(),
         const SizedBox(height: 14),
-        _methodSwitch(),
-        const SizedBox(height: 14),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: _isEmail
-              ? CitroField(
-                  key: const ValueKey('email'),
-                  label: '邮箱',
-                  hint: 'name@example.com',
-                  controller: email,
-                  keyboardType: TextInputType.emailAddress,
-                  maxLength: 64,
-                  onChanged: (_) {
-                    if (error != null) setState(() => error = null);
-                  },
+        CitroField(
+          key: const ValueKey('auth-account'),
+          label: mode == 'login' ? '手机号 / 邮箱' : (_isEmail ? '邮箱' : '手机号'),
+          hint: mode == 'login'
+              ? '输入手机号或邮箱'
+              : (_isEmail ? 'name@example.com' : '请输入 11 位手机号'),
+          controller: account,
+          keyboardType: _isEmail
+              ? TextInputType.emailAddress
+              : TextInputType.phone,
+          maxLength: mode == 'register' && !_isEmail ? 11 : 64,
+          suffix: mode == 'register'
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _methodSelector(),
                 )
-              : CitroField(
-                  key: const ValueKey('phone'),
-                  label: '手机号',
-                  hint: '请输入 11 位手机号',
-                  controller: phone,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 11,
-                  onChanged: (_) {
-                    if (error != null) setState(() => error = null);
-                  },
-                ),
+              : null,
+          onChanged: (_) {
+            setState(() {
+              if (error != null) error = null;
+            });
+          },
         ),
-        if (mode == 'register') ...[
-          const SizedBox(height: 14),
-          CitroField(
-            label: '昵称',
-            hint: '2-16 位，中英文/数字/下划线',
-            controller: name,
-            maxLength: 16,
-          ),
-        ],
         const SizedBox(height: 14),
         CitroField(
+          key: const ValueKey('auth-password'),
           label: '密码',
           hint: '6-32 位密码',
           controller: pw,
           obscure: true,
           maxLength: 32,
         ),
+        if (mode == 'register') ...[
+          const SizedBox(height: 14),
+          CitroField(
+            key: const ValueKey('auth-password-confirm'),
+            label: '确认密码',
+            hint: '再次输入密码',
+            controller: pwConfirm,
+            obscure: true,
+            maxLength: 32,
+          ),
+        ],
         if (error != null) ...[
           const SizedBox(height: 10),
           Row(
@@ -315,7 +337,7 @@ class _AuthFormKitState extends State<AuthFormKit> {
         const SizedBox(height: 12),
         if (mode == 'register')
           Text(
-            '昵称会公开展示，别用真名哦。',
+            '注册后可在个人资料中设置昵称和生日。',
             textAlign: TextAlign.center,
             style: context.body(size: CitroType.small, color: c.inkSoft),
           )
@@ -324,9 +346,15 @@ class _AuthFormKitState extends State<AuthFormKit> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('登录即表示你同意', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                '登录即表示你同意',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
               _legalLink('《用户协议》', AuthLegalDoc.terms),
-              Text('和', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                '和',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
               _legalLink('《隐私政策》', AuthLegalDoc.privacy),
             ],
           ),
@@ -356,7 +384,11 @@ class _AuthFormKitState extends State<AuthFormKit> {
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: context.body(size: CitroType.caption, color: c.inkSoft, height: 1.5),
+          style: context.body(
+            size: CitroType.caption,
+            color: c.inkSoft,
+            height: 1.5,
+          ),
         ),
       ],
     );
@@ -399,12 +431,12 @@ class _AuthFormKitState extends State<AuthFormKit> {
 
   Widget _modeSwitch() {
     final c = context.c;
+    // iOS 分段控件：灰色轨道 + 白色浮起滑块。
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: c.surface2,
-        border: Border.all(color: c.line2),
-        borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [_modeChip('登录', 'login'), _modeChip('注册', 'register')],
@@ -427,16 +459,18 @@ class _AuthFormKitState extends State<AuthFormKit> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: 38,
+          height: 34,
           decoration: BoxDecoration(
-            color: active ? c.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+            color: active
+                ? (c.dark ? const Color(0xFF636366) : const Color(0xFFFFFFFF))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
             boxShadow: active
-                ? [
+                ? const [
                     BoxShadow(
-                      color: c.ink.withAlpha(20),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      color: Color(0x1F000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
                     ),
                   ]
                 : null,
@@ -446,8 +480,8 @@ class _AuthFormKitState extends State<AuthFormKit> {
               label,
               style: context.body(
                 size: CitroType.body,
-                weight: CitroType.medium,
-                color: active ? c.onAccent : c.inkSoft,
+                weight: active ? CitroType.strong : CitroType.medium,
+                color: active ? c.ink : c.inkSoft,
               ),
             ),
           ),
@@ -456,66 +490,147 @@ class _AuthFormKitState extends State<AuthFormKit> {
     );
   }
 
-  Widget _methodSwitch() {
-    return Row(
-      children: [
-        Expanded(child: _methodChip('手机号', 'phone', AppIcons.phone)),
-        const SizedBox(width: 8),
-        Expanded(child: _methodChip('邮箱', 'email', AppIcons.mail)),
-      ],
-    );
-  }
-
-  Widget _methodChip(String label, String value, String icon) {
+  Widget _methodSelector() {
     final c = context.c;
-    final active = method == value;
-    return GestureDetector(
-      onTap: () {
-        if (loading || active) return;
-        setState(() {
-          method = value;
-          error = null;
-        });
-      },
-      child: AnimatedContainer(
-        key: ValueKey('auth-method-$value'),
-        duration: const Duration(milliseconds: 180),
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: active
-              ? c.accentLt.withAlpha(c.dark ? 90 : 170)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(CitroColors.radii.small),
-          border: Border.all(color: active ? c.accent : c.line2),
-        ),
-        // 文字在胶囊内真正居中；图标单独靠左，不参与文字居中的宽度计算。
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Center(
-              child: Text(
-                label,
-                style: context.body(
-                  size: CitroType.meta,
-                  weight: CitroType.medium,
-                  color: active ? c.ink : c.inkSoft,
+    final label = method == 'phone' ? '手机号' : '邮箱';
+    return SizedBox(
+      width: 92,
+      height: 36,
+      child: Semantics(
+        button: true,
+        label: '注册方式，$label',
+        child: Builder(
+          builder: (selectorContext) => MouseRegion(
+            cursor: loading
+                ? SystemMouseCursors.basic
+                : SystemMouseCursors.click,
+            onEnter: (_) {
+              if (!_methodHover) setState(() => _methodHover = true);
+            },
+            onExit: (_) {
+              if (_methodHover) setState(() => _methodHover = false);
+            },
+            child: GestureDetector(
+              key: const ValueKey('auth-method-select'),
+              behavior: HitTestBehavior.opaque,
+              onTap: loading
+                  ? null
+                  : () async {
+                      final box = selectorContext.findRenderObject();
+                      final overlay = Overlay.of(selectorContext).context
+                          .findRenderObject();
+                      if (box is! RenderBox ||
+                          !box.hasSize ||
+                          overlay is! RenderBox ||
+                          !overlay.hasSize) {
+                        return;
+                      }
+                      final anchor =
+                          box.localToGlobal(Offset.zero, ancestor: overlay) &
+                          box.size;
+                      final screen = Offset.zero & overlay.size;
+                      final selected = await showMenu<String>(
+                        context: selectorContext,
+                        color: c.sheet,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.field,
+                          ),
+                          side: BorderSide(color: c.line),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 120,
+                          maxWidth: 120,
+                        ),
+                        position: RelativeRect.fromRect(
+                          Rect.fromLTWH(
+                            anchor.right - 120,
+                            anchor.bottom + 8,
+                            120,
+                            0,
+                          ),
+                          screen,
+                        ),
+                        items: [
+                          for (final value in const ['phone', 'email'])
+                            PopupMenuItem<String>(
+                              key: ValueKey('auth-method-option-$value'),
+                              value: value,
+                              height: 38,
+                              child: Row(
+                                children: [
+                                  AppIcon(
+                                    value == 'phone'
+                                        ? AppIcons.phone
+                                        : AppIcons.mail,
+                                    size: 14,
+                                    color: c.ink2,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    value == 'phone' ? '手机号' : '邮箱',
+                                    style: context.body(
+                                      size: CitroType.meta,
+                                      weight: CitroType.medium,
+                                      color: c.ink,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (method == value)
+                                    AppIcon(
+                                      AppIcons.check,
+                                      size: 14,
+                                      color: c.accent,
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      );
+                      if (!mounted || selected == null || selected == method) {
+                        return;
+                      }
+                      setState(() {
+                        method = selected;
+                        error = null;
+                      });
+                    },
+              child: AnimatedContainer(
+                duration: CitroMotion.hover,
+                curve: CitroMotion.easeOut,
+                width: 92,
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _methodHover
+                      ? c.accentLt.withValues(alpha: c.dark ? .28 : .52)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(CitroColors.radii.field),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.body(
+                        size: CitroType.small,
+                        weight: CitroType.medium,
+                        color: _methodHover ? c.accentInk : c.ink2,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    AppIcon(
+                      AppIcons.chevronDown,
+                      size: 11,
+                      color: _methodHover ? c.accentInk : c.inkSoft,
+                    ),
+                  ],
                 ),
               ),
             ),
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AppIcon(
-                  icon,
-                  size: 15,
-                  color: active ? c.accentInk : c.inkSoft,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -527,6 +642,7 @@ class _AuthFormKitState extends State<AuthFormKit> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
+          key: const ValueKey('auth-agree'),
           behavior: HitTestBehavior.opaque,
           onTap: () {
             setState(() {
@@ -564,9 +680,15 @@ class _AuthFormKitState extends State<AuthFormKit> {
           child: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('我已阅读并同意', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                '我已阅读并同意',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
               _legalLink('《用户协议》', AuthLegalDoc.terms),
-              Text('和', style: context.body(size: CitroType.small, color: c.inkSoft)),
+              Text(
+                '和',
+                style: context.body(size: CitroType.small, color: c.inkSoft),
+              ),
               _legalLink('《隐私政策》', AuthLegalDoc.privacy),
             ],
           ),

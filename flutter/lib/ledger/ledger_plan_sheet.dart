@@ -41,11 +41,11 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
   void initState() {
     super.initState();
     final plan = LedgerStore.instance.planFor(widget.monthKey);
-    _budget = TextEditingController(text: _editText(plan.budgetCents));
-    _income = TextEditingController(text: _editText(plan.incomeCents));
+    _budget = TextEditingController(text: ledgerCentsInput(plan.budgetCents));
+    _income = TextEditingController(text: ledgerCentsInput(plan.incomeCents));
     for (final category in LedgerStore.instance.expenseCategories) {
       _category[category.id] = TextEditingController(
-        text: _editText(plan.budgetFor(category.id)),
+        text: ledgerCentsInput(plan.budgetFor(category.id)),
       );
     }
   }
@@ -60,13 +60,6 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
     super.dispose();
   }
 
-  static String _editText(int cents) {
-    if (cents <= 0) return '';
-    return cents % 100 == 0
-        ? '${cents ~/ 100}'
-        : (cents / 100).toStringAsFixed(2);
-  }
-
   void _copyLastMonth() {
     final source = LedgerDates.monthKeyOfOffset(widget.monthKey, -1);
     final plan = LedgerStore.instance.planFor(source);
@@ -74,10 +67,10 @@ class _LedgerPlanSheetState extends State<LedgerPlanSheet> {
       ledgerToast(context, '上个月还没有设置预算');
       return;
     }
-    _budget.text = _editText(plan.budgetCents);
-    _income.text = _editText(plan.incomeCents);
+    _budget.text = ledgerCentsInput(plan.budgetCents);
+    _income.text = ledgerCentsInput(plan.incomeCents);
     for (final entry in _category.entries) {
-      entry.value.text = _editText(plan.budgetFor(entry.key));
+      entry.value.text = ledgerCentsInput(plan.budgetFor(entry.key));
     }
     setState(() {});
     ledgerToast(context, '已填入 ${LedgerDates.shortMonthLabel(source)} 的预算');

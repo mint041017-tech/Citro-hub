@@ -144,11 +144,10 @@ class GameEndOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final id = identity;
     return Container(
       decoration: BoxDecoration(
         color: c.surface.withValues(alpha: 0.96),
-        border: Border.all(color: id.primary.withAlpha(70)),
+        border: Border.all(color: identity.primary.withAlpha(70)),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(

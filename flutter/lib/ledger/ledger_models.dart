@@ -135,7 +135,6 @@ class LedgerEntry {
     String? categoryId,
     String? note,
     DateTime? occurredAt,
-    LedgerSource? source,
   }) => LedgerEntry(
     id: id,
     kind: kind ?? this.kind,
@@ -144,7 +143,7 @@ class LedgerEntry {
     note: note ?? this.note,
     occurredAt: occurredAt ?? this.occurredAt,
     createdAt: createdAt,
-    source: source ?? this.source,
+    source: source,
   );
 
   factory LedgerEntry.fromJson(Map<String, dynamic> j) {
@@ -272,18 +271,15 @@ class LedgerDraft {
 
   LedgerDraft copyWith({
     LedgerKind? kind,
-    int? amountCents,
     String? categoryId,
-    String? note,
     DateTime? occurredAt,
-    double? confidence,
   }) => LedgerDraft(
     kind: kind ?? this.kind,
-    amountCents: amountCents ?? this.amountCents,
+    amountCents: amountCents,
     categoryId: categoryId ?? this.categoryId,
-    note: note ?? this.note,
+    note: note,
     occurredAt: occurredAt ?? this.occurredAt,
-    confidence: confidence ?? this.confidence,
+    confidence: confidence,
     rawText: rawText,
   );
 
@@ -409,6 +405,14 @@ int? ledgerParseAmount(String raw) {
     fen = int.parse(parts[1].padRight(2, '0').substring(0, 2));
   }
   return yuan * 100 + fen;
+}
+
+/// 分 → 输入框文本：整数不带小数，非整数保留两位；0 或负数返回空串。
+String ledgerCentsInput(int cents) {
+  if (cents <= 0) return '';
+  return cents % 100 == 0
+      ? '${cents ~/ 100}'
+      : (cents / 100).toStringAsFixed(2);
 }
 
 String _groupDigits(int value) {

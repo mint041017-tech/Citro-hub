@@ -1064,7 +1064,6 @@ class GameSheepView extends StatelessWidget {
       // 2026-10-23：恢复「正在玩」条（web gamesLiveMount 对全部 12 个游戏页
       // 统一挂载，v1.5.8 误关）；页面高度超过视口时按 web 行为进滚动流。
       showLive: true,
-      liveInScroll: true,
       liveProgress: liveProgress,
       pills: [
         GameScorePill(label: '关卡', value: levelText),

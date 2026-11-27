@@ -49,7 +49,7 @@ void main() {
     final bank = await MbtiBank.load();
     await tester.pumpWidget(_wrap(const MbtiPage()));
     await _settle(tester);
-    expect(find.text('16 型人格测试'), findsOneWidget);
+    expect(find.text('16 型测试'), findsOneWidget);
     expect(find.text('MBTI 测试'), findsOneWidget);
     expect(find.textContaining('完整版'), findsNothing);
     expect(find.text('仅此一版'), findsNothing);

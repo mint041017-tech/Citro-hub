@@ -38,7 +38,9 @@ class SearchPage extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
                               color: c.surface,
-                              borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                              borderRadius: BorderRadius.circular(
+                                CitroColors.radii.chip,
+                              ),
                               border: Border.all(color: c.line),
                               boxShadow: CitroColors.shadows.card(c),
                             ),
@@ -82,8 +84,10 @@ class SearchPage extends StatelessWidget {
                           ),
                           const SizedBox(height: AppSpacing.x2),
                           const GlobalSearch(hint: '搜索页面 / 游戏 / Mod / 工具 / 驱动'),
-                          if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows ||
-                              defaultTargetPlatform == TargetPlatform.macOS) ...[
+                          if (kIsWeb ||
+                              defaultTargetPlatform == TargetPlatform.windows ||
+                              defaultTargetPlatform ==
+                                  TargetPlatform.macOS) ...[
                             const SizedBox(height: AppSpacing.x2),
                             Text(
                               '支持上下键选择，回车直接打开；没有本地结果时回退到必应。',
@@ -109,7 +113,7 @@ class SearchPage extends StatelessWidget {
                             ('资源库', 'Mod / 工具 / 外设驱动'),
                             ('食谱日记', '菜谱 / 冰箱 / 购物清单'),
                             ('Citro 社区', '动态 / 评论 / 消息'),
-                            ('效率工具', '番茄钟 / 天气 / 星象'),
+                            ('效率工具', '番茄钟 / 天气 / 打卡'),
                           ])
                             _SearchHint(label: item.$1, desc: item.$2),
                         ],

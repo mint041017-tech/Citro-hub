@@ -44,8 +44,9 @@ class LegalPage extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
                             color: c.surface,
-                            borderRadius:
-                                BorderRadius.circular(CitroColors.radii.chip),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.chip,
+                            ),
                             border: Border.all(color: c.line),
                             boxShadow: CitroColors.shadows.card(c),
                           ),
@@ -80,14 +81,19 @@ class LegalPage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '生效日期：2026 年 10 月 24 日 · 版本 v1.0',
-                    style: context.body(size: CitroType.small, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.inkSoft,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.x2),
                   Container(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                     decoration: BoxDecoration(
                       color: c.surface2,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.inner,
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +103,9 @@ class LegalPage extends StatelessWidget {
                           margin: const EdgeInsets.only(top: 3, bottom: 3),
                           decoration: BoxDecoration(
                             color: c.accent,
-                            borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+                            borderRadius: BorderRadius.circular(
+                              CitroColors.radii.xs,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -141,7 +149,10 @@ class LegalPage extends StatelessWidget {
                   Text(
                     '如本页面与线上公布版本不一致，以最新公布版本为准。',
                     textAlign: TextAlign.center,
-                    style: context.body(size: CitroType.micro, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.micro,
+                      color: c.inkSoft,
+                    ),
                   ),
                 ],
               ),
@@ -215,7 +226,11 @@ class _SectionBlock extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               p,
-              style: context.body(size: CitroType.meta, color: c.ink2, height: 1.85),
+              style: context.body(
+                size: CitroType.meta,
+                color: c.ink2,
+                height: 1.85,
+              ),
             ),
           ),
       ],
@@ -230,10 +245,10 @@ const kPrivacySections = <_LegalSection>[
   _LegalSection('我们收集的信息', [
     '账号信息：手机号、昵称、加密后的密码（服务端使用 scrypt 加盐哈希，不保存明文）、头像与生日（可选）。',
     '社区内容：你发布的文字、图片、语音、评论与点赞。选择匿名发布时，其他用户看不到你的账号昵称，但服务端仍会为安全审核保留内容归属。',
-    '个人工具数据：笔记、食谱、下厨日记、冰箱与购物清单。除你主动公开到「食谱广场」的食谱外，这些数据仅你本人可见。',
+    '个人工具数据：食谱、下厨日记、冰箱与购物清单。除你主动公开到「食谱广场」的食谱外，这些数据仅你本人可见。',
     '设备与本机数据：随机生成的访客 ID、主题、通知开关、天气城市、游戏最高分、本机黑名单，以及卡面收藏进度与抽卡机会。',
     '位置信息：仅在你授权定位后读取大致位置，用于获取天气；拒绝授权不会影响其他功能，你可以继续使用默认城市。',
-    'AI 与星象：你主动发送给 AI 的对话文本、图片与食谱上下文会发送给第三方 AI 服务用于生成回复；每日星象只发送星座、日期等信息，不发送手机号。',
+    'AI：你主动发送给 AI 的对话文本、图片与食谱上下文会发送给第三方 AI 服务用于生成回复，不会发送手机号。',
     'CiCi 社区主动评论：CiCi 会读取当天公开的社区动态文字和用户对 CiCi 的回复，交由第三方 AI 判断情绪并生成评论；评论以 CiCi 身份公开可见，不会附带你的账号信息。',
     '游戏数据：昵称或访客 ID、成绩、排行榜信息、「正在玩」页面中你主动展示的游戏进度，以及玩法抽签的签面与时间。',
     '每日运签：当天抽到的签位、是否使用过转运；跟 CiCi 分享的好事会发送给 AI 生成回复，并在登录状态下以「今日好事：…」同步为一条社区动态（含所发图片，公开可见）。',
@@ -245,7 +260,7 @@ const kPrivacySections = <_LegalSection>[
     '通知：用于社区消息与烹饪计时提醒；可在 App 内或系统设置中关闭。',
   ]),
   _LegalSection('使用目的', [
-    '提供账号登录、社区互动、食谱日记、游戏排行、天气与星象等功能；保障服务安全、处理举报与违规内容；在你同意的情况下通过第三方 AI 生成回复。',
+    '提供账号登录、社区互动、食谱日记、游戏排行与天气等功能；保障服务安全、处理举报与违规内容；在你同意的情况下通过第三方 AI 生成回复。',
     '我们不会将你的个人信息用于广告画像，也不会出售个人信息。',
   ]),
   _LegalSection('第三方与共享', [
@@ -257,7 +272,7 @@ const kPrivacySections = <_LegalSection>[
   ]),
   _LegalSection('存储与安全', [
     '账号与社区数据存储在运营者控制的服务器中；密码使用加盐哈希，传输使用 HTTPS。我们通过访问控制与最小化收集降低风险。',
-    '账号数据保留至你主动注销。注销后，账号、帖子、评论、图片、语音、笔记、食谱、成绩、抽签记录与头像会被删除；因安全审核、争议处理或法律要求必须保留的记录，会在必要期限内保存并限制访问。',
+    '账号数据保留至你主动注销。注销后，账号、帖子、评论、图片、语音、食谱、成绩、抽签记录与头像会被删除；因安全审核、争议处理或法律要求必须保留的记录，会在必要期限内保存并限制访问。',
     '本机黑名单只保存在当前设备，不会上传服务器；卸载或清除 App 数据会一并删除。',
   ]),
   _LegalSection('你的权利', [
@@ -278,7 +293,7 @@ const kPrivacySections = <_LegalSection>[
 
 const kTermsSections = <_LegalSection>[
   _LegalSection('服务内容', [
-    'Citro 提供社区、游戏、食谱日记、天气、星象、笔记、抽签等个人向功能。部分功能需要登录，AI 与天气等功能依赖第三方服务，可能因网络或服务调整而暂时不可用。',
+    'Citro 提供社区、游戏、食谱日记、天气、抽签等个人向功能。部分功能需要登录，AI 与天气等功能依赖第三方服务，可能因网络或服务调整而暂时不可用。',
   ]),
   _LegalSection('账号', [
     '注册需要手机号或邮箱、昵称与密码。请妥善保管账号与密码，不要冒用他人信息；因你保管不善造成的损失由你自行承担。',
@@ -298,7 +313,7 @@ const kTermsSections = <_LegalSection>[
     '你保留自己发布内容的权利，并授予运营者为提供、展示、存储、转码与备份服务所必需的非独占许可。你删除内容或注销账号后，该许可随数据删除而终止，法律要求保留的除外。',
   ]),
   _LegalSection('AI 与娱乐内容', [
-    'AI 对话、每日星象、抽签与游戏内容仅供娱乐参考，不构成医疗、法律、投资或其他专业建议。AI 可能生成不准确的内容，请自行判断；请勿发送敏感个人信息。',
+    'AI 对话、抽签与游戏内容仅供娱乐参考，不构成医疗、法律、投资或其他专业建议。AI 可能生成不准确的内容，请自行判断；请勿发送敏感个人信息。',
   ]),
   _LegalSection('游戏与排行榜', [
     '请公平游戏，不要使用外挂、脚本、篡改成绩或其他影响他人体验的方式。发现异常成绩时，我们可以移除记录或限制上榜。',

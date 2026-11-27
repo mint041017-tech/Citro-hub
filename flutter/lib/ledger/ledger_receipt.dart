@@ -54,14 +54,11 @@ class _DraftEdit {
   bool selected;
 
   _DraftEdit(this.draft)
-    : amount = TextEditingController(text: _amountText(draft.amountCents)),
+    : amount = TextEditingController(text: ledgerCentsInput(draft.amountCents)),
       note = TextEditingController(text: draft.note),
       selected = true;
 
   int get cents => ledgerParseAmount(amount.text) ?? 0;
-
-  static String _amountText(int cents) =>
-      cents % 100 == 0 ? '${cents ~/ 100}' : (cents / 100).toStringAsFixed(2);
 
   void dispose() {
     amount.dispose();
@@ -350,7 +347,7 @@ class _LedgerDraftSheetState extends State<_LedgerDraftSheet> {
                       context,
                       initial: edit.draft.occurredAt,
                     );
-                    if (picked == null) return;
+                    if (picked == null || !mounted) return;
                     setState(() {
                       edit.draft = edit.draft.copyWith(occurredAt: picked);
                     });

@@ -751,7 +751,6 @@ class _VariantGlyph extends StatelessWidget {
           windmill: windmill,
           ink: c.ink2,
           accent: c.accent,
-          soft: c.line2,
         ),
       ),
     );
@@ -765,7 +764,6 @@ class _GlyphPainter extends CustomPainter {
     required this.windmill,
     required this.ink,
     required this.accent,
-    required this.soft,
   });
 
   final SudokuVariant variant;
@@ -773,7 +771,6 @@ class _GlyphPainter extends CustomPainter {
   final bool windmill;
   final Color ink;
   final Color accent;
-  final Color soft;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -834,10 +831,10 @@ class _GlyphPainter extends CustomPainter {
         _chevron(canvas, rect, accent);
         break;
       case SudokuVariant.killer:
-        _killer(canvas, rect, line, accent, soft);
+        _killer(canvas, rect, line, accent);
         break;
       case SudokuVariant.cube3d:
-        _cube(canvas, rect, line, accent, soft);
+        _cube(canvas, rect, line, accent);
         break;
     }
   }
@@ -983,7 +980,7 @@ class _GlyphPainter extends CustomPainter {
     canvas.drawLine(mid + Offset(d, 0), mid + Offset(-d, d), p);
   }
 
-  void _killer(Canvas canvas, Rect r, Paint p, Color accent, Color soft) {
+  void _killer(Canvas canvas, Rect r, Paint p, Color accent) {
     _grid(canvas, r, p, 3);
     final dash = Paint()
       ..color = accent.withValues(alpha: .8)
@@ -1027,7 +1024,7 @@ class _GlyphPainter extends CustomPainter {
     );
   }
 
-  void _cube(Canvas canvas, Rect r, Paint p, Color accent, Color soft) {
+  void _cube(Canvas canvas, Rect r, Paint p, Color accent) {
     final w = r.width * .68;
     final h = r.height * .52;
     final dx = r.width * .16;
@@ -1054,6 +1051,5 @@ class _GlyphPainter extends CustomPainter {
       old.variant != variant ||
       old.overlapCount != overlapCount ||
       old.ink != ink ||
-      old.accent != accent ||
-      old.soft != soft;
+      old.accent != accent;
 }

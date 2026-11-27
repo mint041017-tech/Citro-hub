@@ -264,3 +264,234 @@ class _CitroPopState extends State<CitroPop>
     );
   }
 }
+
+/// 数字计数过渡：值变化时从旧值快速滚到新值（[CitroMotion.counter]，≤300ms）。
+///
+/// 首次出现直接显示终值，不从 0 数起；减少动态时直接切换。
+/// 配合等宽数字字体（XiaolaiMono / context.hand）使用，滚动时宽度不抖。
+/// 只重建一个 Text，代价可忽略，适合卡片里的关键读数。
+class CitroCountUp extends StatelessWidget {
+  final num value;
+  final TextStyle? style;
+
+  /// 自定义格式（如金额、百分比）；缺省取整显示。
+  final String Function(double v)? format;
+  final TextAlign? textAlign;
+
+  const CitroCountUp(
+    this.value, {
+    super.key,
+    this.style,
+    this.format,
+    this.textAlign,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final end = value.toDouble();
+    String text(double v) => format?.call(v) ?? v.round().toString();
+    if (CitroMotion.reduced(context)) {
+      return Text(text(end), style: style, textAlign: textAlign);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: end),
+      duration: CitroMotion.counter,
+      curve: CitroMotion.easeOut,
+      builder: (context, v, _) =>
+          Text(text(v), style: style, textAlign: textAlign),
+    );
+  }
+}
+
+/// 勾选 / 完成时的轻弹：[checked] 从 false 变 true 时用 settle 曲线
+/// 从 0.82 弹到 1；取消勾选不弹。只动 transform，不重绘子树。
+class CitroCheckPop extends StatefulWidget {
+  final bool checked;
+  final Widget child;
+
+  const CitroCheckPop({super.key, required this.checked, required this.child});
+
+  @override
+  State<CitroCheckPop> createState() => _CitroCheckPopState();
+}
+
+class _CitroCheckPopState extends State<CitroCheckPop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: CitroMotion.check,
+    value: 1,
+  );
+  late final Animation<double> _scale = Tween<double>(
+    begin: .82,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _ctrl, curve: CitroMotion.settle));
+
+  @override
+  void didUpdateWidget(CitroCheckPop old) {
+    super.didUpdateWidget(old);
+    if (widget.checked && !old.checked && !CitroMotion.reduced(context)) {
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
+}
+
+/// 带增删过渡的竖排列表：新子项展开 + 淡入，被移除的子项收起 + 淡出，
+/// 而不是瞬间出现 / 消失。
+///
+/// - 每个子项必须带唯一 [Key]（按 key 比对增删）。
+/// - 只有「正在进出」的子项持有动画控制器，静止的子项就是原样的 widget，
+///   列表再长也没有常驻开销；首帧已有的子项不播入场。
+/// - 减少动态时直接增删。适合几十条以内的卡片列表（待办列、评论等），
+///   长列表请继续用 ListView.builder。
+class CitroAnimatedColumn extends StatefulWidget {
+  final List<Widget> children;
+  final CrossAxisAlignment crossAxisAlignment;
+  final Duration duration;
+
+  const CitroAnimatedColumn({
+    super.key,
+    required this.children,
+    this.crossAxisAlignment = CrossAxisAlignment.stretch,
+    this.duration = CitroMotion.size,
+  });
+
+  @override
+  State<CitroAnimatedColumn> createState() => _CitroAnimatedColumnState();
+}
+
+class _ColumnEntry {
+  final Key key;
+  Widget widget;
+  AnimationController? ctrl;
+  bool removing = false;
+
+  _ColumnEntry(this.key, this.widget);
+}
+
+class _CitroAnimatedColumnState extends State<CitroAnimatedColumn>
+    with TickerProviderStateMixin {
+  late List<_ColumnEntry> _entries = [
+    for (final w in widget.children) _ColumnEntry(w.key!, w),
+  ];
+
+  AnimationController _controller({required bool entering}) {
+    final ctrl = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      reverseDuration: CitroMotion.sizeExit,
+      value: entering ? 0 : 1,
+    );
+    return ctrl;
+  }
+
+  @override
+  void didUpdateWidget(CitroAnimatedColumn old) {
+    super.didUpdateWidget(old);
+    final reduce = CitroMotion.reduced(context);
+    final byKey = {for (final e in _entries) e.key: e};
+    final newKeys = {for (final w in widget.children) w.key!};
+    final next = <_ColumnEntry>[];
+    for (final w in widget.children) {
+      final existing = byKey[w.key!];
+      if (existing != null && !existing.removing) {
+        existing.widget = w;
+        next.add(existing);
+      } else {
+        // 新出现（或正在收起时又被加回来）：展开入场。
+        existing?.ctrl?.dispose();
+        final e = _ColumnEntry(w.key!, w);
+        if (!reduce) {
+          final ctrl = _controller(entering: true);
+          e.ctrl = ctrl;
+          ctrl.forward().whenComplete(() {
+            if (!mounted || e.ctrl != ctrl) return;
+            ctrl.dispose();
+            setState(() => e.ctrl = null);
+          });
+        }
+        next.add(e);
+      }
+    }
+    if (!reduce) {
+      // 被移除的项留在原位置收起：插到它旧前邻居的后面。
+      for (var i = 0; i < _entries.length; i++) {
+        final e = _entries[i];
+        // 仍在新列表里（含收起途中又被加回来的）：已在上面处理。
+        if (newKeys.contains(e.key)) continue;
+        if (!e.removing) {
+          e.removing = true;
+          e.ctrl?.dispose();
+          final ctrl = _controller(entering: false);
+          e.ctrl = ctrl;
+          ctrl.reverse().whenComplete(() {
+            if (!mounted || e.ctrl != ctrl) return;
+            ctrl.dispose();
+            setState(() => _entries.remove(e));
+          });
+        }
+        var at = 0;
+        for (var j = i - 1; j >= 0; j--) {
+          final idx = next.indexOf(_entries[j]);
+          if (idx >= 0) {
+            at = idx + 1;
+            break;
+          }
+        }
+        next.insert(at, e);
+      }
+    } else {
+      for (final e in _entries) {
+        if (!newKeys.contains(e.key)) e.ctrl?.dispose();
+      }
+    }
+    _entries = next;
+  }
+
+  @override
+  void dispose() {
+    for (final e in _entries) {
+      e.ctrl?.dispose();
+    }
+    super.dispose();
+  }
+
+  Widget _wrap(_ColumnEntry e) {
+    final ctrl = e.ctrl;
+    if (ctrl == null) return KeyedSubtree(key: e.key, child: e.widget);
+    final curved = CurvedAnimation(
+      parent: ctrl,
+      curve: CitroMotion.easeOut,
+      reverseCurve: CitroMotion.exit,
+    );
+    Widget child = FadeTransition(
+      opacity: curved,
+      child: SizeTransition(
+        sizeFactor: curved,
+        alignment: Alignment.topCenter,
+        child: e.widget,
+      ),
+    );
+    if (e.removing) child = IgnorePointer(child: child);
+    return KeyedSubtree(key: e.key, child: child);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: widget.crossAxisAlignment,
+      children: [for (final e in _entries) _wrap(e)],
+    );
+  }
+}

@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.3.1",
-    "build_number": "3301",
-    "file": "Citro-downloads-3.3.1.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.3.1.zip",
-    "size": 1088957,
-    "sha256": "589bc796a15fd2005456997a119f514c590a79c18f74ba6a91abf0b5400674e2",
-    "published_at": "2026-11-22T23:58:59Z",
-    "notes": "Citro downloads 静态站 3.3.1:Windows / Android 入口更新到 3.3.1，同步完全随机抽签、签文分段流式、今日一小步修复与社区长文折叠更新日志；Web 入口同步。"
+    "version": "3.3.5",
+    "build_number": "3305",
+    "file": "Citro-downloads-3.3.5.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.3.5.zip",
+    "size": 1088882,
+    "sha256": "70be51ab919031fd7667b5e30e310ab5ad3683f83f03b4c2b22ced7942d939ac",
+    "published_at": "2026-11-27T20:08:53Z",
+    "notes": "Citro downloads 静态站 3.3.5：Windows / Android 入口更新到 3.3.5，同步测试中心与十二系亲密关系测评、登录注册改版、全局玻璃与游戏卡片视觉更新；Web 入口同步。"
 }

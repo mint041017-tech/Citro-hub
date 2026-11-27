@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../ledger/ledger_charts.dart';
 import '../ledger/ledger_models.dart';
-import '../ledger/ledger_page.dart';
+import '../ledger/ledger_page.dart' deferred as ledgerPage;
 import '../ledger/ledger_store.dart';
 import '../ledger/ledger_theme.dart';
 import '../ledger/ledger_widgets.dart';
@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import 'card_flight.dart';
 import 'card_morph.dart';
+import 'lazy_page.dart';
 import 'paper.dart';
 
 /// 首页记账卡：按实际卡片尺寸自动切换小 / 标准 / 大三种内容。
@@ -42,7 +43,12 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
       context,
       source: rect,
       settings: const RouteSettings(name: '/ledger'),
-      builder: (_) => const LedgerPage(),
+      builder: (_) => CitroLazyPage(
+        load: () async {
+          await ledgerPage.loadLibrary();
+          return ledgerPage.LedgerPage();
+        },
+      ),
       snapshot: CitroCardFlight.snapshotOf(context, rect),
     );
   }
@@ -277,7 +283,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                     Text(
                       ledgerMoney(summary.expenseCents),
                       style: context.ldisplay(
-                        size: 30,
+                        size: 38,
                         weight: FontWeight.w700,
                         color: c.ink,
                         height: 1,
@@ -388,8 +394,9 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(9),
+          // 与待办卡的指标块一致：一层很淡的强调色玻璃。
+          color: c.accent.withValues(alpha: c.dark ? .16 : .10),
+          borderRadius: BorderRadius.circular(CitroColors.radii.xs + 2),
           border: Border.all(color: c.line),
         ),
         child: Column(
@@ -479,7 +486,7 @@ class _LedgerHomeCardState extends State<LedgerHomeCard> {
                 child: Text(
                   ledgerMoney(summary.expenseCents),
                   style: context.ldisplay(
-                    size: 30,
+                    size: 40,
                     weight: FontWeight.w700,
                     color: c.ink,
                     height: 1,

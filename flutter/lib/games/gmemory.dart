@@ -252,7 +252,6 @@ class GameMemoryView extends StatelessWidget {
       gameKey: 'gmem',
       title: '记忆卡牌',
       liveProgress: liveProgress,
-      liveInScroll: true,
       rankDifficulties: const [('easy', '简单'), ('std', '标准'), ('hard', '困难')],
       rankInitial: diff,
       above: [

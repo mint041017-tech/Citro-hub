@@ -2,19 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../services/platform.dart' as platform;
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../overlays/ai_chat.dart';
 import '../widgets/glass_tab_bar.dart';
+import '../widgets/module_rail.dart';
 import '../widgets/paper.dart';
 import '../widgets/tablet_shell.dart';
 import 'ledger_add_tab.dart';
 import 'ledger_home_tab.dart';
 import 'ledger_intake.dart';
 import 'ledger_models.dart';
-import 'ledger_rail.dart';
 import 'ledger_store.dart';
 import 'ledger_theme.dart';
 
@@ -64,11 +63,12 @@ class _LedgerPageState extends State<LedgerPage>
     if (!CitroMotion.reduced(context)) _fade.forward(from: 0);
   }
 
-  /// 返回上一级：Windows 的记账是从计划页 push 出来的，pop 就回到计划页；
-  /// 其他端（以及深链把 /ledger 当初始路由、没有上一级时）仍回首页。
+  /// 返回上一级：四端都是 push 出来的（首页 / 计划页的卡片），pop 就回到
+  /// 打开它的那一页（计划页打开就回计划页）。只有深链把 /ledger 当初始
+  /// 路由、没有上一级时才回首页——和日历页一致。
   void _back(BuildContext context) {
     final nav = Navigator.of(context);
-    if (platform.isWindows && nav.canPop()) {
+    if (nav.canPop()) {
       nav.pop();
       return;
     }
@@ -96,9 +96,10 @@ class _LedgerPageState extends State<LedgerPage>
     return LedgerScope(
       child: Builder(
         builder: (context) {
-          final c = context.c;
-          return Scaffold(
-            backgroundColor: c.bg,
+          return CitroBackground(
+            child: Scaffold(
+            // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+            backgroundColor: Colors.transparent,
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -135,6 +136,7 @@ class _LedgerPageState extends State<LedgerPage>
                 ),
               ],
             ),
+          ),
           );
         },
       ),
@@ -158,7 +160,13 @@ class _LedgerPageState extends State<LedgerPage>
     ],
   );
 
-  Widget _rail(BuildContext context) => LedgerRail(
+  Widget _rail(BuildContext context) => ModuleRail(
+    title: '记账',
+    items: const [
+      ('home', '首页', AppIcons.wallet),
+      ('add', '记一笔', AppIcons.plus),
+    ],
+    footer: '收支 · 预算 · 复盘',
     active: switch (_tab) {
       1 => 'add',
       _ => 'home',
@@ -172,6 +180,9 @@ class _LedgerPageState extends State<LedgerPage>
           _switchTab(1);
       }
     },
+    selectedFg: context.c.accentInk,
+    textStyle: (size, weight, color) =>
+        context.lui(size: size, weight: weight, color: color),
   );
 
   Widget _header(BuildContext context, {required bool wide}) {

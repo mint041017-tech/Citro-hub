@@ -6,6 +6,25 @@ double _clamp(double v, double a, double b) => v < a ? a : (v > b ? b : v);
 
 double _hypot(double x, double y) => math.sqrt(x * x + y * y);
 
+/// 一圈节点外扩 subaRadius 后的整体包围盒。
+({double minX, double maxX, double minY, double maxY}) _outlineBox(
+  SoftBlob blob,
+) {
+  final r = blob.subaRadius;
+  var minX = double.infinity;
+  var maxX = -double.infinity;
+  var minY = double.infinity;
+  var maxY = -double.infinity;
+  for (var i = 0; i < blob.n; i++) {
+    final p = blob.points[i];
+    if (p.x - r < minX) minX = p.x - r;
+    if (p.x + r > maxX) maxX = p.x + r;
+    if (p.y - r < minY) minY = p.y - r;
+    if (p.y + r > maxY) maxY = p.y + r;
+  }
+  return (minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+}
+
 class Vec2 {
   const Vec2(this.x, this.y);
   final double x;
@@ -68,9 +87,6 @@ class SoftBlob {
     // sobosuba 的小球配重很轻（外面积/350 再减去节点数），中心惯性小、
     // 抖动更活；按节点数取 0.3 倍，小球才有那种一碰就晃的果冻感。
     extraMass = math.max(2.0, 0.3 * n);
-    totalMass = n + extraMass;
-    invMass = 1 / totalMass;
-    boundR = radius * 1.25;
     _fx = List<double>.filled(n, 0);
     _fy = List<double>.filled(n, 0);
 
@@ -110,8 +126,6 @@ class SoftBlob {
   late final double restSpacing;
   late final double targetArea;
   late final double extraMass;
-  late final double totalMass;
-  late final double invMass;
   late final List<SoftPoint> points;
   late final List<Vec2> normals;
   late final List<double> _fx;
@@ -126,10 +140,7 @@ class SoftBlob {
   double cx = 0;
   double cy = 0;
   double area = 0;
-  double perimeter = 0;
   double signedArea = 0;
-  double boundR = 0;
-  double kinetic = 0;
   double age = 0;
   double visualPop = 0;
   double mergeLock = 0;
@@ -145,7 +156,6 @@ class SoftBlob {
 
   void measure() {
     var twiceArea = 0.0;
-    var perimeterSum = 0.0;
     var sx = 0.0;
     var sy = 0.0;
 
@@ -153,14 +163,12 @@ class SoftBlob {
       final a = points[i];
       final b = points[(i + 1) % n];
       twiceArea += a.x * b.y - b.x * a.y;
-      perimeterSum += _hypot(b.x - a.x, b.y - a.y);
       sx += a.x;
       sy += a.y;
     }
 
     signedArea = twiceArea * 0.5;
     area = signedArea.abs();
-    perimeter = perimeterSum;
     if (sx.isFinite && sy.isFinite) {
       cx = sx / n;
       cy = sy / n;
@@ -405,7 +413,6 @@ class SoftBlob {
   }
 
   void finish(double h, double floorGrip, double maxSpeed) {
-    var kineticSum = 0.0;
     for (var i = 0; i < n; i++) {
       final p = points[i];
       // sobosuba 的 suba 摩擦是 0：罐底只留很轻的阻尼，
@@ -417,9 +424,7 @@ class SoftBlob {
       p.hit = 0;
       p.px = p.x;
       p.py = p.y;
-      kineticSum += _hypot(p.vx, p.vy);
     }
-    kinetic = kineticSum / n;
     age += h;
     mergeLock = math.max(0, mergeLock - h);
     if (area < targetArea * 0.12) {
@@ -811,18 +816,11 @@ class SoftWorld {
   }
 
   void _translateWithinBounds(SoftBlob blob, double dx, double dy) {
-    final r = blob.subaRadius;
-    var minX = double.infinity;
-    var maxX = -double.infinity;
-    var minY = double.infinity;
-    var maxY = -double.infinity;
-    for (var i = 0; i < blob.n; i++) {
-      final p = blob.points[i];
-      if (p.x - r < minX) minX = p.x - r;
-      if (p.x + r > maxX) maxX = p.x + r;
-      if (p.y - r < minY) minY = p.y - r;
-      if (p.y + r > maxY) maxY = p.y + r;
-    }
+    final box = _outlineBox(blob);
+    final minX = box.minX;
+    final maxX = box.maxX;
+    final minY = box.minY;
+    final maxY = box.maxY;
     if (minX + dx < bounds.left) dx = bounds.left - minX;
     if (maxX + dx > bounds.right) dx = bounds.right - maxX;
     if (minY + dy < bounds.top) dy = bounds.top - minY;
@@ -1002,18 +1000,11 @@ class SoftWorld {
   }
 
   void containBlob(SoftBlob blob) {
-    final r = blob.subaRadius;
-    var minX = double.infinity;
-    var maxX = -double.infinity;
-    var minY = double.infinity;
-    var maxY = -double.infinity;
-    for (var i = 0; i < blob.n; i++) {
-      final p = blob.points[i];
-      if (p.x - r < minX) minX = p.x - r;
-      if (p.x + r > maxX) maxX = p.x + r;
-      if (p.y - r < minY) minY = p.y - r;
-      if (p.y + r > maxY) maxY = p.y + r;
-    }
+    final box = _outlineBox(blob);
+    final minX = box.minX;
+    final maxX = box.maxX;
+    final minY = box.minY;
+    final maxY = box.maxY;
 
     var dx = 0.0;
     var dy = 0.0;
@@ -1033,6 +1024,7 @@ class SoftWorld {
       blob.extraY += dy;
     }
 
+    final r = blob.subaRadius;
     final left = bounds.left + r;
     final right = bounds.right - r;
     final top = bounds.top + r;

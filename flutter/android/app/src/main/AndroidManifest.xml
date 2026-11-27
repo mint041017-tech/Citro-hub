@@ -6,14 +6,6 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <!-- 屏幕共享：Android 14+ 要求先起 mediaProjection 前台服务再开始采集，
-         否则 createVirtualDisplay 抛 SecurityException。 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
-    <!-- 一起看弹幕悬浮窗：观众聊天要滚动在主持人屏幕画面上（应用最小化后
-         仍在），只有系统悬浮窗能进 MediaProjection 的采集画面。
-         TYPE_APPLICATION_OVERLAY 是特殊权限，需用户在设置里授予。 -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -69,12 +61,6 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
-        <!-- 屏幕共享前台服务：Android 14+ 的 mediaProjection 类型是硬性要求。 -->
-        <service
-            android:name=".ScreenCaptureService"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
-
         <!-- 渲染引擎固定用 Impeller（见下方 EnableImpeller），
              不要再退回 Skia：用户明确要求 Android 端以 Impeller 为准。 -->
         <!-- flutter_local_notifications：排程计时/提醒的 AlarmManager 接收器。

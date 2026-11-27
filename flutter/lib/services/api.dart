@@ -155,11 +155,6 @@ class Api {
   static Future<Map<String, dynamic>> cardsGrant(String source) =>
       post('/api/cards/grant', {'source': source});
 
-  /// 首页布局按账号同步：四个布局桶一起上传。
-  static Future<Map<String, dynamic>> homeLayoutSave(
-    Map<String, Object?> layout,
-  ) => post('/api/home/layout', {'layout': layout});
-
   /// 待办数据按账号同步（任务、清单、分类、复盘、心情）。
   /// 语音转写：上传录音，由服务端调用 GLM-ASR 返回文字。
   static Future<String> transcribe(String base64Audio) async {
@@ -199,6 +194,13 @@ class Api {
   static Future<Map<String, dynamic>> mbtiSave(
     List<Map<String, dynamic>> history,
   ) => post('/api/mbti', {'history': history});
+
+  /// 十二系亲密关系测试档案同步，结构与 MBTI 历史一致。
+  static Future<Map<String, dynamic>> keiGet() => get('/api/kei');
+
+  static Future<Map<String, dynamic>> keiSave(
+    List<Map<String, dynamic>> history,
+  ) => post('/api/kei', {'history': history});
 
   static Future<Map<String, dynamic>> login(String account, String password) =>
       post('/api/auth/login', {
@@ -397,27 +399,6 @@ class Api {
     if (gid != null) 'gid': gid,
   });
 
-  static Future<Map<String, dynamic>> zodiacGet(String? deviceId) async {
-    try {
-      return await get(
-        '/api/zodiac',
-        query: {if (deviceId != null) 'deviceId': deviceId},
-        auth: true,
-      );
-    } on ApiException catch (e) {
-      if (e.code == 400) return {};
-      rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>> zodiacLock(
-    String sign,
-    String? deviceId,
-  ) => post('/api/zodiac', {
-    'sign': sign,
-    if (deviceId != null) 'deviceId': deviceId,
-  });
-
   static Future<Map<String, dynamic>> draw({String? deviceId}) =>
       get('/api/draw', query: {if (deviceId != null) 'deviceId': deviceId});
   static Future<Map<String, dynamic>> drawTake({String? deviceId}) =>
@@ -434,12 +415,6 @@ class Api {
     if (deviceId != null) 'deviceId': deviceId,
     if (name != null) 'name': name,
   });
-
-  static Future<Map<String, dynamic>> moyuGet() => get('/api/moyu/config');
-  static Future<Map<String, dynamic>> moyuSave(Map<String, dynamic> config) =>
-      _request('PUT', '/api/moyu/config', body: {'config': config}).then(
-        (v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{},
-      );
 
   static Future<Map<String, dynamic>> cookData() => get('/api/cook');
   static Future<List<Recipe>> cookSquare() async {

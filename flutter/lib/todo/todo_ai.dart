@@ -10,8 +10,6 @@ class TodoDraft {
   final String categoryName;
   final String note;
   final DateTime? at;
-  final Set<int> days;
-  final String time;
   final List<String> subtasks;
   final int priority;
 
@@ -24,8 +22,6 @@ class TodoDraft {
     this.categoryName = '',
     this.note = '',
     this.at,
-    this.days = const {},
-    this.time = '20:00',
     this.subtasks = const [],
     this.priority = 0,
     this.update = false,
@@ -96,8 +92,6 @@ ${task.note.isEmpty ? '' : '补充：${task.note}'}
     required List<MoodEntry> moods,
     required int focusMinutes,
     required int streak,
-    int gameMinutes = 0,
-    String extraContext = '',
   }) async {
     final done = tasks.where((t) => t.done).toList();
     final open = tasks.where((t) => !t.done).toList();
@@ -119,12 +113,6 @@ ${task.note.isEmpty ? '' : '补充：${task.note}'}
     }
     buffer.writeln('专注时长：$focusMinutes 分钟');
     buffer.writeln('连续完成天数：$streak');
-    if (gameMinutes > 0) {
-      buffer.writeln('小游戏时长：$gameMinutes 分钟');
-    }
-    if (extraContext.trim().isNotEmpty) {
-      buffer.writeln(extraContext.trim());
-    }
     if (moods.isNotEmpty) {
       buffer.writeln(
         '心情记录：${moods.map((m) => '${_hm(m.ts)} ${m.kind.label}${m.note.isEmpty ? '' : '（${m.note}）'}').join('；')}',
@@ -243,25 +231,6 @@ ${updateMarker}{"title":"已有任务的标题（必须与待办数据里的标�
   // 解析
   // -------------------------------------------------------------------------
 
-  static List<TodoDraft> parseDrafts(String raw) {
-    final j = _decodeObject(raw);
-    if (j == null) return [];
-    return _draftsFromJson(j);
-  }
-
-  static List<TodoDraft> _draftsFromJson(Map<String, dynamic> j) {
-    final list = j['tasks'];
-    if (list is! List) return [];
-    final out = <TodoDraft>[];
-    for (final item in list) {
-      if (item is! Map) continue;
-      final d = _draftFromJson(Map<String, dynamic>.from(item));
-      if (d != null) out.add(d);
-      if (out.length >= 8) break;
-    }
-    return out;
-  }
-
   static TodoDraft? _draftFromJson(
     Map<String, dynamic>? j, {
     bool update = false,
@@ -271,14 +240,6 @@ ${updateMarker}{"title":"已有任务的标题（必须与待办数据里的标�
     if (title.isEmpty) return null;
     final kind = TodoKindX.fromName('${j['kind'] ?? 'task'}');
     final at = _parseDateTime(j['at']);
-    final days = <int>{};
-    final rawDays = j['days'];
-    if (rawDays is List) {
-      for (final d in rawDays) {
-        final n = int.tryParse('$d');
-        if (n != null && n >= 1 && n <= 7) days.add(n);
-      }
-    }
     final subs = <String>[];
     final rawSubs = j['subtasks'];
     if (rawSubs is List) {
@@ -288,15 +249,12 @@ ${updateMarker}{"title":"已有任务的标题（必须与待办数据里的标�
         if (subs.length >= 8) break;
       }
     }
-    final time = '${j['time'] ?? ''}'.trim();
     return TodoDraft(
       title: title,
       kind: kind,
       categoryName: '${j['category'] ?? ''}'.trim(),
       note: '${j['note'] ?? ''}'.trim(),
       at: at,
-      days: days,
-      time: RegExp(r'^\d{1,2}:\d{2}$').hasMatch(time) ? time : '20:00',
       subtasks: subs,
       priority: int.tryParse('${j['priority'] ?? 0}') ?? 0,
       update: update,

@@ -5,6 +5,7 @@ import '../services/orientation.dart';
 import '../services/platform.dart' as platform;
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
 import '../widgets/auth_form_kit.dart';
 import '../widgets/home_background.dart';
@@ -95,12 +96,15 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
     final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final wide = size.width >= 720;
+    // 沉浸式：登录页就铺上首页同一张背景图（模糊 + 罩面），表单是一块
+    // 磨砂卡片——第一眼就是新界面的样子。
     return Scaffold(
       backgroundColor: c.bg,
       body: Stack(
         children: [
-          // 登录页用纯色底：不铺背景图，视觉干净、也不和主界面抢。
-          Positioned.fill(child: ColoredBox(color: c.bg)),
+          Positioned.fill(
+            child: CitroBackground(child: const SizedBox.expand()),
+          ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -144,13 +148,13 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 52,
-          height: 52,
-          padding: const EdgeInsets.all(11),
+          width: 60,
+          height: 60,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: c.line),
+            // App 图标的样子：白底 + iOS 连续圆角 + 柔和投影。
+            color: const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(15),
             boxShadow: CitroColors.shadows.float(c),
           ),
           child: Image.asset('assets/images/logo.webp', cacheWidth: 120),
@@ -162,10 +166,10 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
             Text(
               'Citro',
               style: context.heading(
-                size: CitroType.titleLg,
+                size: 28,
                 weight: CitroType.strong,
                 color: c.ink,
-                letterSpacing: .4,
+                letterSpacing: -.4,
               ),
             ),
             const SizedBox(height: 2),
@@ -184,15 +188,15 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
   }
 
   Widget _card(CitroColors c) {
-    return Container(
-      width: double.infinity,
+    return CitroGlass(
+      borderRadius: BorderRadius.circular(CitroColors.radii.modal),
+      tint: c.dark
+          ? Colors.white.withValues(alpha: .10)
+          : c.surface.withValues(alpha: .56),
+      borderColor: Colors.white.withValues(alpha: c.dark ? .12 : .44),
+      highlight: true,
+      shadow: CitroColors.shadows.lg(c),
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
       child: AuthFormKit(
         initialMode: widget.initialMode,
         qrSupported: _qrSupported,
@@ -218,7 +222,10 @@ class _CitroLoginPageState extends State<CitroLoginPage> {
             SizedBox(
               width: 12,
               height: 12,
-              child: CircularProgressIndicator(strokeWidth: 1.6, color: c.accent),
+              child: CircularProgressIndicator(
+                strokeWidth: 1.6,
+                color: c.accent,
+              ),
             ),
             const SizedBox(width: 8),
             Text(

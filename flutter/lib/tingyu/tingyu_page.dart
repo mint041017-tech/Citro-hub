@@ -9,12 +9,15 @@ import '../overlays/pomodoro_sheet.dart';
 import '../services/chime.dart';
 import '../services/haptics.dart';
 import '../services/pomodoro.dart';
+import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/active_listenable.dart';
 import '../widgets/desktop_shell.dart';
 import '../widgets/glass_tab_bar.dart';
+import '../widgets/home_background.dart';
 import '../widgets/modal.dart';
+import '../widgets/paper.dart';
 import 'tingyu_controller.dart';
 import 'tingyu_models.dart';
 
@@ -57,8 +60,7 @@ class _TingyuPageState extends State<TingyuPage> {
     return ActiveListenableBuilder(
       listenable: _c,
       builder: (context, _) {
-        final dark = Theme.of(context).brightness == Brightness.dark;
-        final theme = buildNookTheme(dark);
+        final theme = buildNookTheme(context.c);
         final size = MediaQuery.sizeOf(context);
         final portrait = size.height >= size.width;
         final media = MediaQuery.of(context);
@@ -69,12 +71,13 @@ class _TingyuPageState extends State<TingyuPage> {
           ),
           child: Theme(
             data: theme,
-            child: Scaffold(
-              backgroundColor: theme.scaffoldBackgroundColor,
+            child: _NookBackdrop(
+              child: Scaffold(
+              backgroundColor: Colors.transparent,
               appBar: !portrait
                   ? null
                   : AppBar(
-                      backgroundColor: theme.scaffoldBackgroundColor,
+                      backgroundColor: Colors.transparent,
                       surfaceTintColor: Colors.transparent,
                       elevation: 0,
                       scrolledUnderElevation: 0,
@@ -141,6 +144,7 @@ class _TingyuPageState extends State<TingyuPage> {
                 ),
               ),
             ),
+            ),
           ),
         );
       },
@@ -148,18 +152,8 @@ class _TingyuPageState extends State<TingyuPage> {
   }
 }
 
-/// 听隅 / 专注弹层的配色：表面、文字、描边全部继承全局，只覆盖模块特有的
-/// 强调色，避免同一 App 内出现两套底色。
-CitroColors _tingyuPomodoroColors(BuildContext context) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  final base = dark ? CitroColors.darkColors : CitroColors.light;
-  return base.copyWith(
-    accent: dark ? tingyuAccentDark : tingyuAccentLight,
-    accent2: dark ? const Color(0xFF8FAF86) : const Color(0xFF3E5747),
-    accentInk: dark ? const Color(0xFFC8DCC0) : const Color(0xFF3E5747),
-    accentLt: dark ? const Color(0xFF243029) : const Color(0xFFE4EADD),
-  );
-}
+/// 听隅 / 专注弹层的配色：直接用全局令牌（强调色随首页背景图取色）。
+CitroColors _tingyuPomodoroColors(BuildContext context) => context.c;
 
 /// 只做按压缩放的视觉反馈，不接管点击，避免和外层 InkWell 重复触发。
 class _NookPressScale extends StatefulWidget {
@@ -481,11 +475,45 @@ class _TingyuTopClockState extends State<TingyuTopClock> {
   }
 }
 
-/// 听隅的模块强调色（鼠尾草绿），是唯一覆盖全局的字段。
-const tingyuAccentLight = Color(0xFF4F6957);
-const tingyuAccentDark = Color(0xFFAAC4A2);
-const tingyuOnAccentLight = Color(0xFFFFFDF8);
-const tingyuOnAccentDark = Color(0xFF1E2B20);
+/// 听隅的模块强调色：跟随全局主题色（由首页背景图取色），不再固定鼠尾草绿。
+///
+/// 浅色下用深一档的强调墨（文字 / 图标），深色下用亮一档的强调色；
+/// 强调底上的文字反之。
+// 沉浸式重设计：听雨也用背景取色派生的鲜明强调色（与全站主按钮一致）。
+Color tingyuAccent(CitroColors c) => c.dark ? c.accent : c.accent2;
+Color tingyuOnAccent(CitroColors c) => c.onAccent;
+
+/// 听雨的沉浸背景：场景图（窗边雨景）的柔化版铺满整页，像 iOS「正在播放」
+/// 页那样整片界面都染上封面的颜色。柔化图预先算好（见
+/// [CitroBlendImage.softFor]），没有逐帧滤镜，四端都稳帧。
+class _NookBackdrop extends StatelessWidget {
+  final Widget child;
+
+  const _NookBackdrop({required this.child});
+
+  static const scene = 'assets/tingyu/rain-nook.webp';
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: c.bg),
+        IgnorePointer(
+          child: RepaintBoundary(
+            child: CitroBlendImage(
+              asset: scene,
+              lowRes: true,
+              washMin: c.dark ? .52 : .26,
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
 
 /// 听隅的内部调色板。
 ///
@@ -496,11 +524,8 @@ class Palette {
   final CitroColors c;
   const Palette(this.c);
 
-  static Palette of(BuildContext context) => Palette(
-    Theme.of(context).brightness == Brightness.dark
-        ? CitroColors.darkColors
-        : CitroColors.light,
-  );
+  /// 直接取全局主题（已随首页背景图取色），不再按明暗挑静态令牌。
+  static Palette of(BuildContext context) => Palette(context.c);
 
   bool get dark => c.dark;
 
@@ -509,9 +534,11 @@ class Palette {
   Color get subtle => c.surface2;
   Color get text => c.ink;
   Color get muted => c.inkSoft;
-  Color get accent => dark ? tingyuAccentDark : tingyuAccentLight;
-  Color get onAccent => dark ? tingyuOnAccentDark : tingyuOnAccentLight;
-  Color get soft => c.mintSoft;
+  Color get accent => tingyuAccent(c);
+  Color get onAccent => tingyuOnAccent(c);
+  /// 选中 / 软强调底：用强调色的淡色版（原来是固定的薄荷绿，和随背景
+  /// 变化的强调色放在一起会撞色）。
+  Color get soft => accent.withValues(alpha: dark ? .22 : .14);
   Color get border => c.line;
   Color get warning => c.stamp;
   Color get error => c.danger;
@@ -547,9 +574,10 @@ IconData categoryIcon(String category) => switch (category) {
   _ => Icons.graphic_eq_outlined,
 };
 
-/// 听隅子树的 ThemeData：表面 / 文字 / 描边来自全局令牌，强调色是模块自己的绿。
-ThemeData buildNookTheme(bool dark) {
-  final p = Palette(dark ? CitroColors.darkColors : CitroColors.light);
+/// 听隅子树的 ThemeData：全部颜色来自传入的全局令牌（已随首页背景图取色）。
+ThemeData buildNookTheme(CitroColors colors) {
+  final p = Palette(colors);
+  final dark = colors.dark;
   final scheme =
       ColorScheme.fromSeed(
         seedColor: p.accent,
@@ -557,7 +585,8 @@ ThemeData buildNookTheme(bool dark) {
       ).copyWith(
         primary: p.accent,
         onPrimary: p.onAccent,
-        surface: p.surface,
+        // Material 组件（菜单 / 对话框）要不透明的 surface。
+        surface: colors.sheet,
         onSurface: p.text,
         outline: p.border,
       );
@@ -565,7 +594,10 @@ ThemeData buildNookTheme(bool dark) {
     useMaterial3: true,
     fontFamily: AppFonts.rounded,
     colorScheme: scheme,
-    scaffoldBackgroundColor: p.bg,
+    // 子树里的 context.c 也要拿到同一套令牌，不能掉回静态默认值。
+    extensions: [CitroSkin(colors)],
+    // 沉浸式：页面底由外层 _NookBackdrop（场景图 + 罩面）提供。
+    scaffoldBackgroundColor: Colors.transparent,
     textTheme: TextTheme(
       bodyMedium: TextStyle(
         color: p.text,
@@ -594,14 +626,14 @@ ThemeData buildNookTheme(bool dark) {
         ),
       ),
     ),
+    // iOS 的「灰色胶囊」次要按钮：浅填充、无描边。
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(48, 48),
+        minimumSize: const Size(48, 44),
         foregroundColor: p.text,
-        side: BorderSide(color: p.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-        ),
+        backgroundColor: colors.surface2,
+        side: BorderSide.none,
+        shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         textStyle: const TextStyle(
           fontFamily: AppFonts.rounded,
@@ -627,18 +659,26 @@ ThemeData buildNookTheme(bool dark) {
         foregroundColor: p.muted,
       ),
     ),
+    // iOS 音量条：粗一点的圆头轨道 + 白色浮起圆钮。
     sliderTheme: SliderThemeData(
-      trackHeight: 3,
+      trackHeight: 5,
       activeTrackColor: p.accent,
-      inactiveTrackColor: p.border,
-      thumbColor: p.accent,
-      overlayColor: p.accent.withValues(alpha: .1),
-      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-      overlayShape: const RoundSliderOverlayShape(overlayRadius: 15),
+      inactiveTrackColor: colors.surface2.withValues(
+        alpha: colors.dark ? .9 : .7,
+      ),
+      thumbColor: const Color(0xFFFFFFFF),
+      overlayColor: p.accent.withValues(alpha: .12),
+      thumbShape: const RoundSliderThumbShape(
+        enabledThumbRadius: 11,
+        elevation: 3,
+        pressedElevation: 5,
+      ),
+      overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+      trackShape: const RoundedRectSliderTrackShape(),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: p.surface,
+      fillColor: colors.surface2,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       hintStyle: TextStyle(color: p.muted, fontSize: CitroType.body),
       labelStyle: TextStyle(color: p.muted, fontSize: CitroType.label),
@@ -667,8 +707,9 @@ ThemeData buildNookTheme(bool dark) {
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: p.surface,
-      elevation: 2,
+      color: colors.sheet,
+      surfaceTintColor: Colors.transparent,
+      elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         side: BorderSide(color: p.border),
@@ -1343,13 +1384,20 @@ class _NookHomeState extends State<NookHome> {
     final p = Palette.of(ctx);
     return OutlinedButton(
       onPressed: enabled ? onTap : null,
+      // 与分类筛选同一套：灰色胶囊，选中为强调色实心。
       style: OutlinedButton.styleFrom(
-        backgroundColor: selected ? p.soft : p.surface,
-        side: BorderSide(color: selected ? p.accent : p.border),
-        foregroundColor: selected ? p.accent : p.text,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        backgroundColor: selected ? p.accent : p.c.surface2,
+        side: BorderSide.none,
+        foregroundColor: selected ? p.onAccent : p.text,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
-      child: Text(text, style: const TextStyle(fontSize: CitroType.body)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: CitroType.body,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+        ),
+      ),
     );
   }
 
@@ -1360,7 +1408,7 @@ class _NookHomeState extends State<NookHome> {
       barrierDismissible: true,
       barrierLabel: '关闭呼吸',
       barrierColor: p.bg.withValues(alpha: .92),
-      transitionDuration: const Duration(milliseconds: 240),
+      // 时长走 showCitroGeneralDialog 的默认值（modal 进 / modalReverse 退），与全站弹层一致。
       pageBuilder: (dialogContext, _, __) => Padding(
         padding: const EdgeInsets.all(12),
         child: LayoutBuilder(
@@ -1423,6 +1471,7 @@ class _NookHomeState extends State<NookHome> {
         // 其余页常驻；桌面 850–1200 有左侧栏时也常驻。
         final showMini = (desktop && !wide) || (!desktop && page != 0);
         return Scaffold(
+          backgroundColor: Colors.transparent,
           body: SafeArea(
             top: !desktop,
             // 底部安全区由这里统一吃掉：玻璃导航条和迷你播放器都贴在
@@ -1681,8 +1730,8 @@ class _NookHomeState extends State<NookHome> {
     return Container(
       width: 194,
       decoration: BoxDecoration(
-        color: p.surface,
-        border: Border(right: BorderSide(color: p.border)),
+        // 侧栏是浮在场景图上的一层薄磨砂。
+        color: p.c.glassThin,
       ),
       padding: const EdgeInsets.fromLTRB(22, 34, 18, 24),
       child: Column(
@@ -1948,17 +1997,18 @@ class _NookHomeState extends State<NookHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // iOS 大标题。
                 Text(
                   title,
                   style: const TextStyle(
                     fontFamily: AppFonts.rounded,
-                    fontSize: CitroType.heading,
-                    height: 1.25,
+                    fontSize: 30,
+                    height: 1.2,
                     fontWeight: CitroType.strong,
-                    letterSpacing: .2,
+                    letterSpacing: -.6,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -2124,7 +2174,6 @@ class _NookHomeState extends State<NookHome> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: p.surface,
-        border: Border.all(color: p.border),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
@@ -2458,7 +2507,7 @@ class _NookHomeState extends State<NookHome> {
       barrierDismissible: true,
       barrierLabel: '关闭时长设置',
       barrierColor: p.bg.withValues(alpha: .92),
-      transitionDuration: const Duration(milliseconds: 240),
+      // 时长走 showCitroGeneralDialog 的默认值（modal 进 / modalReverse 退），与全站弹层一致。
       pageBuilder: (dialogContext, _, __) => Padding(
         padding: const EdgeInsets.all(20),
         child: LayoutBuilder(
@@ -2754,61 +2803,110 @@ class _NookHomeState extends State<NookHome> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         pageHeading(context, '为现在，留一点安静。', '给自己，留一小片安静。'),
+        // 「正在播放」卡：封面铺满上半张卡，混音名和状态压在封面底部的
+        // 暗色渐变上（Apple Music 的排法）；下半张是磨砂底的播放控件。
         Container(
           decoration: BoxDecoration(
-            color: p.surface,
-            border: Border.all(color: p.border),
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
+            color: p.surface.withValues(alpha: p.dark ? .62 : .56),
+            borderRadius: BorderRadius.circular(CitroColors.radii.card + 4),
+            boxShadow: CitroColors.shadows.lg(p.c),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(CitroColors.radii.card),
+                  top: Radius.circular(CitroColors.radii.card + 4),
                 ),
                 child: AspectRatio(
                   aspectRatio: MediaQuery.sizeOf(context).width < 600
-                      ? 1.85
-                      : 2.55,
-                  child: Image.asset(
-                    'assets/tingyu/rain-nook.webp',
-                    fit: BoxFit.cover,
-                    alignment: const Alignment(0, .25),
-                    // 封面按卡片宽度解码：原图 2K 级别，整张解码在低端机会
-                    // 占到数十 MB；1200 已覆盖平板/桌面宽屏的清晰度。
-                    cacheWidth: 1200,
-                    // 深色下给封面罩一层模块灰绿，浅色保持原图。
-                    color: p.dark ? p.muted : null,
-                    colorBlendMode: p.dark ? BlendMode.modulate : null,
-                    semanticLabel: '雨落在窗外，窗边放着书和一杯茶的水彩画',
+                      ? 1.35
+                      : 2.3,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/tingyu/rain-nook.webp',
+                        fit: BoxFit.cover,
+                        alignment: const Alignment(0, .25),
+                        // 封面按卡片宽度解码：原图 2K 级别，整张解码在低端机会
+                        // 占到数十 MB；1200 已覆盖平板/桌面宽屏的清晰度。
+                        cacheWidth: 1200,
+                        semanticLabel: '雨落在窗外，窗边放着书和一杯茶的水彩画',
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0x00000000),
+                              Color(0x00000000),
+                              Color(0x99000000),
+                            ],
+                            stops: [0, .45, 1],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: 16,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.playing ? '正在播放' : '此刻',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: .78),
+                                fontSize: CitroType.caption,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: .4,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              c.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: AppFonts.rounded,
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: CitroType.strong,
+                                height: 1.2,
+                                letterSpacing: -.4,
+                                shadows: [
+                                  Shadow(
+                                    color: Color(0x66000000),
+                                    blurRadius: 12,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              homeStatus,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: .86),
+                                fontSize: CitroType.label,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 18, 20, 20),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      c.title,
-                      style: const TextStyle(
-                        fontFamily: AppFonts.rounded,
-                        fontSize: CitroType.subtitle,
-                        fontWeight: CitroType.strong,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      homeStatus,
-                      style: TextStyle(
-                        color: p.muted,
-                        fontSize: CitroType.label,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
                     heroActions(context),
                     if (timerCaption != null)
                       Padding(
@@ -2865,7 +2963,6 @@ class _NookHomeState extends State<NookHome> {
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
             decoration: BoxDecoration(
               color: p.surface,
-              border: Border.all(color: p.border),
               borderRadius: BorderRadius.circular(CitroColors.radii.card),
             ),
             child: mixContents(context, embedded: true),
@@ -2910,7 +3007,18 @@ class _NookHomeState extends State<NookHome> {
                 mainAxisExtent: 132.0 + math.max(0.0, scale - 1) * 80,
               ),
               itemCount: scenes.length,
-              itemBuilder: (ctx, i) => sceneCard(context, scenes[i]),
+              // 色场：场景卡按主 / 浅 / 暖 / 深轮流上色。
+              itemBuilder: (ctx, i) => CitroFieldScope(
+                tone: const [
+                  FieldTone.primary,
+                  FieldTone.light,
+                  FieldTone.warm,
+                  FieldTone.deep,
+                ][i % 4],
+                child: Builder(
+                  builder: (fieldCtx) => sceneCard(fieldCtx, scenes[i]),
+                ),
+              ),
             );
           },
         ),
@@ -2997,23 +3105,45 @@ class _NookHomeState extends State<NookHome> {
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
+      // 与「保存」同一种灰色胶囊；计时中改成强调色浅底 + 强调色字。
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        backgroundColor: active ? p.soft : p.surface,
-        foregroundColor: active ? p.accent : p.text,
-        side: BorderSide(color: active ? p.accent : p.border),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        backgroundColor: active
+            ? p.accent.withValues(alpha: p.dark ? .22 : .14)
+            : p.c.surface2,
+        foregroundColor: active ? (p.dark ? p.c.accentInk : p.accent) : p.text,
+        side: BorderSide.none,
       ),
     );
   }
 
   Widget sceneCard(BuildContext context, SceneSpec scene) {
     final p = Palette.of(context);
+    // 场景卡：磨砂底上叠一层场景自己的色调（浅色）/ 强调色（深色），
+    // 亮边勾出卡片轮廓。
+    final tone = p.dark ? p.accent : scene.tint;
+    final inField = CitroFieldScope.toneOf(context) != null;
     return Material(
-      color: p.dark ? p.surface : scene.tint,
-      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+      // 色场里是彩色玻璃：色块 80% 压在柔化场景图上。
+      color: inField
+          ? p.surface.withValues(alpha: .74)
+          : Color.alphaBlend(
+              tone.withValues(alpha: p.dark ? .14 : .45),
+              p.surface,
+            ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(inField ? 26 : CitroColors.radii.card),
+        side: inField
+            ? BorderSide(
+                color: Colors.white.withValues(alpha: p.dark ? .14 : .50),
+                width: .6,
+              )
+            : BorderSide.none,
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => loadScene(scene),
-        borderRadius: BorderRadius.circular(CitroColors.radii.inner),
+        borderRadius: BorderRadius.circular(inField ? 26 : CitroColors.radii.card),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -3022,7 +3152,16 @@ class _NookHomeState extends State<NookHome> {
             children: [
               Row(
                 children: [
-                  Icon(scene.icon, color: p.accent, size: 24),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: p.accent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(scene.icon, color: p.onAccent, size: 20),
+                  ),
                   const Spacer(),
                   Text(
                     '${scene.minutes} 分钟',
@@ -3093,9 +3232,23 @@ class _NookHomeState extends State<NookHome> {
     return Tooltip(
       message: active ? '暂停声音' : '播放声音',
       excludeFromSemantics: true,
-      child: SizedBox(
+      child: Container(
         width: size,
         height: size,
+        // 播放钮带一圈强调色光晕，是整张卡的视觉落点。
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: p.accent.withValues(alpha: p.dark ? .38 : .42),
+                    blurRadius: size * .4,
+                    offset: Offset(0, size * .12),
+                    spreadRadius: -size * .06,
+                  ),
+                ]
+              : null,
+        ),
         child: FilledButton(
           style: FilledButton.styleFrom(
             padding: EdgeInsets.zero,
@@ -3621,17 +3774,16 @@ class _NookHomeState extends State<NookHome> {
                           ),
                           selected: category == v,
                           showCheckmark: false,
-                          selectedColor: p.soft,
-                          backgroundColor: p.surface,
+                          // iOS 筛选胶囊：未选中是灰色填充，选中是强调色实心。
+                          selectedColor: p.accent,
+                          backgroundColor: p.c.surface2,
                           labelStyle: TextStyle(
-                            color: category == v ? p.accent : p.muted,
+                            color: category == v ? p.onAccent : p.text,
                             fontWeight: category == v
                                 ? FontWeight.w700
                                 : FontWeight.w400,
                           ),
-                          side: BorderSide(
-                            color: category == v ? p.accent : p.border,
-                          ),
+                          side: BorderSide.none,
                           shape: const StadiumBorder(),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -3644,19 +3796,7 @@ class _NookHomeState extends State<NookHome> {
                   ],
                 ),
               ),
-              IgnorePointer(
-                child: Container(
-                  width: 26,
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [p.bg.withValues(alpha: 0), p.bg],
-                    ),
-                  ),
-                ),
-              ),
+              // 沉浸背景上没有可渐隐到的纯色底，右缘渐隐去掉。
             ],
           ),
         ),
@@ -3769,7 +3909,7 @@ class _NookHomeState extends State<NookHome> {
         ? '合成音色'
         : '环境录音';
     return Material(
-      color: selected ? p.soft : p.surface,
+      color: selected ? Color.alphaBlend(p.soft, p.surface) : p.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(CitroColors.radii.inner),
         side: BorderSide(
@@ -4592,7 +4732,6 @@ class _NookHomeState extends State<NookHome> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: p.surface,
-        border: Border.all(color: p.border),
         borderRadius: BorderRadius.circular(CitroColors.radii.card),
       ),
       child: Column(
@@ -5295,41 +5434,6 @@ class _BreathingPageState extends State<BreathingPage>
 }
 
 /// 只做按压缩放的视觉反馈，不接管点击，避免和外层 InkWell 重复触发。
-class _BreathPressScale extends StatefulWidget {
-  final Widget child;
-  final double scale;
-
-  const _BreathPressScale({required this.child, this.scale = .95});
-
-  @override
-  State<_BreathPressScale> createState() => _BreathPressScaleState();
-}
-
-class _BreathPressScaleState extends State<_BreathPressScale> {
-  bool _down = false;
-
-  void _set(bool value) {
-    if (_down == value) return;
-    setState(() => _down = value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reduce = MediaQuery.disableAnimationsOf(context);
-    return Listener(
-      onPointerDown: (_) => _set(true),
-      onPointerUp: (_) => _set(false),
-      onPointerCancel: (_) => _set(false),
-      child: AnimatedScale(
-        scale: _down && !reduce ? widget.scale : 1,
-        duration: const Duration(milliseconds: 130),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
 class _BreathGlassButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
@@ -5349,7 +5453,7 @@ class _BreathGlassButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BreathPressScale(
+    return _NookPressScale(
       scale: .92,
       child: Tooltip(
         message: tooltip,
@@ -5397,7 +5501,8 @@ class _BreathDurationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BreathPressScale(
+    return _NookPressScale(
+      scale: .95,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutCubic,

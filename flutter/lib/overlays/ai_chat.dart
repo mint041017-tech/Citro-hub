@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +24,7 @@ import '../todo/todo_models.dart';
 import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
+import '../theme/motion.dart';
 import '../widgets/cici_chat_kit.dart';
 import '../widgets/cici_composer.dart';
 import '../widgets/modal.dart';
@@ -75,7 +77,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
   String _voiceBase = '';
 
   // 转运对话单独一份记录，不把「好事」混进日常 CiCi 历史。
-  List<CiciChatMessage> get _messages => widget.goodDeed ? _deedHistory : _history;
+  List<CiciChatMessage> get _messages =>
+      widget.goodDeed ? _deedHistory : _history;
 
   /// 桌面端麦克风按钮的长按说话：按下超过 0.42s 开始听写，松手停止；
   /// 短按仍然只是开关。
@@ -137,7 +140,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
     if (_listening) {
       setState(() => _listening = false);
       // 系统听写的 stop 在某些 ROM 上会一直不回，别让这次点击吊在这里。
-      await SpeechInput.stop().timeout(const Duration(seconds: 3), onTimeout: () {});
+      await SpeechInput.stop().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {},
+      );
       return;
     }
     final ready = await SpeechInput.ensureReady().timeout(
@@ -688,156 +694,147 @@ class _AiChatSheetState extends State<_AiChatSheet>
     final height = math.min(available, math.max(360.0, available * .9));
     return Padding(
       padding: EdgeInsets.only(bottom: inset),
-      child: ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(CitroColors.radii.card),
-        ),
-        child: ColoredBox(
-          // 页面底跟随主题：浅色奶米 / 深色近黑。
-          // 写死浅色会让深色模式下整页仍是奶米底，和已经 token 化的
-          color: c.bg,
-          child: SizedBox(
-            height: height,
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: c.line2,
-                      borderRadius: BorderRadius.circular(CitroColors.radii.xs),
-                    ),
+      child: _CiciGlassPanel(
+        radius: CitroColors.radii.modal,
+        child: SizedBox(
+          height: height,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: c.line2,
+                    borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: c.accent.withAlpha(70),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: c.line2),
-                            boxShadow: CitroColors.shadows.sm(c),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: c.accent.withAlpha(70),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: c.line2),
+                          boxShadow: CitroColors.shadows.sm(c),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/cici_avatar.webp',
+                            fit: BoxFit.cover,
+                            cacheWidth: 152,
                           ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/cici_avatar.webp',
-                              fit: BoxFit.cover,
-                              cacheWidth: 152,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CiCi',
+                              style: context.heading(
+                                size: CitroType.titleLg,
+                                color: c.ink,
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'CiCi',
-                                style: context.heading(
-                                  size: CitroType.titleLg,
-                                  color: c.ink,
-                                ),
+                            const SizedBox(height: 1),
+                            Text(
+                              _subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.body(
+                                size: CitroType.micro,
+                                color: c.inkSoft,
                               ),
-                              const SizedBox(height: 1),
-                              Text(
-                                _subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.body(
-                                  size: CitroType.micro,
-                                  color: c.inkSoft,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 三个等大的圆形图标按钮：性格 / 新对话 / 关闭。
+                      // 以前是「带字胶囊 + 圆形」混着来，宽度不一、重心乱；
+                      // 现在统一 36 圆钮，一行对齐，功能都还在。
+                      _HeaderIcon(
+                        icon: AppIcons.sparkle,
+                        tooltip: '性格',
+                        onTap: _editPersona,
+                      ),
+                      const SizedBox(width: 6),
+                      _HeaderIcon(
+                        icon: AppIcons.plus,
+                        tooltip: '新对话',
+                        onTap: _clear,
+                      ),
+                      const SizedBox(width: 6),
+                      _HeaderIcon(
+                        icon: AppIcons.close,
+                        tooltip: '关闭',
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                CitroDivider(color: _glassRim(c)),
+                // 奖励 / 转运提示：合并成一块紧凑的通知区，不再上下各挂一条
+                // 大横幅把消息列表挤窄。
+                if (_chatRewarded || (widget.goodDeed && _deedShared))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Column(
+                      children: [
+                        if (_chatRewarded)
+                          _notice(
+                            context,
+                            icon: AppIcons.sparkle,
+                            color: c.accentInk,
+                            background: c.accentLt.withAlpha(c.dark ? 70 : 170),
+                            border: c.accent.withAlpha(80),
+                            text: '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
                           ),
-                        ),
-                        // 三个等大的圆形图标按钮：性格 / 新对话 / 关闭。
-                        // 以前是「带字胶囊 + 圆形」混着来，宽度不一、重心乱；
-                        // 现在统一 36 圆钮，一行对齐，功能都还在。
-                        _HeaderIcon(
-                          icon: AppIcons.sparkle,
-                          tooltip: '性格',
-                          onTap: _editPersona,
-                        ),
-                        const SizedBox(width: 6),
-                        _HeaderIcon(
-                          icon: AppIcons.plus,
-                          tooltip: '新对话',
-                          onTap: _clear,
-                        ),
-                        const SizedBox(width: 6),
-                        _HeaderIcon(
-                          icon: AppIcons.close,
-                          tooltip: '关闭',
-                          onTap: () => Navigator.of(context).pop(),
-                        ),
+                        if (widget.goodDeed && _deedShared) ...[
+                          if (_chatRewarded) const SizedBox(height: 6),
+                          _notice(
+                            context,
+                            icon: AppIcons.sparkle,
+                            color: c.mintInk,
+                            background: c.mintSoft,
+                            border: c.mintLine,
+                            text: '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  CitroDivider(color: c.line2.withAlpha(150)),
-                  // 奖励 / 转运提示：合并成一块紧凑的通知区，不再上下各挂一条
-                  // 大横幅把消息列表挤窄。
-                  if (_chatRewarded || (widget.goodDeed && _deedShared))
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: Column(
-                        children: [
-                          if (_chatRewarded)
-                            _notice(
-                              context,
-                              icon: AppIcons.sparkle,
-                              color: c.accentInk,
-                              background: c.accentLt.withAlpha(
-                                c.dark ? 70 : 170,
-                              ),
-                              border: c.accent.withAlpha(80),
-                              text: '今日首次找 CiCi · 卡面抽卡机会 +1，去「我的 - 卡面收藏」抽',
-                            ),
-                          if (widget.goodDeed && _deedShared) ...[
-                            if (_chatRewarded) const SizedBox(height: 6),
-                            _notice(
-                              context,
-                              icon: AppIcons.sparkle,
-                              color: c.mintInk,
-                              background: c.mintSoft,
-                              border: c.mintLine,
-                              text: '转运机会 +1 · 关掉对话，回签卡点「再抽一签」',
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: _messages.isEmpty
-                        ? _welcome(context)
-                        : CiciMessageListView(
-                            messages: _messages,
-                            controller: _scroll,
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                            bubbleBuilder: _bubble,
-                          ),
-                  ),
-                  if (_session.error != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                      child: Text(
-                        _session.error!,
-                        style: context.body(
-                          size: CitroType.small,
-                          color: c.stamp,
+                Expanded(
+                  child: _messages.isEmpty
+                      ? _welcome(context)
+                      : CiciMessageListView(
+                          messages: _messages,
+                          controller: _scroll,
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                          bubbleBuilder: _bubble,
                         ),
+                ),
+                if (_session.error != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                    child: Text(
+                      _session.error!,
+                      style: context.body(
+                        size: CitroType.small,
+                        color: c.stamp,
                       ),
                     ),
-                  _inputBar(context),
-                ],
-              ),
+                  ),
+                _inputBar(context),
+              ],
             ),
           ),
         ),
@@ -957,11 +954,10 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: c.surface2,
+                        color: _glassFill(c),
                         borderRadius: BorderRadius.circular(
                           CitroColors.radii.chip,
                         ),
-                        border: Border.all(color: c.line),
                       ),
                       child: Text(
                         p,
@@ -1001,15 +997,16 @@ class _AiChatSheetState extends State<_AiChatSheet>
           ),
           margin: const EdgeInsets.only(bottom: 12, left: 40),
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          // 自己的气泡：强调色的「彩色玻璃」——上亮下深的渐变 + 一圈白亮边。
           decoration: BoxDecoration(
             color: c.accent,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(CitroColors.radii.inner),
+              topLeft: Radius.circular(CitroColors.radii.inner + 4),
               topRight: Radius.circular(CitroColors.radii.xs),
-              bottomLeft: Radius.circular(CitroColors.radii.inner),
-              bottomRight: Radius.circular(CitroColors.radii.inner),
+              bottomLeft: Radius.circular(CitroColors.radii.inner + 4),
+              bottomRight: Radius.circular(CitroColors.radii.inner + 4),
             ),
-            boxShadow: CitroColors.shadows.sm(c),
+            boxShadow: CitroColors.shadows.glow(c),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1070,15 +1067,16 @@ class _AiChatSheetState extends State<_AiChatSheet>
               ),
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              // CiCi 的气泡：一片浅色玻璃（叠在面板玻璃上再亮一档）+ 亮边。
               decoration: BoxDecoration(
-                color: c.surface2,
+                color: _glassFill(c),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(CitroColors.radii.xs),
-                  topRight: Radius.circular(CitroColors.radii.inner),
-                  bottomLeft: Radius.circular(CitroColors.radii.inner),
-                  bottomRight: Radius.circular(CitroColors.radii.inner),
+                  topRight: Radius.circular(CitroColors.radii.inner + 4),
+                  bottomLeft: Radius.circular(CitroColors.radii.inner + 4),
+                  bottomRight: Radius.circular(CitroColors.radii.inner + 4),
                 ),
-                border: Border.all(color: c.line),
+                boxShadow: CitroColors.shadows.sm(c),
               ),
               child: m.pending && m.text.isEmpty
                   ? CiciPendingIndicator(
@@ -1195,7 +1193,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                         right: -6,
                         top: -6,
                         child: GestureDetector(
-                          onTap: () => setState(() => _session.pendingImage = null),
+                          onTap: () =>
+                              setState(() => _session.pendingImage = null),
                           child: Container(
                             width: 20,
                             height: 20,
@@ -1263,9 +1262,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   height: 34,
                   margin: const EdgeInsets.only(right: 8, bottom: 2),
                   decoration: BoxDecoration(
-                    color: c.surface2,
+                    color: _glassFill(c),
                     shape: BoxShape.circle,
-                    border: Border.all(color: c.line2),
                   ),
                   child: Center(
                     child: _session.picking
@@ -1303,11 +1301,11 @@ class _AiChatSheetState extends State<_AiChatSheet>
                     height: 34,
                     margin: const EdgeInsets.only(right: 8, bottom: 2),
                     decoration: BoxDecoration(
-                      color: _listening ? c.accent.withAlpha(36) : c.surface2,
+                      color: _listening
+                          ? c.accent.withAlpha(36)
+                          : _glassFill(c),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _listening ? c.accent : c.line2,
-                      ),
+                      border: _listening ? Border.all(color: c.accent) : null,
                     ),
                     child: Center(
                       child: AnimatedSwitcher(
@@ -1341,11 +1339,8 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: c.surface2,
-                    borderRadius: BorderRadius.circular(
-                      CitroColors.radii.inner,
-                    ),
-                    border: Border.all(color: c.line2),
+                    color: _glassFill(c),
+                    borderRadius: BorderRadius.circular(CitroColors.radii.chip),
                   ),
                   child: TextField(
                     controller: _input,
@@ -1389,10 +1384,13 @@ class _AiChatSheetState extends State<_AiChatSheet>
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: _session.sending ? c.accent.withAlpha(100) : c.accent,
+                    color: _session.sending
+                        ? c.accent.withAlpha(100)
+                        : c.accent,
                     shape: BoxShape.circle,
-                    border: Border.all(color: c.line2),
-                    boxShadow: _session.sending ? null : CitroColors.shadows.sm(c),
+                    boxShadow: _session.sending
+                        ? null
+                        : CitroColors.shadows.glow(c),
                   ),
                   child: Center(
                     child: _session.sending
@@ -1639,6 +1637,57 @@ class _PersonaSheetState extends State<_PersonaSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 叠在玻璃面板上的「二层玻璃」：气泡、输入框、建议胶囊。
+Color _glassFill(CitroColors c) =>
+    c.dark ? const Color(0x1AFFFFFF) : const Color(0x99FFFFFF);
+
+/// 玻璃的亮边。
+/// 玻璃不画白边：这里只给分隔线用，取一条很淡的墨色细线。
+Color _glassRim(CitroColors c) => c.ink.withValues(alpha: c.dark ? .10 : .08);
+
+/// CiCi 对话面板：盖在页面上的一整块磨砂玻璃。
+///
+/// 背后真实模糊（面板打开时下面的页面是静止的，只需模糊一次就被光栅
+/// 缓存，不随消息滚动重算）；底色是页面色的半透明版，顶部一道高光、
+/// 上沿一圈亮边。轻量模式（Web / 入门机 / 减少动态）不做模糊，底色加厚。
+class _CiciGlassPanel extends StatelessWidget {
+  final double radius;
+  final Widget child;
+
+  const _CiciGlassPanel({required this.radius, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final lite = CitroMotion.lite(context);
+    final r = BorderRadius.vertical(top: Radius.circular(radius));
+    final base = c.bg;
+    final panelColor = base.withValues(alpha: lite ? 1 : (c.dark ? .76 : .74));
+    final body = DecoratedBox(
+      decoration: BoxDecoration(borderRadius: r, color: panelColor),
+      child: child,
+    );
+    final edged = CustomPaint(
+      foregroundPainter: GlassEdgePainter(
+        radius: radius,
+        color: panelColor.withValues(
+          alpha: (panelColor.a + .12).clamp(0.0, 1.0),
+        ),
+      ),
+      child: body,
+    );
+    return ClipRRect(
+      borderRadius: r,
+      child: lite
+          ? edged
+          : BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: edged,
+            ),
     );
   }
 }

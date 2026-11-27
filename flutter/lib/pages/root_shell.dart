@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 
 import '../overlays/card_draw.dart';
@@ -16,17 +17,17 @@ import '../theme/motion.dart';
 import '../todo/todo_store.dart';
 import '../ledger/ledger_store.dart';
 import '../calendar/calendar_store.dart';
-import '../widgets/home_layout.dart';
 import '../pages/res_page.dart';
 import '../widgets/tab_bar.dart';
-import '../state/negative_screen.dart';
 import '../games/gbrake_web.dart';
 import '../widgets/tablet_shell.dart';
 import '../overlays/ai_chat.dart';
 import 'plan_page.dart';
 import 'home_page.dart';
+import 'me_page.dart';
 import 'games_page.dart';
 import 'community_page.dart';
+import '../widgets/paper.dart';
 
 class RootShell extends StatefulWidget {
   final int initialIndex;
@@ -84,15 +85,12 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     AppState.instance.addListener(_onAuthChanged);
     if (_wasLoggedIn && syncOnNextMount) {
       // 强制登录后，壳是登录成功才挂载的：登录那一刻壳还没在，
-      // 这里补一次云端对齐，否则首页布局 / 待办 / 记账 / 日历都不同步。
+      // 这里补一次云端对齐，否则待办 / 记账 / 日历都不同步。
       syncOnNextMount = false;
-      unawaited(HomeLayoutStore.instance.syncFromAccount(force: true));
       unawaited(TodoStore.instance.syncFromAccount(force: true));
       unawaited(LedgerStore.instance.syncFromAccount(force: true));
       unawaited(CalendarStore.instance.syncFromAccount(force: true));
     }
-    // 负一屏的展开信号：先回到首页，HomePage 自己会把负一屏展开。
-    negativeScreenSignal.addListener(_onNegativeScreenRequest);
     _tabAnim = AnimationController(
       vsync: this,
       duration: CitroMotion.tab,
@@ -132,7 +130,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   }
 
   /// 启动完成、网络请求也让出主线程之后，再预解码常用小图。
-  /// 这样打开星象 / AI 对话时不会在首帧临时解码 9 张猫图。
+  /// 这样打开 AI 对话时不会在首帧临时解码 9 张猫图。
   Future<void> _warmAssets() async {
     // 测试环境没有解码器 / 插件，预解码只会留下一个等不到头的延时。
     if (kIsWeb || platform.isTest) return;
@@ -186,7 +184,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _cardPromptTimer?.cancel();
     AppState.instance.cardPromptTick.removeListener(_onCardPrompt);
     AppState.instance.removeListener(_onAuthChanged);
-    negativeScreenSignal.removeListener(_onNegativeScreenRequest);
     _tabAnim.dispose();
     if (instance == this) instance = null;
     super.dispose();
@@ -195,8 +192,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
   void _onAuthChanged() {
     final loggedIn = AppState.instance.loggedIn;
     if (loggedIn && !_wasLoggedIn) {
-      // 登录完成后立即对齐云端：首页布局与待办数据。
-      unawaited(HomeLayoutStore.instance.syncFromAccount(force: true));
+      // 登录完成后立即对齐云端：待办数据。
       unawaited(TodoStore.instance.syncFromAccount(force: true));
       unawaited(LedgerStore.instance.syncFromAccount(force: true));
       unawaited(CalendarStore.instance.syncFromAccount(force: true));
@@ -205,12 +201,6 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       unawaited(LedgerStore.instance.clearLocal());
     }
     _wasLoggedIn = loggedIn;
-  }
-
-  /// 「资源库」的唯一落点是首页负一屏：收到信号先切回首页，
-  /// HomePage 自己监听同一个信号把负一屏展开。
-  void _onNegativeScreenRequest() {
-    if (mounted && index != 0) switchTo(0);
   }
 
   /// 长按自定义 Tab 改了模块：替换该页实例，让新模块立刻生效。
@@ -225,30 +215,41 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     });
   }
 
-  Widget _withSwipe(Widget child) {
+  /// 原生手机：横滑切 Tab。
+  bool get _nativeTouch => !kIsWeb && (platform.isAndroid || platform.isIOS);
+
+  Widget _withSwipe(Widget child, {bool switchTabs = true}) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
+      // 只认手指 / 触控笔：桌面鼠标拖动是文本选择、横向滚动，不能被吃掉。
+      supportedDevices: const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.stylus,
+      },
       onHorizontalDragStart: (_) => _swipeDx = 0,
       onHorizontalDragUpdate: (details) => _swipeDx += details.delta.dx,
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
-        if (_swipeDx <= -46 || v < -380) {
+        final left = _swipeDx <= -46 || v < -380;
+        final right = _swipeDx >= 46 || v > 380;
+        _swipeDx = 0;
+        if (right && index == 0) {
+          // 首页右滑：从左边呼出「我的」侧栏（首页左边没有 Tab 可切）。
+          unawaited(showMeSidebar(context));
+        } else if (switchTabs && _nativeTouch && left) {
           switchTo(index + 1);
-        } else if (_swipeDx >= 46 || v > 380) {
+        } else if (switchTabs && _nativeTouch && right) {
           switchTo(index - 1);
         }
-        _swipeDx = 0;
       },
       child: child,
     );
   }
 
-  /// 只有触屏手机响应横滑切 Tab；桌面 Web / Windows 会与文本选择、
-  /// 横向滚动（日历、图表、游戏）冲突。
-  Widget _swipeable(Widget child) {
-    if (kIsWeb || !(platform.isAndroid || platform.isIOS)) return child;
-    return _withSwipe(child);
-  }
+  /// 原生手机：横滑切 Tab，首页右滑呼出「我的」侧栏。
+  /// 其他端（Web 触屏 / 平板 / 触屏笔记本）只保留首页右滑呼出侧栏；
+  /// 鼠标拖动一律不响应，避免和文本选择、横向滚动冲突。
+  Widget _swipeable(Widget child) => _withSwipe(child);
 
   void switchTo(int i) => unawaited(_switchTab(i));
 
@@ -263,7 +264,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     _dir = i > index ? 1.0 : -1.0;
     final reduce = CitroMotion.reduced(context);
     PerfProbe.beginFrameCollection();
-    _tabAnim.duration = CitroMotion.tabContent;
+    _tabAnim.duration = CitroMotion.desktopLike
+        ? CitroMotion.tabSlideDesktop
+        : CitroMotion.tabSlide;
     // 先把动画值归零，保证等待新页首帧时它就以 t=0 呈现；
     // 否则会先显示一帧 t=1 再跳回起点，出现闪动。
     _tabAnim.value = 0;
@@ -338,7 +341,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
           // 后台页不监听切页动画（用常量动画占位），结构保持一致，
           // 因此切 Tab 时既不会重挂 Element，也不会逐帧重建后台长页面。
           child: AnimatedBuilder(
-            animation: active
+            // 当前页和正在离开的页都要跟着动画逐帧更新位移；之前只有当前页
+            // 监听 _tabAnim，离开的页只在切换那一帧按 t=0 算一次位置就再也
+            // 不动了——新页从旁边滑进来时直接压在静止的旧页上，就是「重叠」。
+            // 只有后台页才用常量动画占位、不逐帧重建。
+            animation: (active || leaving)
                 ? _tabAnim
                 : const AlwaysStoppedAnimation<double>(1),
             child: page,
@@ -350,37 +357,25 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     );
   }
 
-  /// 切页包装：新页从行进方向一侧进入并淡入，旧页反向让位。
-  ///
-  /// 位移用 [FractionalTranslation]（相对自身宽度），不需要知道画布有多宽；
-  /// 5% 宽在 220ms 下能读出方向，又不会像整页横推那样「等页面」。
+  /// 切页包装：新旧两页整宽并排横移（见 [CitroMotion.tabSlide]）。
   Widget _settlePage(
     Widget child, {
     required bool active,
     required bool leaving,
   }) {
-    final reduce = CitroMotion.reduced(context);
-    if (active) {
-      final t = CitroMotion.easeOut.transform(_tabAnim.value);
-      if (reduce) return child;
-      return Opacity(
-        opacity: .85 + .15 * t,
-        child: FractionalTranslation(
-          translation: Offset(-_dir * .05 * (1 - t), 0),
-          child: child,
-        ),
-      );
+    // 整宽横移：页面底是透明的、背景由壳层统一铺在下面，所以两页并排
+    // 一起滑过静止的背景——像翻相册。新页从行进方向那一侧整页滑入，旧页
+    // 同步整页滑出，两页首尾相接：任何一帧都不重叠、也不留空白。
+    // 不做透明度变化（半透明正是之前「叠字」的来源），只改合成层位移。
+    // 所有页（当前 / 离开 / 后台）都返回同一种包装、只改位移：外层结构
+    // 一旦在「页面」和「FractionalTranslation(页面)」之间切换，页面
+    // Element 会被整棵重建，滚动位置和状态全丢。
+    var dx = 0.0;
+    if ((active || leaving) && !CitroMotion.reduced(context)) {
+      final t = CitroMotion.tabSlideCurve.transform(_tabAnim.value);
+      dx = active ? _dir * (1 - t) : -_dir * t;
     }
-    if (!leaving || reduce) return child;
-    // 旧页：朝相反方向让开一半，同时淡到 70%，把舞台让给新页。
-    final out = CitroMotion.exit.transform(_tabAnim.value);
-    return Opacity(
-      opacity: 1 - .3 * out,
-      child: FractionalTranslation(
-        translation: Offset(_dir * .025 * out, 0),
-        child: child,
-      ),
-    );
+    return FractionalTranslation(translation: Offset(dx, 0), child: child);
   }
 
   Widget _pageAt(int i) {
@@ -417,7 +412,12 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
               if (mounted) CitroOrientation.sync(size);
             });
           }
-          final desktop = kIsWeb && size.width >= 1025;
+          // Web 横屏（浏览器窗口呈横向、且宽度够）直接沿用 Windows 桌面壳：
+          // 左侧 208 侧栏 + 分栏首页，不再走网页专用的 WebHomePage。
+          // 竖屏 / 手机上窗口（width < 900 或短边 < 600）保持原来的移动壳。
+          final webLandscape =
+              kIsWeb && size.width > size.height && CitroForm.tabletNav(size);
+          final desktop = kIsWeb && !webLandscape && size.width >= 1025;
           final duo =
               !kIsWeb && (CitroOrientation.isDuo || CitroForm.duoDevice(size));
           if (duo) {
@@ -429,7 +429,11 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
               padding: media.padding.copyWith(right: 0),
               viewPadding: media.viewPadding.copyWith(right: 0),
             );
-            return Scaffold(
+            return CitroBackground(
+              // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
+              // 不会在侧栏和内容之间出现两块裁切不同的背景。
+              child: Scaffold(
+              backgroundColor: Colors.transparent,
               body: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -440,7 +444,7 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                         contentWidth: size.width - railWidth,
                         tabletNav: true,
                         duo: true,
-                        child: _pageStack(),
+                        child: _withSwipe(_pageStack(), switchTabs: false),
                       ),
                     ),
                   ),
@@ -454,14 +458,21 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                   ),
                 ],
               ),
+            ),
             );
           }
-          final tablet = !desktop && !kIsWeb && CitroForm.tabletNav(size);
+          final tablet =
+              webLandscape ||
+              (!desktop && !kIsWeb && CitroForm.tabletNav(size));
           if (tablet) {
             // 待办 / 记账 / 食谱自己就带左侧 rail：这时全局侧栏让位，
             // 由页面自己的 tab 接替左侧位置，右边的内容区保持不动。
             final ownsRail = _pageOwnsRail;
-            return Scaffold(
+            return CitroBackground(
+              // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
+              // 不会在侧栏和内容之间出现两块裁切不同的背景。
+              child: Scaffold(
+              backgroundColor: Colors.transparent,
               body: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -471,6 +482,9 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                       child: CitroTabletSidebar(
                         index: index,
                         onChanged: switchTo,
+                        // 网页端已下线资源库（mods 包体也从 Web 产物里删掉了），
+                        // 侧栏只保留四格；Windows / iPad 仍然是五格。
+                        showLibrary: !kIsWeb,
                       ),
                     ),
                   Expanded(
@@ -480,19 +494,25 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                           : constraints.maxWidth - _sidebarWidth,
                       tabletNav: true,
                       duo: duo,
-                      // 桌面分栏排版（首页左栏背景 + 右栏卡片）：Windows 桌面壳，
-                      // 以及平板横屏都开 —— iPad 横屏要和 Windows 一致。
+                      // 桌面分栏排版（首页左栏背景 + 右栏卡片）：Windows 桌面壳、
+                      // 平板横屏、以及 Web 横屏都开 —— 三端看起来是同一套桌面版。
                       splitHome:
-                          !kIsWeb &&
-                          (platform.isWindows || size.width > size.height),
-                      child: _pageStack(),
+                          webLandscape ||
+                          (!kIsWeb &&
+                              (platform.isWindows || size.width > size.height)),
+                      child: _withSwipe(_pageStack(), switchTabs: false),
                     ),
                   ),
                 ],
               ),
+            ),
             );
           }
-          return Scaffold(
+          return CitroBackground(
+              // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
+              // 不会在侧栏和内容之间出现两块裁切不同的背景。
+              child: Scaffold(
+              backgroundColor: Colors.transparent,
             body: Stack(
               children: [
                 Positioned.fill(
@@ -511,7 +531,8 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
                   ),
               ],
             ),
-          );
+          ),
+            );
         },
       ),
     );

@@ -114,13 +114,6 @@ class NookController extends ChangeNotifier {
   int get timerDuration => _timerDuration;
   int get timerFade => _timerFade;
   bool get hasTimer => ['armed', 'running', 'fading'].contains(_timerStatus);
-  String get timerLabel => switch (_timerStatus) {
-    'armed' => '播放后计时',
-    'running' => clockText(remaining),
-    'fading' => '渐弱 ${clockText(remaining)}',
-    'expired' => '已定时结束',
-    _ => '定时关闭',
-  };
 
   bool get dirty => ready && _baseline.isNotEmpty && signature != _baseline;
 
@@ -486,7 +479,7 @@ class NookController extends ChangeNotifier {
     if (payload['master'] is num) {
       _master = ((payload['master'] as num).toInt()).clamp(0, 100);
     }
-    if (validTracks(payload['tracks']).isEmpty) {
+    if (next.isEmpty) {
       await _pause();
     } else if (payload['autoplay'] == true) {
       await _play();

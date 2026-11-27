@@ -79,9 +79,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
     final current = ledgerParseAmount(_amount.text) ?? 0;
     final value = current + cents;
     setState(() {
-      _amount.text = value % 100 == 0
-          ? '${value ~/ 100}'
-          : (value / 100).toStringAsFixed(2);
+      _amount.text = ledgerCentsInput(value);
       _amount.selection = TextSelection.collapsed(offset: _amount.text.length);
     });
   }
@@ -112,7 +110,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
 
   Future<void> _pickDate() async {
     final picked = await showLedgerDatePicker(context, initial: _at);
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(
       () => _at = DateTime(
         picked.year,
@@ -126,7 +124,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
 
   Future<void> _pickTime() async {
     final picked = await showLedgerTimePicker(context, initial: _at);
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(
       () => _at = DateTime(
         _at.year,
@@ -155,7 +153,9 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: ctx.c.line2,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.avatar,
+                    ),
                   ),
                 ),
               ),
@@ -349,7 +349,9 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
                               onTap: () => showLedgerCategorySheet(context),
                               scale: .92,
                               hoverLift: 0,
-                              borderRadius: BorderRadius.circular(CitroColors.radii.avatar),
+                              borderRadius: BorderRadius.circular(
+                                CitroColors.radii.avatar,
+                              ),
                               child: Container(
                                 width: 40,
                                 height: 40,
@@ -550,11 +552,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
         ),
         child: Row(
           children: [
-            AppIcon(
-              strokeSvg(icon, width: 1.9),
-              size: 17,
-              color: c.accentInk,
-            ),
+            AppIcon(strokeSvg(icon, width: 1.9), size: 17, color: c.accentInk),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -563,10 +561,7 @@ class _LedgerAddTabState extends State<LedgerAddTab> {
                 children: [
                   Text(
                     label,
-                    style: context.lui(
-                      size: CitroType.small,
-                      color: c.inkSoft,
-                    ),
+                    style: context.lui(size: CitroType.small, color: c.inkSoft),
                   ),
                   Text(
                     value,

@@ -22,7 +22,6 @@ import '../widgets/paper.dart';
 import 'ai_chat.dart';
 import 'card_draw.dart';
 import 'fun_sign_sheet.dart';
-import 'notes_modal.dart';
 import 'reflection_sheet.dart';
 import '../widgets/modal.dart';
 
@@ -390,17 +389,6 @@ class _FortuneDialogState extends State<_FortuneDialog>
     if (!mounted) return;
     if (plan.opensReflection) {
       await _openReflectionEntry();
-      return;
-    }
-    if (plan.opensNotes) {
-      if (!AppState.instance.loggedIn) {
-        await _openReflectionEntry();
-        return;
-      }
-      final nav = Navigator.of(context, rootNavigator: true);
-      nav.pop();
-      await Future<void>.delayed(const Duration(milliseconds: 60));
-      await showNotesModal(nav.context);
       return;
     }
     final route = plan.route;
@@ -1118,7 +1106,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
         : step;
     // 解签没回来时，这一步还没写出来：只占位，不给按钮，也不拿签池文案充数。
     final hasText = text.trim().isNotEmpty;
-    final plan = checkinPlanForKind(kind, stepText: text);
+    final plan = checkinPlanForKind(kind);
     final canUsePrimary =
         CheckinFlags.linkedActionEnabled &&
         plan.hasPrimary &&
@@ -1139,7 +1127,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
               color: done ? c.mintSoft : c.surface2,
               borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               border: Border.all(
-                color: done ? c.mintLine : c.line2.withAlpha(120),
+                color: done ? c.mintLine : c.line2.withValues(alpha: c.line2.a * (120) / 255),
               ),
             ),
       child: Column(
@@ -1387,9 +1375,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: c.surface.withAlpha(c.dark ? 44 : 190),
+          color: c.surface.withValues(alpha: c.surface.a * (c.dark ? 44 : 190) / 255),
           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          border: Border.all(color: c.line2.withAlpha(120)),
+          border: Border.all(color: c.line2.withValues(alpha: c.line2.a * (120) / 255)),
         ),
         child: Row(
           children: [
@@ -1634,7 +1622,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
           child: Container(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
             decoration: BoxDecoration(
-              color: c.tintYellow.withAlpha(c.dark ? 36 : 150),
+              color: c.tintYellow.withValues(alpha: c.tintYellow.a * (c.dark ? 36 : 150) / 255),
               borderRadius: BorderRadius.circular(CitroColors.radii.inner),
               border: Border.all(color: c.accent.withAlpha(55)),
             ),
@@ -1649,9 +1637,9 @@ class _FortuneDialogState extends State<_FortuneDialog>
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: c.surface.withAlpha(c.dark ? 40 : 180),
+                color: c.surface.withValues(alpha: c.surface.a * (c.dark ? 40 : 180) / 255),
                 borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-                border: Border.all(color: c.line2.withAlpha(120)),
+                border: Border.all(color: c.line2.withValues(alpha: c.line2.a * (120) / 255)),
               ),
               child: _reflectionRow(context, embedded: true),
             ),
@@ -1840,14 +1828,14 @@ class _FortuneDialogState extends State<_FortuneDialog>
                   Expanded(flex: 3, child: signPage),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(width: 1, color: c.line2.withAlpha(120)),
+                    child: Container(width: 1, color: c.line2.withValues(alpha: c.line2.a * (120) / 255)),
                   ),
                   Expanded(flex: 2, child: todayPage),
                 ],
               ),
             ),
           const SizedBox(height: 18),
-          Container(height: 1, color: c.line2.withAlpha(110)),
+          Container(height: 1, color: c.line2.withValues(alpha: c.line2.a * (110) / 255)),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -1899,7 +1887,7 @@ class _FortuneDialogState extends State<_FortuneDialog>
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-        border: Border.all(color: c.line2.withAlpha(90)),
+        border: Border.all(color: c.line2.withValues(alpha: c.line2.a * (90) / 255)),
       ),
       child: Row(
         children: [
@@ -2278,9 +2266,9 @@ class _FlipShine extends StatelessWidget {
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                             colors: [
-                              c.surface.withAlpha(0),
-                              c.surface.withAlpha(58),
-                              c.surface.withAlpha(0),
+                              c.surface.withValues(alpha: c.surface.a * (0) / 255),
+                              c.surface.withValues(alpha: c.surface.a * (58) / 255),
+                              c.surface.withValues(alpha: c.surface.a * (0) / 255),
                             ],
                           ),
                         ),
@@ -2300,9 +2288,9 @@ class _FlipShine extends StatelessWidget {
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                             colors: [
-                              c.surface.withAlpha(0),
-                              c.surface.withAlpha(150),
-                              c.surface.withAlpha(0),
+                              c.surface.withValues(alpha: c.surface.a * (0) / 255),
+                              c.surface.withValues(alpha: c.surface.a * (150) / 255),
+                              c.surface.withValues(alpha: c.surface.a * (0) / 255),
                             ],
                           ),
                         ),
@@ -2361,7 +2349,7 @@ class _SignSkeleton extends StatelessWidget {
       width: wide ? double.infinity : width,
       height: height,
       decoration: BoxDecoration(
-        color: c.line2.withAlpha(c.dark ? 60 : 110),
+        color: c.line2.withValues(alpha: c.line2.a * (c.dark ? 60 : 110) / 255),
         borderRadius: BorderRadius.circular(4),
       ),
     );

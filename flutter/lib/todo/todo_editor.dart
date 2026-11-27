@@ -111,18 +111,23 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
   }
 
   /// 日期和时间拆成两个入口：点日期只改年月日，点时间只改时分。
-  Future<void> _pickRemindDate() async {
-    final d = await showTodoDatePicker(context, initial: _remindAt);
+  Future<void> _pickDate(
+    DateTime? current,
+    void Function(DateTime) apply,
+  ) async {
+    final d = await showTodoDatePicker(context, initial: current);
     if (d == null || !mounted) return;
-    final base = _remindAt ?? DateTime.now();
+    final base = current ?? DateTime.now();
     setState(
-      () =>
-          _remindAt = DateTime(d.year, d.month, d.day, base.hour, base.minute),
+      () => apply(DateTime(d.year, d.month, d.day, base.hour, base.minute)),
     );
   }
 
-  Future<void> _pickRemindTime() async {
-    final base = _remindAt ?? DateTime.now();
+  Future<void> _pickTime(
+    DateTime? current,
+    void Function(DateTime) apply,
+  ) async {
+    final base = current ?? DateTime.now();
     final t = await showTodoTimePicker(
       context,
       initial: _hm(base.hour, base.minute),
@@ -130,41 +135,13 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
     if (t == null || !mounted) return;
     final p = t.split(':');
     setState(
-      () => _remindAt = DateTime(
+      () => apply(DateTime(
         base.year,
         base.month,
         base.day,
         int.parse(p[0]),
         int.parse(p[1]),
-      ),
-    );
-  }
-
-  Future<void> _pickDueDate() async {
-    final d = await showTodoDatePicker(context, initial: _dueAt);
-    if (d == null || !mounted) return;
-    final base = _dueAt ?? DateTime.now();
-    setState(
-      () => _dueAt = DateTime(d.year, d.month, d.day, base.hour, base.minute),
-    );
-  }
-
-  Future<void> _pickDueTime() async {
-    final base = _dueAt ?? DateTime.now();
-    final t = await showTodoTimePicker(
-      context,
-      initial: _hm(base.hour, base.minute),
-    );
-    if (t == null || !mounted) return;
-    final p = t.split(':');
-    setState(
-      () => _dueAt = DateTime(
-        base.year,
-        base.month,
-        base.day,
-        int.parse(p[0]),
-        int.parse(p[1]),
-      ),
+      )),
     );
   }
 
@@ -527,7 +504,9 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
             context,
             icon: AppIcons.calendar,
             text: at == null ? '选择日期' : formatDayLabel(at),
-            onTap: isReminder ? _pickRemindDate : _pickDueDate,
+            onTap: isReminder
+                ? () => _pickDate(_remindAt, (v) => _remindAt = v)
+                : () => _pickDate(_dueAt, (v) => _dueAt = v),
           ),
         ),
         const SizedBox(width: 8),
@@ -536,7 +515,9 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
             context,
             icon: AppIcons.clock,
             text: at == null ? '选择时间' : _hm(at.hour, at.minute),
-            onTap: isReminder ? _pickRemindTime : _pickDueTime,
+            onTap: isReminder
+                ? () => _pickTime(_remindAt, (v) => _remindAt = v)
+                : () => _pickTime(_dueAt, (v) => _dueAt = v),
           ),
         ),
       ],
@@ -603,16 +584,18 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
         height: 34,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? c.accent.withAlpha(190) : c.bg2.withAlpha(110),
+          // 选中：accentLt 底 + accent 描边 + accentInk 字，与待办页周/月切换一致。
+          color: active ? c.accentLt : c.bg2.withAlpha(110),
           borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           border: Border.all(color: active ? c.accent : c.line),
+          boxShadow: active ? CitroColors.shadows.glow(c) : null,
         ),
         child: Text(
           names[day - 1],
           style: context.ui(
             size: CitroType.meta,
             weight: active ? CitroType.strong : CitroType.regular,
-            color: active ? c.onAccent : c.ink2,
+            color: active ? c.accentInk : c.ink2,
             height: 1,
           ),
         ),
@@ -1435,7 +1418,7 @@ class _ManagerSheet extends StatelessWidget {
     );
   }
 
-  Future<void> _delete(BuildContext context, _ManageItem item) async {
+  void _delete(BuildContext context, _ManageItem item) {
     if (kind == _ManagerKind.category) {
       TodoStore.instance.deleteCategory(item.id);
     } else {

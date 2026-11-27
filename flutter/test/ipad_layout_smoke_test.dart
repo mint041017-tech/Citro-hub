@@ -13,7 +13,6 @@ import 'package:citro/pages/legal_page.dart';
 import 'package:citro/pages/me_page.dart';
 import 'package:citro/pages/play_page.dart';
 import 'package:citro/pages/res_page.dart';
-import 'package:citro/pages/sens_page.dart';
 import 'package:citro/services/models.dart';
 import 'package:citro/services/prefs.dart';
 import 'package:citro/state/app_state.dart';
@@ -171,7 +170,6 @@ void main() {
         'cook': const CookPage(),
         'resources': const ResPage(),
         'play': const PlayPage(),
-        'sensitivity': const SensPage(),
         'privacy': const LegalPage(doc: LegalDoc.privacy),
         'terms': const LegalPage(doc: LegalDoc.terms),
       };

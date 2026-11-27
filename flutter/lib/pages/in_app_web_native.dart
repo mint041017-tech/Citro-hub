@@ -169,7 +169,7 @@ class _InAppWebPageState extends State<InAppWebPage> {
                       value: _progress > 0 && _progress < 1 ? _progress : null,
                       minHeight: 2,
                       color: c.accent,
-                      backgroundColor: c.line.withAlpha(70),
+                      backgroundColor: c.line.withValues(alpha: c.line.a * (70) / 255),
                     )
                   : const SizedBox.shrink(),
             ),

@@ -10,6 +10,40 @@ import '../theme/native.dart';
 import '../theme/tokens.dart';
 import 'paper.dart';
 
+/// 盖在内容之上的子树（弹窗 / 底部面板）：把半透明的 [CitroColors.surface]
+/// 换成不透明的 [CitroSurfaceX.sheet]，弹层里沿用 `c.surface` 的代码
+/// 不会透出底下的页面。其余配色不变，仍随背景取色。
+Widget citroOpaqueSurface(BuildContext context, Widget child) {
+  final theme = Theme.of(context);
+  final c = context.c;
+  // 已经是不透明配色（嵌套弹层）就不再包一层。
+  if (c.surface.a >= .999) return child;
+  final sheet = c.sheet;
+  // 分区底（tint*）在沉浸式里是半透明的，铺在弹层大面积底上会透出
+  // 后面的页面；这里统一预先叠到不透明的 sheet 上。
+  Color solid(Color x) => Color.alphaBlend(x, sheet);
+  return Theme(
+    data: theme.copyWith(
+      extensions: [
+        for (final e in theme.extensions.values)
+          if (e is! CitroSkin) e,
+        CitroSkin(
+          c.copyWith(
+            bg: sheet,
+            surface: sheet,
+            tintYellow: solid(c.tintYellow),
+            tintPink: solid(c.tintPink),
+            tintBlue: solid(c.tintBlue),
+            tintGreen: solid(c.tintGreen),
+            tintNeutral: solid(c.tintNeutral),
+          ),
+        ),
+      ],
+    ),
+    child: child,
+  );
+}
+
 Future<T?> showCitroDialog<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -19,7 +53,7 @@ Future<T?> showCitroDialog<T>(
   final reduce = CitroMotion.reduced(context);
   return Navigator.of(context, rootNavigator: true).push<T>(
     _CitroDialogRoute<T>(
-      page: builder,
+      page: (ctx) => citroOpaqueSurface(ctx, builder(ctx)),
       dismissible: dismissible,
       barrierColor: barrier ?? context.c.scrim,
       reduce: reduce,
@@ -118,8 +152,11 @@ Future<T?> showCitroGeneralDialog<T>({
   final reduce = CitroMotion.reduced(context);
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
     _CitroGeneralDialogRoute<T>(
-      pageBuilder: pageBuilder,
-      transitionBuilder: transitionBuilder,
+      pageBuilder: (ctx, a, b) => citroOpaqueSurface(ctx, pageBuilder(ctx, a, b)),
+      // 有的弹层（今日一签、卡面收藏）把内容画在 transitionBuilder 里，
+      // 这里也要换成不透明配色，否则卡面会透出底下的页面。
+      transitionBuilder: (ctx, a, b, child) =>
+          citroOpaqueSurface(ctx, transitionBuilder(ctx, a, b, child)),
       dismissible: barrierDismissible,
       label: barrierLabel ?? '关闭',
       barrier: barrierColor,
@@ -211,41 +248,9 @@ Future<DateTime?> showCitroDatePicker({
     builder: (ctx, child) => Theme(
       data: Theme.of(ctx).copyWith(
         datePickerTheme: DatePickerThemeData(
-          backgroundColor: c.surface,
+          backgroundColor: c.sheet,
           headerBackgroundColor: c.accentLt,
           headerForegroundColor: c.ink,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          ),
-        ),
-      ),
-      child: child!,
-    ),
-  );
-}
-
-/// 时间选择器：统一套 Citro 主题（原先有一处完全没套，配色和整站无关）。
-Future<TimeOfDay?> showCitroTimePicker({
-  required BuildContext context,
-  required TimeOfDay initialTime,
-  String? helpText,
-}) {
-  final c = context.c;
-  return showTimePicker(
-    context: context,
-    initialTime: initialTime,
-    helpText: helpText,
-    builder: (ctx, child) => Theme(
-      data: Theme.of(ctx).copyWith(
-        timePickerTheme: TimePickerThemeData(
-          backgroundColor: c.surface,
-          hourMinuteColor: c.surface2,
-          hourMinuteTextColor: c.ink,
-          dayPeriodColor: c.accentLt,
-          dayPeriodTextColor: c.ink,
-          dialBackgroundColor: c.surface2,
-          dialHandColor: c.accent,
-          dialTextColor: c.ink,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(CitroColors.radii.inner),
           ),
@@ -275,7 +280,7 @@ Future<T?> showCitroSheet<T>({
 }) {
   return showModalBottomSheet<T>(
     context: context,
-    builder: builder,
+    builder: (ctx) => citroOpaqueSurface(ctx, builder(ctx)),
     isScrollControlled: isScrollControlled,
     isDismissible: isDismissible,
     enableDrag: enableDrag,
@@ -525,11 +530,11 @@ class AccentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // 主操作是近黑（深色主题近白）胶囊，品牌橙只做强调；危险操作保持红色。
-    final fill = danger ? c.danger : c.ink;
+    // iOS 式主操作：背景取色派生的强调色实心胶囊；危险操作保持红色。
+    final fill = danger ? c.danger : c.accent2;
     final fg = outlined
-        ? (danger ? c.danger : c.ink)
-        : (danger ? c.onAccent : c.bg);
+        ? (danger ? c.danger : c.accentInk)
+        : (danger ? const Color(0xFFFFFFFF) : c.onAccent);
     return Pressable(
       onTap: (loading || onTap == null)
           ? null
@@ -550,7 +555,9 @@ class AccentButton extends StatelessWidget {
           border: outlined
               ? Border.all(color: danger ? c.danger : c.line2)
               : null,
-          boxShadow: outlined ? null : CitroColors.shadows.float(c),
+          boxShadow: outlined || onTap == null
+              ? null
+              : (danger ? CitroColors.shadows.sm(c) : CitroColors.shadows.glow(c)),
         ),
         child: Center(
           child: loading

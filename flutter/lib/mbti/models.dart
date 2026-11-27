@@ -12,12 +12,6 @@ extension MbtiModeX on MbtiMode {
     MbtiMode.full => '完整版',
   };
 
-  String get desc => switch (this) {
-    MbtiMode.quick => '28 题 · 约 3 分钟 · 只出四字母，精度有限',
-    MbtiMode.standard => '64 题 · 约 8 分钟 · 推荐，维度分更稳定',
-    MbtiMode.full => '96 题 · 约 12 分钟 · 额外测情绪稳定性（-A/-T）',
-  };
-
   String get key => name;
 
   static MbtiMode fromKey(String? key) => switch (key) {

@@ -716,11 +716,11 @@ class _CiciComposerState extends State<CiciComposer>
       child: Container(
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 4),
+        // 玻璃胶囊输入栏：叠在 CiCi 面板玻璃上的二层玻璃 + 亮边。
         decoration: BoxDecoration(
-          // 输入框用主题米白（c.surface），和四色底拉开层次。
-          color: c.surface,
+          color: c.dark ? const Color(0x1AFFFFFF) : const Color(0x99FFFFFF),
           borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-          border: Border.all(color: c.line),
+          boxShadow: CitroColors.shadows.sm(c),
         ),
         child: Row(
           children: [

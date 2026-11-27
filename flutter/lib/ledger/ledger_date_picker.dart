@@ -347,7 +347,7 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
     return Row(
       children: [
         Expanded(
-          child: LedgerQuickTimeChip(
+          child: _LedgerQuickTimeChip(
             text: '现在',
             onTap: () {
               final now = DateTime.now();
@@ -364,7 +364,7 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
         ),
         const SizedBox(width: 6),
         Expanded(
-          child: LedgerQuickTimeChip(
+          child: _LedgerQuickTimeChip(
             text: '昨天',
             onTap: () {
               final day = DateTime.now().subtract(const Duration(days: 1));
@@ -377,7 +377,7 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
         ),
         const SizedBox(width: 6),
         Expanded(
-          child: LedgerQuickTimeChip(
+          child: _LedgerQuickTimeChip(
             text: '今天上午',
             onTap: () {
               setState(() {
@@ -462,12 +462,11 @@ class _LedgerDateTimeDialogState extends State<_LedgerDateTimeDialog> {
   }
 }
 
-class LedgerQuickTimeChip extends StatelessWidget {
+class _LedgerQuickTimeChip extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const LedgerQuickTimeChip({
-    super.key,
+  const _LedgerQuickTimeChip({
     required this.text,
     required this.onTap,
   });

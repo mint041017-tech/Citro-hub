@@ -111,8 +111,6 @@ class SudokuBoardView extends StatelessWidget {
     this.onSelect,
     this.maxSide = 500,
     this.interactive = false,
-    this.paused = false,
-    this.over = false,
   });
 
   final SudokuPuzzle puzzle;
@@ -126,8 +124,6 @@ class SudokuBoardView extends StatelessWidget {
   final ValueChanged<int>? onSelect;
   final double maxSide;
   final bool interactive;
-  final bool paused;
-  final bool over;
 
   @override
   Widget build(BuildContext context) {
@@ -178,8 +174,6 @@ class SudokuBoardView extends StatelessWidget {
                   revision: revision,
                   cell: cell,
                   colors: c,
-                  paused: paused,
-                  over: over,
                 ),
                 size: Size(side, height),
               ),
@@ -211,8 +205,6 @@ class _SudokuBoardPainter extends CustomPainter {
     this.focusGrid = -1,
     required this.cell,
     required this.colors,
-    required this.paused,
-    required this.over,
   });
 
   final SudokuPuzzle puzzle;
@@ -225,8 +217,6 @@ class _SudokuBoardPainter extends CustomPainter {
   final int revision;
   final double cell;
   final CitroColors colors;
-  final bool paused;
-  final bool over;
 
   int get _rows => puzzle.rows;
   int get _cols => puzzle.cols;
@@ -828,8 +818,6 @@ class _SudokuBoardPainter extends CustomPainter {
       old.layer != layer ||
       old.focusGrid != focusGrid ||
       old.cell != cell ||
-      old.paused != paused ||
-      old.over != over ||
       old.puzzle != puzzle ||
       old.colors != colors ||
       old.colors.ink != colors.ink ||

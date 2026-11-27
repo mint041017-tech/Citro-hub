@@ -4,7 +4,6 @@ import '../overlays/ai_chat.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import 'liquid_glass.dart';
 import 'motion_widgets.dart';
 import 'paper.dart';
 import 'tab_bar.dart';
@@ -90,41 +89,36 @@ class GlassTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = colors ?? context.c;
     final reduce = CitroMotion.reduced(context);
-    const double barHeight = 56;
-    const double ciciSize = 54;
+    const double barHeight = 62;
+    const double ciciSize = 62;
+    // 与主导航一致：选中强调色，未选中半透明墨色。
     final active = activeColor ?? c.accentInk;
-    final inactive = inactiveColor ?? c.inkSoft;
+    final inactive =
+        inactiveColor ?? c.ink.withValues(alpha: c.dark ? .58 : .52);
 
     Widget bar(BuildContext context) {
       final tabs = tabsBuilder?.call(context) ?? this.tabs;
+      // 与主导航一致：按内容收窄、居中，每格固定 68 宽。
       return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 几格一组：玻璃只包这一个整体，右侧 CICI 不在这层玻璃里。
-          Expanded(
-            child: CitroLiquidGlass(
-              height: barHeight,
-              radius: barHeight / 2,
-              clipBehavior: Clip.antiAlias,
-              child: Row(
-                children: [
+          CitroDock(
+            height: barHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: CitroTabStrip(
+                index: index,
+                itemWidth: 70,
+                height: barHeight,
+                items: [
                   for (var i = 0; i < tabs.length; i++)
-                    Expanded(
-                      child: _slot(
-                        context,
-                        tabs[i],
-                        i,
-                        active,
-                        inactive,
-                        reduce,
-                        c,
-                      ),
-                    ),
+                    _slot(context, tabs[i], i, active, inactive, reduce, c),
                 ],
               ),
             ),
           ),
           if (showCici) ...[
-            const SizedBox(width: AppSpacing.x2),
+            const SizedBox(width: 10),
             CiciAvatarButton(
               size: ciciSize,
               onTap: onCiciTap ?? () => showAiChat(context),
@@ -180,13 +174,12 @@ class GlassTabBar extends StatelessWidget {
     CitroColors c,
   ) {
     final isActive = index == slot;
-    // 选中态只用颜色区分（和首页玻璃导航一致）：实色墨 vs 灰，
-    // 不压瓷实底，玻璃的通透感才留得住。
+    // 选中态：强调色图标 + 文字，底下垫一枚浅胶囊。
     final fg = isActive ? active : inactive;
     final icon = tab.svg != null
-        ? AppIcon(strokeSvg(tab.svg!, width: 2), size: 20, color: fg)
+        ? AppIcon(strokeSvg(tab.svg!, width: isActive ? 2.3 : 2), size: 22, color: fg)
         : tab.icon != null
-        ? Icon(tab.icon, size: 20, color: fg)
+        ? Icon(tab.icon, size: 22, color: fg)
         : const SizedBox.shrink();
     return Semantics(
       button: true,
@@ -198,8 +191,13 @@ class GlassTabBar extends StatelessWidget {
         hoverLift: 0,
         hoverShadow: false,
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
-        child: SizedBox(
-          height: 44,
+        // 选中项垫一枚强调色浅胶囊（iOS 26 标签栏的选中态）。
+        child: AnimatedContainer(
+          duration: reduce ? Duration.zero : CitroMotion.hover,
+          curve: CitroMotion.easeColor,
+          height: 50,
+          // 选中底由 CitroTabStrip 的滑动指示器画。
+          decoration: const BoxDecoration(),
           child: Center(
             child: Stack(
               clipBehavior: Clip.none,
@@ -220,10 +218,10 @@ class GlassTabBar extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: context.body(
-                            size: CitroType.micro,
+                            size: 10.5,
                             weight: isActive
-                                ? CitroType.medium
-                                : CitroType.regular,
+                                ? CitroType.strong
+                                : CitroType.medium,
                             color: fg,
                             height: 1,
                           ),

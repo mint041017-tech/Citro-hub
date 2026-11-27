@@ -273,7 +273,9 @@ class _TodoBoardState extends State<TodoBoard> {
     final auto = store.autoReviewEnabled
         ? '每天 ${store.autoReviewTime} 自动总结'
         : '自动复盘未开启';
-    return _Panel(
+    return CitroFieldScope(
+      tone: FieldTone.light,
+      child: _Panel(
       title: '今日复盘',
       icon: AppIcons.note,
       minHeight: 260,
@@ -344,6 +346,7 @@ class _TodoBoardState extends State<TodoBoard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -432,7 +435,9 @@ class _TodoBoardState extends State<TodoBoard> {
     final open = total - done;
     final rate = total == 0 ? 0.0 : done / total;
     final week = store.weekDone;
-    return _Panel(
+    return CitroFieldScope(
+      tone: FieldTone.warm,
+      child: _Panel(
       title: '任务看板',
       icon: AppIcons.board,
       minHeight: 380,
@@ -469,7 +474,7 @@ class _TodoBoardState extends State<TodoBoard> {
             child: LinearProgressIndicator(
               value: rate.clamp(0.0, 1.0),
               minHeight: 10,
-              backgroundColor: c.line2.withAlpha(100),
+              backgroundColor: c.line2.withValues(alpha: c.line2.a * (100) / 255),
               valueColor: AlwaysStoppedAnimation(c.accent),
             ),
           ),
@@ -511,6 +516,7 @@ class _TodoBoardState extends State<TodoBoard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -568,7 +574,9 @@ class _TodoBoardState extends State<TodoBoard> {
       labels.add(_weekLabel(d));
     }
     final total = week.fold<int>(0, (s, e) => s + e);
-    return _Panel(
+    return CitroFieldScope(
+      tone: FieldTone.deep,
+      child: _Panel(
       title: '专注',
       icon: AppIcons.target,
       minHeight: 300,
@@ -636,6 +644,7 @@ class _TodoBoardState extends State<TodoBoard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -818,16 +827,11 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    // 色场：面板交给 CitroCard 画（在色场里是彩色玻璃块）。
+    return ConstrainedBox(
       constraints: BoxConstraints(minHeight: minHeight ?? 0),
-      decoration: BoxDecoration(
-        // 白板 + 大圆角：看板的每张面板都是页面上的主容器。
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
+      child: CitroCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -854,6 +858,7 @@ class _Panel extends StatelessWidget {
           const SizedBox(height: 12),
           child,
         ],
+      ),
       ),
     );
   }

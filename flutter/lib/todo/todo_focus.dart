@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:flutter/material.dart';
 
 import '../overlays/pomodoro_sheet.dart';
@@ -182,9 +183,9 @@ class TodoFocusPage extends StatelessWidget {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    _settingsCard(context),
+                                    CitroFieldScope(tone: FieldTone.glass, child: Builder(builder: (context) => _settingsCard(context))),
                                     const SizedBox(height: 16),
-                                    _doingCard(context),
+                                    CitroFieldScope(tone: FieldTone.primary, child: Builder(builder: (context) => _doingCard(context))),
                                   ],
                                 );
                                 if (box.maxWidth >= 720) {
@@ -200,7 +201,7 @@ class TodoFocusPage extends StatelessWidget {
                                         ],
                                       ),
                                       const SizedBox(height: 18),
-                                      _statsCard(context),
+                                      CitroFieldScope(tone: FieldTone.deep, child: Builder(builder: (context) => _statsCard(context))),
                                     ],
                                   );
                                 }
@@ -210,7 +211,7 @@ class TodoFocusPage extends StatelessWidget {
                                     const SizedBox(height: 18),
                                     side,
                                     const SizedBox(height: 18),
-                                    _statsCard(context),
+                                    CitroFieldScope(tone: FieldTone.deep, child: Builder(builder: (context) => _statsCard(context))),
                                   ],
                                 );
                               },
@@ -231,10 +232,12 @@ class TodoFocusPage extends StatelessWidget {
     return TodoScope(
       child: Builder(
         builder: (context) {
-          final c = context.c;
-          return Scaffold(
-            backgroundColor: c.bg,
+          return CitroBackground(
+            child: Scaffold(
+            // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+            backgroundColor: Colors.transparent,
             body: content,
+          ),
           );
         },
       ),
@@ -247,13 +250,8 @@ class TodoFocusPage extends StatelessWidget {
       listenable: PomodoroState.instance,
       builder: (context, _) {
         final state = PomodoroState.instance;
-        return Container(
+        return CitroCard(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: c.line2),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -386,11 +384,10 @@ class TodoFocusPage extends StatelessWidget {
           const SizedBox(width: 8),
           Transform.scale(
             scale: .8,
-            child: Switch(
+            child: CupertinoSwitch(
               value: value,
               onChanged: onChanged,
-              activeTrackColor: c.accent.withAlpha(150),
-              activeThumbColor: c.accent,
+              activeTrackColor: c.accent,
             ),
           ),
         ],
@@ -515,13 +512,8 @@ class TodoFocusPage extends StatelessWidget {
     final doing = TodoStore.instance.tasks
         .where((t) => t.state == TodoTaskState.doing)
         .toList();
-    return Container(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line2),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -597,13 +589,8 @@ class TodoFocusPage extends StatelessWidget {
         final state = PomodoroState.instance;
         // 本周是逐日列表，取合计分钟数展示。
         final week = state.weekMinutes.fold<int>(0, (a, b) => a + b);
-        return Container(
+        return CitroCard(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(CitroColors.radii.card),
-            border: Border.all(color: c.line2),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -669,7 +656,7 @@ class TodoFocusPage extends StatelessWidget {
 
 Future<void> _openDurations(BuildContext context) => showCitroDialog<void>(
   context,
-  // 时长弹窗同样套用待办的钢青蓝，别跳回全局橙色。
+  // 时长弹窗使用待办模块的主题配色（跟随全局背景图派生）。
   builder: (_) => const TodoScope(child: _DurationDialog()),
 );
 
@@ -966,7 +953,7 @@ class _DurationDialogState extends State<_DurationDialog> {
         height: 30,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: onTap == null ? c.surface2.withAlpha(120) : c.surface2,
+          color: onTap == null ? c.surface2.withValues(alpha: c.surface2.a * (120) / 255) : c.surface2,
           borderRadius: BorderRadius.circular(CitroColors.radii.xs),
           border: Border.all(color: c.line),
         ),

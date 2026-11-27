@@ -55,10 +55,14 @@ class CitroLayoutScope extends InheritedWidget {
 class CitroTabletSidebar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
+
+  /// 是否显示「资源库」格。Web 端已下线资源库，侧栏只留四格。
+  final bool showLibrary;
   const CitroTabletSidebar({
     super.key,
     required this.index,
     required this.onChanged,
+    this.showLibrary = true,
   });
 
   @override
@@ -96,6 +100,8 @@ class CitroTabletSidebar extends StatelessWidget {
         ),
       ),
       child: CitroBackground(
+          // 侧栏透明：露出壳层那张沉浸背景。
+          color: Colors.transparent,
         child: SafeArea(
           right: false,
           child: Padding(
@@ -187,13 +193,14 @@ class CitroTabletSidebar extends StatelessWidget {
                             ),
                           ],
                         ),
-                        _SidebarItem(
-                          label: '资源库',
-                          icon: AppIcons.library,
-                          active: index == 4,
-                          showHighlight: false,
-                          onTap: () => onChanged(4),
-                        ),
+                        if (showLibrary)
+                          _SidebarItem(
+                            label: '资源库',
+                            icon: AppIcons.library,
+                            active: index == 4,
+                            showHighlight: false,
+                            onTap: () => onChanged(4),
+                          ),
                         _SidebarItem(
                           label: '全站搜索',
                           icon: AppIcons.search,
@@ -323,6 +330,8 @@ class CitroDuoRightRail extends StatelessWidget {
         border: Border(left: BorderSide(color: c.line)),
       ),
       child: CitroBackground(
+          // 侧栏透明：露出壳层那张沉浸背景。
+          color: Colors.transparent,
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 24),
           child: Column(
@@ -432,6 +441,8 @@ class CitroDuoCookRail extends StatelessWidget {
         border: Border(left: BorderSide(color: c.line)),
       ),
       child: CitroBackground(
+          // 侧栏透明：露出壳层那张沉浸背景。
+          color: Colors.transparent,
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 24),
           child: SingleChildScrollView(
@@ -482,6 +493,8 @@ class CitroDuoBackRail extends StatelessWidget {
         border: Border(left: BorderSide(color: c.line)),
       ),
       child: CitroBackground(
+          // 侧栏透明：露出壳层那张沉浸背景。
+          color: Colors.transparent,
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, topInset, 12, 8),
           child: Column(
@@ -771,7 +784,7 @@ class _SidebarItem extends StatelessWidget {
                   color: active ? c.accent : c.surface2,
                   borderRadius: BorderRadius.circular(AppSpacing.x1),
                   border: Border.all(
-                    color: active ? c.accent : c.line.withAlpha(180),
+                    color: active ? c.accent : c.line.withValues(alpha: c.line.a * (180) / 255),
                   ),
                 ),
                 child: Center(

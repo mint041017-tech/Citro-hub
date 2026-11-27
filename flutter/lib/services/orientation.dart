@@ -11,12 +11,6 @@ class CitroOrientation {
   static bool? _isDuo;
   static bool? _landscape;
 
-  /// 全屏放映中（一起看房间页全屏时置位）。
-  ///
-  /// root_shell 在每次尺寸变化时都会调 [sync] 重锁方向；不加这个 guard，
-  /// 全屏进入横屏的下一帧就会被它改回竖屏。退出全屏时清掉。
-  static bool fullscreen = false;
-
   static bool get isDuo => _isDuo == true;
 
   /// 尺寸兜底判断：iPhone 最宽也远小于 600pt；Duo 内屏虽超过 600pt 但按折叠屏处理。
@@ -39,8 +33,6 @@ class CitroOrientation {
 
   static Future<void> sync(Size size) async {
     if (!platform.isIOS) return;
-    // 一起看全屏放映期间，方向由放映逻辑接管，shell 的重锁跳过。
-    if (fullscreen) return;
     if (_idiom == null) {
       try {
         _idiom = await _channel.invokeMethod<String>('idiom');

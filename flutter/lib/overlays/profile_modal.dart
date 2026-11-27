@@ -93,8 +93,9 @@ class _ProfileDialogState extends State<_ProfileDialog> {
       AppToast.show(context, '资料已保存');
       Navigator.of(context).pop();
     } on Exception catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => error = e.toString().replaceFirst('ApiException: ', ''));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -103,19 +104,20 @@ class _ProfileDialogState extends State<_ProfileDialog> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final firstRun = AppState.instance.user?.profileDone == false;
     return PaperDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '更改信息',
+            firstRun ? '完善资料' : '更改信息',
             textAlign: TextAlign.center,
             style: context.heading(size: 22),
           ),
           const SizedBox(height: 4),
           Text(
-            '点头像换图片，改完点保存',
+            firstRun ? '设置昵称和生日，之后可随时修改' : '点头像换图片，改完点保存',
             textAlign: TextAlign.center,
             style: context.body(size: CitroType.caption, color: c.inkSoft),
           ),
@@ -199,7 +201,10 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           ),
           if (error != null) ...[
             const SizedBox(height: 10),
-            Text(error!, style: context.body(size: CitroType.caption, color: c.stamp)),
+            Text(
+              error!,
+              style: context.body(size: CitroType.caption, color: c.stamp),
+            ),
           ],
           const SizedBox(height: 20),
           Row(
@@ -211,7 +216,9 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                     height: 44,
                     decoration: BoxDecoration(
                       border: Border.all(color: c.line2),
-                      borderRadius: BorderRadius.circular(CitroColors.radii.chip),
+                      borderRadius: BorderRadius.circular(
+                        CitroColors.radii.chip,
+                      ),
                     ),
                     child: Center(
                       child: Text(
@@ -261,8 +268,14 @@ class _ProfileDialogState extends State<_ProfileDialog> {
         ),
         child: Row(
           children: [
-            Text(value, style: context.body(size: CitroType.body, color: c.ink)),
-            Text(suffix, style: context.body(size: CitroType.small, color: c.inkSoft)),
+            Text(
+              value,
+              style: context.body(size: CitroType.body, color: c.ink),
+            ),
+            Text(
+              suffix,
+              style: context.body(size: CitroType.small, color: c.inkSoft),
+            ),
             const Spacer(),
             AppIcon(
               strokeSvg(AppIcons.chevronDown, width: 2),
@@ -293,7 +306,9 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           height: 280,
           decoration: BoxDecoration(
             color: cc.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(CitroColors.radii.card)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(CitroColors.radii.card),
+            ),
             border: Border.all(color: cc.line),
           ),
           child: SafeArea(
@@ -315,7 +330,10 @@ class _ProfileDialogState extends State<_ProfileDialog> {
                           padding: const EdgeInsets.all(8),
                           child: Text(
                             '取消',
-                            style: ctx.body(size: CitroType.caption, color: cc.inkSoft),
+                            style: ctx.body(
+                              size: CitroType.caption,
+                              color: cc.inkSoft,
+                            ),
                           ),
                         ),
                       ),

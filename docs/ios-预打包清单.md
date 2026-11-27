@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`3.3.1+3301` · 更新日期：2026-11-23
+> 当前版本：`3.3.5+3305` · 更新日期：2026-11-28
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `3.3.1+3301` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `3.3.5+3305` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.3.1 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3301 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.3.5 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3305 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=3.3.1`、`FLUTTER_BUILD_NUMBER=3301`。
+`FLUTTER_BUILD_NAME=3.3.5`、`FLUTTER_BUILD_NUMBER=3305`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -93,7 +93,16 @@
 - 读数按真实文本宽度排布，放不下时自动折到标题下方一行；难度条与棋盘之间留 24dp 间距。
 - 淘气小球、跳一跳这类自定义 `hud:` 页面显式提供 `hudStats`，其余游戏从 `pills` 自动提取。
 
-### 2.7 3.3.1 预打包检查
+### 2.7 3.3.5 预打包检查
+
+- 新增「测试中心」：十二系亲密关系测评（40 题 / 5 维 / 12 原型，600 次蒙特卡洛稳定率），结果页含五维雷达、成人依恋平面、Curran 效度审计与关系动力学。
+- MBTI 图鉴入口移除，历史结果改为「测试档案」内联回顾；档案随账号云端同步。
+- 登录注册重做：自动识别手机号或邮箱，注册免昵称、增加确认密码，首次进入补全资料。
+- 全局玻璃材质与深色模式通透度重新调校，底部标签栏磨砂更清晰。
+- 游戏卡片与游戏页视觉优化，桌面、平板与手机布局更统一。
+- 版本号、Info.plist 变量、Generated.xcconfig 与构建脚本已同步到 `3.3.5 / 3305`。
+
+### 2.8 3.3.1 预打包检查
 
 - 每日一签取消同级签按日期轮换，等级与具体签位独立随机；旧三段缓存会在首次读取时补随机签位并升级。
 - 签文改为七段文本流式协议，签题、诗、读签、关键词、今日一小步、忌与便签逐段返回。
@@ -101,7 +110,7 @@
 - 社区取消 200 字限制，长文按真实渲染宽度超过五行折叠，可展开 / 收起。
 - 版本号、Info.plist 变量、Generated.xcconfig 与构建脚本已同步到 `3.3.1 / 3301`。
 
-### 2.8 3.3.0 预打包检查
+### 2.9 3.3.0 预打包检查
 
 - MBTI 96 题测试、结果人格切片与二维码分享卡已进入 iOS 共用 Flutter 页面。
 - 每日打卡升级：趣签筒、今日一签、晚间回签与七日成卷；手机签印改为独立朱砂色文字印记。
@@ -126,7 +135,7 @@ bash ios/build_ipa.sh
 ```bash
 flutter build ipa --release \
   --export-method app-store \
-  --dart-define=APP_VERSION=3.3.1
+  --dart-define=APP_VERSION=3.3.5
 ```
 
 产物：`flutter/build/ios/ipa/*.ipa`。
@@ -134,17 +143,17 @@ flutter build ipa --release \
 ## 4. 产物归档与上传
 
 ```bash
-cp build/ios/ipa/*.ipa "../IPA/Citro-v3.3.1-unsigned.ipa"
-shasum -a 256 "../IPA/Citro-v3.3.1-unsigned.ipa"
+cp build/ios/ipa/*.ipa "../IPA/Citro-v3.3.5-unsigned.ipa"
+shasum -a 256 "../IPA/Citro-v3.3.5-unsigned.ipa"
 
-curl -X PUT -T "IPA/Citro-v3.3.1-unsigned.ipa" \
+curl -X PUT -T "IPA/Citro-v3.3.5-unsigned.ipa" \
   -H "Content-Type: application/octet-stream" \
-  "https://obs.chimu-claw.xyz/IPA/Citro-v3.3.1-unsigned.ipa"
+  "https://obs.chimu-claw.xyz/IPA/Citro-v3.3.5-unsigned.ipa"
 ```
 
 ## 5. 发版前验证
 
-1. `CFBundleShortVersionString` 为 `3.3.1`，`CFBundleVersion` 为 `3301`（CI 上传时会按 TestFlight 已有构建号自增，以收据为准）。
+1. `CFBundleShortVersionString` 为 `3.3.5`，`CFBundleVersion` 为 `3305`（CI 上传时会按 TestFlight 已有构建号自增，以收据为准）。
 2. 真机走查：
    - 冷启动首屏是奶米底 logo 启动页（与 Flutter 启动页同款），不再出现旧猫咪插画；
    - 系统深色模式下冷启动是深底变体，浅色模式下是奶米底，两套都不会裁切 logo；
@@ -198,3 +207,4 @@ curl -X PUT -T "IPA/Citro-v3.3.1-unsigned.ipa" \
 | 3.2.1 | 版本号与 iOS 构建配置同步到 `3.2.1+3201`；手机数独操作行随棋盘滚动，四个工具页返回完整淡出；IPA 由 TestFlight CI 构建上传。 |
 | 3.3.0 | 版本号与 iOS 构建配置同步到 `3.3.0+3300`；MBTI 96 题测试与二维码分享、每日打卡回签与七日成卷、独立朱砂色今日签上线；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
 | 3.3.1 | 版本号与 iOS 构建配置同步到 `3.3.1+3301`；每日一签改为完全随机并移除同级日期轮换，签文七段流式输出，今日一小步增加动作校验与兜底，社区长文五行折叠；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
+| 3.3.5 | 版本号与 iOS 构建配置同步到 `3.3.5+3305`；新增测试中心与十二系亲密关系测评、MBTI 测试档案内联回顾；登录注册自动识别账号与免昵称注册；全局玻璃与深色模式通透度调校；游戏卡片视觉改版；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |

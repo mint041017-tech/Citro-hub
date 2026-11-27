@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,97 +27,140 @@ import '../widgets/card_morph.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
 import '../widgets/shared_element.dart';
+import '../widgets/tablet_shell.dart';
 import 'legal_page.dart';
 
-Future<void> showMeWindow(BuildContext context) {
+/// 「我的」以左侧抽屉展示：四端统一。
+///
+/// 入口是首页左上角的头像，所以从左边滑出；宽度在手机上占屏宽 88%，
+/// 平板 / 桌面最宽 420。点遮罩、按 Esc、往左拖都能收起，拖动时面板
+/// 跟手走，松手按位置和速度决定收起还是弹回。
+void openMePage(BuildContext context) => showMeSidebar(context);
+
+/// 兼容旧调用：浮窗入口也改成抽屉。
+Future<void> showMeWindow(BuildContext context) => showMeSidebar(context);
+
+Future<void> showMeSidebar(BuildContext context) {
   final reduce = CitroMotion.reduced(context);
-  // 透明 PageRoute：Hero 只在 PageRoute 之间飞行，Dialog 路由不会。
   return Navigator.of(context, rootNavigator: true).push<void>(
     PageRouteBuilder<void>(
       opaque: false,
       barrierColor: context.c.scrim,
       barrierDismissible: true,
       barrierLabel: '关闭我的',
-      // 和卡片打开同一套节奏：进 300ms / 出 220ms，同一条 emphasized → exit
-      // 轨迹。旧版是 280 / 200 的居中淡入淡出，关掉时看不出「回到入口」。
-      transitionDuration: reduce ? Duration.zero : CitroMotion.cardOpen,
-      reverseTransitionDuration: reduce ? Duration.zero : CitroMotion.cardClose,
-      pageBuilder: (ctx, _, _) {
-        final media = MediaQuery.of(ctx);
-        final width = math.min(720.0, media.size.width - 48);
-        final height = math.min(760.0, media.size.height - 48);
-        return Center(
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-                boxShadow: CitroColors.shadows.lg(context.c),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-                child: MediaQuery(
-                  data: media.copyWith(size: Size(width, height)),
-                  child: const MePage(floating: true),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+      settings: const RouteSettings(name: '/me'),
+      transitionDuration: reduce ? Duration.zero : CitroMotion.sheet,
+      reverseTransitionDuration: reduce
+          ? Duration.zero
+          : CitroMotion.sheetReverse,
+      pageBuilder: (ctx, _, _) => const _MeSidebar(),
       transitionsBuilder: (ctx, animation, secondary, child) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: CitroMotion.emphasized,
+          curve: CitroMotion.drawer,
           reverseCurve: CitroMotion.exit,
         );
         if (reduce) return FadeTransition(opacity: curved, child: child);
-        return FadeTransition(
-          // 起始就有 82% 不透明度：位移负责方向感、透明度只做收尾。
-          // 整扇窗从 0 淡进来回得像系统对话框，而不是本产品的动效。
-          opacity: Tween<double>(begin: .82, end: 1).animate(curved),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, .045),
-              end: Offset.zero,
-            ).animate(curved),
-            child: ScaleTransition(
-              scale: Tween<double>(begin: .96, end: 1).animate(curved),
-              child: child,
-            ),
-          ),
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(-1, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
         );
       },
     ),
   );
 }
 
-/// Windows 与 iPad 统一用浮窗展示「我的」；手机端仍保持整页路由。
-void openMePage(BuildContext context) {
-  final floating =
-      !kIsWeb &&
-      (platform.isWindows ||
-          CitroOrientation.padSize(MediaQuery.sizeOf(context)));
-  if (floating) {
-    showMeWindow(context);
-    return;
-  }
-  // 整页「我的」也走全 App 唯一的卡片打开入口：300 / 220、emphasized → exit，
-  // 和首页卡片、菜谱、日历、记账、听隅同一套节奏。原先 pushNamed 走的是平台
-  // 页面转场（280 / 200），和其它页不一致，关掉时也回不到入口。
-  // 入口是各处的头像、没有可快照的卡片矩形，所以不附快照：转场就是同一场
-  // 「纸页抬起」；source 只在附带快照时用来定位纸面，这里传当前页矩形占位。
-  final box = context.findRenderObject();
-  final source = box is RenderBox && box.hasSize
-      ? box.localToGlobal(Offset.zero) & box.size
-      : Rect.zero;
-  CitroCardMorph.openCardPage<void>(
-    context,
-    source: source,
-    settings: const RouteSettings(name: '/me'),
-    builder: (_) => const MePage(),
+class _MeSidebar extends StatefulWidget {
+  const _MeSidebar();
+
+  @override
+  State<_MeSidebar> createState() => _MeSidebarState();
+}
+
+class _MeSidebarState extends State<_MeSidebar>
+    with SingleTickerProviderStateMixin {
+  /// 跟手拖动的位移（≤ 0，向左为负）。
+  late final AnimationController _drag = AnimationController(
+    vsync: this,
+    lowerBound: -1,
+    upperBound: 0,
+    value: 0,
   );
+  double _width = 1;
+
+  @override
+  void dispose() {
+    _drag.dispose();
+    super.dispose();
+  }
+
+  void _onUpdate(DragUpdateDetails d) {
+    _drag.value = (_drag.value + d.primaryDelta! / _width).clamp(-1.0, 0.0);
+  }
+
+  void _onEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    // 拖过三分之一，或者向左甩得够快：收起。
+    if (_drag.value < -.33 || v < -700) {
+      Navigator.of(context).maybePop();
+    } else {
+      _drag.animateTo(
+        0,
+        duration: CitroMotion.guard(context, CitroMotion.sheetReverse),
+        curve: CitroMotion.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final wide = media.size.width >= 600;
+    _width = wide
+        ? math.min(420.0, media.size.width * .5)
+        : media.size.width * .88;
+    const radius = Radius.circular(28);
+    final panel = SizedBox(
+      width: _width,
+      height: media.size.height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.horizontal(right: radius),
+          boxShadow: CitroColors.shadows.lg(context.c),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.horizontal(right: radius),
+          child: MediaQuery(
+            // 面板就是「我的」的全部视口：宽度换成面板宽，右侧不再有安全区。
+            data: media.copyWith(
+              size: Size(_width, media.size.height),
+              padding: media.padding.copyWith(right: 0),
+              viewPadding: media.viewPadding.copyWith(right: 0),
+            ),
+            child: const MePage(floating: true),
+          ),
+        ),
+      ),
+    );
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: GestureDetector(
+        onHorizontalDragUpdate: _onUpdate,
+        onHorizontalDragEnd: _onEnd,
+        child: AnimatedBuilder(
+          animation: _drag,
+          builder: (context, child) => Transform.translate(
+            offset: Offset(_drag.value * _width, 0),
+            child: child,
+          ),
+          child: RepaintBoundary(child: panel),
+        ),
+      ),
+    );
+  }
 }
 
 class MePage extends StatelessWidget {
@@ -219,17 +263,35 @@ class MePage extends StatelessWidget {
 
   /// 账号与安全：头像入口 + 打卡/收藏/抽卡数据 + 退出与注销。
   Widget _accountGroup(BuildContext context, AppState state, User? user) {
+    // 色场：资料卡单独一块主色色块，是这一页的视觉重心；
+    // 退出 / 注销留在下面普通的分组里，危险色不被主色吃掉。
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CitroFieldScope(
+          tone: FieldTone.primary,
+          child: _GroupCard(
+            children: [
+              _ProfileCell(
+                state: state,
+                user: user,
+                // 「我的」全形态共用同一个 Hero tag：平板侧栏 / Duo 栏 / 浮窗 /
+                // 手机路由都从这颗头像飞进飞出。tag 不一致时 Hero 不生效，
+                // 就只剩浮窗淡入，看不出「从哪来」。
+                heroTag: CitroHero.tagOf('profile', 'me'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _accountActions(context),
+      ],
+    );
+  }
+
+  Widget _accountActions(BuildContext context) {
     return _GroupCard(
       children: [
-        _ProfileCell(
-          state: state,
-          user: user,
-          // 「我的」全形态共用同一个 Hero tag：平板侧栏 / Duo 栏 / 浮窗 /
-          // 手机路由都从这颗头像飞进飞出。tag 不一致时 Hero 不生效，
-          // 就只剩浮窗淡入，看不出「从哪来」。
-          heroTag: CitroHero.tagOf('profile', 'me'),
-        ),
-        const _BlockDivider(),
         _SettingsRow(
           icon: AppIcons.logout,
           label: '退出登录',
@@ -460,14 +522,25 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // 在色场里（资料卡）：交给 CitroCard 画成彩色玻璃块。
+    if (CitroFieldScope.toneOf(context) != null) {
+      return CitroCard(
+        padding: EdgeInsets.zero,
+        clip: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      );
+    }
+    // iOS 分组列表：沿用全局玻璃表面，深色下保持半透明而不是白色实底。
     return Container(
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        boxShadow: CitroColors.shadows.card(c),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner + 2),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
+        borderRadius: BorderRadius.circular(CitroColors.radii.inner + 2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children,
@@ -483,9 +556,41 @@ class _RowDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 54, right: 16),
+    // 16 内边距 + 36 图标块 + 12 间距：细线对齐行标题。
+    // 16 内边距 + 32 图标块 + 12 间距：细线对齐行标题。
+    padding: const EdgeInsets.only(left: 60, right: 0),
     child: CitroDivider(color: context.c.line),
   );
+}
+
+/// 设置行左侧的图标块：accentLt 圆角底 + accentInk 图标，随背景主题色变。
+/// 危险行（退出 / 注销）改用 dangerSoft + danger。
+class _IconTile extends StatelessWidget {
+  final String icon;
+  final bool danger;
+
+  const _IconTile(this.icon, {this.danger = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    // iOS 设置页的图标块：实心色底 + 白色线性图标，上亮下深一点点。
+    final base = danger ? c.danger : c.accent2;
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: base,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: AppIcon(
+        strokeSvg(icon, width: 2.2),
+        size: 18,
+        color: danger ? const Color(0xFFFFFFFF) : c.onAccent,
+      ),
+    );
+  }
 }
 
 /// 整行宽的组内细线，用于无图标的块（资料卡、收藏入口）之后。
@@ -831,12 +936,8 @@ class _SettingsRowState extends State<_SettingsRow> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    AppIcon(
-                      strokeSvg(widget.icon, width: 2),
-                      size: 24,
-                      color: widget.danger ? c.danger : c.ink,
-                    ),
-                    const SizedBox(width: 14),
+                    _IconTile(widget.icon, danger: widget.danger),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -935,12 +1036,8 @@ class _SettingsSwitchRowState extends State<_SettingsSwitchRow> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  AppIcon(
-                    strokeSvg(widget.icon, width: 2),
-                    size: 24,
-                    color: c.ink,
-                  ),
-                  const SizedBox(width: 14),
+                  _IconTile(widget.icon),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -969,13 +1066,11 @@ class _SettingsSwitchRowState extends State<_SettingsSwitchRow> {
                       ],
                     ),
                   ),
-                  Switch(
+                  // iOS 原生开关：强调色轨道。
+                  CupertinoSwitch(
                     value: widget.value,
                     onChanged: widget.onChanged,
-                    activeThumbColor: c.surface,
                     activeTrackColor: c.accent,
-                    inactiveThumbColor: c.inkSoft,
-                    inactiveTrackColor: c.line2,
                   ),
                 ],
               ),
@@ -1019,12 +1114,8 @@ class _ThemeRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            AppIcon(
-              strokeSvg(_icon(current), width: 2),
-              size: 24,
-              color: c.ink,
-            ),
-            const SizedBox(width: 14),
+            _IconTile(_icon(current)),
+            const SizedBox(width: 12),
             Text(
               '主题',
               maxLines: 1,
@@ -1068,23 +1159,24 @@ class _ThemeSegments extends StatelessWidget {
     final reduce = CitroMotion.reduced(context);
     final modes = _ThemeRow._modes;
     final currentIndex = modes.indexOf(current).clamp(0, modes.length - 1);
+    // iOS 分段控件：灰色轨道 + 白色浮起滑块，圆角矩形而不是胶囊。
     return Container(
-      height: 38,
-      padding: const EdgeInsets.all(3),
+      height: 34,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: LayoutBuilder(
         builder: (context, cons) {
           final segW = cons.maxWidth / modes.length;
           return Stack(
             children: [
-              // 一枚滑块指示当前项：和 App 的胶囊按钮同一套近黑，
-              // 比三段各自渐变更利落，也更像系统分段控件。
+              // 一枚滑块指示当前项：surface 浮起块 + accent 光晕，
+              // 图标用 accentInk，像系统分段控件，也跟随背景主题色。
               AnimatedAlign(
                 duration: reduce ? Duration.zero : CitroMotion.indicator,
-                curve: CitroMotion.easeColor,
+                curve: CitroMotion.emphasized,
                 alignment: Alignment(
                   -1 + 2 * currentIndex / (modes.length - 1),
                   0,
@@ -1092,8 +1184,18 @@ class _ThemeSegments extends StatelessWidget {
                 child: Container(
                   width: segW,
                   decoration: BoxDecoration(
-                    color: c.ink,
-                    borderRadius: BorderRadius.circular(999),
+                    color: c.dark
+                        ? const Color(0xFF636366)
+                        : const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(7),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1F000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                      BoxShadow(color: Color(0x0A000000), blurRadius: 1),
+                    ],
                   ),
                 ),
               ),
@@ -1109,12 +1211,12 @@ class _ThemeSegments extends StatelessWidget {
                           behavior: HitTestBehavior.opaque,
                           onTap: () => onChanged(mode),
                           child: SizedBox(
-                            height: 32,
+                            height: 30,
                             child: Center(
                               child: AppIcon(
                                 strokeSvg(_ThemeRow._icon(mode), width: 2),
                                 size: 17,
-                                color: mode == current ? c.bg : c.ink2,
+                                color: mode == current ? c.ink : c.inkSoft,
                               ),
                             ),
                           ),

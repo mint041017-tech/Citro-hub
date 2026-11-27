@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
-import '../services/platform.dart' as platform;
 import '../services/pomodoro.dart';
 import '../theme/app_theme.dart';
 import '../theme/native.dart';
@@ -9,7 +10,9 @@ import '../theme/tokens.dart';
 import '../overlays/ai_chat.dart';
 import '../widgets/glass_tab_bar.dart';
 import '../widgets/modal.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 import '../widgets/tablet_shell.dart';
 import 'todo_board.dart';
 import 'todo_editor.dart';
@@ -20,6 +23,12 @@ import '../tingyu/tingyu_controller.dart';
 import 'todo_rail.dart';
 import 'todo_theme.dart';
 import 'todo_ui.dart';
+
+Color _todoStateColor(CitroColors c, TodoTaskState s) => switch (s) {
+  TodoTaskState.todo => c.accent,
+  TodoTaskState.doing => c.mint,
+  TodoTaskState.done => c.inkSoft,
+};
 
 /// 待办模块的一级页面：待办 / 数据 / 专注。
 class TodoPage extends StatefulWidget {
@@ -224,9 +233,10 @@ class _TodoPageState extends State<TodoPage>
     return TodoScope(
       child: Builder(
         builder: (context) {
-          final c = context.c;
-          return Scaffold(
-            backgroundColor: c.bg,
+          return CitroBackground(
+            child: Scaffold(
+            // 沉浸式：页面底交给外层 CitroBackground（背景图 + 罩面）。
+            backgroundColor: Colors.transparent,
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -275,6 +285,7 @@ class _TodoPageState extends State<TodoPage>
                 ),
               ],
             ),
+          ),
           );
         },
       ),
@@ -460,11 +471,12 @@ class _TodoPageState extends State<TodoPage>
     );
   }
 
-  /// 返回上一级：Windows 的待办是从计划页 push 出来的，pop 就回到计划页；
-  /// 其他端（以及深链把 /todo 当初始路由、没有上一级时）仍回首页。
+  /// 返回上一级：四端都是 push 出来的（首页 / 计划页的卡片），pop 就回到
+  /// 打开它的那一页（计划页打开就回计划页）。只有深链把 /todo 当初始
+  /// 路由、没有上一级时才回首页——和日历页一致。
   void _back(BuildContext context) {
     final nav = Navigator.of(context);
-    if (platform.isWindows && nav.canPop()) {
+    if (nav.canPop()) {
       nav.pop();
       return;
     }
@@ -552,13 +564,16 @@ class _TodayView extends StatelessWidget {
         final tasks = store.todayTasks;
         final panels = [
           for (final s in TodoTaskState.values)
-            _StatePanel(
+            _StatePanel.field(
               state: s,
               tasks: tasks.where((t) => t.state == s).toList(),
               scrollable: wide,
             ),
         ];
-        final head = _TodaySummary(tasks: tasks, horizontal: wide);
+        final head = CitroFieldScope(
+          tone: FieldTone.primary,
+          child: _TodaySummary(tasks: tasks, horizontal: wide),
+        );
         if (!wide) {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
@@ -638,21 +653,37 @@ class _StatePanel extends StatelessWidget {
     this.scrollable = false,
   });
 
+  /// 色场版：三列各用一种色调——待办浅色、进行中暖色、已完成玻璃，
+  /// 一眼分出三种状态。
+  static Widget field({
+    required TodoTaskState state,
+    required List<TodoTask> tasks,
+    bool scrollable = false,
+  }) => CitroFieldScope(
+    tone: switch (state) {
+      TodoTaskState.todo => FieldTone.light,
+      TodoTaskState.doing => FieldTone.warm,
+      TodoTaskState.done => FieldTone.glass,
+    },
+    child: _StatePanel(state: state, tasks: tasks, scrollable: scrollable),
+  );
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final color = switch (state) {
-      TodoTaskState.todo => c.accent,
-      TodoTaskState.doing => c.mint,
-      TodoTaskState.done => c.inkSoft,
-    };
+    final color = _todoStateColor(c, state);
     final empty = switch (state) {
       TodoTaskState.todo => '还没有要做的',
       TodoTaskState.doing => '在任务卡右下角把状态改成进行中',
       TodoTaskState.done => '做完的会收在这里',
     };
-    final tiles = tasks.isEmpty
-        ? Padding(
+    // 任务换列 / 完成 / 删除时，卡片在原位收起、在新列展开，
+    // 空提示也一起淡入淡出，不再整列瞬间跳变。
+    final tiles = CitroAnimatedColumn(
+      children: [
+        if (tasks.isEmpty)
+          Padding(
+            key: const ValueKey('todo-empty'),
             padding: const EdgeInsets.fromLTRB(6, 16, 6, 18),
             child: Text(
               empty,
@@ -662,25 +693,17 @@ class _StatePanel extends StatelessWidget {
                 height: 1.5,
               ),
             ),
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final t in tasks)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: TodoTaskTile(task: t),
-                ),
-            ],
-          );
-    return Container(
+          ),
+        for (final t in tasks)
+          Padding(
+            key: ValueKey('todo-${t.id}'),
+            padding: const EdgeInsets.only(bottom: 6),
+            child: TodoTaskTile(task: t),
+          ),
+      ],
+    );
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
       child: Column(
         mainAxisSize: scrollable ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -747,7 +770,7 @@ class _TodaySummary extends StatelessWidget {
       child: LinearProgressIndicator(
         value: rate.clamp(0.0, 1.0),
         minHeight: 8,
-        backgroundColor: c.line2.withAlpha(100),
+        backgroundColor: c.line2.withValues(alpha: c.line2.a * (100) / 255),
         valueColor: AlwaysStoppedAnimation(c.accent),
       ),
     );
@@ -791,14 +814,8 @@ class _TodaySummary extends StatelessWidget {
         color: c.ink,
       ),
     );
-    return Container(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
       child: horizontal
           ? Row(
               children: [
@@ -819,6 +836,33 @@ class _TodaySummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [title, const Spacer(), countText]),
+                const SizedBox(height: 6),
+                // 色场：剩余件数用大号粗数字，和首页待办卡同一种读法。
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    CitroCountUp(
+                      todo + doing,
+                      style: context.heading(
+                        size: 52,
+                        color: c.ink,
+                        height: .92,
+                        letterSpacing: -3,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '件没做完',
+                        style: context.ui(
+                          size: CitroType.caption,
+                          color: c.inkSoft,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 10),
                 bar,
                 const SizedBox(height: 10),
@@ -828,23 +872,8 @@ class _TodaySummary extends StatelessWidget {
     );
   }
 
-  Widget _dot(BuildContext context, Color color, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 5,
-          height: 5,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: context.ui(size: CitroType.caption, color: context.c.inkSoft),
-        ),
-      ],
-    );
-  }
+  Widget _dot(BuildContext context, Color color, String text) =>
+      _meta(context, color, text);
 }
 
 // ---------------------------------------------------------------------------
@@ -857,17 +886,11 @@ class _TaskStateSelect extends StatelessWidget {
 
   const _TaskStateSelect({required this.task});
 
-  Color _color(CitroColors c, TodoTaskState s) => switch (s) {
-    TodoTaskState.todo => c.accent,
-    TodoTaskState.doing => c.mint,
-    TodoTaskState.done => c.inkSoft,
-  };
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final state = task.state;
-    final color = _color(c, state);
+    final color = _todoStateColor(c, state);
     return PopupMenuButton<TodoTaskState>(
       initialValue: state,
       tooltip: '切换状态',
@@ -890,7 +913,7 @@ class _TaskStateSelect extends StatelessWidget {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: _color(c, s).withAlpha(20),
+                    color: _todoStateColor(c, s).withAlpha(20),
                     borderRadius: BorderRadius.circular(CitroColors.radii.xs),
                   ),
                   child: Center(
@@ -898,7 +921,7 @@ class _TaskStateSelect extends StatelessWidget {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _color(c, s),
+                        color: _todoStateColor(c, s),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1071,7 +1094,12 @@ Widget _menuRow(BuildContext context, String icon, String label, Color color) {
   );
 }
 
-Widget _meta(BuildContext context, Color color, String text) {
+Widget _meta(
+  BuildContext context,
+  Color color,
+  String text, {
+  double? height,
+}) {
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -1086,7 +1114,7 @@ Widget _meta(BuildContext context, Color color, String text) {
         style: context.ui(
           size: CitroType.caption,
           color: context.c.inkSoft,
-          height: 1,
+          height: height,
         ),
       ),
     ],
@@ -1139,7 +1167,7 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                 compact ? 9 : 10,
               ),
               decoration: BoxDecoration(
-                color: task.done ? c.surface2.withAlpha(150) : c.surface2,
+                color: task.done ? c.surface2.withValues(alpha: c.surface2.a * (150) / 255) : c.surface2,
                 borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                 border: Border.all(
                   color: task.overdue
@@ -1303,12 +1331,12 @@ class _TodoTaskTileState extends State<TodoTaskTile> {
                             if (task.priority > 0)
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
-                                child: _meta(context, c.stamp, '重点'),
+                                child: _meta(context, c.stamp, '重点', height: 1),
                               ),
                             if (task.overdue)
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
-                                child: _meta(context, c.stamp, '已逾期'),
+                                child: _meta(context, c.stamp, '已逾期', height: 1),
                               ),
                           ],
                         ),
@@ -1344,12 +1372,20 @@ class _SubtaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Pressable(
-      onTap: () => TodoStore.instance.toggleSubtask(task, sub),
+      onTap: () {
+        // 勾上时给一下轻触感（仅移动端；桌面 / Web 没有马达）。
+        if (!sub.done && !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.android)) {
+          HapticFeedback.lightImpact();
+        }
+        TodoStore.instance.toggleSubtask(task, sub);
+      },
       scale: .995,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
         decoration: BoxDecoration(
-          color: sub.done ? c.surface2.withAlpha(120) : c.surface,
+          color: sub.done ? c.surface2.withValues(alpha: c.surface2.a * (120) / 255) : c.surface,
           borderRadius: BorderRadius.circular(CitroColors.radii.small),
           border: Border.all(color: sub.done ? c.line : c.line2),
         ),
@@ -1377,10 +1413,13 @@ class _SubtaskCard extends StatelessWidget {
               ),
             ),
             if (sub.done)
-              AppIcon(
-                strokeSvg(AppIcons.check, width: 2.4),
-                size: 13,
-                color: c.mintInk,
+              // 勾上的一刻弹入一下，不循环。
+              CitroPop(
+                child: AppIcon(
+                  strokeSvg(AppIcons.check, width: 2.4),
+                  size: 13,
+                  color: c.mintInk,
+                ),
               ),
           ],
         ),
@@ -1458,7 +1497,10 @@ class _ScheduleViewState extends State<_ScheduleView> {
               ],
             ),
             const SizedBox(height: 10),
-            _Timeline(tasks: tasks, day: _selected),
+            CitroFieldScope(
+              tone: FieldTone.glass,
+              child: _Timeline(tasks: tasks, day: _selected),
+            ),
           ],
         );
         if (widget.wide) {
@@ -1469,7 +1511,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
                 flex: 3,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-                  children: [_calendar(context)],
+                  children: [CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _calendar(context)))],
                 ),
               ),
               const SizedBox(width: 16),
@@ -1486,7 +1528,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
           children: [
-            _calendar(context),
+            CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _calendar(context))),
             const SizedBox(height: 16),
             taskSection,
           ],
@@ -1540,14 +1582,15 @@ class _ScheduleViewState extends State<_ScheduleView> {
             padding: const EdgeInsets.fromLTRB(5, 4, 5, 4),
             decoration: BoxDecoration(
               color: selected
-                  ? c.accent.withAlpha(30)
+                  ? c.accentLt
                   : (today ? c.accent.withAlpha(24) : Colors.transparent),
               borderRadius: BorderRadius.circular(CitroColors.radii.xs),
               border: Border.all(
                 color: selected
-                    ? c.accent.withAlpha(160)
-                    : (today ? c.accent.withAlpha(70) : c.line.withAlpha(170)),
+                    ? c.accent
+                    : (today ? c.accent.withAlpha(70) : c.line.withValues(alpha: c.line.a * (170) / 255)),
               ),
+              boxShadow: selected ? CitroColors.shadows.glow(c) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1559,7 +1602,7 @@ class _ScheduleViewState extends State<_ScheduleView> {
                       height: 19,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: selected ? c.accent : Colors.transparent,
+                        color: selected ? c.accent2 : Colors.transparent,
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -1634,14 +1677,8 @@ class _ScheduleViewState extends State<_ScheduleView> {
         ),
       );
     }
-    return Container(
+    return CitroCard(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(CitroColors.radii.card),
-        border: Border.all(color: c.line),
-        boxShadow: CitroColors.shadows.card(c),
-      ),
       child: Column(
         children: [
           Row(
@@ -1760,19 +1797,21 @@ class _ScheduleViewState extends State<_ScheduleView> {
         duration: CitroMotion.hover,
         curve: CitroMotion.easeColor,
         height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? c.accent.withAlpha(190) : c.bg2.withAlpha(90),
-          borderRadius: BorderRadius.circular(CitroColors.radii.xs),
+          // 选中段：accentLt 底 + accentInk 字 + 淡光晕，与全站选中态一致。
+          color: active ? c.accentLt : c.bg2.withAlpha(90),
+          borderRadius: BorderRadius.circular(CitroColors.radii.chip),
           border: Border.all(color: active ? c.accent : c.line),
+          boxShadow: active ? CitroColors.shadows.glow(c) : null,
         ),
         child: Text(
           label,
           style: context.ui(
             size: CitroType.caption,
             weight: active ? CitroType.strong : CitroType.regular,
-            color: active ? c.onAccent : c.ink2,
+            color: active ? c.accentInk : c.ink2,
           ),
         ),
       ),
@@ -1810,18 +1849,13 @@ class _Timeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     if (tasks.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 26),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(CitroColors.radii.card),
-          border: Border.all(color: c.line),
-          boxShadow: CitroColors.shadows.card(c),
-        ),
-        child: Text(
-          '这一天还没有安排',
-          textAlign: TextAlign.center,
-          style: context.ui(size: CitroType.meta, color: c.inkSoft),
+      return CitroCard(
+        padding: EdgeInsets.zero,
+        child: const CitroEmptyState(
+          compact: true,
+          icon: Icon(Icons.event_available_outlined),
+          title: '这一天还没有安排',
+          hint: '空出来的一天，也可以留给自己',
         ),
       );
     }

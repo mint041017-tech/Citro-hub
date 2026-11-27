@@ -357,7 +357,7 @@ class _CardDrawDialogState extends State<_CardDrawDialog>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: c.surface.withAlpha(180),
+                            color: c.surface.withValues(alpha: c.surface.a * (180) / 255),
                             shape: BoxShape.circle,
                             border: Border.all(color: c.line),
                           ),

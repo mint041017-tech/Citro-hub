@@ -150,7 +150,7 @@ class _ScanDialogState extends State<_ScanDialog> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(CitroColors.radii.inner),
                           border: Border.all(
-                            color: c.surface.withAlpha(230),
+                            color: c.surface.withValues(alpha: c.surface.a * (230) / 255),
                             width: 2,
                           ),
                         ),

@@ -13,6 +13,14 @@ import 'ledger_store.dart';
 import 'ledger_theme.dart';
 import 'ledger_widgets.dart';
 
+/// 「日均可用」用的剩余天数：查看当月算今天到月底，其它月份取整月天数。
+int _budgetDaysLeft(String monthKey, DateTime now) {
+  final isCurrentMonth = LedgerDates.monthKey(now) == monthKey;
+  return isCurrentMonth
+      ? (LedgerDates.daysInMonth(monthKey) - now.day + 1).clamp(1, 31)
+      : LedgerDates.daysInMonth(monthKey);
+}
+
 /// 记账首页：收支概览、预算进度、cici 洞察与数据看板。
 class LedgerHomeTab extends StatefulWidget {
   final String monthKey;
@@ -184,10 +192,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
     } else if (summary.budgetCents > 0) {
       // 只有查看当月时「日均可用」才有意义；历史 / 未来月份改用当月天数。
       final now = DateTime.now();
-      final isCurrentMonth = LedgerDates.monthKey(now) == month;
-      final days = isCurrentMonth
-          ? (LedgerDates.daysInMonth(month) - now.day + 1).clamp(1, 31)
-          : LedgerDates.daysInMonth(month);
+      final days = _budgetDaysLeft(month, now);
       lines.add(
         '· 预算还剩 ${ledgerMoney(summary.budgetRemainingCents)}，'
         '按 $days 天算每天可用 '
@@ -229,19 +234,19 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
               children: [
                 _monthRow(context, summary, plan),
                 const SizedBox(height: 10),
-                _overview(context, summary, plan),
+                CitroFieldScope(tone: FieldTone.deep, child: Builder(builder: (context) => _overview(context, summary, plan))),
                 const SizedBox(height: 12),
-                _insightCard(context),
+                CitroFieldScope(tone: FieldTone.primary, child: Builder(builder: (context) => _insightCard(context))),
                 const SizedBox(height: 12),
-                _chartCard(context, store, summary),
+                CitroFieldScope(tone: FieldTone.light, child: Builder(builder: (context) => _chartCard(context, store, summary))),
                 const SizedBox(height: 12),
-                _categoryCard(context, store, summary),
+                CitroFieldScope(tone: FieldTone.warm, child: Builder(builder: (context) => _categoryCard(context, store, summary))),
                 if (store.categoryBudgets(month).isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _budgetCategoryCard(context, store),
+                  CitroFieldScope(tone: FieldTone.glass, child: Builder(builder: (context) => _budgetCategoryCard(context, store))),
                 ],
                 const SizedBox(height: 12),
-                _recentCard(context, store),
+                CitroFieldScope(tone: FieldTone.glass, child: Builder(builder: (context) => _recentCard(context, store))),
               ],
             );
           },
@@ -281,9 +286,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
     // 「日均可用」只在查看当月时计算；历史 / 未来月份没有「剩余天数」的概念。
     final now = DateTime.now();
     final isCurrentMonth = LedgerDates.monthKey(now) == widget.monthKey;
-    final daysLeft = isCurrentMonth
-        ? (LedgerDates.daysInMonth(widget.monthKey) - now.day + 1).clamp(1, 31)
-        : LedgerDates.daysInMonth(widget.monthKey);
+    final daysLeft = _budgetDaysLeft(widget.monthKey, now);
     final daily = plan.hasBudget && isCurrentMonth
         ? (summary.budgetRemainingCents / daysLeft).round()
         : null;
@@ -462,7 +465,6 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
         .where((e) => e.isNotEmpty)
         .toList();
     return CitroCard(
-      color: c.tintBlue,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,7 +885,7 @@ class _LedgerHomeTabState extends State<LedgerHomeTab> {
                 onTap: () => showLedgerEntrySheet(context, entry: entry),
               ),
               if (entry != recent.last)
-                CitroDivider(height: 1, color: c.line.withAlpha(140)),
+                CitroDivider(height: 1, color: c.line.withValues(alpha: c.line.a * (140) / 255)),
             ],
         ],
       ),

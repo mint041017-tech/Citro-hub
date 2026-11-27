@@ -1,31 +1,21 @@
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
 
 import '../data/resources.dart';
 import '../games/game_registry.dart';
-import '../services/api.dart';
-import '../services/platform.dart' as platform;
-import '../services/prefs.dart';
-import '../state/app_state.dart';
 
-/// 首页可编排的卡片。
+/// 首页栅格上的卡片种类。
 ///
-/// 顺序即内容面板里的展示顺序，默认布局按宽屏 / 窄屏分别定义。
-/// [game] / [res] 是一类「可多份」的卡片，具体是小游戏还是资源条目由
-/// [HomeSlot.item] 决定，默认不出现在首页，需要手动添加。
+/// [game] / [res] 是「可多份」的卡片，具体是小游戏还是资源条目由
+/// [HomeSlot.item] 决定。
 enum HomeCardId {
   checkin,
   todo,
   mood,
   ledger,
   tingyu,
-  fish,
   weather,
   cook,
   calendar,
-  zodiac,
   quote,
   cardCollection,
   mbti,
@@ -37,84 +27,28 @@ enum HomeCardId {
 enum HomeForm { compact, wide }
 
 extension HomeFormX on HomeForm {
+  /// 列数：窄屏 6 列，宽屏 12 列。
   int get columns => this == HomeForm.wide ? 12 : 6;
 
-  /// 卡片之间的间隙。手机上 12 让卡片之间有呼吸位，不再贴成一团。
-  double get gap => this == HomeForm.wide ? 14 : 12;
+  /// 卡片之间的间隙。
+  /// 和首页卡片区四周留白（14）一致：卡片之间、卡片到面板边缘一样宽。
+  double get gap => 14;
 
-  /// 行高按形态固定，卡片高度以「行」为单位，编辑时才能稳定吸附。
+  /// 行高：卡片高度以「行」为单位。
   double get rowUnit => 50;
-
-  /// 允许往下拖出的最大行数，避免误拖后页面无限变长。
-  int get maxRows => this == HomeForm.wide ? 30 : 44;
 }
-
-/// 横屏 / 竖屏、窄屏 / 宽屏各自独立保存一套布局。
-enum HomeLayoutKey {
-  compactPortrait,
-  compactLandscape,
-  widePortrait,
-  wideLandscape,
-}
-
-HomeLayoutKey homeLayoutKeyFor(HomeForm form, bool landscape) {
-  if (form == HomeForm.wide) {
-    return landscape ? HomeLayoutKey.wideLandscape : HomeLayoutKey.widePortrait;
-  }
-  return landscape
-      ? HomeLayoutKey.compactLandscape
-      : HomeLayoutKey.compactPortrait;
-}
-
-extension HomeLayoutKeyX on HomeLayoutKey {
-  HomeForm get form =>
-      this == HomeLayoutKey.widePortrait || this == HomeLayoutKey.wideLandscape
-      ? HomeForm.wide
-      : HomeForm.compact;
-
-  bool get landscape =>
-      this == HomeLayoutKey.compactLandscape ||
-      this == HomeLayoutKey.wideLandscape;
-}
-
-class HomeCardInfo {
-  final String label;
-  final String hint;
-
-  const HomeCardInfo(this.label, this.hint);
-}
-
-const Map<HomeCardId, HomeCardInfo> kHomeCardInfo = {
-  HomeCardId.checkin: HomeCardInfo('打卡', '连续记录与今日状态'),
-  HomeCardId.todo: HomeCardInfo('待办', '今日任务、进度与专注入口'),
-  HomeCardId.mood: HomeCardInfo('心情', '记录此刻的状态与变化'),
-  HomeCardId.ledger: HomeCardInfo('记账', '收支、预算与账单分析'),
-  HomeCardId.tingyu: HomeCardInfo('听隅', '白噪音与沉浸声景'),
-  HomeCardId.fish: HomeCardInfo('摸鱼日历', '距离休息日还有几天'),
-  HomeCardId.weather: HomeCardInfo('天气', '实时天气与体感湿度'),
-  HomeCardId.cook: HomeCardInfo('食谱日记', '记录今天吃了什么'),
-  HomeCardId.calendar: HomeCardInfo('日历', '月历、农历与节日'),
-  HomeCardId.zodiac: HomeCardInfo('今日星象', '本命星座与今日运势'),
-  HomeCardId.quote: HomeCardInfo('每日一言', '每天一句，随手可复制'),
-  HomeCardId.cardCollection: HomeCardInfo('卡面收藏', '已收集的卡面与抽卡入口'),
-  HomeCardId.mbti: HomeCardInfo('人格测试', '16 型人格，四个维度看懂自己'),
-  HomeCardId.game: HomeCardInfo('小游戏', '把常玩的小游戏放到首页'),
-  HomeCardId.res: HomeCardInfo('资源', '工具与驱动，随手打开'),
-};
 
 /// 单张卡片在栅格里的位置与尺寸（单位：列 / 行）。
-@immutable
 class HomeSlot {
   final HomeCardId id;
 
-  /// 小游戏 key（如 g2048）或资源 key（如 tool:灵敏度 / driver:Steam）。
+  /// 小游戏 key（如 g2048）或资源 key（如 tool:玩法抽签 / driver:Steam）。
   /// 普通卡片为 null；它是同一 [HomeCardId] 下多张卡片的身份区分。
   final String? item;
   final int col;
   final int row;
   final int w;
   final int h;
-  final bool visible;
 
   const HomeSlot(
     this.id, {
@@ -123,218 +57,61 @@ class HomeSlot {
     required this.row,
     required this.w,
     required this.h,
-    this.visible = true,
   });
 
   int get right => col + w;
   int get bottom => row + h;
+}
 
-  /// 布局内唯一标识：同一种卡片允许多份（不同的小游戏 / 资源）。
-  String get key => item == null ? id.name : '${id.name}:$item';
+/// 同一行里最高的卡片高度：同行的卡片一律拉齐到这一档，
+/// 避免出现「左卡短、右卡长」的锯齿边。
+int rowHeightOf(List<HomeSlot> slots, HomeSlot slot) => slots.fold(
+  slot.h,
+  (h, other) => other.row == slot.row && other.h > h ? other.h : h,
+);
 
-  static String keyOf(HomeCardId id, [String? item]) =>
-      item == null ? id.name : '${id.name}:$item';
+/// 固定的首页布局（不可编辑），两种形态顺序一致、每排两张：
+/// 打卡 + 天气、心情 + 听隅、食谱日记整宽、测试 + 卡面收藏、
+/// 视野live + 玩法抽签，每日一言长条收底。
+/// 宽屏 12 列每张占 6 格，窄屏 6 列每张占 3 格。
+List<HomeSlot> homeSlots(HomeForm form) =>
+    form == HomeForm.wide ? _wideSlots : _compactSlots;
 
-  HomeSlot copyWith({int? col, int? row, int? w, int? h, bool? visible}) =>
-      HomeSlot(
-        id,
-        item: item,
-        col: col ?? this.col,
-        row: row ?? this.row,
-        w: w ?? this.w,
-        h: h ?? this.h,
-        visible: visible ?? this.visible,
-      );
+const List<HomeSlot> _wideSlots = [
+  HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 6, h: 3),
+  HomeSlot(HomeCardId.weather, col: 6, row: 0, w: 6, h: 3),
+  HomeSlot(HomeCardId.mood, col: 0, row: 3, w: 6, h: 3),
+  HomeSlot(HomeCardId.tingyu, col: 6, row: 3, w: 6, h: 3),
+  // 整宽的两张只占两行（约 112 高），内容本身只有一行标题 + 一句话。
+  HomeSlot(HomeCardId.cook, col: 0, row: 6, w: 12, h: 2),
+  HomeSlot(HomeCardId.mbti, col: 0, row: 8, w: 6, h: 2),
+  HomeSlot(HomeCardId.cardCollection, col: 6, row: 8, w: 6, h: 2),
+  HomeSlot(HomeCardId.res, item: 'tool:视野live', col: 0, row: 10, w: 6, h: 2),
+  HomeSlot(HomeCardId.res, item: 'tool:玩法抽签', col: 6, row: 10, w: 6, h: 2),
+  HomeSlot(HomeCardId.quote, col: 0, row: 12, w: 12, h: 2),
+];
 
-  bool overlaps(HomeSlot other) =>
-      col < other.right &&
-      other.col < right &&
-      row < other.bottom &&
-      other.row < bottom;
+const List<HomeSlot> _compactSlots = [
+  HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 3),
+  HomeSlot(HomeCardId.weather, col: 3, row: 0, w: 3, h: 3),
+  HomeSlot(HomeCardId.mood, col: 0, row: 3, w: 3, h: 3),
+  HomeSlot(HomeCardId.tingyu, col: 3, row: 3, w: 3, h: 3),
+  HomeSlot(HomeCardId.cook, col: 0, row: 6, w: 6, h: 2),
+  HomeSlot(HomeCardId.mbti, col: 0, row: 8, w: 3, h: 2),
+  HomeSlot(HomeCardId.cardCollection, col: 3, row: 8, w: 3, h: 2),
+  HomeSlot(HomeCardId.res, item: 'tool:视野live', col: 0, row: 10, w: 3, h: 2),
+  HomeSlot(HomeCardId.res, item: 'tool:玩法抽签', col: 3, row: 10, w: 3, h: 2),
+  HomeSlot(HomeCardId.quote, col: 0, row: 12, w: 6, h: 2),
+];
 
-  Map<String, Object?> toJson() => {
-    'id': id.name,
-    if (item != null) 'item': item,
-    'col': col,
-    'row': row,
-    'w': w,
-    'h': h,
-    'visible': visible,
-  };
-
-  static HomeSlot? fromJson(Object? raw, HomeForm form) {
-    if (raw is! Map) return null;
-    HomeCardId? id;
-    for (final value in HomeCardId.values) {
-      if (value.name == raw['id']) {
-        id = value;
-        break;
-      }
-    }
-    if (id == null) return null;
-    final item = raw['item'] is String && (raw['item'] as String).isNotEmpty
-        ? raw['item'] as String
-        : null;
-    // 小游戏 / 资源卡片必须带具体条目，否则无法渲染。
-    if ((id == HomeCardId.game || id == HomeCardId.res) && item == null) {
-      return null;
-    }
-    final cols = form.columns;
-    final col = _int(raw['col']);
-    final row = _int(raw['row']);
-    final w = _int(raw['w']);
-    final h = _int(raw['h']);
-    if (col == null || row == null || w == null || h == null) return null;
-    if (w < 1 || w > cols || h < 1) return null;
-    if (col < 0 || col + w > cols || row < 0 || row + h > form.maxRows) {
-      return null;
-    }
-    return HomeSlot(
-      id,
-      item: item,
-      col: col,
-      row: row,
-      w: w,
-      h: h,
-      visible: raw['visible'] is bool ? raw['visible'] as bool : true,
-    );
+/// 栅格总高度：最后一行卡片的下缘。
+double homeGridHeight(HomeForm form, List<HomeSlot> slots) {
+  if (slots.isEmpty) return 180;
+  var bottom = 0;
+  for (final slot in slots) {
+    bottom = math.max(bottom, slot.row + rowHeightOf(slots, slot));
   }
-
-  static int? _int(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
-  }
-}
-
-class HomeCardSpec {
-  final int minW;
-  final int maxW;
-  final int minH;
-  final int maxH;
-
-  const HomeCardSpec({
-    required this.minW,
-    required this.maxW,
-    required this.minH,
-    required this.maxH,
-  });
-}
-
-HomeCardSpec homeCardSpec(HomeForm form, HomeCardId id) {
-  final cols = form.columns;
-  // 宽屏把最小宽度从 1/3 降到 1/4，让「小卡」真正可用；
-  // 窄屏最小仍是一半宽度，再小就会失去可读性。
-  const half = 3;
-  return switch (id) {
-    HomeCardId.checkin ||
-    HomeCardId.tingyu => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 3),
-    HomeCardId.todo => HomeCardSpec(
-      // 待办卡从小尺寸的一行概览到整宽的完整列表都能承接。
-      minW: 3,
-      maxW: cols,
-      minH: 2,
-      maxH: 6,
-    ),
-    HomeCardId.fish => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
-    HomeCardId.mood => HomeCardSpec(minW: 3, maxW: cols, minH: 2, maxH: 4),
-    // 记账支持 3×2 小卡到整宽大卡：小卡只放今日支出与预算剩余，
-    // 大卡才展开近 7 日柱图与分类 Top。
-    HomeCardId.ledger => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 5),
-    HomeCardId.weather ||
-    HomeCardId.cook => HomeCardSpec(minW: half, maxW: cols, minH: 3, maxH: 6),
-    HomeCardId.calendar => HomeCardSpec(
-      // 日历支持 3×3 起的迷你尺寸：卡片内的日期格会自动等比缩小。
-      minW: 3,
-      maxW: cols,
-      minH: 3,
-      maxH: 10,
-    ),
-    HomeCardId.zodiac => HomeCardSpec(
-      // 星象卡支持从迷你到整宽高卡的多档尺寸：
-      // 3 列 × 3 行的迷你档由卡片内的 micro 布局承接，保证信息仍可读。
-      minW: 3,
-      maxW: cols,
-      minH: 3,
-      maxH: 12,
-    ),
-    HomeCardId.quote => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
-    HomeCardId.cardCollection => HomeCardSpec(
-      minW: 3,
-      maxW: cols,
-      minH: 2,
-      maxH: 3,
-    ),
-    HomeCardId.mbti => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 3),
-    HomeCardId.game => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 5),
-    HomeCardId.res => HomeCardSpec(minW: half, maxW: cols, minH: 2, maxH: 4),
-  };
-}
-
-/// 默认布局（六排）：
-/// 1. 打卡 + 摸鱼日历（小卡）
-/// 2. 天气 + 心情（原样）
-/// 3. 听隅 + 食谱日记（方形卡）
-/// 4. 星象（整宽大卡）
-/// 5. 人格测试（整宽）
-/// 6. 卡面收藏（整宽）
-/// 7. 每日一言（整宽）
-List<HomeSlot> defaultHomeLayout(HomeLayoutKey key) {
-  if (key.form == HomeForm.wide) {
-    return const [
-      HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.fish, col: 3, row: 0, w: 3, h: 2),
-      HomeSlot(HomeCardId.weather, col: 6, row: 0, w: 3, h: 3),
-      HomeSlot(HomeCardId.mood, col: 9, row: 0, w: 3, h: 3),
-      HomeSlot(HomeCardId.tingyu, col: 0, row: 3, w: 6, h: 3),
-      HomeSlot(HomeCardId.cook, col: 6, row: 3, w: 6, h: 3),
-      HomeSlot(HomeCardId.zodiac, col: 0, row: 6, w: 12, h: 5),
-      HomeSlot(HomeCardId.mbti, col: 0, row: 11, w: 12, h: 2),
-      HomeSlot(HomeCardId.cardCollection, col: 0, row: 13, w: 12, h: 3),
-      HomeSlot(HomeCardId.quote, col: 0, row: 16, w: 12, h: 2),
-    ];
-  }
-  // 窄屏：每排两卡或整宽，行距按 8pt 栅格。
-  return const [
-    HomeSlot(HomeCardId.checkin, col: 0, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.fish, col: 3, row: 0, w: 3, h: 2),
-    HomeSlot(HomeCardId.weather, col: 0, row: 2, w: 3, h: 3),
-    HomeSlot(HomeCardId.mood, col: 3, row: 2, w: 3, h: 3),
-    HomeSlot(HomeCardId.tingyu, col: 0, row: 5, w: 3, h: 3),
-    HomeSlot(HomeCardId.cook, col: 3, row: 5, w: 3, h: 3),
-    HomeSlot(HomeCardId.zodiac, col: 0, row: 8, w: 6, h: 5),
-    HomeSlot(HomeCardId.mbti, col: 0, row: 13, w: 6, h: 2),
-    HomeSlot(HomeCardId.cardCollection, col: 0, row: 15, w: 6, h: 3),
-    HomeSlot(HomeCardId.quote, col: 0, row: 18, w: 6, h: 2),
-  ];
-}
-
-HomeSlot? defaultHomeSlotFor(HomeLayoutKey key, HomeCardId id) {
-  for (final slot in defaultHomeLayout(key)) {
-    if (slot.id == id) return slot;
-  }
-  return null;
-}
-
-/// 默认布局里没有的卡片（小游戏 / 资源）第一次添加时用的初始尺寸。
-HomeSlot initialHomeSlotFor(HomeLayoutKey key, HomeCardId id, {String? item}) {
-  final base = defaultHomeSlotFor(key, id);
-  if (base != null) return base;
-  final wide = key.form == HomeForm.wide;
-  final (w, h) = switch (id) {
-    HomeCardId.game => wide ? (4, 3) : (3, 3),
-    HomeCardId.res => wide ? (4, 2) : (6, 2),
-    HomeCardId.ledger => (3, 2),
-    _ => (key.form.columns, 2),
-  };
-  return HomeSlot(
-    id,
-    item: item,
-    col: 0,
-    row: 0,
-    w: w.clamp(1, key.form.columns),
-    h: h,
-  );
+  return math.max(80, bottom * (form.rowUnit + form.gap) - form.gap);
 }
 
 GameCardData? gameCardByKey(String? key) {
@@ -360,411 +137,4 @@ DriverItem? driverByItem(String? item) {
     if (driver.name == name) return driver;
   }
   return null;
-}
-
-String homeCardLabel(HomeSlot slot) {
-  switch (slot.id) {
-    case HomeCardId.game:
-      return gameCardByKey(slot.item)?.title ?? kHomeCardInfo[slot.id]!.label;
-    case HomeCardId.res:
-      final tool = toolByItem(slot.item);
-      if (tool != null) return tool.name;
-      return driverByItem(slot.item)?.name ?? kHomeCardInfo[slot.id]!.label;
-    default:
-      return kHomeCardInfo[slot.id]!.label;
-  }
-}
-
-/// 「添加卡片」页里的分类：常驻卡片、小游戏、工具、驱动。
-enum HomeCardCategory { core, game, tool, driver }
-
-extension HomeCardCategoryX on HomeCardCategory {
-  String get label => switch (this) {
-    HomeCardCategory.core => '常驻卡片',
-    HomeCardCategory.game => '小游戏',
-    HomeCardCategory.tool => '工具',
-    HomeCardCategory.driver => '驱动',
-  };
-
-  String get hint => switch (this) {
-    HomeCardCategory.core => '首页常用入口',
-    HomeCardCategory.game => '点开直接开局',
-    HomeCardCategory.tool => '资源库小工具',
-    HomeCardCategory.driver => '外设与客户端',
-  };
-}
-
-/// 「添加卡片」面板里的一项：普通卡片一条，小游戏 / 资源按具体条目展开。
-class HomeCardOption {
-  final HomeCardId id;
-  final String? item;
-  final String label;
-  final String hint;
-
-  /// 资源库工具自带 svg 图标；为空时按 [id] 使用默认图标。
-  final String? icon;
-
-  final HomeCardCategory category;
-
-  const HomeCardOption(
-    this.id, {
-    this.item,
-    required this.label,
-    required this.hint,
-    this.icon,
-    this.category = HomeCardCategory.core,
-  });
-
-  String get key => HomeSlot.keyOf(id, item);
-}
-
-/// 与资源库一致：手机上这四项已经并进「游戏」页，不再重复出现在资源库。
-const Set<String> _kToolsMovedToGames = {'玩法抽签', '瞬投', '一起看', '视野live'};
-
-/// 首页布局的单一数据源：负责读写偏好、移动 / 缩放 / 显隐。
-class HomeLayoutStore extends ChangeNotifier {
-  HomeLayoutStore._();
-
-  static final HomeLayoutStore instance = HomeLayoutStore._();
-
-  static const String prefsKey = PrefKeys.homeLayout;
-
-  final Map<HomeLayoutKey, List<HomeSlot>> _slots = {};
-  final Set<HomeLayoutKey> _loaded = {};
-  Map<String, Object?> _raw = const {};
-  Timer? _pushTimer;
-
-  bool get _signedIn =>
-      AppState.instance.user != null && (Api.token?.isNotEmpty ?? false);
-
-  List<HomeSlot> slots(HomeLayoutKey key) {
-    _ensureLoaded(key);
-    return List.unmodifiable(_slots[key]!);
-  }
-
-  List<HomeSlot> visibleSlots(HomeLayoutKey key) =>
-      slots(key).where((s) => s.visible).toList(growable: false);
-
-  void _ensureLoaded(HomeLayoutKey key) {
-    if (_loaded.contains(key)) return;
-    _loaded.add(key);
-    // 自定义布局已下线：永远用默认布局，不再读本地 / 云端保存的旧布局。
-    // 旧布局里卡片位置是几版前的，会把默认值盖掉（表现就是「卡片一直不换」）。
-    _slots[key] = List<HomeSlot>.of(defaultHomeLayout(key));
-  }
-
-  /// 旧版本可能保存过小于当前最小尺寸的卡片；读入时统一收进合法范围，
-  /// 避免小到放不下内容而出现整页溢出。
-  HomeSlot _normalizeSlot(HomeLayoutKey key, HomeSlot slot) {
-    final form = key.form;
-    final spec = homeCardSpec(form, slot.id);
-    final w = slot.w.clamp(spec.minW, form.columns);
-    final h = slot.h.clamp(spec.minH, spec.maxH);
-    final col = slot.col.clamp(0, form.columns - w);
-    final row = slot.row.clamp(0, form.maxRows - h);
-    return slot.copyWith(col: col, row: row, w: w, h: h);
-  }
-
-  /// 返回 false 表示附近没有可放置的空位。
-  ///
-  /// 目标位置被占用时优先「自动避让」：把挡路的卡片推到最近的空位，
-  /// 让被拖动的卡片落在用户想要的位置；推不开才回退到最近空位。
-  bool move(
-    HomeLayoutKey key,
-    HomeCardId id,
-    int col,
-    int row, {
-    String? item,
-  }) {
-    _ensureLoaded(key);
-    final list = _slots[key]!;
-    final index = list.indexWhere((s) => s.id == id && s.item == item);
-    if (index < 0) return false;
-    final slot = list[index];
-    final cols = key.form.columns;
-    final c = col.clamp(0, cols - slot.w);
-    final r = row.clamp(0, key.form.maxRows - slot.h);
-    final target = slot.copyWith(col: c, row: r);
-
-    final next = List<HomeSlot>.of(list);
-    next[index] = target;
-    var pushed = false;
-    for (var i = 0; i < next.length; i++) {
-      final other = next[i];
-      if (other.key == target.key ||
-          !other.visible ||
-          !other.overlaps(target)) {
-        continue;
-      }
-      final moved = _nearestFree(next, other, key.form);
-      if (moved == null) {
-        pushed = false;
-        next.clear();
-        break;
-      }
-      next[i] = moved;
-      pushed = true;
-    }
-    if (next.isNotEmpty && (pushed || _isFree(list, target))) {
-      _slots[key] = next;
-      _persist(key);
-      return true;
-    }
-    // 自动避让失败：不强行重叠，退回到拖动卡自己的最近空位。
-    final fallback = _nearestFree(list, target, key.form);
-    if (fallback == null) return false;
-    list[index] = fallback;
-    _persist(key);
-    return true;
-  }
-
-  bool resize(HomeLayoutKey key, HomeCardId id, int w, int h, {String? item}) {
-    _ensureLoaded(key);
-    final list = _slots[key]!;
-    final index = list.indexWhere((s) => s.id == id && s.item == item);
-    if (index < 0) return false;
-    final slot = list[index];
-    final form = key.form;
-    final spec = homeCardSpec(form, id);
-    var nextW = w.clamp(spec.minW, spec.maxW);
-    var nextH = h.clamp(spec.minH, spec.maxH);
-    final widthLimit = form.columns - slot.col;
-    final heightLimit = form.maxRows - slot.row;
-    if (nextW > widthLimit) nextW = widthLimit;
-    if (nextH > heightLimit) nextH = heightLimit;
-    final next = slot.copyWith(w: nextW, h: nextH);
-    if (!_isFree(list, next)) return false;
-    list[index] = next;
-    _persist(key);
-    return true;
-  }
-
-  (int, int)? presetSize(
-    HomeLayoutKey key,
-    HomeCardId id,
-    int level, {
-    String? item,
-  }) {
-    final form = key.form;
-    final spec = homeCardSpec(form, id);
-    // 记账卡的三档语义和其它卡不同：小 = 今日+预算，标准 = 本月收支，
-    // 大 = 整宽趋势。默认布局里是小档，但仍然需要三档预设。
-    if (id == HomeCardId.ledger) {
-      return switch (level) {
-        0 => (3, 2),
-        1 => (6, 3),
-        _ => (form.columns, 4),
-      };
-    }
-    final base =
-        defaultHomeSlotFor(key, id) ?? initialHomeSlotFor(key, id, item: item);
-    return switch (level) {
-      0 => (spec.minW, spec.minH),
-      1 => (base.w, base.h),
-      _ => (
-        (base.w + 3).clamp(spec.minW, form.columns),
-        (base.h + 1).clamp(spec.minH, spec.maxH),
-      ),
-    };
-  }
-
-  void setVisible(
-    HomeLayoutKey key,
-    HomeCardId id,
-    bool visible, {
-    String? item,
-  }) {
-    _ensureLoaded(key);
-    final list = _slots[key]!;
-    final index = list.indexWhere((s) => s.id == id && s.item == item);
-    if (index < 0) return;
-    list[index] = list[index].copyWith(visible: visible);
-    _persist(key);
-  }
-
-  void reset(HomeLayoutKey key) {
-    _loaded.add(key);
-    _slots[key] = List<HomeSlot>.of(defaultHomeLayout(key));
-    _persist(key);
-  }
-
-  /// 从当前布局里删除一张卡片；之后可在「可添加」里加回来。
-  void remove(HomeLayoutKey key, HomeCardId id, {String? item}) {
-    _ensureLoaded(key);
-    final list = _slots[key]!;
-    list.removeWhere((s) => s.id == id && s.item == item);
-    _persist(key);
-  }
-
-  /// 把一张被删除的卡片加回布局：优先放默认位置，占用时自动避让。
-  bool add(HomeLayoutKey key, HomeCardId id, {String? item}) {
-    _ensureLoaded(key);
-    final list = _slots[key]!;
-    if (list.any((s) => s.id == id && s.item == item)) return false;
-    final base = initialHomeSlotFor(key, id, item: item);
-    var slot = _normalizeSlot(key, base.copyWith(visible: true));
-    if (!_isFree(list, slot)) {
-      final moved = _nearestFree(list, slot, key.form);
-      if (moved == null) return false;
-      slot = moved;
-    }
-    list.add(slot);
-    _persist(key);
-    return true;
-  }
-
-  /// 还能添加到首页的卡片：普通卡片一条，小游戏 / 资源按具体条目展开。
-  List<HomeCardOption> available(HomeLayoutKey key) {
-    final list = slots(key);
-    bool taken(HomeCardId id, [String? item]) =>
-        list.any((s) => s.id == id && s.item == item);
-
-    // 日历 / 待办 / 记账 已经收进「计划」页，首页不再给添加入口。
-    const planOnly = {HomeCardId.calendar, HomeCardId.todo, HomeCardId.ledger};
-    final out = <HomeCardOption>[];
-    for (final id in const [
-      HomeCardId.checkin,
-      HomeCardId.todo,
-      HomeCardId.mood,
-      HomeCardId.ledger,
-      HomeCardId.tingyu,
-      HomeCardId.fish,
-      HomeCardId.weather,
-      HomeCardId.cook,
-      HomeCardId.calendar,
-      HomeCardId.zodiac,
-      HomeCardId.quote,
-      HomeCardId.cardCollection,
-      HomeCardId.mbti,
-    ]) {
-      if (planOnly.contains(id) || taken(id)) continue;
-      final info = kHomeCardInfo[id]!;
-      out.add(
-        HomeCardOption(
-          id,
-          label: info.label,
-          hint: info.hint,
-          category: HomeCardCategory.core,
-        ),
-      );
-    }
-    for (final game in kGameCards) {
-      if (taken(HomeCardId.game, game.key)) continue;
-      out.add(
-        HomeCardOption(
-          HomeCardId.game,
-          item: game.key,
-          label: game.title,
-          hint: '点按直接开局',
-          category: HomeCardCategory.game,
-        ),
-      );
-    }
-    final tools = (platform.isAndroid || platform.isIOS)
-        ? kTools.where((t) => !_kToolsMovedToGames.contains(t.name))
-        : kTools;
-    for (final tool in tools) {
-      final item = 'tool:${tool.name}';
-      if (taken(HomeCardId.res, item)) continue;
-      out.add(
-        HomeCardOption(
-          HomeCardId.res,
-          item: item,
-          label: tool.name,
-          hint: tool.desc,
-          icon: tool.icon,
-          category: HomeCardCategory.tool,
-        ),
-      );
-    }
-    for (final driver in [...kDriversWeb, ...kDriversClient]) {
-      final item = 'driver:${driver.name}';
-      if (taken(HomeCardId.res, item)) continue;
-      out.add(
-        HomeCardOption(
-          HomeCardId.res,
-          item: item,
-          label: driver.name,
-          hint: driver.client ? '客户端 · 下载安装' : '驱动 · 下载安装',
-          category: HomeCardCategory.driver,
-        ),
-      );
-    }
-    return out;
-  }
-
-  bool _isFree(List<HomeSlot> list, HomeSlot target) {
-    for (final other in list) {
-      if (other.key == target.key || !other.visible) continue;
-      if (other.overlaps(target)) return false;
-    }
-    return true;
-  }
-
-  HomeSlot? _nearestFree(List<HomeSlot> list, HomeSlot target, HomeForm form) {
-    final cols = form.columns;
-    for (var distance = 1; distance <= 30; distance++) {
-      for (var dr = -distance; dr <= distance; dr++) {
-        final dcLimit = distance - (dr.abs() - distance).abs();
-        for (var dc = -dcLimit; dc <= dcLimit; dc++) {
-          final c = target.col + dc;
-          final r = target.row + dr;
-          if (c < 0 || r < 0 || c + target.w > cols) continue;
-          if (r + target.h > form.maxRows) continue;
-          final candidate = target.copyWith(col: c, row: r);
-          if (_isFree(list, candidate)) return candidate;
-        }
-      }
-    }
-    return null;
-  }
-
-  Map<String, Object?> exportLayout() => {
-    for (final key in HomeLayoutKey.values)
-      if (_slots[key] != null)
-        key.name: _slots[key]!.map((s) => s.toJson()).toList(growable: false),
-  };
-
-  void _persist(HomeLayoutKey key) {
-    try {
-      final payload = <String, Object?>{..._raw, ...exportLayout()};
-      Prefs.setString(prefsKey, jsonEncode(payload));
-    } catch (_) {
-      // 持久化失败不影响当前会话。
-    }
-    notifyListeners();
-    _schedulePush();
-  }
-
-  /// 编辑时用来判断尺寸是否可行（不落盘）。
-  bool canPlace(HomeLayoutKey key, HomeSlot target) {
-    _ensureLoaded(key);
-    return _isFree(_slots[key]!, target);
-  }
-
-  // ---------------------------------------------------------------------------
-  // 账号同步
-  // ---------------------------------------------------------------------------
-
-  /// 自定义布局已下线：云端不再保存布局，这里不再拉取远程布局
-  /// （拉回来的是几版前的旧位置，会把默认值盖掉）。
-  Future<void> syncFromAccount({bool force = false}) async {}
-
-  void _schedulePush({bool immediate = false}) {
-    if (!_signedIn) return;
-    _pushTimer?.cancel();
-    _pushTimer = Timer(
-      immediate ? Duration.zero : const Duration(milliseconds: 900),
-      _pushRemote,
-    );
-  }
-
-  Future<void> _pushRemote() async {
-    if (!_signedIn) return;
-    try {
-      await Api.homeLayoutSave(exportLayout());
-    } catch (_) {
-      // 网络恢复后下一次编辑会再次尝试。
-    }
-  }
 }

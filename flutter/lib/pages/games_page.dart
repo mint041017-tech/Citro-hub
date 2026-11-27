@@ -21,15 +21,15 @@ class GamesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     final layout = CitroLayoutScope.maybeOf(context);
     final width = layout?.contentWidth ?? MediaQuery.sizeOf(context).width;
     final tabletNav = layout?.tabletNav ?? false;
     // 宽屏网页与桌面端一致：更宽的画布、同样大的游戏卡，不再附赠资源库入口。
-    final desktopWeb = kIsWeb && width >= 1025;
+    // 已经进了桌面壳（tabletNav，Web 横屏 / Windows / 平板横屏）时不再挂网页返回胶囊。
+    final desktopWeb = kIsWeb && !tabletNav && width >= 1025;
     final wideDesktop = tabletNav || desktopWeb;
     final maxWidth = wideDesktop ? 1120.0 : 840.0;
-    final side = math.max(8.0, (width - maxWidth) / 2);
+    final side = AppSpacing.pageSide(width, maxWidth);
     final duo = layout?.duo == true;
     final gameColumns = duo
         ? (width >= 900 ? 6 : (width >= 640 ? 5 : (width >= 460 ? 4 : 3)))
@@ -44,17 +44,20 @@ class GamesPage extends StatelessWidget {
       ])
         (
           group.$1,
-          [for (final key in group.$2) kGameCards.firstWhere((g) => g.key == key)],
+          [
+            for (final key in group.$2)
+              kGameCards.firstWhere((g) => g.key == key),
+          ],
         ),
     ];
     // 最外层必须是 Material：没有它，Flutter 的 Text 会退回「未包 Material」
     // 的兜底样式（黄色下划线 + 警告 debugLabel），整页文字都会带着一条黄线。
+    // 透明 Material：只为文字提供默认样式，不铺底色——背景由壳层的沉浸背景
+    // 统一提供（之前这里是不透明的页面底色，把背景整块盖住了）。
     final content = Material(
-      color: c.bg,
+      type: MaterialType.transparency,
       child: Stack(
         children: [
-          // 背景图只在首页展示；其余页面用纯色底，避免抢内容。
-          Positioned.fill(child: ColoredBox(color: context.c.bg)),
           CitroBackground(
             color: Colors.transparent,
             child: SafeArea(
@@ -63,38 +66,37 @@ class GamesPage extends StatelessWidget {
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   side,
-                  AppSpacing.pageTop(width),
+                  AppSpacing.pageTopRoomy(width),
                   side,
-                  wideDesktop ? 32 : 100,
+                  AppSpacing.pageBottom(floatingNav: !wideDesktop),
                 ),
                 child: CitroStagger(
                   step: const Duration(milliseconds: 28),
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x1),
-                      child: CitroPageTitle('游戏', '挑一个，玩一会儿'),
-                    ),
-                    const SizedBox(height: AppSpacing.x3),
+                    // 标题与卡片左缘对齐（页边距已经够宽，不再额外内缩）。
+                    const CitroPageTitle('游戏', ''),
+                    const SizedBox(height: AppSpacing.block),
                     for (final group in gameGroups) ...[
                       _GroupHeader(
                         title: group.$1,
                         count: group.$2.length,
                         games: group.$2,
                       ),
-                      const SizedBox(height: AppSpacing.x2),
+                      const SizedBox(height: 14),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: gameColumns,
-                          crossAxisSpacing: AppSpacing.x2,
-                          mainAxisSpacing: AppSpacing.x2,
+                          crossAxisSpacing: AppSpacing.grid,
+                          mainAxisSpacing: AppSpacing.grid + 2,
                           childAspectRatio: .8,
                         ),
                         itemCount: group.$2.length,
                         itemBuilder: (_, i) => _GameCard(entry: group.$2[i]),
                       ),
-                      const SizedBox(height: AppSpacing.x4),
+                      // 分组之间多留一档，像杂志的章节。
+                      const SizedBox(height: AppSpacing.x4 + 8),
                     ],
                   ],
                 ),
@@ -133,8 +135,9 @@ class _GroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // 左缘与标题、卡片对齐；只留一点右内边距给色点。
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x1),
+      padding: const EdgeInsets.only(right: 4),
       child: Row(
         children: [
           Text(
@@ -189,9 +192,11 @@ class _GameCard extends StatelessWidget {
     final tablet = layout?.tabletNav ?? false;
     final compact =
         (layout?.duo ?? false) && CitroLayoutScope.widthOf(context) < 520;
-    final desktopWeb = kIsWeb && CitroLayoutScope.widthOf(context) >= 1025;
+    final desktopWeb =
+        kIsWeb && !tablet && CitroLayoutScope.widthOf(context) >= 1025;
     final large = (tablet || desktopWeb) && !compact;
     final identity = entry.identity;
+    const shape = BorderRadius.all(Radius.circular(18));
     return Pressable(
       onTap: () {
         // 和听隅一致：纸页从第一帧轻沉淡入，卡片快照抬起，退出时反向收回。
@@ -209,11 +214,16 @@ class _GameCard extends StatelessWidget {
           builder: (_) => buildGamePage(entry.key),
         );
       },
-      // 卡片底用实心表面（玻璃已全线取消，仅 Tab 栏保留）。
-      child: CitroCard(
-        radius: 18,
-        padding: EdgeInsets.zero,
-        clip: Clip.antiAlias,
+      scale: .98,
+      borderRadius: shape,
+      hoverShadow: false,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: shape,
+          boxShadow: CitroColors.shadows.card(c),
+        ),
         child: Column(
           children: [
             Expanded(
@@ -229,8 +239,6 @@ class _GameCard extends StatelessWidget {
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
-                    bottomLeft: Radius.circular(11),
-                    bottomRight: Radius.circular(11),
                   ),
                 ),
                 child: Stack(
@@ -284,7 +292,9 @@ class _GameCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: large ? 12 : 10),
               decoration: BoxDecoration(
                 color: c.surface,
-                border: Border(top: BorderSide(color: identity.primary.withAlpha(40))),
+                border: Border(
+                  top: BorderSide(color: identity.primary.withAlpha(40)),
+                ),
               ),
               alignment: Alignment.centerLeft,
               child: CitroHero(

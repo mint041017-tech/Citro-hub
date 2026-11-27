@@ -4,7 +4,7 @@ import 'sudoku_puzzle.dart';
 
 /// 九宫异形种子：每行一条宫形切分，0–8 为区域编号，用 / 分隔。
 /// 这些种子与 [standardSolution] 配套；运行时再叠加旋转/镜像/宫行置换。
-const List<String> kJigsawNineSeeds = [
+const List<String> _kJigsawNineSeeds = [
   '555111177/555511177/355011877/300088887/300008887/333022867/332222666/344222666/444444466',
   '222222000/555222400/555544400/551444440/111177770/611117733/666777333/668888333/666888883',
   '055537777/005533777/000533776/008533666/408553666/488883626/448811222/448111222/444111122',
@@ -31,7 +31,7 @@ const List<String> kJigsawNineSeeds = [
   '336666666/433000662/433000002/433101822/443111882/444111882/455177882/555777782/555577782',
 ];
 
-List<int> decodeRegionSeed(String seed) {
+List<int> _decodeRegionSeed(String seed) {
   final cells = <int>[];
   for (var i = 0; i < seed.length; i++) {
     final code = seed.codeUnitAt(i);
@@ -51,7 +51,7 @@ List<int> standardRegions() => [
 ];
 
 /// 8 种旋转/镜像：0 原样，1 逆时针，2 180°，3 顺时针，4–7 镜像后再旋转。
-List<int> transformGrid(List<int> grid, int n, int turn) {
+List<int> _transformGrid(List<int> grid, int n, int turn) {
   final out = List<int>.filled(n * n, 0);
   for (var r = 0; r < n; r++) {
     for (var c = 0; c < n; c++) {
@@ -97,7 +97,7 @@ List<int> bandCols(math.Random rnd) {
   ];
 }
 
-bool regionConnected(List<int> regions, int region) {
+bool _regionConnected(List<int> regions, int region) {
   final cells = <int>[];
   for (var i = 0; i < regions.length; i++) {
     if (regions[i] == region) cells.add(i);
@@ -121,9 +121,9 @@ bool regionConnected(List<int> regions, int region) {
   return seen.length == cells.length;
 }
 
-bool regionsConnected(List<int> regions) {
+bool _regionsConnected(List<int> regions) {
   for (var k = 0; k < 9; k++) {
-    if (!regionConnected(regions, k)) return false;
+    if (!_regionConnected(regions, k)) return false;
   }
   return true;
 }
@@ -168,7 +168,7 @@ List<List<int>> classicUnits({bool diagonal = false}) {
   return units;
 }
 
-/// 三面立方的满解（217 位，按 [cubeFaceMaps] 的全局索引顺序）。
+/// 三面立方的满解（217 位，按 _cubeFaceMaps 的全局索引顺序）。
 /// 运行时只做数字置换/挖洞，保证 3D 出题稳定且可复现。
 const List<String> kCubeFaceSolutions = [
   '5237486914189365729671254383845627192763918451958742637412539868596173246324891574973158628152673499715346285648219733287965141869724357431582962596437816937481547521638316524975471892628963751731862499543718286249573',
@@ -205,7 +205,7 @@ class CubeFaceLayout {
   final int cellCount;
 }
 
-List<SudokuCubeFaceMap> cubeFaceMaps() {
+List<SudokuCubeFaceMap> _cubeFaceMaps() {
   final top = <int>[for (var i = 0; i < 81; i++) i];
   final frontLeft = List<int>.filled(81, -1);
   final frontRight = List<int>.filled(81, -1);
@@ -261,7 +261,7 @@ List<SudokuCubeFaceMap> cubeFaceMaps() {
 }
 
 CubeFaceLayout cubeFaceLayout() {
-  final faces = cubeFaceMaps();
+  final faces = _cubeFaceMaps();
   final raw = <List<int>>[];
   for (final face in faces) {
     for (var r = 0; r < 9; r++) {
@@ -456,10 +456,10 @@ class JigsawLayout {
 }
 
 JigsawLayout randomJigsawLayout(math.Random rnd) {
-  final seed = kJigsawNineSeeds[rnd.nextInt(kJigsawNineSeeds.length)];
+  final seed = _kJigsawNineSeeds[rnd.nextInt(_kJigsawNineSeeds.length)];
   final turn = rnd.nextInt(8);
-  var regions = transformGrid(decodeRegionSeed(seed), 9, turn);
-  var solution = transformGrid(standardSolution(), 9, turn);
+  var regions = _transformGrid(_decodeRegionSeed(seed), 9, turn);
+  var solution = _transformGrid(standardSolution(), 9, turn);
 
   // 宫行置换能在保持数独行的同时改变宫形；只接受仍然连通的置换。
   for (var attempt = 0; attempt < 12; attempt++) {
@@ -467,7 +467,7 @@ JigsawLayout randomJigsawLayout(math.Random rnd) {
     final cols = bandCols(rnd);
     final nextRegions = permuteGrid(regions, 9, rows, cols);
     final nextSolution = permuteGrid(solution, 9, rows, cols);
-    if (regionsConnected(nextRegions) &&
+    if (_regionsConnected(nextRegions) &&
         regionsMatchSolution(nextRegions, nextSolution)) {
       regions = nextRegions;
       solution = nextSolution;

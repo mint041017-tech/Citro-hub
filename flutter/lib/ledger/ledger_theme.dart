@@ -6,10 +6,6 @@ import '../theme/tokens.dart';
 
 /// 记账模块不再有专属强调色：全 App 统一用全局品牌橙（`context.c.accent`），
 /// 超支 / 预警用全局 danger。表面、描边、文字本来就继承全局。
-///
-/// 这里保留一个空的 [ledgerColors]，让既有的 `LedgerScope` 调用点不用改，
-/// 也留个位置给以后真需要「模块级微调」时再注入。
-CitroColors ledgerColors(CitroColors base) => base;
 
 /// 记账页统一放大一档字号、加一档字重。
 /// 不改全局 `context.ui`，避免影响首页和其它模块。
@@ -84,7 +80,7 @@ class LedgerScope extends StatelessWidget {
         extensions: [
           for (final e in theme.extensions.values)
             if (e is! CitroSkin) e,
-          CitroSkin(ledgerColors(context.c)),
+          CitroSkin(context.c),
         ],
       ),
       child: child,

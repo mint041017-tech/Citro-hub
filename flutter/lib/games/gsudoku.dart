@@ -1161,11 +1161,7 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       return const [];
     }
     final counts = List<int>.filled(10, 0);
-    final start = puzzle.isCube3d ? _layer * puzzle.rows * puzzle.cols : 0;
-    final end = puzzle.isCube3d
-        ? start + puzzle.rows * puzzle.cols
-        : _board.length;
-    for (var i = start; i < end && i < _board.length; i++) {
+    for (var i = 0; i < _board.length; i++) {
       if (!_isActive(i)) continue;
       final v = _board[i];
       if (v > 0 && v <= 9) counts[v]++;
@@ -1300,7 +1296,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
       rankDifficulties: _rankDifficulties,
       rankInitial: _rankInitial,
       liveProgress: _progress,
-      liveInScroll: true,
       // 数独内容最长：操作行跟棋盘一起滚动，底部只留「正在玩」。
       actionsInScroll: true,
       onBack: _backToModes,
@@ -1387,8 +1382,6 @@ class _GameSudokuPageState extends State<GameSudokuPage> {
                   revision: _revision,
                   maxSide: boardW,
                   interactive: puzzle.variant == SudokuVariant.overlap,
-                  paused: _paused,
-                  over: _over,
                   onSelect: _select,
                 ),
               ),

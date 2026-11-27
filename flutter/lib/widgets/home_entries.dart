@@ -5,13 +5,16 @@ import 'package:flutter/material.dart';
 import '../data/resources.dart';
 import '../checkin/checkin_models.dart';
 import '../checkin/checkin_store.dart';
+import '../games/game_identity.dart';
 import '../games/game_loader.dart';
 import '../games/game_registry.dart';
-import '../overlays/extra_sheets.dart';
+import '../overlays/fortune_sheet.dart';
+import '../pages/web_resource_actions.dart';
 import '../pages/in_app_web.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
 import '../tingyu/tingyu_controller.dart';
 import '../tingyu/tingyu_page.dart';
@@ -45,7 +48,7 @@ class CheckinCard extends StatelessWidget {
         if (compact) {
           return CitroCard(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            onTap: () => showCheckinOverlay(context),
+            onTap: () => showFortuneOverlay(context),
             child: Row(
               children: [
                 Container(
@@ -97,7 +100,7 @@ class CheckinCard extends StatelessWidget {
         }
         return CitroCard(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          onTap: () => showCheckinOverlay(context),
+          onTap: () => showFortuneOverlay(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -106,15 +109,12 @@ class CheckinCard extends StatelessWidget {
                   AppIcon(
                     strokeSvg(AppIcons.calendar, width: 2),
                     size: 18,
-                    color: c.accent,
+                    color: c.ink2,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '打卡',
-                    style: context.heading(
-                      size: CitroType.label,
-                      color: c.ink,
-                    ),
+                    style: context.heading(size: CitroType.label, color: c.ink),
                   ),
                   const Spacer(),
                   _StatePill(text: view.pill, phase: view.phase),
@@ -124,13 +124,14 @@ class CheckinCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // 色场：连续天数是这块的主角，用超大粗体占满留白。
                   Text(
                     '$streak',
-                    style: context.hand(
-                      size: CitroType.display,
-                      weight: CitroType.strong,
+                    style: context.heading(
+                      size: 64,
                       color: c.ink,
-                      height: .9,
+                      height: .86,
+                      letterSpacing: -3,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -148,8 +149,8 @@ class CheckinCard extends StatelessWidget {
                   const Spacer(),
                   _ArrowBadge(
                     icon: AppIcons.arrowUpRight,
-                    tint: c.tintYellow,
-                    ink: c.accentInk,
+                    tint: c.surface2,
+                    ink: c.ink,
                   ),
                 ],
               ),
@@ -197,8 +198,7 @@ class TingyuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // 听隅入口属于模块品牌色（鼠尾草绿），不跟全站青瓷 accent。
-    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
+    final accent = tingyuAccent(c);
     final reduce = CitroMotion.reduced(context);
     return ListenableBuilder(
       listenable: NookController.instance,
@@ -305,8 +305,8 @@ class _NookToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     // 播放态沿用听隅模块品牌色（鼠尾草绿）；未播放仍是全局薄荷软底。
-    final accent = c.dark ? tingyuAccentDark : tingyuAccentLight;
-    final onAccent = c.dark ? tingyuOnAccentDark : tingyuOnAccentLight;
+    final accent = tingyuAccent(c);
+    final onAccent = tingyuOnAccent(c);
     return Semantics(
       button: true,
       label: playing ? '暂停听隅' : (ready ? '播放听隅' : '进入听隅'),
@@ -424,111 +424,272 @@ class HomeGameCard extends StatelessWidget {
     final c = context.c;
     final entry = gameCardByKey(gameKey);
     if (entry == null) return const SizedBox.shrink();
-    return CitroCard(
-      padding: EdgeInsets.zero,
-      onTap: () {
-        // 和听隅入口一致：纸页轻沉淡入，进入与退出都复用同一套软转场。
-        final box = context.findRenderObject();
-        if (box is! RenderBox || !box.hasSize) {
-          Navigator.of(context).pushNamed('/${entry.key}');
-          return;
-        }
-        final rect = box.localToGlobal(Offset.zero) & box.size;
-        CitroCardMorph.openCardPage(
-          context,
-          source: rect,
-          snapshot: CitroCardFlight.snapshotOf(context, rect),
-          settings: RouteSettings(name: '/${entry.key}'),
-          builder: (_) => buildGamePage(entry.key),
-        );
-      },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // 够宽就横排：左边一块游戏渐变砖，右边标题 + 开局，
-          // 和听隅 / 食谱那些横向卡片同一套语言。
-          final wide = constraints.maxWidth >= 190 && constraints.maxHeight >= 120;
-          if (!wide) {
-            return Column(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: _artTile(context, entry, c, size: 46),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
-                  child: Text(
-                    entry.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.heading(size: CitroType.body, color: c.ink),
-                  ),
-                ),
-              ],
-            );
+    final identity = entry.identity;
+    final radius = BorderRadius.circular(CitroColors.radii.card);
+    return Semantics(
+      button: true,
+      label: '${entry.title}，${identity.tag}',
+      child: Pressable(
+        onTap: () {
+          final box = context.findRenderObject();
+          if (box is! RenderBox || !box.hasSize) {
+            Navigator.of(context).pushNamed('/${entry.key}');
+            return;
           }
-          return Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                _artTile(context, entry, c, size: 68),
-                const SizedBox(width: AppSpacing.x2),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        entry.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.heading(
-                          size: CitroType.titleLg,
-                          color: c.ink,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.x1),
-                      Container(
-                        height: 26,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+          final rect = box.localToGlobal(Offset.zero) & box.size;
+          CitroCardMorph.openCardPage(
+            context,
+            source: rect,
+            snapshot: CitroCardFlight.snapshotOf(context, rect),
+            settings: RouteSettings(name: '/${entry.key}'),
+            builder: (_) => buildGamePage(entry.key),
+          );
+        },
+        scale: .98,
+        hoverLift: 2,
+        hoverShadow: false,
+        hoverOverlayColor: Colors.white.withValues(alpha: c.dark ? .04 : .10),
+        borderRadius: radius,
+        child: CitroGlass(
+          borderRadius: radius,
+          tint: c.surface,
+          borderColor: Colors.white.withValues(alpha: c.dark ? .12 : .42),
+          highlight: true,
+          shadow: CitroColors.shadows.sm(c),
+          padding: const EdgeInsets.all(6),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide =
+                  constraints.maxWidth >= 190 && constraints.maxHeight >= 120;
+              if (!wide) {
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
-                          color: c.ink,
-                          borderRadius: BorderRadius.circular(999),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color.lerp(identity.soft, identity.primary, .12)!,
+                              Color.lerp(identity.soft, identity.primary, .34)!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(
+                              alpha: c.dark ? .10 : .34,
+                            ),
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            Text(
-                              '开局',
-                              style: context.body(
-                                size: CitroType.micro,
-                                weight: CitroType.medium,
-                                color: c.bg,
+                            Positioned(
+                              top: -34,
+                              right: -28,
+                              child: Container(
+                                width: 104,
+                                height: 104,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(
+                                    alpha: c.dark ? .05 : .20,
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 3),
-                            AppIcon(
-                              strokeSvg(AppIcons.arrowRight, width: 2.2),
-                              size: 13,
-                              color: c.bg,
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: entry.art(context),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 7,
+                              left: 7,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: GameIdentity.paper.withValues(
+                                    alpha: c.dark ? .78 : .66,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    CitroColors.radii.chip,
+                                  ),
+                                ),
+                                child: Text(
+                                  identity.tag,
+                                  style: TextStyle(
+                                    fontFamily: AppFonts.rounded,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: identity.deep,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 7,
+                              right: 7,
+                              child: Container(
+                                width: 23,
+                                height: 23,
+                                decoration: BoxDecoration(
+                                  color: GameIdentity.paper.withValues(
+                                    alpha: c.dark ? .68 : .54,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: AppIcon(
+                                    strokeSvg(
+                                      AppIcons.arrowUpRight,
+                                      width: 2.2,
+                                    ),
+                                    size: 11,
+                                    color: identity.deep,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(
+                      height: 38,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                entry.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.heading(
+                                  size: 14.5,
+                                  color: c.ink,
+                                  letterSpacing: -.2,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: identity.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              final artSize = constraints.maxHeight < 150 ? 60.0 : 68.0;
+              final actionInk = c.dark ? identity.onDark() : identity.deep;
+              return Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    _artTile(context, entry, c, size: artSize),
+                    const SizedBox(width: AppSpacing.x2),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: identity.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                identity.tag,
+                                style: context.body(
+                                  size: CitroType.small,
+                                  color: c.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            entry.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.heading(
+                              size: CitroType.titleLg,
+                              color: c.ink,
+                              height: 1.15,
+                              letterSpacing: -.3,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.x1),
+                          Container(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: identity.primary.withValues(
+                                alpha: c.dark ? .22 : .12,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: identity.primary.withValues(alpha: .20),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '开局',
+                                  style: context.body(
+                                    size: CitroType.micro,
+                                    weight: CitroType.medium,
+                                    color: actionInk,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                AppIcon(
+                                  strokeSvg(AppIcons.arrowRight, width: 2.2),
+                                  size: 13,
+                                  color: actionInk,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
 
-/// 首页资源卡片：小工具 / 驱动的一条快捷入口。
 /// 游戏卡的艺术砖：圆角渐变底 + 居中的小游戏插画。
 Widget _artTile(
   BuildContext context,
@@ -536,21 +697,46 @@ Widget _artTile(
   CitroColors c, {
   required double size,
 }) {
+  final identity = entry.identity;
   return Container(
     width: size,
     height: size,
-    padding: const EdgeInsets.all(6),
+    clipBehavior: Clip.antiAlias,
+    padding: const EdgeInsets.all(7),
     decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: entry.gradient,
+        colors: [
+          Color.lerp(identity.soft, identity.primary, .12)!,
+          Color.lerp(identity.soft, identity.primary, .34)!,
+        ],
       ),
-      borderRadius: BorderRadius.circular(size * .26),
-      border: Border.all(color: c.line),
+      borderRadius: BorderRadius.circular(size * .28),
+      border: Border.all(
+        color: Colors.white.withValues(alpha: c.dark ? .10 : .38),
+      ),
+      boxShadow: CitroColors.shadows.sm(c),
     ),
-    child: Center(
-      child: FittedBox(fit: BoxFit.scaleDown, child: entry.art(context)),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned(
+          top: -size * .22,
+          right: -size * .20,
+          child: Container(
+            width: size * .62,
+            height: size * .62,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: c.dark ? .05 : .20),
+            ),
+          ),
+        ),
+        Center(
+          child: FittedBox(fit: BoxFit.contain, child: entry.art(context)),
+        ),
+      ],
     ),
   );
 }
@@ -567,8 +753,9 @@ class HomeResCard extends StatelessWidget {
     final driver = driverByItem(item);
     if (tool == null && driver == null) return const SizedBox.shrink();
     final isTool = tool != null;
-    final accentBg = isTool ? c.mintSoft : c.tintBlue;
-    final accentInk = isTool ? c.mintInk : c.accentInk;
+    // 色场：图标块用块内强调色（随背景取色），不再固定薄荷绿。
+    final accentBg = c.accent;
+    final accentInk = c.onAccent;
     final label = isTool ? tool.name : driver!.name;
     final kind = isTool ? '工具' : (driver!.client ? '客户端' : '驱动');
     final desc = isTool
@@ -587,6 +774,69 @@ class HomeResCard extends StatelessWidget {
           final large =
               constraints.maxWidth >= 330 && constraints.maxHeight >= 168;
           final tile = compact ? 38.0 : (large ? 50.0 : 44.0);
+          // 窄卡（手机两列时只有 170 出头）：文字横排会被挤成「玩法…」，
+          // 改成图标一行、标题与说明各自占满整宽的竖排。
+          if (narrow) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _ResIconTile(
+                        icon: tool?.icon ?? AppIcons.download,
+                        size: 36,
+                        background: accentBg,
+                        foreground: accentInk,
+                      ),
+                      const Spacer(),
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: accentBg,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: c.line.withValues(
+                              alpha: c.line.a * (140) / 255,
+                            ),
+                          ),
+                        ),
+                        child: Center(
+                          child: AppIcon(
+                            strokeSvg(AppIcons.arrowUpRight, width: 2.2),
+                            size: 12,
+                            color: accentInk,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context
+                        .heading(size: 16, color: c.ink, height: 1.15)
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.body(
+                      size: 11.5,
+                      color: c.inkSoft,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
           return Padding(
             padding: EdgeInsets.fromLTRB(
               compact ? 10 : 12,
@@ -694,7 +944,9 @@ class HomeResCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: accentBg,
                       shape: BoxShape.circle,
-                      border: Border.all(color: c.line.withAlpha(140)),
+                      border: Border.all(
+                        color: c.line.withValues(alpha: c.line.a * (140) / 255),
+                      ),
                     ),
                     child: Center(
                       child: AppIcon(
@@ -719,31 +971,15 @@ class HomeResCard extends StatelessWidget {
     DriverItem? driver,
   ) async {
     if (tool != null) {
-      if (tool.name == '人格测试') {
-        Navigator.of(context).pushNamed('/mbti');
-        return;
-      }
-      if (tool.name == '灵敏度') {
-        Navigator.of(context).pushNamed('/sens');
-        return;
-      }
-      if (tool.hash == '#/play' || tool.name == '玩法抽签') {
-        Navigator.of(context).pushNamed('/play');
-        return;
-      }
-      if (tool.url != null) {
-        await openCitroPage(context, tool.url!, title: tool.name);
-      }
+      openCitroTool(context, tool);
       return;
     }
-    if (driver != null) {
-      await openCitroPage(
-        context,
-        driver.url,
-        title: driver.name,
-        download: driver.client || isDownloadLink(driver.url),
-      );
-    }
+    await openCitroPage(
+      context,
+      driver!.url,
+      title: driver.name,
+      download: driver.client || isDownloadLink(driver.url),
+    );
   }
 }
 

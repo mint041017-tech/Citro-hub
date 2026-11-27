@@ -113,13 +113,6 @@ class NookController extends ChangeNotifier {
   bool get hasTimer => ['armed', 'running', 'fading'].contains(timerStatus);
   String get signature => jsonEncode({'tracks': tracks, 'master': master});
   bool get dirty => ready && _baseline.isNotEmpty && signature != _baseline;
-  String get timerLabel => switch (timerStatus) {
-    'armed' => '播放后计时',
-    'running' => clockText(remaining),
-    'fading' => '渐弱 ${clockText(remaining)}',
-    'expired' => '已定时结束',
-    _ => '定时关闭',
-  };
 
   int _stamp(Map<String, dynamic> item, String key) =>
       item[key] is num ? (item[key] as num).toInt() : 0;

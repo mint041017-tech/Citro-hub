@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../services/clipboard_image.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
@@ -51,6 +53,7 @@ class _MbtiPageState extends State<MbtiPage> {
   void initState() {
     super.initState();
     _load();
+    unawaited(MbtiStore.syncFromAccount(account: AppState.instance.user?.name));
   }
 
   Future<void> _load() async {
@@ -169,6 +172,7 @@ class _MbtiPageState extends State<MbtiPage> {
   Widget _frame(Widget child, {double maxWidth = 640, VoidCallback? onClose}) {
     final c = context.c;
     return Stack(
+      fit: StackFit.expand,
       children: [
         SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 70, 20, 40),
@@ -199,7 +203,7 @@ class _MbtiPageState extends State<MbtiPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '16 型人格测试',
+            '16 型测试',
             textAlign: TextAlign.center,
             style: context.display(
               size: 30,
@@ -291,30 +295,79 @@ class _MbtiPageState extends State<MbtiPage> {
               ),
             ),
             const SizedBox(height: AppSpacing.x3),
-            Row(
-              children: [
-                Expanded(
-                  child: _subEntry(
-                    '16 型图鉴',
-                    Icons.grid_view_rounded,
-                    () => Navigator.of(context).push(
-                      mbtiSubRoute(MbtiGalleryPage(library: library!)),
+            ValueListenableBuilder<int>(
+              valueListenable: MbtiStore.changes,
+              builder: (context, _, _) {
+                final records = MbtiStore.load();
+                if (records.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '测试档案',
+                          style: context.heading(
+                            size: CitroType.title,
+                            color: c.ink,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${records.length} 次 · 云端同步',
+                          style: context.body(
+                            size: CitroType.small,
+                            color: c.inkSoft,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.x2),
-                Expanded(
-                  child: _subEntry(
-                    '历史记录',
-                    Icons.history_rounded,
-                    () => Navigator.of(context).push(
-                      mbtiSubRoute(
-                        MbtiHistoryPage(bank: bank!, library: library!),
+                    const SizedBox(height: AppSpacing.x1),
+                    for (final r in records.take(5))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: CitroCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          onTap: () => _showRecord(r),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _recordLabel(r),
+                                      style: context.heading(
+                                        size: CitroType.bodyLg,
+                                        color: c.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _date(r.takenAtMs),
+                                      style: context.body(
+                                        size: CitroType.small,
+                                        color: c.inkSoft,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: c.inkSoft,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ],
           const SizedBox(height: AppSpacing.x3),
@@ -331,27 +384,26 @@ class _MbtiPageState extends State<MbtiPage> {
     );
   }
 
-  Widget _subEntry(String label, IconData icon, VoidCallback onTap) {
-    final c = context.c;
-    return CitroCard(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      onTap: onTap,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 17, color: c.accentInk),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: context.body(
-              size: CitroType.label,
-              weight: CitroType.medium,
-              color: c.accentInk,
-            ),
-          ),
-        ],
-      ),
-    );
+  void _showRecord(MbtiRecord r) {
+    setState(() {
+      record = r;
+      confirmed = r.typeConfirmed;
+      aiText = r.aiInsight;
+      aiFailed = false;
+      aiLoading = false;
+      step = 'result';
+    });
+  }
+
+  String _recordLabel(MbtiRecord r) {
+    final name = library?.byCode(r.typeConfirmed ?? r.result.typeRaw)?.name;
+    return '${r.displayType}${name == null ? '' : ' · $name'}';
+  }
+
+  String _date(int ms) {
+    final d = DateTime.fromMillisecondsSinceEpoch(ms);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}.${two(d.month)}.${two(d.day)}';
   }
 
   // ---------------- 答题 ----------------
@@ -929,11 +981,7 @@ class _MbtiPageState extends State<MbtiPage> {
         dimLines: dimLines,
       );
       final fileName = 'Citro-MBTI-$effectiveCode.png';
-      final file = XFile.fromData(
-        bytes,
-        mimeType: 'image/png',
-        name: fileName,
-      );
+      final file = XFile.fromData(bytes, mimeType: 'image/png', name: fileName);
       final shareBox = target.findRenderObject();
       final shareOrigin = shareBox is RenderBox && shareBox.hasSize
           ? shareBox.localToGlobal(Offset.zero) & shareBox.size

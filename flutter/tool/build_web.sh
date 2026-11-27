@@ -43,4 +43,17 @@ find "$out/assets" -type f \
   \( -name '*.ttf' -o -name '*.otf' -o -name '*.json' -o -name '*.bin' \) \
   -exec gzip -9 -kf {} +
 
+# 可选：WEB_BROTLI=1 且本机装了 brotli 时，额外产一份 .br。
+# 只有线上 nginx 装了 ngx_brotli 并用 brotli_static 才有意义，否则只是多占包体，
+# 所以默认关闭。开启后 CanvasKit wasm 从 gzip 2.78 MB 降到约 2.2 MB，
+# main.dart.js 从 1.59 MB 降到约 1.2 MB。
+if [ "${WEB_BROTLI:-0}" = "1" ] && command -v brotli >/dev/null 2>&1; then
+  for file in \
+    main.dart.js \
+    canvaskit/canvaskit.wasm \
+    canvaskit/chromium/canvaskit.wasm; do
+    [ -f "$out/$file" ] && brotli -q 11 -f -o "$out/$file.br" "$out/$file"
+  done
+fi
+
 du -sh "$out"

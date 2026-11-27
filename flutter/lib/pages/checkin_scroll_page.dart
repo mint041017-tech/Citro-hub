@@ -132,12 +132,13 @@ class _CheckinScrollPageState extends State<CheckinScrollPage> {
     // 最外层必须是 Material：这个页面没有 Scaffold，缺了 Material 之后
     // 页面里每一条 Text 都会退回「未包 Material」的兜底样式，
     // 整页文字都拖着一根黄色下划线（同 games_page 的注释）。
+    // 独立打开的页面：自己铺沉浸背景（背景图柔化版 + 罩面），
+    // Material 只负责文字默认样式，不再铺不透明的页面底色。
     return Material(
-      color: c.bg,
+      type: MaterialType.transparency,
       child: Stack(
         children: [
           CitroBackground(
-            color: Colors.transparent,
             child: SafeArea(
               bottom: false,
               child: ListenableBuilder(

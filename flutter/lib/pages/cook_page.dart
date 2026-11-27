@@ -27,6 +27,7 @@ import '../widgets/glass_tab_bar.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/modal.dart';
 import '../widgets/paper.dart';
+import '../widgets/feedback.dart';
 import '../widgets/tablet_shell.dart';
 
 class CookPage extends StatefulWidget {
@@ -77,7 +78,6 @@ class _CookPageState extends State<CookPage> {
   Recipe? detail;
   String detailSource = 'mine';
   bool detailLoading = false;
-  Timer? searchDebounce;
   AppState? _app;
   String? _lastUser;
   final shoppingInput = TextEditingController();
@@ -121,7 +121,6 @@ class _CookPageState extends State<CookPage> {
   @override
   void dispose() {
     _app?.removeListener(_onApp);
-    searchDebounce?.cancel();
     shoppingInput.dispose();
     findInput.dispose();
     searchCtrl.dispose();
@@ -562,12 +561,29 @@ class _CookPageState extends State<CookPage> {
               ],
             ),
             child: KeyedSubtree(
-              key: ValueKey('${tab}-${detail?.id ?? 'list'}-$findView'),
+              key: ValueKey(bodyKey),
               child: !app.loggedIn
                   ? _loginGate(context)
                   : (!loaded && loading
-                        ? const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        ? LayoutBuilder(
+                            builder: (context, box) {
+                              final w = box.maxWidth - 20;
+                              final cols = w >= 1000
+                                  ? 5
+                                  : w >= 760
+                                  ? 4
+                                  : w >= 560
+                                  ? 3
+                                  : 2;
+                              return SingleChildScrollView(
+                                physics: const NeverScrollableScrollPhysics(),
+                                child: CitroSkeleton.grid(
+                                  count: cols * 2,
+                                  columns: cols,
+                                  aspect: .82,
+                                ),
+                              );
+                            },
                           )
                         : (error != null && mine.isEmpty)
                         ? _errorView(context)
@@ -1177,48 +1193,22 @@ class _CookPageState extends State<CookPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 96),
               children: [
-                const SizedBox(height: 60),
-                Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: context.c.surface2,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: AppIcon(
-                        strokeSvg(AppIcons.fork, width: 1.8),
-                        size: 30,
-                        color: context.c.accent,
-                      ),
-                    ),
+                const SizedBox(height: AppSpacing.x4),
+                CitroEmptyState(
+                  icon: AppIcon(
+                    strokeSvg(AppIcons.fork, width: 1.8),
+                    size: 26,
+                    color: context.c.accentInk,
                   ),
+                  title: tab == 'square'
+                      ? '广场上还没有公开食谱'
+                      : (mine.isEmpty ? '还没有食谱' : '没有匹配的食谱'),
+                  hint: tab == 'recipes' && mine.isEmpty
+                      ? '从第一道拿手菜开始记吧'
+                      : (tab == 'recipes' ? '换个关键词或筛选试试' : null),
+                  action: tab == 'recipes' && mine.isEmpty ? '＋ 新建第一个食谱' : null,
+                  onAction: tab == 'recipes' && mine.isEmpty ? _newRecipe : null,
                 ),
-                const SizedBox(height: 14),
-                Center(
-                  child: Text(
-                    tab == 'square'
-                        ? '广场上还没有公开食谱'
-                        : (mine.isEmpty ? '还没有食谱——从第一道拿手菜开始记吧' : '没有匹配的食谱'),
-                    textAlign: TextAlign.center,
-                    style: context.body(
-                      size: CitroType.caption,
-                      color: context.c.inkSoft,
-                    ),
-                  ),
-                ),
-                if (tab == 'recipes' && mine.isEmpty) ...[
-                  const SizedBox(height: 14),
-                  Center(
-                    child: AccentButton(
-                      text: '＋ 新建第一个食谱',
-                      width: 190,
-                      height: 42,
-                      onTap: _newRecipe,
-                    ),
-                  ),
-                ],
               ],
             )
           : LayoutBuilder(
@@ -1457,7 +1447,7 @@ class _CookPageState extends State<CookPage> {
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.fromLTRB(3, 2, 8, 2),
       decoration: BoxDecoration(
-        color: c.surface.withAlpha(240),
+        color: c.surface.withValues(alpha: c.surface.a * (240) / 255),
         borderRadius: BorderRadius.circular(CitroColors.radii.chip),
         border: Border.all(color: c.line),
       ),
@@ -3026,15 +3016,15 @@ class _CookPageState extends State<CookPage> {
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: c.ink,
+                color: c.accent2,
                 shape: BoxShape.circle,
-                boxShadow: CitroColors.shadows.float(c),
+                boxShadow: CitroColors.shadows.glow(c),
               ),
               child: Center(
                 child: AppIcon(
                   strokeSvg(AppIcons.plus, width: 2.4),
                   size: 22,
-                  color: c.bg,
+                  color: c.onAccent,
                 ),
               ),
             ),

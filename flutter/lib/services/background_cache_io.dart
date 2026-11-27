@@ -36,7 +36,9 @@ File _metaFile(Directory dir, String key) =>
 File _bytesFile(Directory dir, String key) =>
     File('${dir.path}${Platform.pathSeparator}${_nameFor(key)}.bg');
 
-Future<({int w, int h, int r, int g, int b})?> readMeta(String key) async {
+/// 返回 (宽, 高, 底部色, 主色)；主色三字段在旧缓存里可能为 null。
+Future<({int w, int h, int r, int g, int b, int? ar, int? ag, int? ab})?>
+readMeta(String key) async {
   final dir = await _cacheDir();
   if (dir == null) return null;
   try {
@@ -47,24 +49,51 @@ Future<({int w, int h, int r, int g, int b})?> readMeta(String key) async {
     final w = map['w'];
     final h = map['h'];
     if (w is! int || h is! int || w <= 0 || h <= 0) return null;
+    final ar = map['ar'];
+    final ag = map['ag'];
+    final ab = map['ab'];
     return (
       w: w,
       h: h,
       r: map['r'] is int ? map['r'] as int : 0,
       g: map['g'] is int ? map['g'] as int : 0,
       b: map['b'] is int ? map['b'] as int : 0,
+      ar: ar is int ? ar : null,
+      ag: ag is int ? ag : null,
+      ab: ab is int ? ab : null,
     );
   } catch (_) {
     return null;
   }
 }
 
-Future<void> writeMeta(String key, int w, int h, int r, int g, int b) async {
+Future<void> writeMeta(
+  String key,
+  int w,
+  int h,
+  int r,
+  int g,
+  int b, {
+  int? ar,
+  int? ag,
+  int? ab,
+}) async {
   final dir = await _cacheDir();
   if (dir == null) return;
   try {
     await _metaFile(dir, key).writeAsString(
-      jsonEncode({'w': w, 'h': h, 'r': r, 'g': g, 'b': b}),
+      jsonEncode({
+        'w': w,
+        'h': h,
+        'r': r,
+        'g': g,
+        'b': b,
+        if (ar != null && ag != null && ab != null) ...{
+          'ar': ar,
+          'ag': ag,
+          'ab': ab,
+        },
+      }),
       flush: true,
     );
   } catch (_) {

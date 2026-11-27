@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/resources.dart';
-import '../overlays/notes_modal.dart';
 import '../services/platform.dart' as platform;
 import '../widgets/desktop_shell.dart';
 import '../theme/app_theme.dart';
@@ -19,27 +18,6 @@ class ResPage extends StatefulWidget {
   State<ResPage> createState() => _ResPageState();
 }
 
-const _gamesMovedTools = {'玩法抽签', '瞬投', '一起看', '视野live'};
-
-/// 顶部快捷工具：这三项在下方列表里不再重复出现（「便签」不在 kTools 里）。
-const _quickToolNames = {'一起看', '玩法抽签', '视野live'};
-
-class _QuickTool {
-  final String name;
-  final String desc;
-  final String icon;
-  final Color tint;
-  final VoidCallback onTap;
-
-  const _QuickTool({
-    required this.name,
-    required this.desc,
-    required this.icon,
-    required this.tint,
-    required this.onTap,
-  });
-}
-
 class _ResPageState extends State<ResPage> {
   @override
   Widget build(BuildContext context) {
@@ -51,16 +29,7 @@ class _ResPageState extends State<ResPage> {
     final maxWidth = wide ? 1120.0 : 840.0;
     final tabBar = widget.embedded && !(layout?.tabletNav ?? false);
     final mods = kMods;
-    // 「一起看」「玩法抽签」「视野live」已经提到顶部快捷工具里，
-    // 下面不再重复显示。
-    final tools = kTools
-        .where(
-          (t) =>
-              !_quickToolNames.contains(t.name) &&
-              (!(platform.isAndroid || platform.isIOS) ||
-                  !_gamesMovedTools.contains(t.name)),
-        )
-        .toList();
+    final tools = kTools;
     final drivers = [...kDriversWeb, ...kDriversClient];
     // iPad 上装不了 PC 外设驱动，整块不展示（用户要求）。
     // 不能只依赖 tabletNav：iPad 从横屏转竖屏 / 分屏时 RootShell 会退到手机布局，
@@ -98,7 +67,6 @@ class _ResPageState extends State<ResPage> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.x2),
-                    _quickToolsRow(context, columns: wide ? 4 : 2),
                     if (mods.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x2),
                       CitroCard(
@@ -302,8 +270,9 @@ class _ResPageState extends State<ResPage> {
                         ),
                         decoration: BoxDecoration(
                           color: c.surface,
-                          borderRadius:
-                              BorderRadius.circular(CitroColors.radii.chip),
+                          borderRadius: BorderRadius.circular(
+                            CitroColors.radii.chip,
+                          ),
                           border: Border.all(color: c.line2),
                         ),
                         child: Text(
@@ -370,128 +339,6 @@ class _ResPageState extends State<ResPage> {
     );
   }
 
-  /// 顶部一排快捷工具：四张卡用不同底色区分，点一下直接打开。
-  /// 「一起看」「玩法抽签」「视野live」在下方列表里不再重复。
-  Widget _quickToolsRow(BuildContext context, {required int columns}) {
-    final c = context.c;
-    final byName = {for (final t in kTools) t.name: t};
-    void open(String name) {
-      final t = byName[name];
-      if (t != null) openCitroTool(context, t);
-    }
-
-    final items = <_QuickTool>[
-      _QuickTool(
-        name: '一起看',
-        desc: byName['一起看']?.desc ?? '把屏幕放进房间，和朋友一起看',
-        icon: byName['一起看']?.icon ?? AppIcons.monitor,
-        tint: c.tintBlue,
-        onTap: () => open('一起看'),
-      ),
-      _QuickTool(
-        name: '玩法抽签',
-        desc: byName['玩法抽签']?.desc ?? '无畏契约整活玩法抽签',
-        icon: byName['玩法抽签']?.icon ?? AppIcons.sparkle,
-        tint: c.tintYellow,
-        onTap: () => open('玩法抽签'),
-      ),
-      _QuickTool(
-        name: '视野live',
-        desc: byName['视野live']?.desc ?? '实时视野 · 在线直播',
-        icon: byName['视野live']?.icon ?? AppIcons.eye,
-        tint: c.tintGreen,
-        onTap: () => open('视野live'),
-      ),
-      _QuickTool(
-        name: '便签',
-        desc: '随手记点什么',
-        icon: AppIcons.note,
-        tint: c.tintPink,
-        onTap: () => showNotesModal(context),
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < items.length; i += columns) ...[
-          if (i > 0) const SizedBox(height: AppSpacing.x2),
-          Row(
-            children: [
-              for (var j = i; j < i + columns && j < items.length; j++) ...[
-                if (j > i) const SizedBox(width: AppSpacing.x2),
-                Expanded(child: _quickToolCard(context, items[j])),
-              ],
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _quickToolCard(BuildContext context, _QuickTool item) {
-    final c = context.c;
-    return Pressable(
-      onTap: item.onTap,
-      hoverLift: 0,
-      hoverShadow: false,
-      hoverColor: c.surface2,
-      borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(CitroColors.radii.inner),
-          border: Border.all(color: c.line),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: item.tint,
-                borderRadius: BorderRadius.circular(CitroColors.radii.small),
-              ),
-              child: Center(
-                child: AppIcon(
-                  strokeSvg(item.icon, width: 2),
-                  size: 19,
-                  color: c.ink,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(
-                      size: CitroType.body,
-                      weight: CitroType.medium,
-                      color: c.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.desc,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.body(size: CitroType.small, color: c.inkSoft),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _toolCard(BuildContext context, ToolItem tool) {
     final c = context.c;
     return Pressable(
@@ -503,9 +350,7 @@ class _ResPageState extends State<ResPage> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: c.line),
-          ),
+          border: Border(bottom: BorderSide(color: c.line)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,10 +386,7 @@ class _ResPageState extends State<ResPage> {
               tool.desc,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.body(
-                size: CitroType.small,
-                color: c.inkSoft,
-              ),
+              style: context.body(size: CitroType.small, color: c.inkSoft),
             ),
           ],
         ),
@@ -579,12 +421,8 @@ class _ResPageState extends State<ResPage> {
   Widget _driverRow(BuildContext context, DriverItem d) {
     final c = context.c;
     return Pressable(
-      onTap: () => openCitroResource(
-        context,
-        d.name,
-        d.url,
-        download: d.client,
-      ),
+      onTap: () =>
+          openCitroResource(context, d.name, d.url, download: d.client),
       hoverLift: 0,
       hoverShadow: false,
       hoverColor: c.surface2,

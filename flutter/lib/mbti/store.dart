@@ -37,14 +37,13 @@ class MbtiRecord {
   int get effectiveUpdatedAt => updatedAtMs > 0 ? updatedAtMs : takenAtMs;
 
   MbtiRecord copyWith({
-    String? typeConfirmed,
     String? aiInsight,
     int? updatedAtMs,
   }) => MbtiRecord(
     id: id,
     takenAtMs: takenAtMs,
     result: result,
-    typeConfirmed: typeConfirmed ?? this.typeConfirmed,
+    typeConfirmed: typeConfirmed,
     aiInsight: aiInsight ?? this.aiInsight,
     updatedAtMs: updatedAtMs ?? this.updatedAtMs,
   );

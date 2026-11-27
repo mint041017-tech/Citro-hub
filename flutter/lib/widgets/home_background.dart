@@ -3,17 +3,20 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show NetworkAssetBundle, rootBundle;
+import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
 import '../data/cards.dart';
 import '../services/background_cache.dart';
 import '../state/app_state.dart';
+import '../theme/ambient_palette.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 
-/// 背景图的信息：资源、原始尺寸、底部提取色。
+/// 背景图的信息：资源、原始尺寸、底部提取色、主色。
 ///
 /// 只放小的元数据：网络图的原始字节另存在 [_CitroBlendImageState._bytesCache]
 /// 里（有总量上限），避免缓存地图无限增长。
@@ -22,7 +25,10 @@ class _BgInfo {
   final Size size;
   final Color bottom;
 
-  const _BgInfo(this.asset, this.size, this.bottom);
+  /// 整图主色（按彩度加权），首页用它派生全局主题色。
+  final Color accent;
+
+  const _BgInfo(this.asset, this.size, this.bottom, this.accent);
 }
 
 /// 把背景图按「不放大、不裁切」的方式铺在顶部，下方用提取色混色过渡。
@@ -36,7 +42,23 @@ class CitroBlendImage extends StatefulWidget {
     this.asset,
     this.cover = false,
     this.ratio3x4 = false,
+    this.lowRes = false,
+    this.washMin,
+    this.washColor,
   });
+
+  /// 低清柔化模式下的自适应罩面：最低透明度（null = 不加罩面）。
+  /// 实际透明度按背景图明暗往上加，见 [_CitroBlendImageState.washAlpha]。
+  final double? washMin;
+
+  /// 罩面颜色，默认页面底色 [CitroColors.bg]。
+  final Color? washColor;
+
+  /// 低清模式：只解码约 40px 宽的缩略图，再由 GPU 双三次放大铺满。
+  ///
+  /// 放大后的效果就是一张极重的高斯模糊，但没有任何逐帧滤镜开销——
+  /// 页面级沉浸背景用它，四端（含 Web、入门安卓）都能稳帧。
+  final bool lowRes;
 
   /// 背景图下边缘相对屏幕顶部的距离（像素）。
   ///
@@ -81,6 +103,126 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   static final Map<String, Future<Uint8List>> _networkInFlight = {};
 
   static Uint8List? peekBytes(String key) => _bytesCache[key];
+
+  // ---------------------------------------------------------------------------
+  // 预模糊背景（页面级沉浸背景用）
+  // ---------------------------------------------------------------------------
+
+  /// 预先算好的「柔化背景」PNG：按资源地址缓存，每张图只算一次。
+  static final Map<String, Uint8List> _softCache = {};
+  static final Map<String, Future<Uint8List?>> _softInFlight = {};
+
+  /// 每算好一张柔化图 +1。
+  static final ValueNotifier<int> _softRevision = ValueNotifier(0);
+
+  /// 每张柔化图的明暗统计：(最暗四分之一的平均色, 最亮四分之一的平均色)。
+  /// 罩面按它自适应：浅色模式看「暗部」，深色模式看「亮部」——字最容易
+  /// 看不清的，正是落在这些区域上的灰字。
+  static final Map<String, (Color, Color)> _softStats = {};
+
+  static double _lum(int r, int g, int b) {
+    double ch(int v) {
+      final x = v / 255;
+      return x <= .03928 ? x / 12.92 : math.pow((x + .055) / 1.055, 2.4).toDouble();
+    }
+
+    return .2126 * ch(r) + .7152 * ch(g) + .0722 * ch(b);
+  }
+
+  static (Color, Color) _measure(img.Image im) {
+    final px = <(double, int, int, int)>[];
+    for (var y = 0; y < im.height; y += 2) {
+      for (var x = 0; x < im.width; x += 2) {
+        final p = im.getPixel(x, y);
+        final r = p.r.toInt(), g = p.g.toInt(), b = p.b.toInt();
+        px.add((_lum(r, g, b), r, g, b));
+      }
+    }
+    px.sort((a, b) => a.$1.compareTo(b.$1));
+    Color avg(Iterable<(double, int, int, int)> it) {
+      var r = 0, g = 0, b = 0, n = 0;
+      for (final e in it) {
+        r += e.$2;
+        g += e.$3;
+        b += e.$4;
+        n++;
+      }
+      if (n == 0) return const Color(0xFF808080);
+      return Color.fromARGB(255, r ~/ n, g ~/ n, b ~/ n);
+    }
+
+    final q = math.max(1, px.length ~/ 4);
+    return (avg(px.take(q)), avg(px.skip(px.length - q)));
+  }
+
+  /// 自适应罩面的透明度：至少 [min]；再往上加，直到「图 + 罩面」的合成
+  /// 亮度落进可读区间——浅色模式暗部合成后亮度 ≥ 0.55，深色模式亮部
+  /// 合成后亮度 ≤ 0.08。这样灰字在任何背景图上都有足够对比度，
+  /// 明亮、低对比的图则保持通透。
+  static double washAlpha(String key, Color wash, bool dark, double min) {
+    final stats = _softStats[key];
+    if (stats == null) return min;
+    final probe = dark ? stats.$2 : stats.$1;
+    int mix(double a, double w, double p) => (a * w + (1 - a) * p).round();
+    for (var a = min; a < .96; a += .02) {
+      final r = mix(a, wash.r * 255, probe.r * 255);
+      final g = mix(a, wash.g * 255, probe.g * 255);
+      final b = mix(a, wash.b * 255, probe.b * 255);
+      final l = _lum(r, g, b);
+      if (dark ? l <= .08 : l >= .55) return a;
+    }
+    return .96;
+  }
+
+  /// 取一张背景图的柔化版本：浏览器 / 引擎原生解码成 48px 宽的缩略图，
+  /// 双三次放大到 192px 再做一次高斯模糊，编码成小 PNG。
+  ///
+  /// 整个过程只处理约 4 万像素、几毫秒，结果缓存；上屏后就是一张静态
+  /// 图片，没有任何逐帧滤镜——Web、入门安卓、Windows 都不额外掉帧。
+  static Future<Uint8List?> softFor(String key) {
+    final hit = _softCache[key];
+    if (hit != null) return Future.value(hit);
+    return _softInFlight[key] ??= _makeSoft(key).whenComplete(
+      () => _softInFlight.remove(key),
+    );
+  }
+
+  static Future<Uint8List?> _makeSoft(String key) async {
+    try {
+      final Uint8List data = key.startsWith('http')
+          ? await _loadNetworkBytes(key)
+          : (await rootBundle.load(key)).buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(data, targetWidth: 48);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      final w = image.width;
+      final h = image.height;
+      final raw = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      image.dispose();
+      codec.dispose();
+      if (raw == null || w == 0 || h == 0) return null;
+      final small = img.Image.fromBytes(
+        width: w,
+        height: h,
+        bytes: raw.buffer,
+        numChannels: 4,
+      );
+      final big = img.copyResize(
+        small,
+        width: 192,
+        interpolation: img.Interpolation.cubic,
+      );
+      final soft = img.gaussianBlur(big, radius: 10);
+      final out = Uint8List.fromList(img.encodePng(soft, level: 1));
+      _softStats[key] = _measure(soft);
+      _softCache[key] = out;
+      _softRevision.value++;
+      return out;
+    } catch (e, st) {
+      debugPrint('[citro-soft] $key failed: $e\n$st');
+      return null;
+    }
+  }
 
   static void _putBytes(String key, Uint8List bytes) {
     final old = _bytesCache.remove(key);
@@ -140,14 +282,18 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    // 低清柔化模式只需要 48px 缩略图（softFor 自己解码），不做整图解码：
+    // 整图用 package:image 在主线程解，2K 图在 Web / 低端机上要卡好几秒。
+    if (!widget.lowRes) _future = _load();
   }
 
   @override
   void didUpdateWidget(CitroBlendImage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.lowRes) return;
     if (oldWidget.networkUrl != widget.networkUrl ||
-        oldWidget.asset != widget.asset) {
+        oldWidget.asset != widget.asset ||
+        oldWidget.lowRes) {
       _future = _load();
     }
   }
@@ -161,7 +307,7 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   }
 
   static Future<_BgInfo> _decode(String key) async {
-    // 磁盘缓存先命中：宽高和底部色已知，不用再解码一次。
+    // 磁盘缓存先命中：宽高、底部色、主色已知，不用再解码一次。
     final meta = await BackgroundCache.readMeta(key);
     if (meta != null) {
       unawaited(BackgroundCache.touch(key));
@@ -174,61 +320,60 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
         } catch (_) {}
         if (bytes != null) _putBytes(key, bytes);
       }
+      final bottom = Color.fromRGBO(meta.r, meta.g, meta.b, 1);
       return _BgInfo(
         key,
         Size(meta.w.toDouble(), meta.h.toDouble()),
-        Color.fromRGBO(meta.r, meta.g, meta.b, 1),
+        bottom,
+        meta.ar == null || meta.ag == null || meta.ab == null
+            ? bottom
+            : Color.fromRGBO(meta.ar!, meta.ag!, meta.ab!, 1),
       );
     }
     try {
+      // 网络图字节先落内存缓存：解码失败时 Flutter 还能自己再解一次。
+      final Uint8List data;
       if (key.startsWith('http')) {
-        final bytes = await _loadNetworkBytes(key);
-        _putBytes(key, bytes);
-        final decoded = img.decodeImage(bytes);
-        if (decoded != null) {
-          final bottom = _sampleBottom(decoded);
-          unawaited(
-            BackgroundCache.writeMeta(
-              key,
-              decoded.width,
-              decoded.height,
-              bottom.r.toInt(),
-              bottom.g.toInt(),
-              bottom.b.toInt(),
-            ),
-          );
-          return _BgInfo(
-            key,
-            Size(decoded.width.toDouble(), decoded.height.toDouble()),
-            bottom,
-          );
-        }
-        // 解码失败但字节已经拿到：字节进内存缓存，让 Flutter 自己再解一次。
-        return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
+        data = await _loadNetworkBytes(key);
+        _putBytes(key, data);
       } else {
-        final data = await rootBundle.load(key);
-        final decoded = img.decodeImage(data.buffer.asUint8List());
-        if (decoded != null) {
-          final bottom = _sampleBottom(decoded);
-          unawaited(
-            BackgroundCache.writeMeta(
-              key,
+        data = (await rootBundle.load(key)).buffer.asUint8List();
+      }
+      final decoded = img.decodeImage(data);
+      if (decoded != null) {
+        final bottom = _sampleBottom(decoded);
+        final accent =
+            extractAccentColor(
               decoded.width,
               decoded.height,
-              bottom.r.toInt(),
-              bottom.g.toInt(),
-              bottom.b.toInt(),
-            ),
-          );
-          return _BgInfo(
+              (x, y) {
+                final p = decoded.getPixel(x, y);
+                return (p.r.toInt(), p.g.toInt(), p.b.toInt());
+              },
+            )?.toARGB32() ??
+            bottom.toARGB32();
+        unawaited(
+          BackgroundCache.writeMeta(
             key,
-            Size(decoded.width.toDouble(), decoded.height.toDouble()),
-            bottom,
-          );
-        }
+            decoded.width,
+            decoded.height,
+            bottom.r.toInt(),
+            bottom.g.toInt(),
+            bottom.b.toInt(),
+            ar: (accent >> 16) & 0xFF,
+            ag: (accent >> 8) & 0xFF,
+            ab: accent & 0xFF,
+          ),
+        );
+        return _BgInfo(
+          key,
+          Size(decoded.width.toDouble(), decoded.height.toDouble()),
+          bottom,
+          Color(accent),
+        );
       }
     } catch (_) {}
-    return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor());
+    return _BgInfo(key, Size.zero, CitroTimeBackground.baseColor(), CitroTimeBackground.baseColor());
   }
 
   /// 网络图字节：先读磁盘缓存，没有再下载并写回。
@@ -252,9 +397,13 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
   }
 
   static Future<Uint8List> _fetchNetworkBytes(String url) async {
-    final bundle = NetworkAssetBundle(Uri.parse(url));
-    final data = await bundle.load(url).timeout(const Duration(seconds: 12));
-    final bytes = data.buffer.asUint8List();
+    // Web 上没有 dart:io 的 HttpClient（NetworkAssetBundle 会抛
+    // Platform._version），走 http 包；字节缓存与解码逻辑保持一致。
+    final bytes = kIsWeb
+        ? await http.readBytes(Uri.parse(url)).timeout(const Duration(seconds: 12))
+        : (await NetworkAssetBundle(
+            Uri.parse(url),
+          ).load(url).timeout(const Duration(seconds: 12))).buffer.asUint8List();
     if (bytes.isEmpty) throw Exception('background image is empty');
     unawaited(BackgroundCache.writeBytes(url, bytes));
     return bytes;
@@ -280,8 +429,51 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
     return Color.fromRGBO(r ~/ n, g ~/ n, b ~/ n, 1);
   }
 
+  Widget _softBuild(BuildContext context) {
+    final c = context.c;
+    final key =
+        widget.asset ??
+        widget.networkUrl ??
+        CitroTimeBackground.assetFor(DateTime.now());
+    if (_softCache[key] == null) unawaited(softFor(key));
+    // 柔化图算好后通过 [_softRevision] 通知所有在等的背景重建，
+    // 不依赖单个 State 的回调（页面转场时 State 会被替换）。
+    return ValueListenableBuilder<int>(
+      valueListenable: _softRevision,
+      builder: (context, _, _) {
+        final soft = _softCache[key];
+        final image = soft == null
+            ? const SizedBox.expand()
+            : Image.memory(
+                soft,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.medium,
+              );
+        final min = widget.washMin;
+        if (min == null) return ColoredBox(color: c.bg, child: image);
+        // 自适应罩面直接压在柔化图上：所有沉浸背景共用这一套，可读性一致。
+        final wash = widget.washColor ?? c.bg;
+        final a = washAlpha(key, wash, c.dark, min);
+        return ColoredBox(
+          color: c.bg,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              image,
+              ColoredBox(color: wash.withValues(alpha: a)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.lowRes) return _softBuild(context);
     return FutureBuilder<_BgInfo>(
       future: _future,
       builder: (context, snap) {
@@ -317,13 +509,16 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
             : Alignment.topCenter;
         // 图没盖到的下方区域用奶米 #F9EDD7，和卡片区连成一整块。
         // 网络图优先用缓存字节上屏（MemoryImage），避免二次下载。
+        final decodeW = widget.lowRes ? 40 : 512;
+        final quality = widget.lowRes ? FilterQuality.high : FilterQuality.medium;
         Widget? placed;
         if (asset != null) {
           placed = Image.asset(
             asset,
             fit: fit,
             alignment: alignment,
-            cacheWidth: 512,
+            cacheWidth: decodeW,
+            filterQuality: quality,
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           );
         } else if (url != null && bytes != null) {
@@ -331,7 +526,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
             bytes,
             fit: fit,
             alignment: alignment,
-            cacheWidth: 512,
+            cacheWidth: decodeW,
+            filterQuality: quality,
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           );
         } else if (url != null && info != null) {
@@ -339,7 +535,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
             url,
             fit: fit,
             alignment: alignment,
-            cacheWidth: 512,
+            cacheWidth: decodeW,
+            filterQuality: quality,
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           );
         } else if (url != null) {
@@ -350,7 +547,8 @@ class _CitroBlendImageState extends State<CitroBlendImage> {
             info?.asset ?? CitroTimeBackground.assetFor(DateTime.now()),
             fit: fit,
             alignment: alignment,
-            cacheWidth: 512,
+            cacheWidth: decodeW,
+            filterQuality: quality,
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           );
         }
@@ -462,6 +660,13 @@ class CitroAmbientBackground extends StatefulWidget {
   /// 背景图按 3:4 居中摆放（完整可见，不裁切）。
   final bool ratio3x4;
 
+  /// 低清放大当模糊用（见 [CitroBlendImage.lowRes]）：页面级背景专用。
+  final bool lowRes;
+
+  /// 自适应罩面（见 [CitroBlendImage.washMin]）。
+  final double? washMin;
+  final Color? washColor;
+
   const CitroAmbientBackground({
     super.key,
     this.blurred = false,
@@ -471,6 +676,9 @@ class CitroAmbientBackground extends StatefulWidget {
     this.dim = 0,
     this.cover = false,
     this.ratio3x4 = false,
+    this.lowRes = false,
+    this.washMin,
+    this.washColor,
   });
 
   /// 测试播种：非空时强制使用该时段背景资源（覆盖空卡面时的进程内随机抽图），
@@ -753,7 +961,7 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
           source.$1 ??
           source.$2 ??
           CitroTimeBackground.assetFor(DateTime.now());
-      await _CitroBlendImageState.ensureReady(key);
+      _applyPalette(await _CitroBlendImageState.ensureReady(key));
       _prefetchNextStatic();
     } catch (_) {
       // 背景准备失败不阻塞进入主界面。
@@ -787,7 +995,17 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     if (mounted) {
       setState(() => _ready = true);
     }
+    // 首张当前背景也要解码：既为了首帧不闪，也为了主题色随它取色。
+    unawaited(_prefetchCurrent());
     unawaited(_prefetchNext());
+  }
+
+  /// 首页当前背景换图后，全局主题色跟着它派生。
+  ///
+  /// 只有「当前」背景能改主题色：预取下一张、其他页面的背景图都不算。
+  static void _applyPalette(_BgInfo info) {
+    if (info.size == Size.zero) return;
+    AmbientPalette.apply(info.accent);
   }
 
   void _onRevision() {
@@ -805,7 +1023,8 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
     final asset = source.$1;
     final url = source.$2;
     if (asset == null && url == null) return;
-    await _CitroBlendImageState.ensureReady(asset ?? url!);
+    final info = await _CitroBlendImageState.ensureReady(asset ?? url!);
+    _applyPalette(info);
     if (!mounted) return;
     unawaited(
       precacheImage(
@@ -857,6 +1076,9 @@ class _CitroAmbientBackgroundState extends State<CitroAmbientBackground> {
       networkUrl: source.$2,
       cover: widget.cover,
       ratio3x4: widget.ratio3x4,
+      lowRes: widget.lowRes,
+      washMin: widget.washMin,
+      washColor: widget.washColor,
     );
     // 首帧不包 AnimatedSwitcher：从时段背景硬切到选中的卡面是原本的行为，
     // 不让它多一段淡入；就绪之后的每次换图才交叉淡化。
