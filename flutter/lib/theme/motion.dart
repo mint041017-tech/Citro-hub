@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -156,6 +158,32 @@ class CitroMotion {
 
   static bool reduced(BuildContext context) =>
       MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  /// 正在滚动 / 切页：底栏这类大面积实时模糊当前每帧都要重采样背景，
+  /// Android 上最容易吃掉帧预算。交互期间临时收一档模糊、加一点填充，
+  /// 停下来立刻恢复；视觉只在运动中出现，静止时仍是完整重模糊。
+  static final ValueNotifier<bool> interacting = ValueNotifier<bool>(false);
+  static Timer? _interactionTimer;
+
+  static void beginInteraction() {
+    _interactionTimer?.cancel();
+    if (!interacting.value) interacting.value = true;
+  }
+
+  static void endInteraction({
+    Duration settle = const Duration(milliseconds: 140),
+  }) {
+    _interactionTimer?.cancel();
+    _interactionTimer = Timer(settle, () {
+      if (interacting.value) interacting.value = false;
+    });
+  }
+
+  /// 滚动通知每帧都会来，持续把结束时间往后推。
+  static void noteScroll() {
+    beginInteraction();
+    endInteraction();
+  }
 
   /// 不依赖 context 的轻量模式判断：Web 端一律轻量
   /// （CanvasKit/Skwasm 下每帧重绘成本高，装饰性动效收益不抵开销）。

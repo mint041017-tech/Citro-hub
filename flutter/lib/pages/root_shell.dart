@@ -285,11 +285,13 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
       PerfProbe.endFrameCollection('tab_$i');
       return;
     }
+    CitroMotion.beginInteraction();
     // 先让新页完成首帧 build/layout，再开始动画，避免“构建整页 + 动画”
     // 挤在同一帧（首次切到社区/我的时最容易掉帧）。
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
     await _tabAnim.forward(from: 0);
+    CitroMotion.endInteraction(settle: const Duration(milliseconds: 180));
     if (!mounted) return;
     if (_prevIndex != null) {
       setState(() => _prevIndex = null);
@@ -305,17 +307,24 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
     // 已挂载的页面保持原位；当前页与上一页（切页动画期间）同时在场。
     // 旧实现把整棵 Stack 放进 AnimatedBuilder，动画期间后台页也会逐帧重建；
     // 首页、社区这类长页面在每次切 Tab 时都要白白 build + layout 一遍。
-    return Stack(
-      fit: StackFit.expand,
-      clipBehavior: Clip.hardEdge,
-      children: [
-        for (var i = 0; i < _tabCount; i++)
-          if (_visited[i] && i != index && i != _prevIndex)
-            _pageLayer(i, active: false),
-        if (_prevIndex != null && _visited[_prevIndex!])
-          _pageLayer(_prevIndex!, active: false),
-        _pageLayer(index, active: true),
-      ],
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // 滚动期间底栏玻璃会持续重采样背景，Android 上最容易掉帧。
+        CitroMotion.noteScroll();
+        return false;
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
+        children: [
+          for (var i = 0; i < _tabCount; i++)
+            if (_visited[i] && i != index && i != _prevIndex)
+              _pageLayer(i, active: false),
+          if (_prevIndex != null && _visited[_prevIndex!])
+            _pageLayer(_prevIndex!, active: false),
+          _pageLayer(index, active: true),
+        ],
+      ),
     );
   }
 
@@ -433,32 +442,32 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
               // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
               // 不会在侧栏和内容之间出现两块裁切不同的背景。
               child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: MediaQuery(
-                      data: contentMedia,
-                      child: CitroLayoutScope(
-                        contentWidth: size.width - railWidth,
-                        tabletNav: true,
-                        duo: true,
-                        child: _withSwipe(_pageStack(), switchTabs: false),
+                backgroundColor: Colors.transparent,
+                body: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: MediaQuery(
+                        data: contentMedia,
+                        child: CitroLayoutScope(
+                          contentWidth: size.width - railWidth,
+                          tabletNav: true,
+                          duo: true,
+                          child: _withSwipe(_pageStack(), switchTabs: false),
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(
-                    width: railWidth,
-                    child: CitroDuoRightRail(
-                      index: index,
-                      onChanged: switchTo,
-                      topInset: CitroForm.duoRailTopInset(size),
+                    SizedBox(
+                      width: railWidth,
+                      child: CitroDuoRightRail(
+                        index: index,
+                        onChanged: switchTo,
+                        topInset: CitroForm.duoRailTopInset(size),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             );
           }
           final tablet =
@@ -472,67 +481,68 @@ class RootShellState extends State<RootShell> with TickerProviderStateMixin {
               // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
               // 不会在侧栏和内容之间出现两块裁切不同的背景。
               child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!ownsRail)
-                    SizedBox(
-                      width: _sidebarWidth,
-                      child: CitroTabletSidebar(
-                        index: index,
-                        onChanged: switchTo,
-                        // 网页端已下线资源库（mods 包体也从 Web 产物里删掉了），
-                        // 侧栏只保留四格；Windows / iPad 仍然是五格。
-                        showLibrary: !kIsWeb,
+                backgroundColor: Colors.transparent,
+                body: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!ownsRail)
+                      SizedBox(
+                        width: _sidebarWidth,
+                        child: CitroTabletSidebar(
+                          index: index,
+                          onChanged: switchTo,
+                          // 网页端已下线资源库（mods 包体也从 Web 产物里删掉了），
+                          // 侧栏只保留四格；Windows / iPad 仍然是五格。
+                          showLibrary: !kIsWeb,
+                        ),
+                      ),
+                    Expanded(
+                      child: CitroLayoutScope(
+                        contentWidth: ownsRail
+                            ? constraints.maxWidth
+                            : constraints.maxWidth - _sidebarWidth,
+                        tabletNav: true,
+                        duo: duo,
+                        // 桌面分栏排版（首页左栏背景 + 右栏卡片）：Windows 桌面壳、
+                        // 平板横屏、以及 Web 横屏都开 —— 三端看起来是同一套桌面版。
+                        splitHome:
+                            webLandscape ||
+                            (!kIsWeb &&
+                                (platform.isWindows ||
+                                    size.width > size.height)),
+                        child: _withSwipe(_pageStack(), switchTabs: false),
                       ),
                     ),
-                  Expanded(
-                    child: CitroLayoutScope(
-                      contentWidth: ownsRail
-                          ? constraints.maxWidth
-                          : constraints.maxWidth - _sidebarWidth,
-                      tabletNav: true,
-                      duo: duo,
-                      // 桌面分栏排版（首页左栏背景 + 右栏卡片）：Windows 桌面壳、
-                      // 平板横屏、以及 Web 横屏都开 —— 三端看起来是同一套桌面版。
-                      splitHome:
-                          webLandscape ||
-                          (!kIsWeb &&
-                              (platform.isWindows || size.width > size.height)),
-                      child: _withSwipe(_pageStack(), switchTabs: false),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             );
           }
           return CitroBackground(
-              // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
-              // 不会在侧栏和内容之间出现两块裁切不同的背景。
-              child: Scaffold(
+            // 整个壳只铺一张沉浸背景：侧栏、各 tab 页（透明底）共用同一张图，
+            // 不会在侧栏和内容之间出现两块裁切不同的背景。
+            child: Scaffold(
               backgroundColor: Colors.transparent,
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: CitroLayoutScope(
-                    contentWidth: constraints.maxWidth,
-                    tabletNav: false,
-                    duo: duo,
-                    child: _swipeable(_pageStack()),
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CitroLayoutScope(
+                      contentWidth: constraints.maxWidth,
+                      tabletNav: false,
+                      duo: duo,
+                      child: _swipeable(_pageStack()),
+                    ),
                   ),
-                ),
-                if (!desktop && !keyboardOpen)
-                  CitroTabBar(
-                    index: index,
-                    onChanged: switchTo,
-                    onCiciTap: () => showAiChat(context),
-                  ),
-              ],
+                  if (!desktop && !keyboardOpen)
+                    CitroTabBar(
+                      index: index,
+                      onChanged: switchTo,
+                      onCiciTap: () => showAiChat(context),
+                    ),
+                ],
+              ),
             ),
-          ),
-            );
+          );
         },
       ),
     );

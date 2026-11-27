@@ -36,7 +36,10 @@ class _CityHit {
   /// 同名同坐标视为同一个城市，去掉接口返回的重复项。
   @override
   bool operator ==(Object other) =>
-      other is _CityHit && other.name == name && other.lat == lat && other.lon == lon;
+      other is _CityHit &&
+      other.name == name &&
+      other.lat == lat &&
+      other.lon == lon;
 
   @override
   int get hashCode => Object.hash(name, lat, lon);
@@ -488,7 +491,10 @@ class _CityPickerDialogState extends State<_CityPickerDialog> {
                   if (hit.region.isNotEmpty)
                     Text(
                       hit.region,
-                      style: context.body(size: CitroType.micro, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.micro,
+                        color: c.inkSoft,
+                      ),
                     ),
                 ],
               ),
@@ -567,6 +573,8 @@ class _WeatherDialogState extends State<_WeatherDialog> {
     final w = state.weather;
     return PaperDialog(
       maxWidth: 400,
+      blurSigma: 36,
+      tint: c.dark ? const Color(0x42FFFFFF) : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -621,7 +629,10 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         '°C',
-                        style: context.body(size: CitroType.body, color: c.inkSoft),
+                        style: context.body(
+                          size: CitroType.body,
+                          color: c.inkSoft,
+                        ),
                       ),
                     ),
                   ],
@@ -633,7 +644,10 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                 if (today != null)
                   Text(
                     '最高 ${today.max.round()}° / 最低 ${today.min.round()}°',
-                    style: context.body(size: CitroType.caption, color: c.inkSoft),
+                    style: context.body(
+                      size: CitroType.caption,
+                      color: c.inkSoft,
+                    ),
                   ),
               ],
             ),
@@ -643,17 +657,26 @@ class _WeatherDialogState extends State<_WeatherDialog> {
               children: [
                 Text(
                   '体感 ${w.feels.round()}°',
-                  style: context.body(size: CitroType.caption, color: c.inkSoft),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '湿度 ${w.humidity}%',
-                  style: context.body(size: CitroType.caption, color: c.inkSoft),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${w.windDirection} ${w.wind.round()} km/h',
-                  style: context.body(size: CitroType.caption, color: c.inkSoft),
+                  style: context.body(
+                    size: CitroType.caption,
+                    color: c.inkSoft,
+                  ),
                 ),
               ],
             ),
@@ -674,8 +697,12 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                   width: 58,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
-                    color: current ? c.accentLt.withAlpha(c.dark ? 70 : 170) : c.surface,
-                    borderRadius: BorderRadius.circular(CitroColors.radii.small),
+                    color: current
+                        ? c.accentLt.withAlpha(c.dark ? 70 : 170)
+                        : c.surface,
+                    borderRadius: BorderRadius.circular(
+                      CitroColors.radii.small,
+                    ),
                     border: Border.all(color: current ? c.accent : c.line),
                   ),
                   child: Column(
@@ -686,7 +713,9 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                             : '${hour.time.hour.toString().padLeft(2, '0')}:00',
                         style: context.body(
                           size: CitroType.small,
-                          weight: current ? CitroType.medium : CitroType.regular,
+                          weight: current
+                              ? CitroType.medium
+                              : CitroType.regular,
                           color: current ? c.accentInk : c.inkSoft,
                         ),
                       ),
@@ -751,13 +780,19 @@ class _WeatherDialogState extends State<_WeatherDialog> {
                   Expanded(
                     child: Text(
                       weatherText(d.code),
-                      style: context.body(size: CitroType.caption, color: c.inkSoft),
+                      style: context.body(
+                        size: CitroType.caption,
+                        color: c.inkSoft,
+                      ),
                     ),
                   ),
                   if (d.rain > 0) ...[
                     Text(
                       '${d.rain}%',
-                      style: context.body(size: CitroType.small, color: c.mintInk),
+                      style: context.body(
+                        size: CitroType.small,
+                        color: c.mintInk,
+                      ),
                     ),
                     const SizedBox(width: 8),
                   ],

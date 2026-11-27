@@ -152,7 +152,8 @@ Future<T?> showCitroGeneralDialog<T>({
   final reduce = CitroMotion.reduced(context);
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
     _CitroGeneralDialogRoute<T>(
-      pageBuilder: (ctx, a, b) => citroOpaqueSurface(ctx, pageBuilder(ctx, a, b)),
+      pageBuilder: (ctx, a, b) =>
+          citroOpaqueSurface(ctx, pageBuilder(ctx, a, b)),
       // 有的弹层（今日一签、卡面收藏）把内容画在 transitionBuilder 里，
       // 这里也要换成不透明配色，否则卡面会透出底下的页面。
       transitionBuilder: (ctx, a, b, child) =>
@@ -302,6 +303,8 @@ class PaperDialog extends StatefulWidget {
   final VoidCallback? onClose;
   final bool scrollable;
   final bool alignTop;
+  final double? blurSigma;
+  final Color? tint;
 
   const PaperDialog({
     super.key,
@@ -312,6 +315,8 @@ class PaperDialog extends StatefulWidget {
     this.onClose,
     this.scrollable = true,
     this.alignTop = false,
+    this.blurSigma,
+    this.tint,
   });
 
   @override
@@ -344,7 +349,8 @@ class _PaperDialogState extends State<PaperDialog> {
       width: double.infinity,
       padding: widget.padding,
       borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-      tint: c.glassTintStrong,
+      tint: widget.tint ?? c.glassTintStrong,
+      sigma: widget.blurSigma,
       shadow: CitroColors.shadows.lg(c),
       child: widget.child,
     );
@@ -557,7 +563,9 @@ class AccentButton extends StatelessWidget {
               : null,
           boxShadow: outlined || onTap == null
               ? null
-              : (danger ? CitroColors.shadows.sm(c) : CitroColors.shadows.glow(c)),
+              : (danger
+                    ? CitroColors.shadows.sm(c)
+                    : CitroColors.shadows.glow(c)),
         ),
         child: Center(
           child: loading

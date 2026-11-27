@@ -115,20 +115,32 @@ class CitroDock extends StatelessWidget {
     final c = context.c;
     final r = BorderRadius.circular(height / 2);
     final lite = CitroMotion.lite(context);
-    return CitroGlass(
-      width: width,
-      height: height,
-      borderRadius: r,
-      tint: Colors.white.withValues(
-        alpha: lite ? (c.dark ? .16 : .48) : (c.dark ? .10 : .34),
-      ),
-      shadow: [
-        ...CitroColors.shadows.lg(c),
-        if (!c.dark)
-          const BoxShadow(color: Color(0x1F000000), spreadRadius: .5),
-      ],
-      sigma: 34,
-      child: child,
+    final baseAlpha = lite ? (c.dark ? .16 : .48) : (c.dark ? .10 : .34);
+    return ValueListenableBuilder<bool>(
+      valueListenable: CitroMotion.interacting,
+      builder: (context, interacting, _) {
+        // Android 滚动/切页时降低实时模糊强度并补一点填充，避免底栏在
+        // 移动背景下每帧重采样高斯核造成掉帧；静止后恢复完整模糊。
+        final busy =
+            interacting &&
+            !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.android;
+        return CitroGlass(
+          width: width,
+          height: height,
+          borderRadius: r,
+          tint: Colors.white.withValues(
+            alpha: busy ? (baseAlpha + .08).clamp(0.0, 1.0) : baseAlpha,
+          ),
+          shadow: [
+            ...CitroColors.shadows.lg(c),
+            if (!c.dark)
+              const BoxShadow(color: Color(0x1F000000), spreadRadius: .5),
+          ],
+          sigma: busy ? 18 : 34,
+          child: child,
+        );
+      },
     );
   }
 }
@@ -746,6 +758,8 @@ class CitroStat extends StatelessWidget {
   final String? unit;
   final Color? color;
   final bool center;
+  final double? labelSize;
+  final double? valueSize;
 
   const CitroStat(
     this.label,
@@ -754,6 +768,8 @@ class CitroStat extends StatelessWidget {
     this.unit,
     this.color,
     this.center = true,
+    this.labelSize,
+    this.valueSize,
   });
 
   @override
@@ -769,7 +785,7 @@ class CitroStat extends StatelessWidget {
         Text(
           label,
           style: context.body(
-            size: CitroType.small,
+            size: labelSize ?? CitroType.small,
             color: c.inkSoft,
             height: 1.1,
           ),
@@ -784,7 +800,10 @@ class CitroStat extends StatelessWidget {
           children: [
             Text(
               value,
-              style: context.hand(size: CitroType.bodyLg, color: valueColor),
+              style: context.hand(
+                size: valueSize ?? CitroType.bodyLg,
+                color: valueColor,
+              ),
             ),
             if (unit != null) ...[
               const SizedBox(width: 1),

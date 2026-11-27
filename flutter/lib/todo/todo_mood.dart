@@ -211,6 +211,8 @@ class _MoodDetailDialogState extends State<_MoodDetailDialog> {
     final c = context.c;
     return PaperDialog(
       maxWidth: 520,
+      blurSigma: 36,
+      tint: c.dark ? const Color(0x42FFFFFF) : null,
       child: ListenableBuilder(
         listenable: TodoStore.instance,
         builder: (context, _) {

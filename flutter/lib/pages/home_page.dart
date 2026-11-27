@@ -1030,7 +1030,7 @@ class WeatherCard extends StatelessWidget {
                     Text(
                       '天气',
                       style: context.body(
-                        size: CitroType.meta,
+                        size: CitroType.label,
                         weight: CitroType.medium,
                         color: c.inkSoft,
                       ),
@@ -1055,7 +1055,7 @@ class WeatherCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.body(
-                          size: CitroType.meta,
+                          size: CitroType.label,
                           color: c.inkSoft,
                         ),
                       ),
@@ -1093,7 +1093,7 @@ class WeatherCard extends StatelessWidget {
                   w.desc,
                   textAlign: TextAlign.center,
                   style: context.heading(
-                    size: CitroType.titleLg,
+                    size: CitroType.subtitle,
                     color: c.ink2,
                   ),
                 ),
@@ -1102,9 +1102,23 @@ class WeatherCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.x2),
                 Row(
                   children: [
-                    Expanded(child: CitroStat('体感', '${w.feels.round()}°')),
-                    Container(width: 1, height: 28, color: c.line),
-                    Expanded(child: CitroStat('湿度', '${w.humidity}%')),
+                    Expanded(
+                      child: CitroStat(
+                        '体感',
+                        '${w.feels.round()}°',
+                        labelSize: CitroType.caption,
+                        valueSize: CitroType.title,
+                      ),
+                    ),
+                    Container(width: 1, height: 32, color: c.line),
+                    Expanded(
+                      child: CitroStat(
+                        '湿度',
+                        '${w.humidity}%',
+                        labelSize: CitroType.caption,
+                        valueSize: CitroType.title,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.x1),
@@ -1113,7 +1127,7 @@ class WeatherCard extends StatelessWidget {
                   child: Text(
                     '${w.updated} 更新',
                     style: context.body(
-                      size: CitroType.small,
+                      size: CitroType.caption,
                       color: c.inkSoft,
                     ),
                   ),
