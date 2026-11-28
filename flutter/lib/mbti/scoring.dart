@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'models.dart';
 
 /// 倾向强度分档：center = 贴线（倾向不明显），mild = 温和，clear = 明确。
@@ -67,6 +69,53 @@ class AnswerQuality {
   );
 }
 
+/// MBTI 测量效度审计指标（对齐 Curran 粗心作答审计协议）。
+class MbtiAudit {
+  final int longstring;
+  final double ars;
+  final int ersPct;
+  final int antonymScore;
+  final double medianSec;
+  final String validityStatus;
+  final bool validityWarn;
+  final List<String> warnings;
+
+  const MbtiAudit({
+    required this.longstring,
+    required this.ars,
+    required this.ersPct,
+    required this.antonymScore,
+    required this.medianSec,
+    required this.validityStatus,
+    required this.validityWarn,
+    required this.warnings,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'longstring': longstring,
+    'ars': ars,
+    'ersPct': ersPct,
+    'antonymScore': antonymScore,
+    'medianSec': medianSec,
+    'validityStatus': validityStatus,
+    'validityWarn': validityWarn,
+    'warnings': warnings,
+  };
+
+  factory MbtiAudit.fromJson(Map<String, dynamic> j) => MbtiAudit(
+    longstring: (j['longstring'] as num?)?.toInt() ?? 1,
+    ars: (j['ars'] as num?)?.toDouble() ?? 0,
+    ersPct: (j['ersPct'] as num?)?.toInt() ?? 0,
+    antonymScore: (j['antonymScore'] as num?)?.toInt() ?? 100,
+    medianSec: (j['medianSec'] as num?)?.toDouble() ?? 0,
+    validityStatus: '${j['validityStatus'] ?? '可靠'}',
+    validityWarn: j['validityWarn'] == true,
+    warnings: ((j['warnings'] as List?) ?? [])
+        .map((e) => '$e')
+        .toList(growable: false),
+  );
+}
+
 class MbtiResult {
   final MbtiMode mode;
   final Map<String, DimScore> scores;
@@ -76,12 +125,16 @@ class MbtiResult {
   final String atSuffix;
   final AnswerQuality quality;
 
+  /// 测量效度审计结果；旧版本历史记录为 null。
+  final MbtiAudit? audit;
+
   const MbtiResult({
     required this.mode,
     required this.scores,
     required this.typeRaw,
     required this.atSuffix,
     required this.quality,
+    this.audit,
   });
 
   /// 含情绪后缀的完整展示型（如 INFJ-T）。
@@ -93,6 +146,7 @@ class MbtiResult {
     'typeRaw': typeRaw,
     'atSuffix': atSuffix,
     'quality': quality.toJson(),
+    if (audit != null) 'audit': audit!.toJson(),
   };
 
   factory MbtiResult.fromJson(Map<String, dynamic> j) {
@@ -106,6 +160,9 @@ class MbtiResult {
       typeRaw: j['typeRaw'] as String,
       atSuffix: j['atSuffix'] as String? ?? '',
       quality: AnswerQuality.fromJson(j['quality'] as Map<String, dynamic>),
+      audit: j['audit'] is Map
+          ? MbtiAudit.fromJson(Map<String, dynamic>.from(j['audit'] as Map))
+          : null,
     );
   }
 }
@@ -123,6 +180,7 @@ class MbtiScoring {
     required MbtiMode mode,
     required Map<String, int> answers,
     int durationSec = 1 << 30,
+    List<int> timingsMs = const [],
   }) {
     final qs = bank.questionsFor(mode);
     final sums = <String, int>{};
@@ -169,12 +227,16 @@ class MbtiScoring {
         ? '-${scores['AT']!.letter}'
         : '';
 
+    final quality = _quality(qs, answers, durationSec);
+    final audit = _audit(qs, answers, durationSec, timingsMs, quality);
+
     return MbtiResult(
       mode: mode,
       scores: scores,
       typeRaw: typeRaw,
       atSuffix: atSuffix,
-      quality: _quality(qs, answers, durationSec),
+      quality: quality,
+      audit: audit,
     );
   }
 
@@ -223,6 +285,110 @@ class MbtiScoring {
       fastFinish: fast,
       straightLine: straight,
       inconsistentPairs: inconsistent,
+    );
+  }
+
+  /// 计算完整效度审计指标（Longstring、ARS、ERS、镜像题对一致度与单题中位耗时）。
+  static MbtiAudit _audit(
+    List<MbtiQuestion> qs,
+    Map<String, int> answers,
+    int durationSec,
+    List<int> timingsMs,
+    AnswerQuality quality,
+  ) {
+    final n = qs.length;
+    var longstring = 1;
+    var run = 1;
+    var arsSum = 0.0;
+    var ersCount = 0;
+
+    for (var i = 0; i < n; i++) {
+      final a = answers[qs[i].id]!;
+      arsSum += (a - 4) / 3.0;
+      if (a == 1 || a == 7) ersCount++;
+      if (i > 0) {
+        if (a == answers[qs[i - 1].id]) {
+          run++;
+          if (run > longstring) longstring = run;
+        } else {
+          run = 1;
+        }
+      }
+    }
+
+    final ars = double.parse((arsSum / n).toStringAsFixed(2));
+    final ersPct = (ersCount / n * 100).round();
+
+    var pairErr = 0.0;
+    var pairCnt = 0;
+    final seen = <String>{};
+    for (final q in qs) {
+      final pairId = q.pair;
+      if (pairId == null || seen.contains(q.id)) continue;
+      final other = qs.where((e) => e.id == pairId).firstOrNull;
+      if (other == null) continue;
+      seen.add(q.id);
+      seen.add(other.id);
+      final s1 = q.scoreOf(answers[q.id]!);
+      final s2 = other.scoreOf(answers[other.id]!);
+      pairErr += (s1 - s2).abs();
+      pairCnt++;
+    }
+    final antonymScore = pairCnt == 0
+        ? 100
+        : math.max(0, ((1 - pairErr / (pairCnt * 6)) * 100).round());
+
+    final clean = timingsMs.where((t) => t > 0).toList()..sort();
+    final double medianSec;
+    if (clean.isNotEmpty) {
+      medianSec = double.parse(
+        (clean[clean.length ~/ 2] / 1000).toStringAsFixed(1),
+      );
+    } else if (durationSec < (1 << 29)) {
+      medianSec = double.parse((durationSec / n).toStringAsFixed(1));
+    } else {
+      medianSec = 3.2;
+    }
+
+    final warnings = <String>[];
+    if (longstring >= 8) {
+      warnings.add('最大连续同选达到 $longstring 题（疑似机械作答）');
+    } else if (quality.straightLine) {
+      warnings.add('单一选项占比过高（疑似缺乏区分度）');
+    }
+    if (medianSec < 1.2 || quality.fastFinish) {
+      warnings.add('单题中位耗时仅 ${medianSec}s（疑似阅读过快）');
+    }
+    if (antonymScore < 62 || quality.inconsistentPairs >= 2) {
+      warnings.add('跨距题对一致性偏低（$antonymScore/100）');
+    }
+    if (ars.abs() >= .35) {
+      warnings.add(
+        '存在${ars > 0 ? '赞同' : '否定'}作答风格（ARS=${ars > 0 ? '+' : ''}$ars，已由正反题结构自动抵消）',
+      );
+    }
+
+    var status = '可靠';
+    var warn = false;
+    if (longstring >= 10 || (medianSec < 1.0 && antonymScore < 65)) {
+      status = '建议重测';
+      warn = true;
+    } else if (warnings.isNotEmpty || quality.hasWarning) {
+      status = '需留意';
+      warn = true;
+    } else if (antonymScore >= 80 && longstring <= 7) {
+      status = '高可靠';
+    }
+
+    return MbtiAudit(
+      longstring: longstring,
+      ars: ars,
+      ersPct: ersPct,
+      antonymScore: antonymScore,
+      medianSec: medianSec,
+      validityStatus: status,
+      validityWarn: warn,
+      warnings: warnings,
     );
   }
 }

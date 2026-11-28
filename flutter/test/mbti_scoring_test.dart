@@ -324,6 +324,48 @@ void main() {
       expect(restored.atSuffix, result.atSuffix);
       expect(restored.scores.length, result.scores.length);
       expect(restored.mode, result.mode);
+      expect(restored.audit, isNotNull);
+      expect(restored.audit!.antonymScore, result.audit!.antonymScore);
+      expect(restored.audit!.validityStatus, result.audit!.validityStatus);
+    });
+
+    test('效度审计识别高质量作答、极速作答与旧版记录兼容', () {
+      final goodAnswers = answersFor(MbtiMode.full, {
+        'EI': 'left',
+        'SN': 'right',
+        'TF': 'left',
+        'JP': 'right',
+        'AT': 'left',
+      }, agree: 6);
+      final good = MbtiScoring.score(
+        bank: bank,
+        mode: MbtiMode.full,
+        answers: goodAnswers,
+        durationSec: 300,
+        timingsMs: List<int>.filled(96, 3000),
+      );
+      expect(good.audit, isNotNull);
+      expect(good.audit!.antonymScore, 100);
+      expect(good.audit!.validityStatus, '高可靠');
+      expect(good.audit!.validityWarn, isFalse);
+
+      final fastBad = MbtiScoring.score(
+        bank: bank,
+        mode: MbtiMode.full,
+        answers: {for (final q in bank.questionsFor(MbtiMode.full)) q.id: 7},
+        durationSec: 25,
+        timingsMs: List<int>.filled(96, 500),
+      );
+      expect(fastBad.audit!.longstring, 96);
+      expect(fastBad.audit!.ersPct, 100);
+      expect(fastBad.audit!.medianSec, 0.5);
+      expect(fastBad.audit!.validityStatus, '建议重测');
+      expect(fastBad.audit!.validityWarn, isTrue);
+
+      final legacyJson = good.toJson()..remove('audit');
+      final legacy = MbtiResult.fromJson(legacyJson);
+      expect(legacy.audit, isNull);
+      expect(legacy.typeRaw, good.typeRaw);
     });
   });
 }

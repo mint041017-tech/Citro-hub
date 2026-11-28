@@ -573,8 +573,6 @@ class _WeatherDialogState extends State<_WeatherDialog> {
     final w = state.weather;
     return PaperDialog(
       maxWidth: 400,
-      blurSigma: 36,
-      tint: c.dark ? const Color(0x42FFFFFF) : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -666,7 +666,7 @@ extension CitroFieldX on CitroColors {
         bg = dark ? hsl(-8, sat * .30, .13) : hsl(-8, sat * .28, .88);
         accentIn = dark ? hsl(24, sat * .9, .70) : hsl(-8, sat * .8, .38);
       case FieldTone.glass:
-        final glass = dark ? const Color(0xE62A2830) : const Color(0xE6FFFFFF);
+        final glass = dark ? const Color(0x6E2A2834) : const Color(0xADFFFFFF);
         return FieldSwatch(
           bg: glass,
           fg: ink,
@@ -730,9 +730,9 @@ extension CitroSurfaceX on CitroColors {
   Color get rim =>
       dark ? surface.withValues(alpha: .28) : const Color(0x8CFFFFFF);
 
-  /// 更薄的一档材质：首页小组件、问候区底。
+  /// 更薄的一档毛玻璃材质：首页小组件、问候区底。
   Color get glassThin =>
-      dark ? const Color(0x17FFFFFF) : const Color(0x66FFFFFF);
+      dark ? const Color(0x3325232F) : const Color(0x70FFFFFF);
 
   /// 页面罩面：铺在背景图之上、内容之下，保证任何图上的字都读得清。
   Color get wash => bg.withValues(alpha: dark ? .58 : .55);

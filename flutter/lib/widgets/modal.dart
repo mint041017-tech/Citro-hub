@@ -315,7 +315,7 @@ class PaperDialog extends StatefulWidget {
     this.onClose,
     this.scrollable = true,
     this.alignTop = false,
-    this.blurSigma = 36,
+    this.blurSigma = 40,
     this.tint,
   });
 
@@ -349,9 +349,9 @@ class _PaperDialogState extends State<PaperDialog> {
       width: double.infinity,
       padding: widget.padding,
       borderRadius: BorderRadius.circular(CitroColors.radii.modal),
-      tint:
-          widget.tint ?? (c.dark ? const Color(0x42FFFFFF) : c.glassTintStrong),
+      tint: widget.tint ?? c.glassTintStrong,
       sigma: widget.blurSigma,
+      highlight: true,
       shadow: CitroColors.shadows.lg(c),
       child: widget.child,
     );

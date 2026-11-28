@@ -66,31 +66,30 @@ extension CitroNativeType on BuildContext {
   }
 }
 
-/// 玻璃 / tonal 材质的配色。亮色用半透明白色，暗色用轻量白色覆层，
-/// 让背景透出来，同时保留发丝边与顶部高光。
+/// 玻璃 / tonal 材质的配色。采用高模糊磨砂底色 + 柔和半透白边缘高光，
+/// 在透出背景色彩波动的同时保证文字与控件的可读性。
 extension CitroMaterialColors on CitroColors {
-  /// 导航栏、侧栏、浮动胶囊的底色。
+  /// 导航栏、侧栏、浮动胶囊的磨砂底色。
   Color get glassTint =>
-      dark ? const Color(0x1FFFFFFF) : const Color(0x8CFFFFFF);
+      dark ? const Color(0x5225232F) : const Color(0x8CFFFFFF);
 
-  /// 对话框 / 弹层用的更实一点的底色，保证正文对比度。
+  /// 对话框 / 弹层用的更厚实的磨砂底色，保证正文对比度。
   Color get glassTintStrong =>
-      dark ? const Color(0x33FFFFFF) : const Color(0xB8FFFFFF);
+      dark ? const Color(0x78262430) : const Color(0xB3FFFFFF);
 
-  /// 发丝描边：跟随当前玻璃表面色的同色勾边。
+  /// 磨砂玻璃的柔和高光边缘。
   Color get glassBorder =>
-      dark ? surface.withValues(alpha: .28) : const Color(0x1A000000);
+      dark ? const Color(0x29FFFFFF) : const Color(0x8CFFFFFF);
 
-  /// 顶部内高光，模拟玻璃边缘折射。
+  /// 顶部内高光，模拟磨砂玻璃边缘漫反射。
   Color get glassHighlight =>
-      dark ? const Color(0x14FFFFFF) : const Color(0x33FFFFFF);
+      dark ? const Color(0x18FFFFFF) : const Color(0x40FFFFFF);
 }
 
-/// 平台自适应的材质表面。
+/// 平台自适应的毛玻璃材质表面。
 ///
-/// - iOS / iPadOS：背景模糊 + 半透明 + 发丝边 + 内高光；
-/// - Android：半透明 tonal 表面 + 发丝边；
-/// - Windows / Web：半透明纸面 + 发丝边（不做整块模糊）。
+/// 全站统一采用磨砂雾面玻璃（高高斯模糊 + 雾化面纱 + 柔和饱和度提升 +
+/// 细微漫反射边缘），兼顾清晰度与层次感。
 class CitroGlass extends StatelessWidget {
   final Widget child;
   final BorderRadius borderRadius;
@@ -104,6 +103,9 @@ class CitroGlass extends StatelessWidget {
   final double? height;
   final double? width;
 
+  /// 全站默认毛玻璃模糊半径，避免未显式传 sigma 时退化成清玻璃。
+  static const double defaultBlurSigma = 28.0;
+
   const CitroGlass({
     super.key,
     required this.child,
@@ -112,7 +114,6 @@ class CitroGlass extends StatelessWidget {
     this.sigma,
     this.tint,
     this.borderColor,
-    // 玻璃统一无边框：默认不再描边、不再压内高光。
     this.highlight = false,
     this.shadow,
     this.padding,
@@ -127,26 +128,29 @@ class CitroGlass extends StatelessWidget {
     final radius = borderRadius.topLeft.x;
     final base = LiquidGlassSettings.ios27(context);
     final tintColor = tint ?? colors.glassTint;
-    final edgeColor = tintColor.withValues(
-      alpha: (tintColor.a + .12).clamp(0.0, 1.0),
-    );
+    final edgeColor = borderColor ??
+        (colors.dark
+            ? Colors.white.withValues(alpha: .16)
+            : Colors.white.withValues(alpha: .58));
     final settings = base.copyWith(
       glassColor: tintColor,
-      bodyMode: GlassBodyMode.clear,
+      bodyMode: GlassBodyMode.adaptive,
       shadow: shadow ?? base.shadow,
-      frost: 0,
-      frostOpacity: 0,
-      bodyShade: 0,
-      saturation: 1,
-      lightIntensity: 0,
-      ambientStrength: 0,
+      frost: 14,
+      frostOpacity: colors.dark ? 0.62 : 0.70,
+      bodyShade: colors.dark ? 0.04 : 0.0,
+      saturation: 1.18,
+      lightIntensity: highlight
+          ? (colors.dark ? 0.14 : 0.24)
+          : (colors.dark ? 0.06 : 0.12),
+      ambientStrength: colors.dark ? 0.04 : 0.10,
       fresnelStrength: 0,
       edgeAbsorption: 0,
       glowIntensity: 0,
       rimLight: 0,
       rimShade: 0,
-      whitenStrength: 0,
-      blur: blur ? (sigma ?? base.blur) : 0,
+      whitenStrength: colors.dark ? 0.01 : 0.08,
+      blur: blur ? (sigma ?? defaultBlurSigma) : 0,
     );
     Widget surface = GlassContainer(
       width: width,

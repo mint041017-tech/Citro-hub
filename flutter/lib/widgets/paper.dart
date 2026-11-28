@@ -115,7 +115,8 @@ class CitroDock extends StatelessWidget {
     final c = context.c;
     final r = BorderRadius.circular(height / 2);
     final lite = CitroMotion.lite(context);
-    final baseAlpha = lite ? (c.dark ? .16 : .48) : (c.dark ? .10 : .34);
+    final baseAlpha = lite ? (c.dark ? .48 : .58) : (c.dark ? .32 : .44);
+    final baseColor = c.dark ? const Color(0xFF25232F) : Colors.white;
     return ValueListenableBuilder<bool>(
       valueListenable: CitroMotion.interacting,
       builder: (context, interacting, _) {
@@ -129,7 +130,8 @@ class CitroDock extends StatelessWidget {
           width: width,
           height: height,
           borderRadius: r,
-          tint: Colors.white.withValues(
+          highlight: true,
+          tint: baseColor.withValues(
             alpha: busy ? (baseAlpha + .08).clamp(0.0, 1.0) : baseAlpha,
           ),
           shadow: [
@@ -137,7 +139,7 @@ class CitroDock extends StatelessWidget {
             if (!c.dark)
               const BoxShadow(color: Color(0x1F000000), spreadRadius: .5),
           ],
-          sigma: busy ? 18 : 34,
+          sigma: busy ? 22 : 40,
           child: child,
         );
       },
@@ -317,8 +319,8 @@ class CitroCard extends StatelessWidget {
     final surface = field != null
         ? c.surface.withValues(
             alpha: field == FieldTone.glass
-                ? (c.dark ? .44 : .56)
-                : (c.dark ? .58 : .64),
+                ? (c.dark ? .34 : .58)
+                : (c.dark ? .60 : .66),
           )
         : (color ?? c.surface);
     Widget box = Container(
@@ -338,12 +340,14 @@ class CitroCard extends StatelessWidget {
           ? child
           : ClipRRect(borderRadius: br, child: child),
     );
-    // 同色描边：跟随卡片当前玻璃表面的颜色，只略微提亮透明度。
+    // 磨砂玻璃 / 色场边缘高光：跟随玻璃材质给出柔和边缘。
     if (field != null && border == null) {
       box = CustomPaint(
         foregroundPainter: GlassEdgePainter(
           radius: r,
-          color: surface.withValues(alpha: (surface.a + .12).clamp(0.0, 1.0)),
+          color: field == FieldTone.glass
+              ? c.glassBorder
+              : surface.withValues(alpha: (surface.a + .12).clamp(0.0, 1.0)),
         ),
         child: box,
       );

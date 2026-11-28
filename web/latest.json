@@ -1,13 +1,13 @@
 {
     "schema": 1,
     "app_name": "citro",
-    "version": "3.5.2",
-    "build_number": "3502",
-    "build_id": "48d3d2303a8d95dee34489a9c7aee486",
-    "file": "Citro-web-3.5.2.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.5.2.zip",
-    "size": 45707564,
-    "sha256": "cb5439328a001f58cecc8eb042676713cd617d468f5a60eba4ba939e5ab139fa",
-    "published_at": "2026-11-27T21:29:07Z",
-    "notes": "3.5.2:横屏 Tab 切换改为上下翻页；所有弹窗玻璃模糊统一提高并加深深色填充；Android 待办/记账/食谱/听隅/我的页动画优化，减少整页透明度、缩放与逐帧模糊；延续天气/心情弹窗与天气卡字号调整。"
+    "version": "3.6.0",
+    "build_number": "3600",
+    "build_id": "317065abdf2885411dac250ca3ddede4",
+    "file": "Citro-web-3.6.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-web-3.6.0.zip",
+    "size": 45719460,
+    "sha256": "e5c177a0c687f2bafbc6d1e07277aa6e1b8438b1df95d5d8ac0fe583907490be",
+    "published_at": "2026-11-28T07:02:39Z",
+    "notes": "3.6.0：依恋测试接入 CiCi 个性化分析与结果长图分享；MBTI 测评接入作答效度审计与答题节奏记录；全局毛玻璃视觉调校，保持浅色通透度并单独提升深色玻璃通透感。"
 }

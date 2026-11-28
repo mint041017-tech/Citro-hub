@@ -117,4 +117,21 @@ void main() {
     expect(merged, hasLength(1));
     expect(merged.first.effectiveUpdatedAt, 200);
   });
+
+  test('KeiRecord 序列化与 copyWith 支持 aiInsight', () {
+    final result = KeiScoring.analyze(
+      bank: bank,
+      answers: List<int>.filled(40, 0),
+    );
+    final record = KeiRecord(id: 'ai-1', takenAtMs: 100, result: result);
+    final updated = record.copyWith(
+      aiInsight: '你在亲密关系中倾向于温和靠近并保持觉察。',
+      updatedAtMs: 250,
+    );
+    final restored = KeiRecord.fromJson(
+      Map<String, dynamic>.from(updated.toJson()),
+    );
+    expect(restored.aiInsight, '你在亲密关系中倾向于温和靠近并保持觉察。');
+    expect(restored.effectiveUpdatedAt, 250);
+  });
 }

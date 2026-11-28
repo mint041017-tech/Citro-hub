@@ -33,13 +33,20 @@ class CitroLiquidGlass extends StatelessWidget {
     this.settings,
   });
 
-  /// 无边框玻璃材质：在当前主题的 ios27 预设上去掉 rim 亮边与边缘吸收。
+  /// 无边框毛玻璃材质：在当前主题的 ios27 预设上去掉 rim 亮边与边缘吸收，
+  /// 并补足基础模糊与磨砂雾面。
   static LiquidGlassSettings borderlessSettings(BuildContext context) {
     final brightness = Theme.maybeBrightnessOf(context) ?? Brightness.light;
-    final base = brightness == Brightness.dark
+    final isDark = brightness == Brightness.dark;
+    final base = isDark
         ? LiquidGlassSettings.ios27Dark
         : LiquidGlassSettings.ios27Light;
     return base.copyWith(
+      blur: 24,
+      frost: 18,
+      frostOpacity: isDark ? 0.64 : 0.72,
+      saturation: 1.2,
+      whitenStrength: isDark ? 0.01 : 0.08,
       rimLight: 0,
       rimShade: 0,
       edgeAbsorption: 0,

@@ -61,6 +61,16 @@ class KeiStore {
     return id;
   }
 
+  /// 更新已有测评记录（用于回写 CiCi 解读等衍生字段）。
+  static Future<void> update(KeiRecord record) async {
+    final records = load();
+    final index = records.indexWhere((e) => e.id == record.id);
+    if (index < 0) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    records[index] = record.copyWith(updatedAtMs: now);
+    await _write(records);
+  }
+
   static Future<void> remove(String id) async {
     final records = load()..removeWhere((e) => e.id == id);
     await _write(records);

@@ -35,7 +35,10 @@ Future<void> _pumpResult(WidgetTester tester, Size size) async {
   expect(find.text('画像与占比'), findsOneWidget);
   expect(find.text('五维与效度'), findsOneWidget);
   expect(find.text('关系动力学'), findsOneWidget);
+  expect(find.text('CiCi 个性化解读'), findsOneWidget);
   expect(find.text('主辅动力学解读'), findsOneWidget);
+  expect(find.text('分享结果'), findsOneWidget);
+  expect(find.text('扫码测你的十二系'), findsOneWidget);
   expect(find.byType(CustomPaint), findsWidgets);
 }
 

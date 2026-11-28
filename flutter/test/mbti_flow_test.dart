@@ -73,6 +73,9 @@ void main() {
     expect(find.text('倾向不明显'), findsNWidgets(5));
     expect(find.text('最后一步：确认一下像不像你'), findsOneWidget);
     expect(find.text('你的专属人格切片'), findsOneWidget);
+    expect(find.text('测量效度审计'), findsOneWidget);
+    expect(find.text('题对镜像一致性'), findsOneWidget);
+    expect(find.text('Longstring 连续同选'), findsOneWidget);
     expect(find.text('分享结果'), findsOneWidget);
     expect(find.text('你的优势'), findsOneWidget);
 

@@ -1,14 +1,21 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../services/clipboard_image.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/paper.dart';
+import 'ai.dart';
 import 'models.dart';
 import 'scoring.dart';
+import 'share_card.dart';
 import 'store.dart';
 
 class KeiPage extends StatefulWidget {
@@ -31,6 +38,13 @@ class _KeiPageState extends State<KeiPage> {
   DateTime? startTime;
   DateTime? questionAt;
   Timer? advanceTimer;
+
+  final GlobalKey _shareCardKey = GlobalKey();
+  bool _sharing = false;
+
+  String? aiText;
+  bool aiLoading = false;
+  bool aiFailed = false;
 
   @override
   void initState() {
@@ -79,6 +93,9 @@ class _KeiPageState extends State<KeiPage> {
       questionAt = DateTime.now();
       record = null;
       resultTab = 0;
+      aiText = null;
+      aiLoading = false;
+      aiFailed = false;
       step = 'quiz';
     });
   }
@@ -133,8 +150,92 @@ class _KeiPageState extends State<KeiPage> {
       records = KeiStore.load();
       record = saved;
       resultTab = 0;
+      aiText = saved?.aiInsight;
+      aiLoading = false;
+      aiFailed = false;
       step = 'result';
     });
+    unawaited(_genAi());
+  }
+
+  /// 调用 CiCi 生成十二系个性化解读并回写记录。
+  Future<void> _genAi() async {
+    final r = record;
+    if (r == null || aiLoading) return;
+    setState(() {
+      aiLoading = true;
+      aiFailed = false;
+    });
+    final proto = bank?.byId(r.result.typeId);
+    final text = await KeiAi.insight(result: r.result, proto: proto);
+    if (!mounted) return;
+    setState(() {
+      aiLoading = false;
+      aiText = text;
+      aiFailed = text == null;
+      if (text != null && record?.id == r.id) {
+        record = record!.copyWith(aiInsight: text);
+      }
+    });
+    if (text != null) {
+      await KeiStore.update(r.copyWith(aiInsight: text));
+    }
+  }
+
+  /// 截图生成十二系分享长图并调起系统分享（Web 端不支持时回退剪贴板）。
+  Future<void> _shareResult() async {
+    if (_sharing || record == null) return;
+    setState(() => _sharing = true);
+    try {
+      final target = _shareCardKey.currentContext;
+      if (target == null) throw StateError('share card not ready');
+      await Scrollable.ensureVisible(
+        target,
+        alignment: 0.08,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+      final boundary =
+          _shareCardKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) throw StateError('share card not ready');
+      final image = await boundary.toImage(pixelRatio: 3);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (data == null) throw StateError('capture failed');
+      final bytes = data.buffer.asUint8List();
+
+      final r = record!;
+      final proto = bank?.byId(r.result.typeId);
+      final text = keiShareText(result: r.result, proto: proto);
+      final fileName = 'Citro-Kei-${r.result.typeId}.png';
+      final file = XFile.fromData(bytes, mimeType: 'image/png', name: fileName);
+      final shareBox = target.findRenderObject();
+      final shareOrigin = shareBox is RenderBox && shareBox.hasSize
+          ? shareBox.localToGlobal(Offset.zero) & shareBox.size
+          : null;
+      try {
+        await Share.shareXFiles(
+          [file],
+          text: text,
+          fileNameOverrides: [fileName],
+          sharePositionOrigin: shareOrigin,
+        );
+      } catch (_) {
+        if (kIsWeb && await copyImageToClipboard(bytes)) {
+          if (mounted) AppToast.show(context, '分享图已复制到剪贴板');
+          return;
+        }
+        rethrow;
+      }
+      if (mounted) AppToast.show(context, '分享卡片已生成');
+    } catch (_) {
+      if (mounted) AppToast.show(context, '分享失败，请检查网络或稍后再试');
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   Future<void> _confirmQuit() async {
@@ -168,6 +269,9 @@ class _KeiPageState extends State<KeiPage> {
     setState(() {
       record = r;
       resultTab = 0;
+      aiText = r.aiInsight;
+      aiLoading = false;
+      aiFailed = false;
       step = 'result';
     });
   }
@@ -497,7 +601,7 @@ class _KeiPageState extends State<KeiPage> {
       selected: selected,
       label: '${value + 4} 级',
       child: Pressable(
-        key: ValueKey('kei-option-${idx}-$value'),
+        key: ValueKey('kei-option-$idx-$value'),
         onTap: () => _pick(value),
         borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
@@ -612,7 +716,38 @@ class _KeiPageState extends State<KeiPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.x3),
-          CitroButton(label: '再测一次', expanded: true, onPressed: _start),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: RepaintBoundary(
+                key: _shareCardKey,
+                child: KeiShareCard(
+                  result: r.result,
+                  proto: proto,
+                  accent: accent,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x3),
+          Row(
+            children: [
+              Expanded(
+                child: CitroButton(
+                  label: _sharing ? '生成中…' : '分享结果',
+                  onPressed: _sharing ? null : _shareResult,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x2),
+              Expanded(
+                child: CitroButton(
+                  label: '再测一次',
+                  style: CitroButtonStyle.surface,
+                  onPressed: _start,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.x1),
           CitroButton(
             label: '返回测试中心',
@@ -786,6 +921,8 @@ class _KeiPageState extends State<KeiPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _aiCard(c),
+        const SizedBox(height: AppSpacing.x2),
         if (r.result.synthesis.isNotEmpty)
           _contentSection(c, '主辅动力学解读', r.result.synthesis),
         _sectionTitle(c, '十二系等半径投影分布'),
@@ -1169,6 +1306,76 @@ class _KeiPageState extends State<KeiPage> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _aiCard(CitroColors c) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x2),
+      child: CitroCard(
+        padding: const EdgeInsets.all(AppSpacing.x3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 18, color: c.accentInk),
+                const SizedBox(width: 6),
+                Text(
+                  'CiCi 个性化解读',
+                  style: context.heading(size: CitroType.title, color: c.ink),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x2),
+            if (aiLoading)
+              Text(
+                '正在结合你的五维坐标与依恋象限生成解读…',
+                style: context.body(color: c.inkSoft),
+              )
+            else if (aiText != null) ...[
+              Text(
+                aiText!,
+                style: context.body(
+                  size: CitroType.body,
+                  color: c.ink2,
+                  height: 1.8,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Pressable(
+                  onTap: _genAi,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Text(
+                    '重新生成解读',
+                    style: context.body(
+                      size: CitroType.small,
+                      color: c.accentInk,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              Text(
+                aiFailed ? '生成失败，检查网络后可以重试。' : '暂未生成解读。',
+                style: context.body(size: CitroType.caption, color: c.inkSoft),
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CitroButton(
+                  label: '生成 AI 解读',
+                  style: CitroButtonStyle.outline,
+                  height: 40,
+                  onPressed: _genAi,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

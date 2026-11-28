@@ -2,12 +2,12 @@
     "schema": 1,
     "app_name": "citro-downloads",
     "site": "dl.chimu-claw.xyz",
-    "version": "3.5.2",
-    "build_number": "3502",
-    "file": "Citro-downloads-3.5.2.zip",
-    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.5.2.zip",
-    "size": 1088981,
-    "sha256": "54a352fe51d00dadd75bc8ad2efaba683ab78c38be30e045a9d0e32c7ba3c3a9",
-    "published_at": "2026-11-27T21:29:08Z",
-    "notes": "Citro downloads 静态站 3.5.2：Windows / Android 入口更新到 3.5.2，同步横屏上下切页、所有弹窗模糊提高、Android 动画优化与天气卡字号调整；Web 入口同步。"
+    "version": "3.6.0",
+    "build_number": "3600",
+    "file": "Citro-downloads-3.6.0.zip",
+    "url": "https://obs.chimu-claw.xyz/web/Citro-downloads-3.6.0.zip",
+    "size": 1088846,
+    "sha256": "b15e10e1b5a3cb529adf1c023813f1ccfb6d3a584ea506138bf99792d2067a04",
+    "published_at": "2026-11-28T07:03:20Z",
+    "notes": "Citro downloads 静态站 3.6.0：Windows / Android 入口更新到 3.6.0，同步依恋测试 CiCi 分析与分享、MBTI 作答效度审计及深浅色毛玻璃质感调校；Web 入口同步。"
 }

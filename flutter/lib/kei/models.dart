@@ -389,20 +389,37 @@ class KeiRecord {
   final int updatedAtMs;
   final KeiResult result;
 
+  /// CiCi 生成的个性化解读文案；旧记录或未生成时为空。
+  final String? aiInsight;
+
   const KeiRecord({
     required this.id,
     required this.takenAtMs,
     required this.result,
+    this.aiInsight,
     this.updatedAtMs = 0,
   });
 
   int get effectiveUpdatedAt => updatedAtMs > 0 ? updatedAtMs : takenAtMs;
+
+  /// 复制记录并按需更新 AI 解读或修改时间戳。
+  KeiRecord copyWith({
+    String? aiInsight,
+    int? updatedAtMs,
+  }) => KeiRecord(
+    id: id,
+    takenAtMs: takenAtMs,
+    result: result,
+    aiInsight: aiInsight ?? this.aiInsight,
+    updatedAtMs: updatedAtMs ?? this.updatedAtMs,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'takenAt': takenAtMs,
     'updatedAt': effectiveUpdatedAt,
     'result': result.toJson(),
+    if (aiInsight != null) 'aiInsight': aiInsight,
   };
 
   factory KeiRecord.fromJson(Map<String, dynamic> j) {
@@ -413,6 +430,7 @@ class KeiRecord {
       takenAtMs: taken is num ? taken.toInt() : 0,
       updatedAtMs: updated is num ? updated.toInt() : 0,
       result: KeiResult.fromJson(Map<String, dynamic>.from(j['result'] as Map)),
+      aiInsight: j['aiInsight'] as String?,
     );
   }
 }

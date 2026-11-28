@@ -4,7 +4,7 @@
 > 后续发版只维护这一份：更新第 1 节的版本号，在第 2 / 5 节补充当次改动，
 > 并在第 7 节历史表追加一行即可。
 >
-> 当前版本：`3.5.2+3502` · 更新日期：2026-11-28
+> 当前版本：`3.6.0+3600` · 更新日期：2026-11-28
 
 ## 1. 当前版本与工程状态
 
@@ -13,17 +13,17 @@
 
 | 项目 | 值 | 位置 |
 | --- | --- | --- |
-| Flutter 版本号 | `3.5.2+3502` | `flutter/pubspec.yaml` |
+| Flutter 版本号 | `3.6.0+3600` | `flutter/pubspec.yaml` |
 | Bundle ID | `com.chimu.crew` | `flutter/ios/Runner.xcodeproj/project.pbxproj` |
-| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.5.2 | `flutter/ios/Runner/Info.plist` |
-| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3502 | `flutter/ios/Runner/Info.plist` |
+| 短版本号 | `$(FLUTTER_BUILD_NAME)` → 3.6.0 | `flutter/ios/Runner/Info.plist` |
+| Build 号 | `$(FLUTTER_BUILD_NUMBER)` → 3600 | `flutter/ios/Runner/Info.plist` |
 | 最低系统 | iOS 15.0 | `flutter/ios/Podfile` |
 | 高刷开关 | `CADisableMinimumFrameDurationOnPhone = true` | `flutter/ios/Runner/Info.plist` |
 | 出口合规 | `ITSAppUsesNonExemptEncryption = false` | `flutter/ios/Runner/Info.plist` |
 | 计时 Live Activity | `CitroTimerWidget` | `flutter/ios/CitroTimerWidget` |
 
 已同步 `ios/Flutter/Generated.xcconfig` 与 `ios/Flutter/flutter_export_environment.sh` 的
-`FLUTTER_BUILD_NAME=3.5.2`、`FLUTTER_BUILD_NUMBER=3502`。
+`FLUTTER_BUILD_NAME=3.6.0`、`FLUTTER_BUILD_NUMBER=3600`。
 
 ## 2. 当前功能面与端侧能力
 
@@ -93,11 +93,12 @@
 - 读数按真实文本宽度排布，放不下时自动折到标题下方一行；难度条与棋盘之间留 24dp 间距。
 - 淘气小球、跳一跳这类自定义 `hud:` 页面显式提供 `hudStats`，其余游戏从 `pills` 自动提取。
 
-### 2.7 3.5.2 预打包检查
+### 2.7 3.6.0 预打包检查
 
-- 横屏 Tab 切换改为上下翻页，竖屏保持左右滑动。
-- Android 动画优化：待办/记账去掉整页透明度、食谱取消整页淡入、听隅呼吸页改用渐变光晕、二级页路由去掉整页缩放、底栏玻璃交互期自适应降模糊。
-- 所有 PaperDialog 弹窗默认模糊提高到 36，深色模式统一加厚填充。
+- 依恋测试（十二系亲密关系测评）接入 CiCi 个性化分析与结果长图二维码分享（`KeiAi`、`KeiShareCard`）。
+- MBTI 测评接入作答效度审计（`MbtiAudit` 与单题答题节奏采集，结果页新增测量效度审计卡片）。
+- 全局毛玻璃视觉调校：保持浅色通透度，单独提升深色模式玻璃通透与层次感。
+- `3.5.2` 既有改动延续：横屏 Tab 上下翻页、Android 动画与弹窗模糊优化均已合入。
 - 沿用 3.5.1 的天气/心情弹窗与天气卡字号调整。
 - 版本号、Info.plist 变量、Generated.xcconfig 与构建脚本已同步到 `3.5.2 / 3502`。
 
@@ -151,7 +152,7 @@ bash ios/build_ipa.sh
 ```bash
 flutter build ipa --release \
   --export-method app-store \
-  --dart-define=APP_VERSION=3.5.2
+  --dart-define=APP_VERSION=3.6.0
 ```
 
 产物：`flutter/build/ios/ipa/*.ipa`。
@@ -159,17 +160,17 @@ flutter build ipa --release \
 ## 4. 产物归档与上传
 
 ```bash
-cp build/ios/ipa/*.ipa "../IPA/Citro-v3.5.2-unsigned.ipa"
-shasum -a 256 "../IPA/Citro-v3.5.2-unsigned.ipa"
+cp build/ios/ipa/*.ipa "../IPA/Citro-v3.6.0-unsigned.ipa"
+shasum -a 256 "../IPA/Citro-v3.6.0-unsigned.ipa"
 
-curl -X PUT -T "IPA/Citro-v3.5.2-unsigned.ipa" \
+curl -X PUT -T "IPA/Citro-v3.6.0-unsigned.ipa" \
   -H "Content-Type: application/octet-stream" \
-  "https://obs.chimu-claw.xyz/IPA/Citro-v3.5.2-unsigned.ipa"
+  "https://obs.chimu-claw.xyz/IPA/Citro-v3.6.0-unsigned.ipa"
 ```
 
 ## 5. 发版前验证
 
-1. `CFBundleShortVersionString` 为 `3.5.2`，`CFBundleVersion` 为 `3502`（CI 上传时会按 TestFlight 已有构建号自增，以收据为准）。
+1. `CFBundleShortVersionString` 为 `3.6.0`，`CFBundleVersion` 为 `3600`（CI 上传时会按 TestFlight 已有构建号自增，以收据为准）。
 2. 真机走查：
    - 冷启动首屏是奶米底 logo 启动页（与 Flutter 启动页同款），不再出现旧猫咪插画；
    - 系统深色模式下冷启动是深底变体，浅色模式下是奶米底，两套都不会裁切 logo；
@@ -225,4 +226,5 @@ curl -X PUT -T "IPA/Citro-v3.5.2-unsigned.ipa" \
 | 3.3.1 | 版本号与 iOS 构建配置同步到 `3.3.1+3301`；每日一签改为完全随机并移除同级日期轮换，签文七段流式输出，今日一小步增加动作校验与兜底，社区长文五行折叠；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
 | 3.3.5 | 版本号与 iOS 构建配置同步到 `3.3.5+3305`；新增测试中心与十二系亲密关系测评、MBTI 测试档案内联回顾；登录注册自动识别账号与免昵称注册；全局玻璃与深色模式通透度调校；游戏卡片视觉改版；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
 | 3.5.1 | 版本号与 iOS 构建配置同步到 `3.5.1+3501`；天气/心情详情弹窗加强模糊与深色填充，首页天气卡字号放大；Android 滚动/切页期间底栏玻璃自适应降模糊；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
-| 3.5.2 | 版本号与 iOS 构建配置同步到 `3.5.2+3502`；横屏 Tab 上下切换，Android 页面转场/待办/记账/食谱/听隅/我的动画优化，所有 PaperDialog 弹窗提高模糊；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |
+| 3.5.2 | 版本号与 iOS 构建配置同步到 `3.5.2+3502`；横屏 Tab 上下切换，Android 页面转场/待办/记账/食谱/听隅/我的动画优化，所有 PaperDialog 弹窗提高模糊；IPA 由 TestFlight CI 构建上传。 |
+| 3.6.0 | 版本号与 iOS 构建配置同步到 `3.6.0+3600`；依恋测试接入 CiCi 分析与长图分享，MBTI 接入作答效度审计，全局毛玻璃与深色通透度调校；IPA 待 macOS 生成，推送 main 后由 TestFlight CI 构建上传。 |

@@ -23,6 +23,7 @@ import '../todo/todo_ai.dart';
 import '../todo/todo_models.dart';
 import '../todo/todo_store.dart';
 import '../theme/app_theme.dart';
+import '../theme/native.dart';
 import '../theme/tokens.dart';
 import '../theme/motion.dart';
 import '../widgets/cici_chat_kit.dart';
@@ -1666,7 +1667,7 @@ class _CiciGlassPanel extends StatelessWidget {
     final lite = CitroMotion.lite(context);
     final r = BorderRadius.vertical(top: Radius.circular(radius));
     final base = c.bg;
-    final panelColor = base.withValues(alpha: lite ? 1 : (c.dark ? .76 : .74));
+    final panelColor = base.withValues(alpha: lite ? 1 : (c.dark ? .48 : .62));
     final body = DecoratedBox(
       decoration: BoxDecoration(borderRadius: r, color: panelColor),
       child: child,
@@ -1674,9 +1675,7 @@ class _CiciGlassPanel extends StatelessWidget {
     final edged = CustomPaint(
       foregroundPainter: GlassEdgePainter(
         radius: radius,
-        color: panelColor.withValues(
-          alpha: (panelColor.a + .12).clamp(0.0, 1.0),
-        ),
+        color: c.glassBorder,
       ),
       child: body,
     );
@@ -1685,7 +1684,7 @@ class _CiciGlassPanel extends StatelessWidget {
       child: lite
           ? edged
           : BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              filter: ui.ImageFilter.blur(sigmaX: 38, sigmaY: 38),
               child: edged,
             ),
     );

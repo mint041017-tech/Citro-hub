@@ -39,8 +39,10 @@ class _MbtiPageState extends State<MbtiPage> {
 
   List<MbtiQuestion> quizQs = [];
   Map<String, int> answers = {};
+  Map<String, int> itemTimingsMs = {};
   int groupIndex = 0;
   DateTime? startTime;
+  DateTime? lastAnswerAt;
 
   MbtiRecord? record;
   String? confirmed;
@@ -76,8 +78,10 @@ class _MbtiPageState extends State<MbtiPage> {
       mode = MbtiMode.full;
       quizQs = bank!.questionsFor(mode);
       answers = {};
+      itemTimingsMs = {};
       groupIndex = 0;
       startTime = DateTime.now();
+      lastAnswerAt = DateTime.now();
       confirmed = null;
       aiText = null;
       aiFailed = false;
@@ -87,11 +91,15 @@ class _MbtiPageState extends State<MbtiPage> {
 
   Future<void> _submit() async {
     final duration = DateTime.now().difference(startTime!).inSeconds;
+    final timingsMs = [
+      for (final q in quizQs) itemTimingsMs[q.id] ?? 0,
+    ];
     final result = MbtiScoring.score(
       bank: bank!,
       mode: mode,
       answers: answers,
       durationSec: duration,
+      timingsMs: timingsMs,
     );
     final id = await MbtiStore.add(result);
     if (!mounted) return;
@@ -539,7 +547,10 @@ class _MbtiPageState extends State<MbtiPage> {
                           if (isLast) {
                             _submit();
                           } else {
-                            setState(() => groupIndex++);
+                            setState(() {
+                              groupIndex++;
+                              lastAnswerAt = DateTime.now();
+                            });
                           }
                         }
                       : null,
@@ -564,7 +575,14 @@ class _MbtiPageState extends State<MbtiPage> {
             for (var a = 1; a <= 7; a++)
               Pressable(
                 key: ValueKey('mbti-${q.id}-$a'),
-                onTap: () => setState(() => answers[q.id] = a),
+                onTap: () => setState(() {
+                  final now = DateTime.now();
+                  itemTimingsMs[q.id] = now
+                      .difference(lastAnswerAt ?? now)
+                      .inMilliseconds;
+                  lastAnswerAt = now;
+                  answers[q.id] = a;
+                }),
                 borderRadius: BorderRadius.circular(999),
                 child: Container(
                   width: size,
@@ -671,12 +689,15 @@ class _MbtiPageState extends State<MbtiPage> {
               style: context.body(size: CitroType.small, color: c.stamp),
             ),
           ],
-          if (result.quality.hasWarning) ...[
+          if (result.quality.hasWarning ||
+              (result.audit != null && result.audit!.warnings.isNotEmpty)) ...[
             const SizedBox(height: AppSpacing.x2),
             CitroCard(
               padding: const EdgeInsets.all(AppSpacing.x2),
               child: Text(
-                '${[if (result.quality.fastFinish) '本次作答较快', if (result.quality.straightLine) '选项分布比较单一', if (result.quality.inconsistentPairs >= 2) '部分回答前后不太一致'].join('，')}，结果可能不够准，建议找个安静的时间认真重测一次。',
+                result.audit != null && result.audit!.warnings.isNotEmpty
+                    ? '效度审计提示（${result.audit!.validityStatus}）：${result.audit!.warnings.join('；')}，结果可能不够准，建议找个安静的时间认真重测一次。'
+                    : '${[if (result.quality.fastFinish) '本次作答较快', if (result.quality.straightLine) '选项分布比较单一', if (result.quality.inconsistentPairs >= 2) '部分回答前后不太一致'].join('，')}，结果可能不够准，建议找个安静的时间认真重测一次。',
                 style: context.body(
                   size: CitroType.caption,
                   color: c.stamp,
@@ -717,6 +738,8 @@ class _MbtiPageState extends State<MbtiPage> {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.x2),
+          _auditCard(c, result),
           const SizedBox(height: AppSpacing.x2),
           _calibrationCard(c),
           const SizedBox(height: AppSpacing.x2),
@@ -764,6 +787,181 @@ class _MbtiPageState extends State<MbtiPage> {
               size: CitroType.small,
               color: c.inkSoft,
               height: 1.7,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _auditCard(CitroColors c, MbtiResult result) {
+    final audit = result.audit;
+    final status = audit?.validityStatus ??
+        (result.quality.hasWarning ? '需留意' : '可靠');
+    final warn = audit?.validityWarn ?? result.quality.hasWarning;
+    final pairCount = bank == null
+        ? 4
+        : bank!.questionsFor(result.mode).where((q) => q.pair != null).length ~/
+            2;
+    return CitroCard(
+      padding: const EdgeInsets.all(AppSpacing.x3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                warn ? Icons.verified_user_outlined : Icons.verified_user_rounded,
+                size: 18,
+                color: warn ? c.danger : c.accentInk,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '测量效度审计',
+                  style: context.heading(size: CitroType.title, color: c.ink),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: warn ? c.dangerSoft : c.accentLt,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  status,
+                  style: context.body(
+                    size: CitroType.small,
+                    weight: CitroType.strong,
+                    color: warn ? c.danger : c.accentInk,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'CURRAN PROTOCOL · 作答效度审计',
+            style: context.body(
+              size: CitroType.micro,
+              color: c.inkSoft,
+              letterSpacing: .8,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x1),
+          if (audit == null) ...[
+            _auditRow(
+              c,
+              '题对一致性冲突',
+              '同维度镜像题对矛盾数（≥2 预警）',
+              '${result.quality.inconsistentPairs} 对',
+              result.quality.inconsistentPairs >= 2,
+            ),
+            _auditRow(
+              c,
+              '直线连续作答',
+              '连续同选或单一选项占比过高',
+              result.quality.straightLine ? '存在异常' : '正常',
+              result.quality.straightLine,
+            ),
+            _auditRow(
+              c,
+              '整卷作答耗时',
+              '平均每题低于 1.5s 提示未充分阅读',
+              result.quality.fastFinish ? '过快' : '正常',
+              result.quality.fastFinish,
+              last: true,
+            ),
+          ] else ...[
+            _auditRow(
+              c,
+              '题对镜像一致性',
+              '$pairCount 组跨距配对题极性一致度',
+              '${audit.antonymScore} / 100',
+              audit.antonymScore < 62,
+            ),
+            _auditRow(
+              c,
+              'Longstring 连续同选',
+              'Curran 粗心作答指标（≥8 预警）',
+              '${audit.longstring} 题',
+              audit.longstring >= 8,
+            ),
+            _auditRow(
+              c,
+              '默认赞同偏差 (ARS)',
+              '正反题对冲结构已自动抵消其影响',
+              '${audit.ars > 0 ? '+' : ''}${audit.ars.toStringAsFixed(2)}',
+              false,
+            ),
+            _auditRow(
+              c,
+              '极端作答率 (ERS)',
+              '选择端点 1 分或 7 分的比例',
+              '${audit.ersPct}%',
+              false,
+            ),
+            _auditRow(
+              c,
+              '中位单题耗时',
+              '低于 1.2s 提示未充分阅读',
+              '${audit.medianSec}s',
+              audit.medianSec < 1.2,
+              last: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _auditRow(
+    CitroColors c,
+    String title,
+    String subtitle,
+    String value,
+    bool warn, {
+    bool last = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        border: last
+            ? null
+            : Border(bottom: BorderSide(color: c.line.withValues(alpha: .6))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.body(
+                    size: CitroType.caption,
+                    weight: CitroType.medium,
+                    color: c.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: context.body(size: CitroType.micro, color: c.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            value,
+            style: context.body(
+              size: CitroType.caption,
+              weight: warn ? CitroType.strong : CitroType.medium,
+              color: warn ? c.danger : c.ink,
             ),
           ),
         ],
